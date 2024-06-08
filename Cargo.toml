@@ -1,0 +1,25 @@
+[package]
+name = "tachyonfx"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+
+[dependencies]
+colorsys = "0.6.7"
+derive_builder = "0.20.0"
+rand = { version = "0.8.5", features = ["small_rng"] }
+ratatui = "0.26.3"
+simple-easing = "1.0.1"
+
+[dev-dependencies]
+crossterm = "0.27.0"
+
+[[example]]
+name = "open-window"
+
+[[example]]
+name = "basic-effects"
+
+[[example]]
+name = "tweens"
