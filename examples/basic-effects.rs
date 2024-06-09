@@ -16,11 +16,11 @@ use ratatui::widgets::{Block, Clear, Widget};
 
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
-use tachyonfx::{CenteredShrink, Effect, EffectRenderer, fx, Interpolation, IntoEffect, Shader};
-use tachyonfx::fx::{Glitch, never_complete, parallel, sequence, temporary};
+use tachyonfx::{CenteredShrink, Effect, EffectRenderer, fx, Interpolation, Shader};
+use tachyonfx::fx::{Glitch, never_complete, parallel, sequence, timed_never_complete, with_duration};
 
 use crate::gruvbox::Gruvbox;
-use crate::gruvbox::Gruvbox::{Dark0, Dark0Hard, Dark0Soft, Light4};
+use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
@@ -98,7 +98,7 @@ fn run_app(
                         KeyCode::Char('s') => {
                             let duration = Duration::from_secs(7);
                             let rng = SmallRng::from_entropy();
-                            app.active_effect = ("scramble", fx::temporary(duration, Glitch::builder()
+                            app.active_effect = ("scramble", fx::with_duration(duration, Glitch::builder()
                                 .cell_glitch_ratio(1f32)
                                 .action_start_delay_ms(0..3000)
                                 .rng(rng)
@@ -232,14 +232,14 @@ impl EffectsRepository {
                 fx::coalesce(100, (medium, CubicOut))),
             ("glitchy coalesce", parallel(vec![
                 fx::coalesce(100, (medium, CubicOut)),
-                temporary(medium, never_complete(glitch))
+                timed_never_complete(medium, glitch)
             ])),
             ("fade fg",
                 fx::fade_from_fg(bg, (medium, CircOut))),
             ("repeating fade in, dissolving fade out", fx::repeating(
                 sequence(vec![
                     // fade in content area
-                    temporary(slow + short, parallel(vec![
+                    with_duration(slow + short, parallel(vec![
                         never_complete(fx::dissolve(1, 0)),
                         never_complete(fx::fade_from(screen_bg, screen_bg, (slow, QuadOut))),
                     ])),
@@ -253,9 +253,9 @@ impl EffectsRepository {
                         fx::fade_to_fg(bg, (slow, QuadOut)),
                     ]),
                     // content hidden for some time
-                    temporary(short, never_complete(fx::dissolve(1, 0))),
+                    timed_never_complete(short, fx::dissolve(1, 0)),
                     // fade out content area
-                    temporary(slow + short, parallel(vec![
+                    with_duration(slow + short, parallel(vec![
                         never_complete(fx::dissolve(1, 0)),
                         never_complete(fx::fade_to(screen_bg, screen_bg, (slow, QuadOut))),
                     ])),
@@ -285,9 +285,8 @@ fn setup_terminal() -> Result<Terminal> {
 
     let panic_hook = panic::take_hook();
     panic::set_hook(Box::new(move |panic| {
-        // restore_terminal(terminal).expect("failed to reset the terminal");
-        disable_raw_mode();
-        execute!(
+        let _ = disable_raw_mode();
+        let _ = execute!(
             io::stderr(),
             LeaveAlternateScreen,
             DisableMouseCapture
@@ -297,11 +296,4 @@ fn setup_terminal() -> Result<Terminal> {
     }));
 
     Ok(terminal)
-}
-
-fn restore_terminal(mut terminal: Terminal) -> Result<()> {
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
-    terminal.show_cursor()?;
-    Ok(())
 }

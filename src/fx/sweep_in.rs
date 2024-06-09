@@ -1,14 +1,14 @@
-use std::ops::Sub;
 use std::time::Duration;
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::prelude::Color;
+
 use Interpolation::CircOut;
+
 use crate::ColorMapper;
 use crate::effect::CellFilter;
 use crate::effect_timer::EffectTimer;
-
 use crate::interpolation::{Interpolatable, Interpolation};
 use crate::shader::Shader;
 
@@ -70,7 +70,7 @@ impl Shader for SweepIn {
             .filter(|(pos, cell)| cell_filter.is_valid(*pos, cell))
             .for_each(|(pos, cell)| {
                 let a = window_alpha(pos.x);
-                
+
                 match a {
                     0.0 => {
                         cell.set_fg(self.faded_color);

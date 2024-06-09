@@ -6,7 +6,6 @@ use std::time::Duration;
 use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use rand::prelude::SeedableRng;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::Frame;
@@ -18,7 +17,7 @@ use ratatui::widgets::{BorderType, Clear, StatefulWidget, Widget};
 use Interpolation::*;
 use tachyonfx::{CenteredShrink, Effect, EffectRenderer, CellFilter, fx, Interpolation, IntoEffect, Shader};
 use tachyonfx::CellFilter::{AllOf, Inner, Negate, Outer};
-use tachyonfx::fx::{never_complete, parallel, sequence, temporary};
+use tachyonfx::fx::{never_complete, parallel, sequence, with_duration};
 
 use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Dark1, Light2, YellowBright};
 use crate::window::OpenWindow;
@@ -196,7 +195,7 @@ fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
         // window borders
         parallel(vec![
             sequence(vec![
-                temporary(short * time_scale, never_complete(fx::dissolve(1, 0))),
+                with_duration(short * time_scale, never_complete(fx::dissolve(1, 0))),
                 fx::coalesce(111, (duration, BounceOut)),
             ]),
             fx::fade_from(Dark0, Dark0, (duration * time_scale))
@@ -205,13 +204,13 @@ fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
 
         // window title and shortcuts
         sequence(vec![
-            temporary(duration * time_scale, never_complete(fx::fade_to(Dark0, Dark0, 0))),
+            with_duration(duration * time_scale, never_complete(fx::fade_to(Dark0, Dark0, 0))),
             fx::fade_from(Dark0, Dark0, (320 * time_scale, QuadOut)),
         ]).with_cell_selection(border_text),
 
         // content area
         sequence(vec![
-            temporary(Duration::from_millis(270) * time_scale, parallel(vec![
+            with_duration(Duration::from_millis(270) * time_scale, parallel(vec![
                 never_complete(fx::dissolve(1, 0)), // hiding icons/emoji
                 never_complete(fx::fade_to(bg, bg, 0)),
             ])),

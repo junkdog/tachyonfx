@@ -12,7 +12,7 @@ use crate::fx::resize::ResizeArea;
 use crate::fx::repeat::Repeat;
 use crate::fx::sleep::Sleep;
 use crate::fx::sweep_in::SweepIn;
-use crate::fx::temporary::IntoTemporaryEffect;
+use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
 
 pub use glitch::Glitch;
 
@@ -157,8 +157,14 @@ pub fn never_complete(effect: Effect) -> Effect {
 
 /// Wraps an effect and enforces a duration on it. Once the duration has
 /// elapsed, the effect will be marked as complete.
-pub fn temporary(duration: Duration, effect: Effect) -> Effect {
+pub fn with_duration(duration: Duration, effect: Effect) -> Effect {
     effect.with_duration(duration)
+}
+
+/// Creates an effect that runs indefinitely but has an enforced duration,
+/// after which the effect will be marked as complete.
+pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
+    TemporaryEffect::new(never_complete(effect), duration).into_effect()
 }
 
 

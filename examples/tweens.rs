@@ -12,17 +12,17 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Margin, Rect};
 use ratatui::layout::Constraint::Ratio;
 use ratatui::prelude::Marker;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Axis, Block, Chart, Clear, Dataset, GraphType, LegendPosition, StatefulWidget, Widget};
 
 use Gruvbox::OrangeBright;
 use Interpolation::*;
-use tachyonfx::{CenteredShrink, Effect, EffectRenderer, EffectTimer, CellFilter, fx, Interpolation, Shader};
-use tachyonfx::fx::{never_complete, parallel, repeating, sequence};
+use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, EffectTimer, fx, Interpolation, Shader};
+use tachyonfx::fx::{parallel, repeating, sequence};
 
 use crate::gruvbox::Gruvbox;
-use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark1, Dark4, Light2};
+use crate::gruvbox::Gruvbox::{Dark0, Dark1, Light2};
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
@@ -265,18 +265,18 @@ struct InterpolationWidgetState {
 }
 
 fn chart_fx() -> Effect {
-    let duration = Duration::from_millis(350);
+    let duration = Duration::from_millis(300);
     let timer = EffectTimer::new(duration, QuadInOut);
 
     parallel(vec![
         // chart axis
-        fx::sweep_in(2, Dark0, timer)
+        fx::sweep_in(15, Dark0, timer)
             .with_cell_selection(CellFilter::FgColor(Light2.into())),
         // chart data
         sequence(vec![
-            fx::temporary(duration, fx::never_complete(fx::dissolve(1, 0)))
+            fx::timed_never_complete(duration, fx::dissolve(1, 0))
                 .with_cell_selection(CellFilter::FgColor(OrangeBright.into())),
-            fx::sweep_in(2, Dark0, timer)
+            fx::sweep_in(15, Dark0, timer)
                 .with_cell_selection(CellFilter::FgColor(OrangeBright.into())),
         ]),
     ])
