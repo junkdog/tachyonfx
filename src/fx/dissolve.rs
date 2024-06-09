@@ -3,7 +3,7 @@ use rand::{Rng, thread_rng};
 use rand::prelude::{SeedableRng, SmallRng};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::effect::FilterMode;
+use crate::effect::CellFilter;
 use crate::effect_timer::EffectTimer;
 
 use crate::shader::Shader;
@@ -13,7 +13,7 @@ pub struct Dissolve {
     lifetime: EffectTimer,
     cyclic_cell_activation: Vec<f32>,
     area: Option<Rect>,
-    cell_filter: FilterMode,
+    cell_filter: CellFilter,
 }
 
 impl Dissolve {
@@ -27,7 +27,7 @@ impl Dissolve {
             lifetime,
             cyclic_cell_activation: (0..cell_cycle).map(|_| rng.gen_range(0.0..1.0)).collect(),
             area: None,
-            cell_filter: FilterMode::All,
+            cell_filter: CellFilter::All,
         }
     }
 
@@ -73,7 +73,7 @@ impl Shader for Dissolve {
         self.area = Some(area)
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.cell_filter = strategy
     }
 

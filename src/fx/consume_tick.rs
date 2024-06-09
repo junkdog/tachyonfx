@@ -1,7 +1,7 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::effect::FilterMode;
+use crate::effect::CellFilter;
 use crate::shader::Shader;
 
 /// consumes any remaining duration for a single tick.
@@ -29,5 +29,5 @@ impl Shader for ConsumeTick {
 
     fn area(&self) -> Option<Rect> { None }
     fn set_area(&mut self, _area: Rect) {}
-    fn cell_selection(&mut self, _strategy: FilterMode) {}
+    fn cell_selection(&mut self, _strategy: CellFilter) {}
 }

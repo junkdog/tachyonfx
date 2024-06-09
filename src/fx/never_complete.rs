@@ -1,7 +1,7 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::effect::{Effect, FilterMode};
+use crate::effect::{Effect, CellFilter};
 use crate::shader::Shader;
 
 #[derive(Clone)]
@@ -26,7 +26,7 @@ impl Shader for NeverComplete {
     fn area(&self) -> Option<Rect>              { self.effect.area() }
     fn set_area(&mut self, area: Rect)          { self.effect.set_area(area) }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.effect.cell_selection(strategy);
     }
 

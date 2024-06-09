@@ -1,7 +1,7 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::effect::{Effect, FilterMode, IntoEffect};
+use crate::effect::{Effect, CellFilter, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolation::Linear;
 use crate::shader::Shader;
@@ -49,7 +49,7 @@ impl Shader for TemporaryEffect {
         self.effect.set_area(area)
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.effect.cell_selection(strategy);
     }
 

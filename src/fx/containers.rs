@@ -1,7 +1,7 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Rect};
-use crate::effect::{Effect, FilterMode};
+use crate::effect::{Effect, CellFilter};
 use crate::shader::Shader;
 
 #[derive(Default, Clone)]
@@ -62,7 +62,7 @@ impl Shader for ParallelEffect {
         self.effects.iter_mut().for_each(|e| e.set_area(area));
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.effects.iter_mut().for_each(|e| e.cell_selection(strategy.clone()));
     }
 
@@ -110,7 +110,7 @@ impl Shader for SequentialEffect {
         self.effects.iter_mut().for_each(|e| e.set_area(area));
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.effects.iter_mut().for_each(|e| e.cell_selection(strategy.clone()));
     }
 

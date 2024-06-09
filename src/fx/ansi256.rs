@@ -3,7 +3,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Rect};
 use crate::color_ext::AsIndexedColor;
 use crate::color_mapper::ColorMapper;
-use crate::effect::FilterMode;
+use crate::effect::CellFilter;
 use crate::shader::Shader;
 
 
@@ -50,7 +50,5 @@ impl Shader for Ansi256 {
         self.area = Some(area);
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
-        todo!()
-    }
+    fn cell_selection(&mut self, _strategy: CellFilter) {}
 }

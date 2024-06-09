@@ -16,7 +16,7 @@ pub fn add(left: usize, right: usize) -> usize {
 
 pub use cell_iter::CellIterator;
 pub use color_mapper::ColorMapper;
-pub use effect::{Effect, FilterMode, IntoEffect};
+pub use effect::{Effect, CellFilter, IntoEffect};
 pub use effect_timer::EffectTimer;
 pub use rect_ext::CenteredShrink;
 pub use render_effect::EffectRenderer;

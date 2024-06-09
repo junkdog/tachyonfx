@@ -3,7 +3,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Rect};
 use crate::cell_iter::CellIterator;
 
-use crate::effect::FilterMode;
+use crate::effect::CellFilter;
 
 /// A shader-like object that can be processed for a duration.
 pub trait Shader {
@@ -34,7 +34,7 @@ pub trait Shader {
     fn area(&self) -> Option<Rect>;
     
     fn set_area(&mut self, area: Rect);
-    fn cell_selection(&mut self, strategy: FilterMode);
+    fn cell_selection(&mut self, strategy: CellFilter);
 
     fn reverse(&mut self) {}
 }

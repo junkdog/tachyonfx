@@ -6,8 +6,8 @@ use derive_builder::Builder;
 use rand::prelude::SmallRng;
 use rand::Rng;
 use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use crate::effect::{Effect, FilterMode, IntoEffect};
+use ratatui::layout::{Position, Rect};
+use crate::effect::{Effect, CellFilter, IntoEffect};
 use crate::shader::Shader;
 
 
@@ -41,6 +41,8 @@ pub struct Glitch {
     action_start_delay_ms: Range<u32>,
     action_ms: Range<u32>,
     rng: SmallRng,
+    #[builder(default)]
+    selection: CellFilter,
 
     #[builder(setter(skip))]
     glitch_cells: Vec<GlitchCell>,
@@ -118,11 +120,16 @@ impl Shader for Glitch {
         // remove invalid cells (e.g., from resizing)
         self.glitch_cells.retain(|cell| cell.cell_idx < buf.content.len());
 
+        let selector = self.selection.selector(area);
+
         // apply glitches to buffer
         self.glitch_cells.iter().filter(|c| c.presleep_remaining_ms == 0).for_each(|cell| {
             let x = cell.cell_idx % area.width as usize;
             let y = cell.cell_idx / area.width as usize;
             let c  = buf.get_mut(area.x + x as u16, area.y + y as u16);
+            if !selector.is_valid(Position::new(x as u16, y as u16), c) {
+                return;
+            }
 
             match cell.glitch {
                 GlitchType::ChangeCase if c.symbol().is_ascii() => {
@@ -174,7 +181,7 @@ impl Shader for Glitch {
         self.area = Some(area)
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
-        todo!()
+    fn cell_selection(&mut self, strategy: CellFilter) {
+        self.selection = strategy;
     }
 }

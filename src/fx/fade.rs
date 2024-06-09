@@ -4,7 +4,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::prelude::Color;
 use crate::color_mapper::ColorMapper;
-use crate::effect::{Effect, FilterMode, IntoEffect};
+use crate::effect::{Effect, CellFilter, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 
@@ -18,7 +18,7 @@ pub struct FadeColors {
     #[builder(default)]
     area: Option<Rect>,
     #[builder(default)]
-    cell_filter: FilterMode,
+    cell_filter: CellFilter,
 }
 
 impl FadeColors {
@@ -80,7 +80,7 @@ impl Shader for FadeColors {
         self.area = Some(area);
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.cell_filter = strategy;
     }
 

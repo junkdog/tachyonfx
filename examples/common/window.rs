@@ -7,7 +7,7 @@ use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, BorderType, Clear};
 use ratatui::widgets::Widget;
-use tachyonfx::{Effect, FilterMode, IntoEffect, Shader};
+use tachyonfx::{Effect, CellFilter, IntoEffect, Shader};
 
 
 fn open_window(
@@ -146,7 +146,7 @@ impl Shader for OpenWindow {
         }
     }
 
-    fn cell_selection(&mut self, _strategy: FilterMode) {
+    fn cell_selection(&mut self, _strategy: CellFilter) {
         todo!()
     }
 }

@@ -3,7 +3,7 @@ use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
-use crate::effect::{Effect, FilterMode};
+use crate::effect::{Effect, CellFilter};
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
 use crate::rect_ext::CenteredShrink;
@@ -76,7 +76,7 @@ impl Shader for ResizeArea {
         self.target_area = area;
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         if let Some(fx) = self.fx.as_mut() {
             fx.cell_selection(strategy);
         }

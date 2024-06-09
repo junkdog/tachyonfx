@@ -3,8 +3,7 @@ use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 
-use crate::effect::{Effect, FilterMode};
-use crate::render_effect::EffectRenderer;
+use crate::effect::{Effect, CellFilter};
 use crate::shader::Shader;
 
 #[derive(Clone)]
@@ -96,7 +95,7 @@ impl Shader for Repeat {
         self.fx.set_area(area)
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.fx.cell_selection(strategy);
     }
 }

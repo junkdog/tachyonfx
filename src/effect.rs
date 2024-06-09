@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Margin, Position, Rect};
+use ratatui::style::Color;
 use crate::shader::Shader;
 
 pub struct Effect {
@@ -21,44 +22,57 @@ impl Effect {
         cloned
     }
 
-    pub fn with_cell_selection(&self, mode: FilterMode) -> Self {
+    pub fn with_cell_selection(&self, mode: CellFilter) -> Self {
         let mut cloned = self.clone();
         cloned.cell_selection(mode);
         cloned
     }
 }
 
+/// A filter mode enables effects to operate on specific cells.
 #[derive(Clone, Debug, Default)]
-pub enum FilterMode {
+pub enum CellFilter {
+    /// Selects every cell
     #[default]
     All,
+    /// Selects cells with matching foreground color
+    FgColor(Color),
+    /// Selects cells with matching background color
+    BgColor(Color),
+    /// Selects cells within the inner margin of the area
     Inner(Margin),
+    /// Selects cells outside the inner margin of the area
     Outer(Margin),
+    /// Selects cells with text
     Text,
-    AllOf(Vec<FilterMode>),
-    Negate(Box<FilterMode>),
+    /// Selects cells that match all the given filters
+    AllOf(Vec<CellFilter>),
+    /// Negates the given filter
+    Negate(Box<CellFilter>),
 }
 
 pub struct CellSelector {
     inner_area: Rect,
-    strategy: FilterMode,
+    strategy: CellFilter,
 }
 
 impl CellSelector {
-    fn new(area: Rect, strategy: FilterMode) -> Self {
+    fn new(area: Rect, strategy: CellFilter) -> Self {
         let inner_area = Self::resolve_area(area, &strategy);
 
         Self { inner_area, strategy }
     }
 
-    fn resolve_area(area: Rect, mode: &FilterMode) -> Rect {
+    fn resolve_area(area: Rect, mode: &CellFilter) -> Rect {
         match mode {
-            FilterMode::All           => area,
-            FilterMode::Inner(margin) => area.inner(margin),
-            FilterMode::Outer(margin) => area.inner(margin),
-            FilterMode::Text          => area,
-            FilterMode::AllOf(_)      => area,
-            FilterMode::Negate(m)     => Self::resolve_area(area, m.as_ref()),
+            CellFilter::All           => area,
+            CellFilter::Inner(margin) => area.inner(margin),
+            CellFilter::Outer(margin) => area.inner(margin),
+            CellFilter::Text          => area,
+            CellFilter::AllOf(_)      => area,
+            CellFilter::Negate(m)     => Self::resolve_area(area, m.as_ref()),
+            CellFilter::FgColor(_)    => area,
+            CellFilter::BgColor(_)    => area,
         }
     }
 
@@ -69,25 +83,23 @@ impl CellSelector {
             && self.is_valid_cell(cell, mode)
     }
 
-    pub fn is_valid_position(&self, pos: Position) -> bool {
-        self.valid_position(pos, &self.strategy)
-    }
-
-    fn valid_position(&self, pos: Position, mode: &FilterMode) -> bool {
+    fn valid_position(&self, pos: Position, mode: &CellFilter) -> bool {
         match mode {
-            FilterMode::All       => true,
-            FilterMode::Inner(_)  => self.inner_area.contains(pos),
-            FilterMode::Outer(_)  => !self.inner_area.contains(pos),
-            FilterMode::Text      => true,
-            FilterMode::AllOf(s)  => s.iter()
+            CellFilter::All        => true,
+            CellFilter::Inner(_)   => self.inner_area.contains(pos),
+            CellFilter::Outer(_)   => !self.inner_area.contains(pos),
+            CellFilter::Text       => true,
+            CellFilter::AllOf(s)   => s.iter()
                 .all(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
-            FilterMode::Negate(m) => self.valid_position(pos, m.as_ref()),
+            CellFilter::Negate(m)  => self.valid_position(pos, m.as_ref()),
+            CellFilter::FgColor(_) => true,
+            CellFilter::BgColor(_) => true,
         }
     }
 
-    fn is_valid_cell(&self, cell: &Cell, mode: &FilterMode) -> bool {
+    fn is_valid_cell(&self, cell: &Cell, mode: &CellFilter) -> bool {
         match mode {
-            FilterMode::Text => {
+            CellFilter::Text => {
                 if cell.symbol().len() == 1 {
                     let ch = cell.symbol().chars().next().unwrap();
                     ch.is_alphabetic() || ch.is_numeric() || ch == ' ' || "?!.,:;".contains(ch)
@@ -96,19 +108,22 @@ impl CellSelector {
                 }
             },
 
-            FilterMode::AllOf(s) => {
+            CellFilter::AllOf(s) => {
                 s.iter()
                     .all(|s| s.selector(self.inner_area).is_valid_cell(cell, s))
             },
 
-            FilterMode::Negate(m) => !self.is_valid_cell(cell, m.as_ref()),
+            CellFilter::FgColor(color) => cell.fg == *color,
+            CellFilter::BgColor(color) => cell.bg == *color,
+
+            CellFilter::Negate(m) => !self.is_valid_cell(cell, m.as_ref()),
 
             _ => true,
         }
     }
 }
 
-impl FilterMode {
+impl CellFilter {
     pub fn selector(&self, area: Rect) -> CellSelector {
         CellSelector::new(area, self.clone())
     }
@@ -142,7 +157,7 @@ impl Shader for Effect {
         self.shader.set_area(area)
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.shader.cell_selection(strategy)
     }
 

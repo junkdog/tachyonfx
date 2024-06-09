@@ -1,37 +1,31 @@
 use std::{io, panic, vec};
 use std::error::Error;
 use std::io::Stdout;
-use std::rc::Rc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use rand::{Rng, RngCore};
-use rand::prelude::SeedableRng;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Margin, Rect};
 use ratatui::layout::Constraint::Ratio;
 use ratatui::prelude::Marker;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Axis, Block, Chart, Clear, Dataset, GraphType, LegendPosition, StatefulWidget, Widget};
 
 use Gruvbox::OrangeBright;
 use Interpolation::*;
-use tachyonfx::{CenteredShrink, Effect, EffectRenderer, EffectTimer, fx, Interpolation, IntoEffect, Shader};
+use tachyonfx::{CenteredShrink, Effect, EffectRenderer, EffectTimer, CellFilter, fx, Interpolation, Shader};
 use tachyonfx::fx::{parallel, repeating, sequence};
 
 use crate::gruvbox::Gruvbox;
-use crate::gruvbox::Gruvbox::{Dark0, Dark0Hard, Dark1, Light2};
+use crate::gruvbox::Gruvbox::{Dark0, Dark1, Light2};
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
-
-#[path = "common/window.rs"]
-mod window;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
@@ -47,10 +41,10 @@ impl App {
     fn new() -> Self {
         let tween_idx = 0;
         let shortcut_fx = repeating(sequence(vec![
-            fx::sweep_in(20, Dark0Hard, EffectTimer::from_ms(1000, QuadIn)),
+            fx::sweep_in(20, Dark0, EffectTimer::from_ms(1000, QuadIn)),
             fx::sleep(5_000),
             parallel(vec![
-                fx::fade_to_fg(Dark0Hard, EffectTimer::from_ms(500, BounceOut)),
+                fx::fade_to_fg(Dark0, EffectTimer::from_ms(500, BounceOut)),
                 fx::dissolve(30, EffectTimer::from_ms(500, BounceOut)),
             ]),
         ]));
@@ -147,7 +141,7 @@ fn ui(
 
     Clear.render(f.size(), f.buffer_mut());
     Block::default()
-        .style(Style::default().fg(Light2.into()).bg(Dark0Hard.into()))
+        .style(Style::default().fg(Light2.into()).bg(Dark0.into()))
         .render(f.size(), f.buffer_mut());
 
     let layout = Layout::vertical(
@@ -190,15 +184,9 @@ fn render_shortcuts(app: &mut App, f: &mut Frame, area: Rect) {
         Span::from("Quit ").style(shortcut_label_style),
     ]);
 
-    let layout = Layout::horizontal(vec![
-        Constraint::Percentage(40),
-        Constraint::Length(line.width() as u16),
-        Constraint::Percentage(40),
-    ]).split(area);
-
-    line.render(layout[1], f.buffer_mut());
-
-    f.render_effect(&mut app.shortcut_fx, layout[1], app.last_tick)
+    let content_area = area.inner_centered(line.width() as u16, 1);
+    line.render(content_area, f.buffer_mut());
+    f.render_effect(&mut app.shortcut_fx, content_area, app.last_tick)
 }
 
 
@@ -212,13 +200,12 @@ fn setup_terminal() -> Result<Terminal> {
 
     let panic_hook = panic::take_hook();
     panic::set_hook(Box::new(move |panic| {
-        // restore_terminal(terminal).expect("failed to reset the terminal");
-        disable_raw_mode();
+        disable_raw_mode().expect("failed to disable raw mode");
         execute!(
             io::stderr(),
             LeaveAlternateScreen,
             DisableMouseCapture
-        );
+        ).expect("failed to reset the terminal");
 
         panic_hook(panic);
     }));
@@ -270,7 +257,6 @@ impl InterpolationWidget {
 
 #[derive(Clone)]
 struct InterpolationWidgetState {
-    title: Text<'static>,
     chart_fx: Effect,
     coalesce_fx: Effect,
     fade_fx: Effect,
@@ -279,16 +265,25 @@ struct InterpolationWidgetState {
 }
 
 fn chart_fx() -> Effect {
-    fx::coalesce(20, EffectTimer::from_ms(220, QuadIn))
+    let duration = Duration::from_millis(500);
+    let timer = EffectTimer::new(duration, QuadOut);
+    parallel(vec![
+        // chart axis
+        fx::sweep_in(40, Dark0, timer)
+            .with_cell_selection(CellFilter::FgColor(Light2.into())),
+        // chart data
+        sequence(vec![
+            fx::temporary(duration, fx::never_complete(fx::dissolve(1, 0)))
+                .with_cell_selection(CellFilter::FgColor(OrangeBright.into())),
+            fx::sweep_in(30, Dark0, timer)
+                .with_cell_selection(CellFilter::FgColor(OrangeBright.into())),
+        ]),
+    ])
 }
 
 impl InterpolationWidgetState {
     fn new(tween_idx: usize) -> Self {
-        let title = Text::from("Interpolation")
-            .style(Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD));
-
         let mut s = Self {
-            title,
             tween_idx,
             dataset: Vec::new(),
             chart_fx: chart_fx(),
@@ -379,15 +374,6 @@ impl StatefulWidget for InterpolationWidget {
             .bounds([-0.2, 1.2])
             .labels(vec!["-0.2".into(), "0.5".into(), "1.2".into()]);
 
-        let chart_area = |area: Rect| {
-            let mut a = area;
-            a.x += 5;
-            a.width = a.width.saturating_sub(5);
-            a.y += 1;
-            a.height = a.height.saturating_sub(3);
-            a
-        };
-
         let chart = Chart::new(state.dataset())
             .x_axis(axis_x)
             .y_axis(axis_y)
@@ -398,11 +384,8 @@ impl StatefulWidget for InterpolationWidget {
         chart.render(layout[0], buffer);
 
         if state.chart_fx.running() {
-            state.chart_fx.process(self.last_frame, buffer, chart_area(layout[0]));
+            state.chart_fx.process(self.last_frame, buffer, layout[0]);
         }
-
-        let ms = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() % 1000;
-        let a = idx_to_tween(state.tween_idx).alpha(ms as f32 / 1000.0).clamp(0.0, 1.0);
 
         self.render_transitions(layout[2], buffer, state);
     }

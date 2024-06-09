@@ -3,10 +3,9 @@ use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 
-use crate::effect::{Effect, FilterMode};
+use crate::effect::{Effect, CellFilter};
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
-use crate::render_effect::EffectRenderer;
 use crate::shader::Shader;
 
 #[derive(Clone, Default)]
@@ -83,7 +82,7 @@ impl Shader for Translate {
         }
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         if let Some(fx) = self.fx.as_mut() {
             fx.cell_selection(strategy)
         }

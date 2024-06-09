@@ -16,8 +16,8 @@ use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{BorderType, Clear, StatefulWidget, Widget};
 
 use Interpolation::*;
-use tachyonfx::{CenteredShrink, Effect, EffectRenderer, FilterMode, fx, Interpolation, IntoEffect, Shader};
-use tachyonfx::FilterMode::{AllOf, Inner, Negate, Outer};
+use tachyonfx::{CenteredShrink, Effect, EffectRenderer, CellFilter, fx, Interpolation, IntoEffect, Shader};
+use tachyonfx::CellFilter::{AllOf, Inner, Negate, Outer};
 use tachyonfx::fx::{never_complete, parallel, sequence, temporary};
 
 use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Dark1, Light2, YellowBright};
@@ -180,8 +180,8 @@ impl HelloWorldPopupState {
 
 fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
     let margin = Margin::new(1, 1);
-    let border_text        = AllOf(vec![Outer(margin), FilterMode::Text]);
-    let border_decorations = AllOf(vec![Outer(margin), Negate(FilterMode::Text.into())]);
+    let border_text        = AllOf(vec![Outer(margin), CellFilter::Text]);
+    let border_decorations = AllOf(vec![Outer(margin), Negate(CellFilter::Text.into())]);
 
     let bg = bg.into();
 

@@ -6,7 +6,7 @@ use ratatui::layout::Rect;
 use ratatui::prelude::Color;
 use Interpolation::CircOut;
 use crate::ColorMapper;
-use crate::effect::FilterMode;
+use crate::effect::CellFilter;
 use crate::effect_timer::EffectTimer;
 
 use crate::interpolation::{Interpolatable, Interpolation};
@@ -18,7 +18,7 @@ pub struct SweepIn {
     faded_color: Color,
     lifetime: EffectTimer,
     area: Option<Rect>,
-    cell_filter: FilterMode,
+    cell_filter: CellFilter,
 }
 
 impl SweepIn {
@@ -32,7 +32,7 @@ impl SweepIn {
             faded_color,
             lifetime,
             area: None,
-            cell_filter: FilterMode::All,
+            cell_filter: CellFilter::All,
         }
     }
 }
@@ -112,7 +112,7 @@ impl Shader for SweepIn {
         self.area = Some(area)
     }
 
-    fn cell_selection(&mut self, strategy: FilterMode) {
+    fn cell_selection(&mut self, strategy: CellFilter) {
         self.cell_filter = strategy;
     }
 
