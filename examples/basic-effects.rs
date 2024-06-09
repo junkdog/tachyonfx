@@ -216,6 +216,13 @@ impl EffectsRepository {
         let medium = Duration::from_millis(750);
         let short = Duration::from_millis(320);
 
+        let glitch = Glitch::builder()
+            .rng(SmallRng::from_entropy())
+            .action_ms(200..400)
+            .action_start_delay_ms(0..1)
+            .cell_glitch_ratio(1.0)
+            .into();
+
         let effects = vec![
             ("sweep in",
                 fx::sweep_in(10, bg, (slow, QuadOut))),
@@ -223,6 +230,10 @@ impl EffectsRepository {
                 fx::sweep_in(20, screen_bg, (slow * 2, QuadOut))),
             ("coalesce",
                 fx::coalesce(100, (medium, CubicOut))),
+            ("glitchy coalesce", parallel(vec![
+                fx::coalesce(100, (medium, CubicOut)),
+                temporary(medium, never_complete(glitch))
+            ])),
             ("fade fg",
                 fx::fade_from_fg(bg, (medium, CircOut))),
             ("repeating fade in, dissolving fade out", fx::repeating(

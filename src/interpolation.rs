@@ -1,7 +1,7 @@
 use ratatui::style::{Color, Style};
-use simple_easing::{back_in, back_in_out, back_out, bounce_in, bounce_out, circ_in, circ_in_out, circ_out, cubic_in, elastic_in, elastic_in_out, elastic_out, expo_in, expo_in_out, expo_out, quad_in, quad_in_out, quad_out, quart_in, quart_in_out, quart_out, quint_in, quint_in_out, quint_out, reverse, sine_in, sine_in_out, sine_out};
+use simple_easing::{back_in, back_in_out, back_out, bounce_in, bounce_in_out, bounce_out, circ_in, circ_in_out, circ_out, cubic_in, elastic_in, elastic_in_out, elastic_out, expo_in, expo_in_out, expo_out, quad_in, quad_in_out, quad_out, quart_in, quart_in_out, quart_out, quint_in, quint_in_out, quint_out, reverse, sine_in, sine_in_out, sine_out};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum Interpolation {
     BackIn,
     BackOut,
@@ -59,7 +59,7 @@ impl Interpolation {
 
             Interpolation::BounceIn     => bounce_in(a),
             Interpolation::BounceOut    => bounce_out(a),
-            Interpolation::BounceInOut  => back_in_out(a),
+            Interpolation::BounceInOut  => bounce_in_out(a),
 
             Interpolation::CircIn       => circ_in(a),
             Interpolation::CircOut      => circ_out(a),

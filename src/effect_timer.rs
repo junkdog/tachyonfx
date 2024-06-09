@@ -1,7 +1,7 @@
 use std::time::Duration;
 use crate::interpolation::Interpolation;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Copy, Default)]
 pub struct EffectTimer {
     remaining: Duration,
     total: Duration,

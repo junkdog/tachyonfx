@@ -1,14 +1,11 @@
 use std::time::Duration;
-use derive_builder::Builder;
+
 use ratatui::buffer::Buffer;
-use ratatui::layout::Position;
 use ratatui::prelude::Rect;
-use ratatui::widgets::Clear;
-use ratatui::widgets::Widget;
+
 use crate::effect::{Effect, FilterMode};
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
-use crate::rect_ext::CenteredShrink;
 use crate::render_effect::EffectRenderer;
 use crate::shader::Shader;
 
