@@ -1,41 +1,14 @@
 use std::time::Duration;
+
 use derive_builder::Builder;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::prelude::Span;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, BorderType, Clear};
 use ratatui::widgets::Widget;
-use tachyonfx::{Effect, CellFilter, IntoEffect, Shader};
 
-
-fn open_window(
-    title: &'static str,
-    border_style: Style,
-    title_style: Style,
-    content_style: Style,
-    open_fx: Effect,
-    content_fx: Effect,
-) -> OpenWindow {
-    let title = Line::from(vec![
-        Span::from("┫").style(border_style),
-        Span::from(" ").style(title_style),
-        Span::from(title).style(title_style),
-        Span::from(" ").style(title_style),
-        Span::from("┣").style(border_style),
-    ]);
-
-    OpenWindow::builder()
-        .title(title)
-        .border_style(border_style)
-        .border_type(BorderType::Rounded)
-        .background(content_style)
-        .pre_render_fx(open_fx)
-        .content_fx(content_fx)
-        .build()
-        .unwrap()
-}
+use tachyonfx::{CellFilter, Effect, IntoEffect, Shader};
 
 #[derive(Builder, Clone)]
 #[builder(pattern = "owned")]
@@ -73,7 +46,7 @@ impl OpenWindow {
     fn window_block(&self) -> Block {
         Block::new()
             .borders(Borders::ALL)
-            .title_style(self.border_style)
+            .title_style(self.title_style)
             .title(self.title.clone())
             .border_style(self.border_style)
             .border_type(self.border_type)

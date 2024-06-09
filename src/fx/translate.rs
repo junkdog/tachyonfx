@@ -43,7 +43,7 @@ impl Shader for Translate {
         let overflow = self.lifetime.process(duration);
         let alpha = self.lifetime.alpha();
 
-        let mut lerped_area = self.original.clone().unwrap();
+        let mut lerped_area = self.original.unwrap();
         let x = lerped_area.x as i16 + (0i16.lerp(&self.translate_by.0, alpha));
         let y = lerped_area.y as i16 + (0i16.lerp(&self.translate_by.1, alpha));
         lerped_area.x = x.max(0) as u16;
@@ -89,6 +89,6 @@ impl Shader for Translate {
     }
 
     fn reverse(&mut self) {
-        self.lifetime = self.lifetime.clone().reversed()
+        self.lifetime = self.lifetime.reversed()
     }
 }

@@ -83,6 +83,6 @@ impl Shader for ResizeArea {
     }
 
     fn reverse(&mut self) {
-        self.lifetime = self.lifetime.clone().reversed();
+        self.lifetime = self.lifetime.reversed();
     }
 }

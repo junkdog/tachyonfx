@@ -85,6 +85,6 @@ impl Shader for FadeColors {
     }
 
     fn reverse(&mut self) {
-        self.lifetime = self.lifetime.clone().reversed();
+        self.lifetime = self.lifetime.reversed();
     }
 }

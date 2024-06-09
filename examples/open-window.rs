@@ -15,7 +15,7 @@ use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{BorderType, Clear, StatefulWidget, Widget};
 
 use Interpolation::*;
-use tachyonfx::{CenteredShrink, Effect, EffectRenderer, CellFilter, fx, Interpolation, IntoEffect, Shader};
+use tachyonfx::{CenteredShrink, Effect, EffectRenderer, CellFilter, fx, Interpolation, Shader};
 use tachyonfx::CellFilter::{AllOf, Inner, Negate, Outer};
 use tachyonfx::fx::{never_complete, parallel, sequence, with_duration};
 
@@ -53,12 +53,12 @@ fn main() -> Result<()> {
     let res = run_app(&mut terminal, app);
 
     // restore terminal
-    disable_raw_mode()?;
-    execute!(
+    let _ = disable_raw_mode().expect("failed to disable raw mode");
+    let _ = execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture
-    )?;
+    ).expect("failed to leave alternate screen");
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -198,7 +198,7 @@ fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
                 with_duration(short * time_scale, never_complete(fx::dissolve(1, 0))),
                 fx::coalesce(111, (duration, BounceOut)),
             ]),
-            fx::fade_from(Dark0, Dark0, (duration * time_scale))
+            fx::fade_from(Dark0, Dark0, duration * time_scale)
                 .with_cell_selection(border_decorations),
         ]),
 
@@ -252,9 +252,8 @@ fn setup_terminal() -> Result<Terminal> {
 
     let panic_hook = panic::take_hook();
     panic::set_hook(Box::new(move |panic| {
-        // restore_terminal(terminal).expect("failed to reset the terminal");
-        disable_raw_mode();
-        execute!(
+        let _ = disable_raw_mode();
+        let _ = execute!(
             io::stderr(),
             LeaveAlternateScreen,
             DisableMouseCapture
@@ -264,11 +263,4 @@ fn setup_terminal() -> Result<Terminal> {
     }));
 
     Ok(terminal)
-}
-
-fn restore_terminal(mut terminal: Terminal) -> Result<()> {
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
-    terminal.show_cursor()?;
-    Ok(())
 }

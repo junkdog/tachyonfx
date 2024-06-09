@@ -213,13 +213,6 @@ fn setup_terminal() -> Result<Terminal> {
     Ok(terminal)
 }
 
-fn restore_terminal(mut terminal: Terminal) -> Result<()> {
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
-    terminal.show_cursor()?;
-    Ok(())
-}
-
 struct InterpolationWidget {
     last_frame: Duration,
 }

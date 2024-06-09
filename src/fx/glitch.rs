@@ -154,7 +154,7 @@ impl Shader for Glitch {
                             .clamp(32, 255) as char
                     } else {
                         c.symbol().as_bytes()[0]
-                            .saturating_sub(v.abs() as u8)
+                            .saturating_sub(v.unsigned_abs())
                             .clamp(32, 255) as char
                     });
                 }
