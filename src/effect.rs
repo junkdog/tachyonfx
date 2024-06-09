@@ -85,15 +85,15 @@ impl CellSelector {
 
     fn valid_position(&self, pos: Position, mode: &CellFilter) -> bool {
         match mode {
-            CellFilter::All        => true,
+            CellFilter::All        => self.inner_area.contains(pos),
             CellFilter::Inner(_)   => self.inner_area.contains(pos),
             CellFilter::Outer(_)   => !self.inner_area.contains(pos),
-            CellFilter::Text       => true,
+            CellFilter::Text       => self.inner_area.contains(pos),
             CellFilter::AllOf(s)   => s.iter()
                 .all(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
             CellFilter::Negate(m)  => self.valid_position(pos, m.as_ref()),
-            CellFilter::FgColor(_) => true,
-            CellFilter::BgColor(_) => true,
+            CellFilter::FgColor(_) => self.inner_area.contains(pos),
+            CellFilter::BgColor(_) => self.inner_area.contains(pos),
         }
     }
 

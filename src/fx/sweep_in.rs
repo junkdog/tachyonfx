@@ -47,17 +47,15 @@ impl Shader for SweepIn {
         let alpha = self.lifetime.alpha();
         let overflow = self.lifetime.process(duration);
 
-        // gradient starts outside the area
-        let gradient_len = self.gradient_length;
-        let gradient_start: f32 = ((area.x + area.width + gradient_len * 2) as f32 * alpha)
-            .round()
-            .sub(gradient_len as f32);
+        let gradient_len = self.gradient_length as f32;
+        let x_start = (area.x as f32 - gradient_len) + ((area.width as f32 + gradient_len) * alpha);
+        let x_end = x_start + gradient_len;
 
-        let gradient_range = gradient_start..(gradient_start + gradient_len as f32);
+        let gradient_range = x_start..x_end;
         let window_alpha = |x: u16| {
             // fade in, left to right using a linear gradient
             match x as f32 {
-                x if gradient_range.contains(&x) => 1.0 - (x - gradient_start) / gradient_len as f32,
+                x if gradient_range.contains(&x) => 1.0 - (x - x_start) / gradient_len,
                 x if x < gradient_range.start    => 1.0,
                 _                                => 0.0,
             }
@@ -78,9 +76,7 @@ impl Shader for SweepIn {
                         cell.set_fg(self.faded_color);
                         cell.set_bg(self.faded_color);
                     },
-                    1.0 => {
-                        // nothing to do
-                    }
+                    1.0 => {} // nothing to do
                     _ => {
                         let fg = fg_mapper
                             .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));

@@ -188,8 +188,8 @@ fn ui(
         shortcut("↵   ", "next transition"),
         shortcut("⌫   ", "previous transition"),
         shortcut("␣   ", "restart transition"),
-        shortcut("R   ", "random transition"),
-        shortcut("S   ", "scramble text toggle"),
+        shortcut("r   ", "random transition"),
+        shortcut("s   ", "scramble text toggle"),
         shortcut("ESC ", "quit"),
     ]);
 
