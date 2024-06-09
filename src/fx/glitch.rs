@@ -126,8 +126,11 @@ impl Shader for Glitch {
         self.glitch_cells.iter().filter(|c| c.presleep_remaining_ms == 0).for_each(|cell| {
             let x = cell.cell_idx % area.width as usize;
             let y = cell.cell_idx / area.width as usize;
+            let pos = Position::new(area.x + x as u16, area.y + y as u16);
             let c  = buf.get_mut(area.x + x as u16, area.y + y as u16);
-            if !selector.is_valid(Position::new(x as u16, y as u16), c) {
+
+            if !selector.is_valid(pos, c) {
+                println!("yolo");
                 return;
             }
 
