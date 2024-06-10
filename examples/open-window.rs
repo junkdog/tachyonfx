@@ -8,16 +8,17 @@ use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::Frame;
+use ratatui::{Frame, text, widgets};
 use ratatui::layout::{Margin, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span, Text};
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{BorderType, Clear, StatefulWidget, Widget};
+use CellFilter::Text;
 
 use Interpolation::*;
 use tachyonfx::{CenteredShrink, Effect, EffectRenderer, CellFilter, fx, Interpolation, Shader};
 use tachyonfx::CellFilter::{AllOf, Inner, Negate, Outer};
-use tachyonfx::fx::{never_complete, parallel, sequence, with_duration};
+use tachyonfx::fx::{never_complete, parallel, ping_pong, repeat, repeating, sequence, sleep, with_duration};
 
 use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Dark1, Light2, YellowBright};
 use crate::window::OpenWindow;
@@ -121,7 +122,7 @@ impl HelloWorldPopup {
 
 #[derive(Clone)]
 struct HelloWorldPopupState {
-    text: Text<'static>,
+    text: text::Text<'static>,
     window_fx: OpenWindow,
 }
 
@@ -135,7 +136,7 @@ impl HelloWorldPopupState {
                 .fg(Light2.into())
         ];
 
-        let text = Text::from(vec![
+        let text = text::Text::from(vec![
             Line::from("Hello, World!").style(styles[0]),
             Line::from("").style(styles[1]),
             Line::from("Lorem ipsum dolor sit amet, consectetur adipiscing elit.").style(styles[1]),
@@ -179,8 +180,8 @@ impl HelloWorldPopupState {
 
 fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
     let margin = Margin::new(1, 1);
-    let border_text        = AllOf(vec![Outer(margin), CellFilter::Text]);
-    let border_decorations = AllOf(vec![Outer(margin), Negate(CellFilter::Text.into())]);
+    let border_text        = AllOf(vec![Outer(margin), Text]);
+    let border_decorations = AllOf(vec![Outer(margin), Negate(Text.into())]);
 
     let bg = bg.into();
 
@@ -191,7 +192,7 @@ fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
     let short = Duration::from_millis(220);
     let duration = Duration::from_millis(320);
     let time_scale = 2;
-    parallel(vec![
+    repeating(parallel(vec![
         // window borders
         parallel(vec![
             sequence(vec![
@@ -218,8 +219,13 @@ fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
                 fx::coalesce(111, Duration::from_millis(220) * time_scale),
                 fx::fade_from(bg, bg, (250 * time_scale, QuadOut))
             ]),
+            sleep(3000),
+            parallel(vec![
+                fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
+                fx::dissolve(111, (Duration::from_millis(220) * time_scale, ElasticOut)),
+            ]),
         ]).with_cell_selection(Inner(margin)),
-    ])
+    ]))
 }
 
 impl StatefulWidget for HelloWorldPopup {

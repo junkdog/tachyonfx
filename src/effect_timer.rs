@@ -37,6 +37,10 @@ impl EffectTimer {
         self.total != self.remaining
     }
 
+    pub fn reset(&mut self) {
+        self.remaining = self.total;
+    }
+
     pub fn alpha(&self) -> f32 {
         let total = self.total.as_secs_f32();
         if total == 0.0 {

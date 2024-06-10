@@ -17,18 +17,20 @@ use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
 pub use glitch::Glitch;
 
 mod ansi256;
+mod consume_tick;
 mod containers;
 mod dissolve;
 mod fade;
 mod glitch;
+mod never_complete;
+mod ping_pong;
+mod repeat;
 mod resize;
 mod sleep;
-mod consume_tick;
-mod temporary;
-mod never_complete;
 mod sweep_in;
-mod repeat;
+mod temporary;
 mod translate;
+use ping_pong::PingPong;
 
 /// Returns an effect that downsamples to 256 color mode.
 pub fn term256_colors() -> Effect {
@@ -38,6 +40,11 @@ pub fn term256_colors() -> Effect {
 /// Repeat the effect indefinitely or for a specified number of times or duration.
 pub fn repeat(effect: Effect, mode: repeat::RepeatMode) -> Effect {
     Repeat::new(effect, mode).into_effect()
+}
+
+/// plays the effect forwards and then backwards.
+pub fn ping_pong(effect: Effect) -> Effect {
+    PingPong::new(effect).into_effect()
 }
 
 /// Repeat the effect indefinitely.
