@@ -9,7 +9,6 @@ pub struct PingPong {
     fx_original: Effect,
     is_reversing: bool,
     strategy: CellFilter,
-    area: Option<Rect>
 }
 
 impl PingPong {
@@ -19,7 +18,6 @@ impl PingPong {
             fx,
             is_reversing: false,
             strategy: CellFilter::default(),
-            area: None
         }
     }
 }
@@ -54,11 +52,11 @@ impl Shader for PingPong {
     }
 
     fn area(&self) -> Option<Rect> {
-        self.area
+        self.fx.area()
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.area = Some(area);
+        self.fx.set_area(area);
     }
 
     fn cell_selection(&mut self, strategy: CellFilter) {

@@ -27,6 +27,12 @@ impl Effect {
         cloned.cell_selection(mode);
         cloned
     }
+
+    pub fn reversed(&self) -> Self {
+        let mut cloned = self.clone();
+        cloned.reverse();
+        cloned
+    }
 }
 
 /// A filter mode enables effects to operate on specific cells.
@@ -48,7 +54,7 @@ pub enum CellFilter {
     /// Selects cells that match all the given filters
     AllOf(Vec<CellFilter>),
     /// Negates the given filter
-    Negate(Box<CellFilter>),
+    Not(Box<CellFilter>),
 }
 
 pub struct CellSelector {
@@ -70,7 +76,7 @@ impl CellSelector {
             CellFilter::Outer(margin) => area.inner(margin),
             CellFilter::Text          => area,
             CellFilter::AllOf(_)      => area,
-            CellFilter::Negate(m)     => Self::resolve_area(area, m.as_ref()),
+            CellFilter::Not(m)        => Self::resolve_area(area, m.as_ref()),
             CellFilter::FgColor(_)    => area,
             CellFilter::BgColor(_)    => area,
         }
@@ -91,7 +97,7 @@ impl CellSelector {
             CellFilter::Text       => self.inner_area.contains(pos),
             CellFilter::AllOf(s)   => s.iter()
                 .all(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
-            CellFilter::Negate(m)  => self.valid_position(pos, m.as_ref()),
+            CellFilter::Not(m)  => self.valid_position(pos, m.as_ref()),
             CellFilter::FgColor(_) => self.inner_area.contains(pos),
             CellFilter::BgColor(_) => self.inner_area.contains(pos),
         }
@@ -116,7 +122,7 @@ impl CellSelector {
             CellFilter::FgColor(color) => cell.fg == *color,
             CellFilter::BgColor(color) => cell.bg == *color,
 
-            CellFilter::Negate(m) => !self.is_valid_cell(cell, m.as_ref()),
+            CellFilter::Not(m) => !self.is_valid_cell(cell, m.as_ref()),
 
             _ => true,
         }

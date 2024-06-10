@@ -6,19 +6,19 @@ use std::time::Duration;
 use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use ratatui::{Frame, text};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::{Frame, text, widgets};
 use ratatui::layout::{Margin, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{BorderType, Clear, StatefulWidget, Widget};
-use CellFilter::Text;
 
+use CellFilter::Text;
 use Interpolation::*;
-use tachyonfx::{CenteredShrink, Effect, EffectRenderer, CellFilter, fx, Interpolation, Shader};
-use tachyonfx::CellFilter::{AllOf, Inner, Negate, Outer};
-use tachyonfx::fx::{never_complete, parallel, ping_pong, repeat, repeating, sequence, sleep, with_duration};
+use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, fx, Interpolation, Shader};
+use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer};
+use tachyonfx::fx::{never_complete, parallel, repeating, sequence, sleep, with_duration};
 
 use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Dark1, Light2, YellowBright};
 use crate::window::OpenWindow;
@@ -159,8 +159,9 @@ impl HelloWorldPopupState {
             Span::from("┣").style(border_style),
         ]);
 
-        let mut move_in_window = fx::translate(None, (0, -25), (1200, QuartInOut));
-        move_in_window.reverse();
+        let move_in_window = fx::ping_pong(
+            fx::translate(None, (0, -25), (1200, QuartInOut)).reversed()
+        );
 
         let window_fx = OpenWindow::builder()
             .title(title)
@@ -181,7 +182,7 @@ impl HelloWorldPopupState {
 fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
     let margin = Margin::new(1, 1);
     let border_text        = AllOf(vec![Outer(margin), Text]);
-    let border_decorations = AllOf(vec![Outer(margin), Negate(Text.into())]);
+    let border_decorations = AllOf(vec![Outer(margin), Not(Text.into())]);
 
     let bg = bg.into();
 
