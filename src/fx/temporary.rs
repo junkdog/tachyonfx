@@ -26,10 +26,8 @@ impl Shader for TemporaryEffect {
         area: Rect
     ) -> Option<Duration> {
         let remaining = self.duration.process(duration);
-
         let effect_area = self.effect.area().unwrap_or(area);
         self.effect.process(duration, buf, effect_area);
-
         remaining
     }
 

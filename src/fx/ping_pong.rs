@@ -1,7 +1,9 @@
-use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::{CellFilter, Effect, EffectTimer, Interpolation, Shader};
+
+use std::time::Duration;
+
+use crate::{CellFilter, Effect, Shader};
 
 #[derive(Clone)]
 pub struct PingPong {

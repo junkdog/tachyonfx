@@ -254,7 +254,7 @@ fn setup_terminal() -> Result<Terminal> {
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = ratatui::Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
     let panic_hook = panic::take_hook();

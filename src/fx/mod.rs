@@ -15,6 +15,7 @@ use crate::fx::sweep_in::SweepIn;
 use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
 
 pub use glitch::Glitch;
+pub use sweep_in::Direction;
 
 mod ansi256;
 mod consume_tick;
@@ -52,13 +53,30 @@ pub fn repeating(effect: Effect) -> Effect {
     repeat(effect, repeat::RepeatMode::Forever)
 }
 
-/// Sweeps in a gradient from the specified color.
-pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
+/// Sweeps out to the specified color.
+pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
+    direction: Direction,
     gradient_length: u16,
     faded_color: C,
     lifetime: T,
 ) -> Effect {
-    SweepIn::new(gradient_length, faded_color.into(), lifetime.into())
+    let flipped = match direction {
+        Direction::LeftToRight => Direction::RightToLeft,
+        Direction::RightToLeft => Direction::LeftToRight,
+        Direction::UpToDown => Direction::DownToUp,
+        Direction::DownToUp => Direction::UpToDown,
+    };
+    sweep_in(flipped, gradient_length, faded_color, lifetime).reversed()
+}
+
+/// Sweeps in a from the specified color.
+pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
+    direction: Direction,
+    gradient_length: u16,
+    faded_color: C,
+    lifetime: T,
+) -> Effect {
+    SweepIn::new(direction, gradient_length, faded_color.into(), lifetime.into())
         .into_effect()
 }
 

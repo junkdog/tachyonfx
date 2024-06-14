@@ -17,7 +17,7 @@ use ratatui::widgets::{Block, Clear, Widget};
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
 use tachyonfx::{CenteredShrink, Effect, EffectRenderer, fx, Interpolation, Shader};
-use tachyonfx::fx::{Glitch, never_complete, parallel, sequence, timed_never_complete, with_duration};
+use tachyonfx::fx::{Direction, Glitch, never_complete, parallel, sequence, timed_never_complete, with_duration};
 
 use crate::gruvbox::Gruvbox;
 use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
@@ -225,9 +225,13 @@ impl EffectsRepository {
 
         let effects = vec![
             ("sweep in",
-                fx::sweep_in(10, bg, (slow, QuadOut))),
-            ("sweep in #2",
-                fx::sweep_in(20, screen_bg, (slow * 2, QuadOut))),
+                fx::sweep_in(Direction::LeftToRight, 30, screen_bg, (slow, QuadOut))),
+            ("sweep out/sweep in", sequence(vec![
+                fx::sweep_out(Direction::DownToUp, 5, bg, (2000, QuadOut)),
+                fx::sweep_in(Direction::UpToDown, 5, bg, (2000, QuadOut)),
+                fx::sweep_out(Direction::UpToDown, 5, bg, (2000, QuadOut)),
+                fx::sweep_in(Direction::DownToUp, 5, bg, (2000, QuadOut)),
+            ])),
             ("coalesce",
                 fx::coalesce(100, (medium, CubicOut))),
             ("glitchy coalesce", parallel(vec![

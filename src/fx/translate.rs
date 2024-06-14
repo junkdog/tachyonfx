@@ -49,7 +49,6 @@ impl Shader for Translate {
         lerped_area.x = x.max(0) as u16;
         lerped_area.y = y.max(0) as u16;
 
-        // lerped_area = self.original.unwrap();
         self.set_area(lerped_area);
         if let Some(fx) = self.fx.as_mut() {
             fx.process(duration, buf, lerped_area);

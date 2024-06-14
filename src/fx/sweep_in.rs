@@ -1,7 +1,8 @@
+use std::ops::Range;
 use std::time::Duration;
 
 use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::layout::{Position, Rect};
 use ratatui::prelude::Color;
 
 use Interpolation::CircOut;
@@ -19,22 +20,57 @@ pub struct SweepIn {
     lifetime: EffectTimer,
     area: Option<Rect>,
     cell_filter: CellFilter,
+    direction: Direction,
+}
+
+#[derive(Clone, Copy)]
+pub enum Direction {
+    LeftToRight,
+    RightToLeft,
+    UpToDown,
+    DownToUp,
 }
 
 impl SweepIn {
     pub fn new(
+        direction: Direction,
         gradient_length: u16,
         faded_color: Color,
         lifetime: EffectTimer,
     ) -> Self {
+        let timer = match direction {
+            Direction::RightToLeft => lifetime.reversed(),
+            Direction::LeftToRight => lifetime,
+            Direction::UpToDown => lifetime,
+            Direction::DownToUp => lifetime.reversed(),
+        };
+
         Self {
+            direction,
             gradient_length,
             faded_color,
-            lifetime,
+            lifetime: timer,
             area: None,
             cell_filter: CellFilter::All,
         }
     }
+
+    fn horizontal_gradient(&self, area: Rect, alpha: f32) -> Range<f32> {
+        let gradient_len = self.gradient_length as f32;
+        let x_start = (area.x as f32 - gradient_len) + ((area.width as f32 + gradient_len) * alpha);
+        let x_end = x_start + gradient_len;
+
+        x_start..x_end
+    }
+
+    fn vertical_gradient(&self, area: Rect, progress: f32) -> Range<f32> {
+        let gradient_len = self.gradient_length as f32;
+        let y_start = (area.y as f32 - gradient_len) + ((area.height as f32 + gradient_len) * progress);
+        let y_end = y_start + gradient_len;
+
+        y_start..y_end
+    }
+
 }
 
 impl Shader for SweepIn {
@@ -47,20 +83,15 @@ impl Shader for SweepIn {
         let alpha = self.lifetime.alpha();
         let overflow = self.lifetime.process(duration);
 
-        let gradient_len = self.gradient_length as f32;
-        let x_start = (area.x as f32 - gradient_len) + ((area.width as f32 + gradient_len) * alpha);
-        let x_end = x_start + gradient_len;
-
-        let gradient_range = x_start..x_end;
-        let window_alpha = |x: u16| {
-            // fade in, left to right using a linear gradient
-            match x as f32 {
-                x if gradient_range.contains(&x) => 1.0 - (x - x_start) / gradient_len,
-                x if x < gradient_range.start    => 1.0,
-                _                                => 0.0,
-            }
+        let direction = self.direction;
+        let gradient = match direction {
+            Direction::LeftToRight | Direction::RightToLeft =>
+                self.horizontal_gradient(area, alpha),
+            Direction::UpToDown | Direction::DownToUp =>
+                self.vertical_gradient(area, alpha),
         };
-        
+
+        let window_alpha = window_alpha_fn(direction, gradient);
         let cell_filter = self.cell_filter.selector(area);
         
         let mut fg_mapper = ColorMapper::default();
@@ -69,7 +100,7 @@ impl Shader for SweepIn {
         self.cell_iter(buf, area)
             .filter(|(pos, cell)| cell_filter.is_valid(*pos, cell))
             .for_each(|(pos, cell)| {
-                let a = window_alpha(pos.x);
+                let a = window_alpha(pos);
 
                 match a {
                     0.0 => {
@@ -114,5 +145,42 @@ impl Shader for SweepIn {
 
     fn reverse(&mut self) {
         self.lifetime = self.lifetime.reversed();
+    }
+}
+
+fn window_alpha_fn(
+    direction: Direction,
+    gradient: Range<f32>,
+) -> Box::<dyn Fn(Position) -> f32> {
+    let gradient_len = gradient.end - gradient.start;
+    match direction {
+        Direction::LeftToRight => Box::new(move |p: Position| -> f32 {
+            match p.x as f32 {
+                x if gradient.contains(&x) => 1.0 - (x - gradient.start) / gradient_len,
+                x if x < gradient.start    => 1.0,
+                _                          => 0.0,
+            }
+        }),
+        Direction::RightToLeft => Box::new(move |p: Position| -> f32 {
+            match p.x as f32 {
+                x if gradient.contains(&x) => (x - gradient.start) / gradient_len,
+                x if x >= gradient.end     => 1.0,
+                _                          => 0.0,
+            }
+        }),
+        Direction::UpToDown => Box::new(move |p: Position| -> f32 {
+            match p.y as f32 {
+                y if gradient.contains(&y) => 1.0 - (y - gradient.start) / gradient_len,
+                y if y < gradient.start    => 1.0,
+                _                          => 0.0,
+            }
+        }),
+        Direction::DownToUp => Box::new(move |p: Position| -> f32 {
+            match p.y as f32 {
+                y if gradient.contains(&y) => (y - gradient.start) / gradient_len,
+                y if y >= gradient.start   => 1.0,
+                _                          => 0.0,
+            }
+        }),
     }
 }
