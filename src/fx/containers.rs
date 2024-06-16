@@ -1,6 +1,7 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Rect};
+use crate::{CellIterator, EffectTimer};
 use crate::effect::{Effect, CellFilter};
 use crate::shader::Shader;
 
@@ -45,6 +46,8 @@ impl Shader for ParallelEffect {
         remaining
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {}
+
     fn done(&self) -> bool {
         self.effects.iter().all(Effect::done)
     }
@@ -54,7 +57,6 @@ impl Shader for ParallelEffect {
     }
 
     fn area(&self) -> Option<Rect> {
-        // self.effects.first().map(|e| e.area()).unwrap_or(None)
         None
     }
 
@@ -68,6 +70,14 @@ impl Shader for ParallelEffect {
 
     fn reverse(&mut self) {
         self.effects.iter_mut().for_each(Effect::reverse)
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        None
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        None
     }
 }
 
@@ -93,6 +103,8 @@ impl Shader for SequentialEffect {
         remaining
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {}
+
     fn done(&self) -> bool {
         self.current >= self.effects.len()
     }
@@ -102,7 +114,6 @@ impl Shader for SequentialEffect {
     }
 
     fn area(&self) -> Option<Rect> {
-        // self.effects.first().map(|e| e.area()).unwrap_or(None)
         None
     }
 
@@ -117,4 +128,8 @@ impl Shader for SequentialEffect {
     fn reverse(&mut self) {
         self.effects.iter_mut().for_each(Effect::reverse)
     }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
+
+    fn cell_filter(&self) -> Option<CellFilter> { None }
 }

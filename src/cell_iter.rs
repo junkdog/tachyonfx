@@ -1,15 +1,21 @@
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Position, Rect};
+use crate::CellFilter;
 
 pub struct CellIterator<'a> {
     current: u16,
     area: Rect,
     buf: &'a mut Buffer,
+    filter: Option<CellFilter>,
 }
 
 impl<'a> CellIterator<'a> {
-    pub fn new(buf: &'a mut Buffer, area: Rect) -> Self {
-        Self { current: 0, area, buf }
+    pub fn new(
+        buf: &'a mut Buffer,
+        area: Rect,
+        filter: Option<CellFilter>,
+    ) -> Self {
+        Self { current: 0, area, buf, filter }
     }
     
     fn cell_mut(&mut self) -> (Position, &mut Cell) {
@@ -26,20 +32,22 @@ impl<'a> Iterator for CellIterator<'a> {
     type Item = (Position, &'a mut Cell);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = if self.current < self.area.area() {
+        let selector = self.filter.as_ref().map(|f| f.selector(self.area));
+        while self.current < self.area.area() {
             let (pos, cell) = self.cell_mut();
             // enforce cell's lifetime. this is safe because `buf` is guaranteed to outlive `'a`
             let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
-            
-            Some((pos, cell))
-        } else {
-            None
-        };
-        
-        if item.is_some() {
             self.current += 1;
+
+            if let Some(filter) = &selector {
+                if filter.is_valid(pos, cell) {
+                    return Some((pos, cell));
+                }
+            } else {
+                return Some((pos, cell));
+            }
         }
-        
-        item
+
+        None
     }
 }

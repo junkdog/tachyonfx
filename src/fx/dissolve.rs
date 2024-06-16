@@ -1,11 +1,10 @@
-use std::time::Duration;
 use rand::{Rng, thread_rng};
 use rand::prelude::{SeedableRng, SmallRng};
-use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+
+use crate::CellIterator;
 use crate::effect::CellFilter;
 use crate::effect_timer::EffectTimer;
-
 use crate::shader::Shader;
 
 #[derive(Clone)]
@@ -37,27 +36,14 @@ impl Dissolve {
 }
 
 impl Shader for Dissolve {
-     fn process(
-         &mut self,
-         duration: Duration,
-         buf: &mut Buffer,
-         area: Rect
-     ) -> Option<Duration> {
-         let a = self.lifetime.alpha();
-         let remainder = self.lifetime.process(duration);
 
-         let cell_filter = self.cell_filter.selector(area);
-         
-         self.cell_iter(buf, area)
-             .filter(|(pos, cell)| cell_filter.is_valid(*pos, cell))
-             .enumerate()
-             .filter(|(idx, _)| self.is_cell_idx_active(*idx, a))
-             .for_each(|(_, (_, c))| { c.set_char(' '); });
+    fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
+        cell_iter.enumerate()
+            .filter(|(idx, _)| self.is_cell_idx_active(*idx, alpha))
+            .for_each(|(_, (_, c))| { c.set_char(' '); });
+    }
 
-         remainder
-     }
-
-     fn done(&self) -> bool {
+    fn done(&self) -> bool {
           self.lifetime.done()
      }
 
@@ -79,5 +65,13 @@ impl Shader for Dissolve {
 
     fn reverse(&mut self) {
         self.lifetime = self.lifetime.reversed();
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        Some(&mut self.lifetime)
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        Some(self.cell_filter.clone())
     }
 }

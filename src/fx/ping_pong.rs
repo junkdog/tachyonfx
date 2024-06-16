@@ -3,7 +3,7 @@ use ratatui::layout::Rect;
 
 use std::time::Duration;
 
-use crate::{CellFilter, Effect, Shader};
+use crate::{CellFilter, CellIterator, Effect, EffectTimer, Shader};
 
 #[derive(Clone)]
 pub struct PingPong {
@@ -45,6 +45,10 @@ impl Shader for PingPong {
         overflow
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
+        // nothing to do
+    }
+
     fn done(&self) -> bool {
         self.is_reversing && self.fx.done()
     }
@@ -67,5 +71,13 @@ impl Shader for PingPong {
 
     fn reverse(&mut self) {
         self.fx.reverse();
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        self.fx.timer_mut()
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        Some(self.strategy.clone())
     }
 }

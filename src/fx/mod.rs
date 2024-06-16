@@ -31,7 +31,31 @@ mod sleep;
 mod sweep_in;
 mod temporary;
 mod translate;
+mod hsl_shift;
+
 use ping_pong::PingPong;
+
+/// changes the hue, saturation, and lightness of the foreground and background colors.
+pub fn hsl_shift<T: Into<EffectTimer>>(
+    hsl_fg_change: Option<[f32; 3]>,
+    hsl_bg_change: Option<[f32; 3]>,
+    lifetime: T,
+) -> Effect {
+    hsl_shift::HslShift::builder()
+        .hsl_mod_fg(hsl_fg_change)
+        .hsl_mod_bg(hsl_bg_change)
+        .lifetime(lifetime.into())
+        .into()
+}
+
+/// Shifts the foreground color by the specified hue, saturation, and lightness
+/// over the specified duration.
+pub fn hsl_shift_fg<T: Into<EffectTimer>>(
+    hsl_fg_change: [f32; 3],
+    lifetime: T,
+) -> Effect {
+    hsl_shift(Some(hsl_fg_change), None, lifetime)
+}
 
 /// Returns an effect that downsamples to 256 color mode.
 pub fn term256_colors() -> Effect {

@@ -1,6 +1,9 @@
 use std::time::Duration;
+
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+
+use crate::CellIterator;
 use crate::effect::CellFilter;
 use crate::shader::Shader;
 
@@ -20,6 +23,8 @@ impl Shader for ConsumeTick {
         self.has_consumed_tick = true;
         None
     }
+
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {}
 
     fn done(&self) -> bool { self.has_consumed_tick }
 

@@ -3,6 +3,7 @@ use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
+use crate::CellIterator;
 use crate::effect::{Effect, CellFilter};
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
@@ -55,6 +56,10 @@ impl Shader for ResizeArea {
         remaining
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
+        // nothing to do
+    }
+
     fn done(&self) -> bool {
         self.lifetime.done()
             && (self.fx.as_ref().is_some_and(|fx| fx.done()) || self.fx.is_none())
@@ -84,5 +89,13 @@ impl Shader for ResizeArea {
 
     fn reverse(&mut self) {
         self.lifetime = self.lifetime.reversed();
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        Some(&mut self.lifetime)
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.fx.as_ref().and_then(Effect::cell_filter)
     }
 }

@@ -3,6 +3,7 @@ use std::time::Duration;
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Margin, Position, Rect};
 use ratatui::style::Color;
+use crate::{CellIterator, EffectTimer};
 use crate::shader::Shader;
 
 pub struct Effect {
@@ -147,6 +148,10 @@ impl Shader for Effect {
         self.shader.process(duration, buf, area)
     }
 
+    fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator){
+        self.shader.execute(alpha, area, cell_iter);
+    }
+
     fn done(&self) -> bool {
         self.shader.done()
     }
@@ -169,6 +174,14 @@ impl Shader for Effect {
 
     fn reverse(&mut self) {
         self.shader.reverse()
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        self.shader.timer_mut()
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.shader.cell_filter()
     }
 }
 

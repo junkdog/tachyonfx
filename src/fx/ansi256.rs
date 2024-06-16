@@ -1,11 +1,13 @@
 use std::time::Duration;
+
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Rect};
+use ratatui::layout::Rect;
+
+use crate::CellIterator;
 use crate::color_ext::AsIndexedColor;
 use crate::color_mapper::ColorMapper;
 use crate::effect::CellFilter;
 use crate::shader::Shader;
-
 
 #[derive(Clone, Default)]
 pub struct Ansi256 {
@@ -34,6 +36,10 @@ impl Shader for Ansi256 {
         }
 
         None
+    }
+
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
+        // handled by process
     }
 
     fn done(&self) -> bool { false }

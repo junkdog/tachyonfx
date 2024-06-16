@@ -1,6 +1,7 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use crate::{CellIterator, EffectTimer};
 use crate::effect::{Effect, CellFilter};
 use crate::shader::Shader;
 
@@ -21,6 +22,10 @@ impl Shader for NeverComplete {
         None
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
+
+    }
+
     fn done(&self) -> bool                      { false }
     fn clone_box(&self) -> Box<dyn Shader>      { Box::new(self.clone()) }
     fn area(&self) -> Option<Rect>              { self.effect.area() }
@@ -32,5 +37,13 @@ impl Shader for NeverComplete {
 
     fn reverse(&mut self) {
         self.effect.reverse()
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        None
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.effect.cell_filter()
     }
 }

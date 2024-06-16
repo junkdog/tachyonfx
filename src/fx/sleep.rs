@@ -1,7 +1,6 @@
-use std::time::Duration;
 
-use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use crate::CellIterator;
 
 
 use crate::effect::CellFilter;
@@ -20,13 +19,8 @@ impl Sleep {
 }
 
 impl Shader for Sleep {
-    fn process(
-        &mut self,
-        duration: Duration,
-        _buf: &mut Buffer,
-        _area: Rect
-    ) -> Option<Duration> {
-        self.timer.process(duration)
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
+         // slept
     }
 
     fn done(&self) -> bool {
@@ -40,6 +34,14 @@ impl Shader for Sleep {
     fn area(&self) -> Option<Rect> { None }
     fn set_area(&mut self, _area: Rect) {}
     fn cell_selection(&mut self, _strategy: CellFilter) {}
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        Some(&mut self.timer)
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        None
+    }
 }
 
 

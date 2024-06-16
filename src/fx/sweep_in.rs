@@ -1,13 +1,11 @@
 use std::ops::Range;
-use std::time::Duration;
 
-use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
 use ratatui::prelude::Color;
 
 use Interpolation::CircOut;
 
-use crate::ColorMapper;
+use crate::{CellIterator, ColorMapper};
 use crate::effect::CellFilter;
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::{Interpolatable, Interpolation};
@@ -74,15 +72,7 @@ impl SweepIn {
 }
 
 impl Shader for SweepIn {
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect,
-    ) -> Option<Duration> {
-        let alpha = self.lifetime.alpha();
-        let overflow = self.lifetime.process(duration);
-
+    fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {
         let direction = self.direction;
         let gradient = match direction {
             Direction::LeftToRight | Direction::RightToLeft =>
@@ -92,35 +82,30 @@ impl Shader for SweepIn {
         };
 
         let window_alpha = window_alpha_fn(direction, gradient);
-        let cell_filter = self.cell_filter.selector(area);
-        
+
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
-        
-        self.cell_iter(buf, area)
-            .filter(|(pos, cell)| cell_filter.is_valid(*pos, cell))
-            .for_each(|(pos, cell)| {
-                let a = window_alpha(pos);
 
-                match a {
-                    0.0 => {
-                        cell.set_fg(self.faded_color);
-                        cell.set_bg(self.faded_color);
-                    },
-                    1.0 => {} // nothing to do
-                    _ => {
-                        let fg = fg_mapper
-                            .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
-                        let bg = bg_mapper
-                            .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
+        cell_iter.for_each(|(pos, cell)| {
+            let a = window_alpha(pos);
 
-                        cell.set_fg(fg);
-                        cell.set_bg(bg);
-                    }
+            match a {
+                0.0 => {
+                    cell.set_fg(self.faded_color);
+                    cell.set_bg(self.faded_color);
+                },
+                1.0 => {} // nothing to do
+                _ => {
+                    let fg = fg_mapper
+                        .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
+                    let bg = bg_mapper
+                        .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
+
+                    cell.set_fg(fg);
+                    cell.set_bg(bg);
                 }
-            });
-
-        overflow
+            }
+        });
     }
 
     fn done(&self) -> bool {
@@ -145,6 +130,14 @@ impl Shader for SweepIn {
 
     fn reverse(&mut self) {
         self.lifetime = self.lifetime.reversed();
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        Some(&mut self.lifetime)
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        Some(self.cell_filter.clone())
     }
 }
 

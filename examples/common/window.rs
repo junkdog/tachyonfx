@@ -8,7 +8,7 @@ use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, BorderType, Clear};
 use ratatui::widgets::Widget;
 
-use tachyonfx::{CellFilter, Effect, IntoEffect, Shader};
+use tachyonfx::{CellFilter, CellIterator, Effect, EffectTimer, IntoEffect, Shader};
 
 #[derive(Builder, Clone)]
 #[builder(pattern = "owned")]
@@ -97,6 +97,10 @@ impl Shader for OpenWindow {
         overflow
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
+        // nothing to do
+    }
+
 
     fn done(&self) -> bool {
         self.pre_render_fx.is_none()
@@ -121,5 +125,13 @@ impl Shader for OpenWindow {
 
     fn cell_selection(&mut self, _strategy: CellFilter) {
         todo!()
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        self.pre_render_fx.as_mut().and_then(Effect::timer_mut)
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.pre_render_fx.as_ref().map(Effect::cell_filter).flatten()
     }
 }

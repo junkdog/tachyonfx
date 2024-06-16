@@ -7,6 +7,7 @@ use rand::prelude::SmallRng;
 use rand::Rng;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
+use crate::{CellIterator, EffectTimer};
 use crate::effect::{Effect, CellFilter, IntoEffect};
 use crate::shader::Shader;
 
@@ -130,7 +131,6 @@ impl Shader for Glitch {
             let c  = buf.get_mut(area.x + x as u16, area.y + y as u16);
 
             if !selector.is_valid(pos, c) {
-                println!("yolo");
                 return;
             }
 
@@ -168,6 +168,8 @@ impl Shader for Glitch {
         None
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {}
+
     fn done(&self) -> bool {
         false
     }
@@ -186,5 +188,11 @@ impl Shader for Glitch {
 
     fn cell_selection(&mut self, strategy: CellFilter) {
         self.selection = strategy;
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        Some(self.selection.clone())
     }
 }

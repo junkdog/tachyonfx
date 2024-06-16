@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
+use crate::{CellIterator, EffectTimer};
 
 use crate::effect::{Effect, CellFilter};
 use crate::shader::Shader;
@@ -75,6 +76,10 @@ impl Shader for Repeat {
         }
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
+        // nothing to do
+    }
+
     fn done(&self) -> bool {
         match self.mode {
             RepeatMode::Times(0)                 => true,
@@ -97,6 +102,14 @@ impl Shader for Repeat {
 
     fn cell_selection(&mut self, strategy: CellFilter) {
         self.fx.cell_selection(strategy);
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        None
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.fx.cell_filter()
     }
 }
 

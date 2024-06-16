@@ -1,6 +1,7 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use crate::CellIterator;
 use crate::effect::{Effect, CellFilter, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolation::Linear;
@@ -31,6 +32,10 @@ impl Shader for TemporaryEffect {
         remaining
     }
 
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
+        // nothing to do
+    }
+
     fn done(&self) -> bool {
         self.duration.done() || self.effect.done()
     }
@@ -53,6 +58,14 @@ impl Shader for TemporaryEffect {
 
     fn reverse(&mut self) {
         self.effect.reverse()
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        Some(&mut self.duration)
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.effect.cell_filter()
     }
 }
 

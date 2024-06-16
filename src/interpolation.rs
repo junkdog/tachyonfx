@@ -153,12 +153,12 @@ impl Interpolatable<Color> for Color {
             return *target;
         }
         
-        let (h, s, v) = self.to_hsv();
-        let (h2, s2, v2) = target.to_hsv();
-        Color::from_hsv(
-            h.lerp(&h2, alpha),
-            s.lerp(&s2, alpha),
-            v.lerp(&v2, alpha),
+        let (h, s, v) = self.to_hsl();
+        let (h2, s2, v2) = target.to_hsl();
+        Color::from_hsl(
+            h.lerp(&h2, alpha) as f64,
+            s.lerp(&s2, alpha) as f64,
+            v.lerp(&v2, alpha) as f64,
         )
     }
 }
@@ -174,13 +174,13 @@ impl Interpolatable<Option<Color>> for Option<Color> {
     }
 }
 
-trait HsvConvertable {
-    fn from_hsv(h: f32, s: f32, v: f32) -> Self;
-    fn to_hsv(&self) -> (f32, f32, f32);
+pub trait HslConvertable {
+    fn from_hsl(h: f32, s: f32, v: f32) -> Self;
+    fn to_hsl(&self) -> (f32, f32, f32);
 }
 
-impl HsvConvertable for Color {
-    fn from_hsv(h: f32, s: f32, v: f32) -> Self {
+impl HslConvertable for Color {
+    fn from_hsl(h: f32, s: f32, v: f32) -> Self {
         let hsl = colorsys::Hsl::new(h as f64, s as f64, v as f64, None);
         let color: colorsys::Rgb = hsl.as_ref().into();
         
@@ -191,7 +191,7 @@ impl HsvConvertable for Color {
         Color::Rgb(red as u8, green as u8, blue as u8)
     }
 
-    fn to_hsv(&self) -> (f32, f32, f32) {
+    fn to_hsl(&self) -> (f32, f32, f32) {
         match self {
             Color::Rgb(r, g, b) => {
                 let rgb = colorsys::Rgb::from([*r, *g, *b]);

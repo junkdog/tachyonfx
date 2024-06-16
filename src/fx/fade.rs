@@ -1,13 +1,12 @@
-use std::time::Duration;
 use derive_builder::Builder;
-use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::prelude::Color;
+
+use crate::CellIterator;
 use crate::color_mapper::ColorMapper;
-use crate::effect::{Effect, CellFilter, IntoEffect};
+use crate::effect::{CellFilter, Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
-
 
 #[derive(Builder, Clone)]
 #[builder(pattern = "owned")]
@@ -34,34 +33,21 @@ impl From<FadeColorsBuilder> for Effect {
 }
 
 impl Shader for FadeColors {
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect,
-    ) -> Option<Duration> {
-        let alpha = self.lifetime.alpha();
-        let remainder = self.lifetime.process(duration);
-
-        let cell_filter = self.cell_filter.selector(area);
+    fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
-        
-        self.cell_iter(buf, area)
-            .filter(|(pos, cell)| cell_filter.is_valid(*pos, cell))
-            .for_each(|(_, cell)| {
-                if let Some(fg) = self.fg.as_ref() {
-                    let color = fg_mapper.mapping(cell.fg, fg, alpha);
-                    cell.set_fg(color);
-                }
 
-                if let Some(bg) = self.bg.as_ref() {
-                    let color = bg_mapper.mapping(cell.bg, bg, alpha);
-                    cell.set_bg(color);
-                }
-            });
+        cell_iter.for_each(|(_, cell)| {
+            if let Some(fg) = self.fg.as_ref() {
+                let color = fg_mapper.mapping(cell.fg, fg, alpha);
+                cell.set_fg(color);
+            }
 
-        remainder
+            if let Some(bg) = self.bg.as_ref() {
+                let color = bg_mapper.mapping(cell.bg, bg, alpha);
+                cell.set_bg(color);
+            }
+        });
     }
 
     fn done(&self) -> bool {
@@ -86,5 +72,13 @@ impl Shader for FadeColors {
 
     fn reverse(&mut self) {
         self.lifetime = self.lifetime.reversed();
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        Some(&mut self.lifetime)
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        Some(self.cell_filter.clone())
     }
 }

@@ -238,8 +238,17 @@ impl EffectsRepository {
                 fx::coalesce(100, (medium, CubicOut)),
                 timed_never_complete(medium, glitch)
             ])),
-            ("fade fg",
-                fx::fade_from_fg(bg, (medium, CircOut))),
+            ("change hue, saturation and lightness" ,sequence(vec![
+                fx::hsl_shift_fg([360.0, 0.0, 0.0], medium),
+                fx::hsl_shift_fg([0.0, -100.0, 0.0], medium),
+                fx::hsl_shift_fg([0.0, -100.0, 0.0], medium).reversed(),
+                fx::hsl_shift_fg([0.0, 100.0, 0.0], medium),
+                fx::hsl_shift_fg([0.0, 100.0, 0.0], medium).reversed(),
+                fx::hsl_shift_fg([0.0, 0.0, -100.0], medium),
+                fx::hsl_shift_fg([0.0, 0.0, -100.0], medium).reversed(),
+                fx::hsl_shift_fg([0.0, 0.0, 100.0], medium),
+                fx::hsl_shift_fg([0.0, 0.0, 100.0], medium).reversed(),
+            ])),
             ("repeating fade in, dissolving fade out", fx::repeating(
                 sequence(vec![
                     // fade in content area
