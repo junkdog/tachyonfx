@@ -15,6 +15,7 @@ use crate::fx::sweep_in::SweepIn;
 use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
 
 pub use glitch::Glitch;
+use hsl_shift::HslShift;
 pub use sweep_in::Direction;
 
 mod ansi256;
@@ -41,7 +42,7 @@ pub fn hsl_shift<T: Into<EffectTimer>>(
     hsl_bg_change: Option<[f32; 3]>,
     lifetime: T,
 ) -> Effect {
-    hsl_shift::HslShift::builder()
+    HslShift::builder()
         .hsl_mod_fg(hsl_fg_change)
         .hsl_mod_bg(hsl_bg_change)
         .lifetime(lifetime.into())

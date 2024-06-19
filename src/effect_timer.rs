@@ -10,6 +10,20 @@ pub struct EffectTimer {
 }
 
 impl EffectTimer {
+    /// Creates a new `EffectTimer` with the specified duration in milliseconds and interpolation method.
+    ///
+    /// # Arguments
+    /// * `duration` - The duration of the effect in milliseconds.
+    /// * `interpolation` - The interpolation method to be used for the effect.
+    ///
+    /// # Returns
+    /// * A new `EffectTimer` instance.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
+    /// ```
     pub fn from_ms(
         duration: u32,
         interpolation: Interpolation,
@@ -17,6 +31,21 @@ impl EffectTimer {
         Self::new(Duration::from_millis(duration as u64), interpolation)
     }
 
+    /// Creates a new `EffectTimer` with the specified duration and interpolation method.
+    ///
+    /// # Arguments
+    /// * `duration` - The duration of the effect as a `Duration` object.
+    /// * `interpolation` - The interpolation method to be used for the effect.
+    ///
+    /// # Returns
+    /// * A new `EffectTimer` instance.
+    ///
+    /// # Example
+    /// ```
+    /// use std::time::Duration;
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// let timer = EffectTimer::new(Duration::from_secs(1), Interpolation::Linear);
+    /// ```
     pub fn new(
         duration: Duration,
         interpolation: Interpolation,
@@ -28,19 +57,59 @@ impl EffectTimer {
             reverse: false
         }
     }
-    
+
+    /// Reverses the timer direction.
+    ///
+    /// # Returns
+    /// * A new `EffectTimer` instance with the reverse flag toggled.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear).reversed();
+    /// ```
     pub fn reversed(self) -> Self {
         Self { reverse: !self.reverse, ..self }
     }
 
+    /// Checks if the timer has started.
+    ///
+    /// # Returns
+    /// * `true` if the timer has started, `false` otherwise.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
+    /// assert!(!timer.started());
+    /// ```
     pub fn started(&self) -> bool {
         self.total != self.remaining
     }
 
+    /// Resets the timer to its initial duration.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// let mut timer = EffectTimer::from_ms(1000, Interpolation::Linear);
+    /// timer.reset();
+    /// ```
     pub fn reset(&mut self) {
         self.remaining = self.total;
     }
 
+    /// Computes the current alpha value based on the elapsed time and interpolation method.
+    ///
+    /// # Returns
+    /// * The current alpha value as a `f32`.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
+    /// let alpha = timer.alpha();
+    /// ```
     pub fn alpha(&self) -> f32 {
         let total = self.total.as_secs_f32();
         if total == 0.0 {
@@ -48,12 +117,28 @@ impl EffectTimer {
         }
 
         let remaining = self.remaining.as_secs_f32();
-        let inv_alpha = remaining / total; //.clamp(0.0, 1.0);
+        let inv_alpha = remaining / total;
 
         let a = if self.reverse { inv_alpha } else { 1.0 - inv_alpha };
         self.interpolation.alpha(a)
     }
 
+    /// Processes the timer by reducing the remaining duration by the specified amount.
+    ///
+    /// # Arguments
+    /// * `duration` - The amount of time to process.
+    ///
+    /// # Returns
+    /// * An `Option` containing the overflow duration if the timer has completed, or `None` if the timer is still running.
+    ///
+    /// # Example
+    /// ```
+    /// use std::time::Duration;
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// let mut timer = EffectTimer::from_ms(1000, Interpolation::Linear);
+    /// let overflow = timer.process(Duration::from_millis(500));
+    /// assert!(overflow.is_none());
+    /// ```
     pub fn process(&mut self, duration: Duration) -> Option<Duration> {
         if self.remaining >= duration {
             self.remaining -= duration;
@@ -64,7 +149,18 @@ impl EffectTimer {
             Some(overflow)
         }
     }
-    
+
+    /// Checks if the timer has completed.
+    ///
+    /// # Returns
+    /// * `true` if the timer has completed, `false` otherwise.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
+    /// assert!(!timer.done());
+    /// ```
     pub fn done(&self) -> bool {
         self.remaining.is_zero()
     }
