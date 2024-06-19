@@ -58,6 +58,9 @@ The library includes a variety of effects, categorized as follows:
 
 ### EffectTimer and Interpolations
 
+The EffectTimer is used to control the duration and interpolation of effects. It
+allows for precise timing and synchronization of visual effects within your application.
+
 ### Cell Selection and Area
 
 Effects can be applied to specific cells in the terminal UI, allowing for targeted visual
