@@ -46,7 +46,7 @@ The library includes a variety of effects, categorized as follows:
 - **with_duration:**        Wraps an effect and enforces a duration on it.
 
 #### Geometry Effects
-- **translate:**   Moves the effect by a specified amount.
+- **translate:**   Moves the effect area by a specified amount.
 - **resize_area:** Resizes the area of the wrapped effect.
 
  
