@@ -18,23 +18,43 @@ tachyonfx = "0.1.0"
 
 ### Effects
 
-The library includes a variety of effects, such as:
+The library includes a variety of effects, categorized as follows:
 
-- **consume_tick:** Consumes a single tick.
-- **dissolve:** Dissolves the foreground into empty cells over the specified duration.
-- **fade_to_fg:** Fades the foreground color to a specified color.
-- **hsl_shift:** Changes the hue, saturation, and lightness of the foreground and background colors.
-- **never_complete:** Makes an effect run indefinitely.
-- **parallel:** Runs effects in parallel.
-- **ping_pong:** Plays the effect forwards and then backwards.
-- **repeat:** Repeats an effect indefinitely or for a specified number of times or duration.
-- **resize_area:** Resizes the area of the wrapped effect.
-- **sequence:** Runs effects in sequence.
-- **sleep:** Pauses for a specified duration.
+#### Color Effects
+- **fade_from:**      Fades from the specified background and foreground colors
+- **fade_from_fg:**   Fades the foreground color from a specified color.
+- **fade_to:**        Fades to the specified background and foreground colors.
+- **fade_to_fg:**     Fades the foreground color to a specified color.
+- **hsl_shift:**      Changes the hue, saturation, and lightness of the foreground and background colors.
+- **hsl_shift_fg:**   Shifts the foreground color by the specified hue, saturation, and lightness over the specified duration.
+- **term256_colors:** Downsamples to 256 color mode.
+
+#### Text/Character Effects
+- **coalesce:** The reverse of dissolve, coalesces text over the specified duration.
+- **dissolve:** Dissolves the current text into the new text over the specified duration.
 - **sweep_in:** Sweeps in from the specified color.
 - **sweep_out:** Sweeps out to the specified color.
-- **term256_colors:** Downsamples to 256 color mode.
-- **translate:** Moves the effect by a specified amount.
+
+#### Timing and Control Effects
+- **consume_tick:**         Consumes a single tick.
+- **never_complete:**       Makes an effect run indefinitely.
+- **ping_pong:**            Plays the effect forwards and then backwards.
+- **repeat:**               Repeats an effect indefinitely or for a specified number of times or duration.
+- **repeating:**            Repeats the effect indefinitely.
+- **sleep:**                Pauses for a specified duration.
+- **timed_never_complete:** Creates an effect that runs indefinitely but has an enforced duration.
+- **with_duration:**        Wraps an effect and enforces a duration on it.
+
+#### Geometry Effects
+- **translate:**   Moves the effect by a specified amount.
+- **resize_area:** Resizes the area of the wrapped effect.
+
+ 
+#### Combination Effects
+- **parallel:** Runs effects in parallel, all at the same time. Reports completion once all effects have completed.
+- **sequence:** Runs effects in sequence, one after the other. Reports completion once the last effect has completed.
+
+
 
 ### EffectTimer and Interpolations
 
@@ -49,7 +69,7 @@ fx::sweep_in(Direction::UpToDown, 15, Dark0, timer)
     .with_cell_selection(CellFilter::FgColor(Light2.into()))
 ```
 
-CellFilters can be combined to form complex selection criteria.
+`CellFilter`s can be combined to form complex selection criteria.
 
 ```rust
 // apply effect to cells on the outer border of the area

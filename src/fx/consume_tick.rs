@@ -34,5 +34,5 @@ impl Shader for ConsumeTick {
 
     fn area(&self) -> Option<Rect> { None }
     fn set_area(&mut self, _area: Rect) {}
-    fn cell_selection(&mut self, _strategy: CellFilter) {}
+    fn set_cell_selection(&mut self, _strategy: CellFilter) {}
 }

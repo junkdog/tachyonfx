@@ -33,13 +33,13 @@ impl Shader for Sleep {
 
     fn area(&self) -> Option<Rect> { None }
     fn set_area(&mut self, _area: Rect) {}
-    fn cell_selection(&mut self, _strategy: CellFilter) {}
+    fn set_cell_selection(&mut self, _strategy: CellFilter) {}
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_selection(&self) -> Option<CellFilter> {
         None
     }
 }

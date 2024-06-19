@@ -81,9 +81,9 @@ impl Shader for ResizeArea {
         self.target_area = area;
     }
 
-    fn cell_selection(&mut self, strategy: CellFilter) {
+    fn set_cell_selection(&mut self, strategy: CellFilter) {
         if let Some(fx) = self.fx.as_mut() {
-            fx.cell_selection(strategy);
+            fx.set_cell_selection(strategy);
         }
     }
 
@@ -95,7 +95,7 @@ impl Shader for ResizeArea {
         Some(&mut self.lifetime)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        self.fx.as_ref().and_then(Effect::cell_filter)
+    fn cell_selection(&self) -> Option<CellFilter> {
+        self.fx.as_ref().and_then(Effect::cell_selection)
     }
 }

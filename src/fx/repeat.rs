@@ -100,16 +100,16 @@ impl Shader for Repeat {
         self.fx.set_area(area)
     }
 
-    fn cell_selection(&mut self, strategy: CellFilter) {
-        self.fx.cell_selection(strategy);
+    fn set_cell_selection(&mut self, strategy: CellFilter) {
+        self.fx.set_cell_selection(strategy);
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         None
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        self.fx.cell_filter()
+    fn cell_selection(&self) -> Option<CellFilter> {
+        self.fx.cell_selection()
     }
 }
 

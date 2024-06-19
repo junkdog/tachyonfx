@@ -6,29 +6,76 @@ use ratatui::style::Color;
 use crate::{CellIterator, EffectTimer};
 use crate::shader::Shader;
 
+/// Represents an effect that can be applied to terminal cells.
+/// The `Effect` struct wraps a shader, allowing it to be configured
+/// and applied to a specified area and cell selection.
 pub struct Effect {
     shader: Box<dyn Shader>,
 }
 
 impl Effect {
+    /// Creates a new `Effect` with the specified shader.
+    ///
+    /// # Arguments
+    /// * `shader` - The shader to be used for the effect. It must implement the `Shader` trait and have a static lifetime.
+    ///
+    /// # Returns
+    /// * A new `Effect` instance.
     pub fn new<S>(shader: S) -> Self
         where S: Shader + 'static
     {
         Self { shader: Box::new(shader) }
     }
 
+    /// Creates a new `Effect` with the specified area.
+    ///
+    /// # Arguments
+    /// * `area` - The rectangular area where the effect will be applied.
+    ///
+    /// # Returns
+    /// * A new `Effect` instance with the specified area.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::Effect;
+    /// use ratatui::layout::Rect;
+    ///
+    /// let shader = MyShader::new();
+    /// let effect = Effect::new(shader)
+    ///     .with_area(Rect::new(0, 0, 10, 10));
+    /// ```
     pub fn with_area(&self, area: Rect) -> Self {
         let mut cloned = self.clone();
         cloned.shader.set_area(area);
         cloned
     }
 
+    /// Creates a new `Effect` with the specified cell selection mode.
+    ///
+    /// # Arguments
+    /// * `mode` - The cell selection mode to be used for the effect.
+    ///
+    /// # Returns
+    /// * A new `Effect` instance with the specified cell selection mode.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{Effect, CellFilter};
+    ///
+    /// let shader = MyShader::new();
+    /// let effect = Effect::new(shader)
+    ///     .with_cell_selection(CellFilter::Text);
+    /// ```
     pub fn with_cell_selection(&self, mode: CellFilter) -> Self {
         let mut cloned = self.clone();
-        cloned.cell_selection(mode);
+        cloned.set_cell_selection(mode);
         cloned
     }
 
+    /// Creates a new `Effect` with the shader's reverse flag toggled.
+    ///
+    /// # Returns
+    /// * A new `Effect` instance with the shader's reverse flag toggled.
     pub fn reversed(&self) -> Self {
         let mut cloned = self.clone();
         cloned.reverse();
@@ -168,8 +215,8 @@ impl Shader for Effect {
         self.shader.set_area(area)
     }
 
-    fn cell_selection(&mut self, strategy: CellFilter) {
-        self.shader.cell_selection(strategy)
+    fn set_cell_selection(&mut self, strategy: CellFilter) {
+        self.shader.set_cell_selection(strategy)
     }
 
     fn reverse(&mut self) {
@@ -180,8 +227,8 @@ impl Shader for Effect {
         self.shader.timer_mut()
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        self.shader.cell_filter()
+    fn cell_selection(&self) -> Option<CellFilter> {
+        self.shader.cell_selection()
     }
 }
 

@@ -59,7 +59,7 @@ impl Shader for Dissolve {
         self.area = Some(area)
     }
 
-    fn cell_selection(&mut self, strategy: CellFilter) {
+    fn set_cell_selection(&mut self, strategy: CellFilter) {
         self.cell_filter = strategy
     }
 
@@ -71,7 +71,7 @@ impl Shader for Dissolve {
         Some(&mut self.lifetime)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
     }
 }

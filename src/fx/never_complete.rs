@@ -31,8 +31,8 @@ impl Shader for NeverComplete {
     fn area(&self) -> Option<Rect>              { self.effect.area() }
     fn set_area(&mut self, area: Rect)          { self.effect.set_area(area) }
 
-    fn cell_selection(&mut self, strategy: CellFilter) {
-        self.effect.cell_selection(strategy);
+    fn set_cell_selection(&mut self, strategy: CellFilter) {
+        self.effect.set_cell_selection(strategy);
     }
 
     fn reverse(&mut self) {
@@ -43,7 +43,7 @@ impl Shader for NeverComplete {
         None
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        self.effect.cell_filter()
+    fn cell_selection(&self) -> Option<CellFilter> {
+        self.effect.cell_selection()
     }
 }

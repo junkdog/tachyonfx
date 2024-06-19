@@ -52,8 +52,8 @@ impl Shader for TemporaryEffect {
         self.effect.set_area(area)
     }
 
-    fn cell_selection(&mut self, strategy: CellFilter) {
-        self.effect.cell_selection(strategy);
+    fn set_cell_selection(&mut self, strategy: CellFilter) {
+        self.effect.set_cell_selection(strategy);
     }
 
     fn reverse(&mut self) {
@@ -64,8 +64,8 @@ impl Shader for TemporaryEffect {
         Some(&mut self.duration)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        self.effect.cell_filter()
+    fn cell_selection(&self) -> Option<CellFilter> {
+        self.effect.cell_selection()
     }
 }
 

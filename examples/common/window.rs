@@ -123,7 +123,7 @@ impl Shader for OpenWindow {
         }
     }
 
-    fn cell_selection(&mut self, _strategy: CellFilter) {
+    fn set_cell_selection(&mut self, _strategy: CellFilter) {
         todo!()
     }
 
@@ -131,7 +131,7 @@ impl Shader for OpenWindow {
         self.pre_render_fx.as_mut().and_then(Effect::timer_mut)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        self.pre_render_fx.as_ref().map(Effect::cell_filter).flatten()
+    fn cell_selection(&self) -> Option<CellFilter> {
+        self.pre_render_fx.as_ref().map(Effect::cell_selection).flatten()
     }
 }
