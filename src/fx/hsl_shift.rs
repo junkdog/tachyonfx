@@ -1,12 +1,8 @@
-use std::time::Duration;
 use derive_builder::Builder;
-
-use ratatui::buffer::{Buffer, Cell};
-use ratatui::layout::{Position, Rect};
+use ratatui::layout::Rect;
 use ratatui::style::Color;
+
 use crate::{CellIterator, ColorMapper, Effect, HslConvertable, Interpolatable, IntoEffect};
-
-
 use crate::effect::CellFilter;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;

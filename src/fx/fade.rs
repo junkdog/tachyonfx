@@ -33,7 +33,7 @@ impl From<FadeColorsBuilder> for Effect {
 }
 
 impl Shader for FadeColors {
-    fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {
+    fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
 
