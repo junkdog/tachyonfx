@@ -32,16 +32,6 @@ impl From<FadeColorsBuilder> for Effect {
     }
 }
 
-fn yolo() {
-    let start = Color::Green;
-    let target = Color::Red;
-    let a = 0.5;
-
-    let mut fg_mapper = ColorMapper::default();
-    fg_mapper.map(start, a, |c| c.lerp(&target, a));
-
-}
-
 impl Shader for FadeColors {
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         let mut fg_mapper = ColorMapper::default();
