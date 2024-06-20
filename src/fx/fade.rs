@@ -2,7 +2,7 @@ use derive_builder::Builder;
 use ratatui::layout::Rect;
 use ratatui::prelude::Color;
 
-use crate::CellIterator;
+use crate::{CellIterator, Interpolatable};
 use crate::color_mapper::ColorMapper;
 use crate::effect::{CellFilter, Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
@@ -32,6 +32,16 @@ impl From<FadeColorsBuilder> for Effect {
     }
 }
 
+fn yolo() {
+    let start = Color::Green;
+    let target = Color::Red;
+    let a = 0.5;
+
+    let mut fg_mapper = ColorMapper::default();
+    fg_mapper.map(start, a, |c| c.lerp(&target, a));
+
+}
+
 impl Shader for FadeColors {
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         let mut fg_mapper = ColorMapper::default();
@@ -39,12 +49,12 @@ impl Shader for FadeColors {
 
         cell_iter.for_each(|(_, cell)| {
             if let Some(fg) = self.fg.as_ref() {
-                let color = fg_mapper.mapping(cell.fg, fg, alpha);
+                let color = fg_mapper.map(cell.fg, alpha, |c| c.lerp(fg, alpha));
                 cell.set_fg(color);
             }
 
             if let Some(bg) = self.bg.as_ref() {
-                let color = bg_mapper.mapping(cell.bg, bg, alpha);
+                let color = bg_mapper.map(cell.bg, alpha, |c| c.lerp(bg, alpha));
                 cell.set_bg(color);
             }
         });

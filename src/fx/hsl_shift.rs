@@ -25,7 +25,6 @@ impl HslShift {
     pub fn builder() -> HslShiftBuilder {
         HslShiftBuilder::default()
     }
-
 }
 
 impl Shader for HslShift {

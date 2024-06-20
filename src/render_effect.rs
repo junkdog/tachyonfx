@@ -37,7 +37,6 @@ impl<S: Shader> EffectRenderer<S> for Buffer {
 }
 
 fn render_effect<S: Shader>(
-    // effect: &mut Effect,
     effect: &mut S,
     buf: &mut Buffer,
     area: Rect,

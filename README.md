@@ -1,9 +1,11 @@
 ## tachyonfx
 
-tachyonfx is a Ratatui library for creating shader-like effects in terminal UIs.
+tachyonfx is a [ratatui][ratatui] library for creating shader-like effects in terminal UIs.
 This library provides a collection of effects that can be used to enhance the
 visual appeal of terminal applications, offering capabilities such as color
 transformations, animations, and complex effect combinations.
+
+ [ratatui]: https://ratatui.rs/
 
 ## Installation
 Add tachyonfx to your `Cargo.toml`:

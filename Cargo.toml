@@ -3,7 +3,14 @@ name = "tachyonfx"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-
+description = "A ratatui library for creating shader-like effects in TUIs."
+repository = "https://github.com/junkdog/tachyonfx"
+homepage = "https://github.com/junkdog/tachyonfx"
+documentation = "https://docs.rs/tachyonfx"
+readme = "README.md"
+keywords = ["ratatui", "terminal", "effects", "UI", "TUI"]
+categories = ["command-line-interface"]
+authors = ["Adrian Papari <junkdog@angelhill.net>"]
 
 [dependencies]
 colorsys = "0.6.7"

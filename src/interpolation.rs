@@ -100,6 +100,7 @@ impl Interpolation {
     }
 }
 
+/// A trait for interpolating between two values.
 pub trait Interpolatable<T> {
     fn lerp(&self, target: &T, alpha: f32) -> T;
     

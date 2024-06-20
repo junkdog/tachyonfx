@@ -1,3 +1,9 @@
+//! tachyonfx - A ratatui library for creating shader-like effects in terminal UIs
+//!
+//! This library provides a collection of effects that can be used to enhance the visual
+//! appeal of terminal applications, offering capabilities such as color transformations,
+//! animations, and complex effect combinations.
+
 mod interpolation;
 mod effect;
 mod shader;
@@ -10,10 +16,7 @@ mod render_effect;
 
 pub mod fx;
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
+/// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
 pub use color_mapper::ColorMapper;
 pub use effect::{Effect, CellFilter, IntoEffect};
@@ -23,14 +26,3 @@ pub use render_effect::EffectRenderer;
 pub use shader::Shader;
 pub use interpolation::*;
 
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}

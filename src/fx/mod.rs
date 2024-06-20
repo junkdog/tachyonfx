@@ -144,7 +144,7 @@ pub fn dissolve<T: Into<EffectTimer>>(cycle_len: usize, lifetime: T) -> Effect {
         .into_effect()
 }
 
-/// The reverse of [dissolve].
+/// The reverse of [dissolve()].
 pub fn coalesce<T: Into<EffectTimer>>(cycle_len: usize, lifetime: T) -> Effect {
     let lifetime = lifetime.into().reversed();
     Dissolve::new(lifetime, cycle_len)
@@ -197,10 +197,9 @@ pub fn consume_tick() -> Effect {
     ConsumeTick::default().into_effect()
 }
 
-/// An effect that forces the wrapped [effect] to never report completion,
+/// An effect that forces the wrapped effect to never report completion,
 /// effectively making it run indefinitely. Once the effect reaches the end,
 /// it will continue to process the effect without advancing the duration.
-///
 pub fn never_complete(effect: Effect) -> Effect {
     NeverComplete::new(effect).into_effect()
 }

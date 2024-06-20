@@ -1,6 +1,15 @@
 use std::time::Duration;
 use crate::interpolation::Interpolation;
 
+/// A struct for managing the timing and interpolation of effects.
+/// The `EffectTimer` controls the duration and progress of an effect, allowing it to be reversed,
+/// reset, and processed over time.
+///
+/// # Fields
+/// * `remaining` - The remaining duration of the effect.
+/// * `total` - The total duration of the effect.
+/// * `interpolation` - The interpolation method used for the effect.
+/// * `reverse` - A flag indicating whether the effect is reversed.
 #[derive(Clone, Copy, Default)]
 pub struct EffectTimer {
     remaining: Duration,
@@ -10,6 +19,7 @@ pub struct EffectTimer {
 }
 
 impl EffectTimer {
+
     /// Creates a new `EffectTimer` with the specified duration in milliseconds and interpolation method.
     ///
     /// # Arguments
