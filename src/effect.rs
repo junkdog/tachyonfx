@@ -101,6 +101,10 @@ pub enum CellFilter {
     Text,
     /// Selects cells that match all the given filters
     AllOf(Vec<CellFilter>),
+    /// Selects cells that match any of the given filters
+    AnyOf(Vec<CellFilter>),
+    /// Selects cells that do not match any of the given filters
+    NoneOf(Vec<CellFilter>),
     /// Negates the given filter
     Not(Box<CellFilter>),
 }
@@ -124,6 +128,8 @@ impl CellSelector {
             CellFilter::Outer(margin) => area.inner(margin),
             CellFilter::Text          => area,
             CellFilter::AllOf(_)      => area,
+            CellFilter::AnyOf(_)      => area,
+            CellFilter::NoneOf(_)     => area,
             CellFilter::Not(m)        => Self::resolve_area(area, m.as_ref()),
             CellFilter::FgColor(_)    => area,
             CellFilter::BgColor(_)    => area,
@@ -145,6 +151,10 @@ impl CellSelector {
             CellFilter::Text       => self.inner_area.contains(pos),
             CellFilter::AllOf(s)   => s.iter()
                 .all(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
+            CellFilter::AnyOf(s)   => s.iter()
+                .any(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
+            CellFilter::NoneOf(s)  => s.iter()
+                .all(|mode| !mode.selector(self.inner_area).valid_position(pos, mode)),
             CellFilter::Not(m)  => self.valid_position(pos, m.as_ref()),
             CellFilter::FgColor(_) => self.inner_area.contains(pos),
             CellFilter::BgColor(_) => self.inner_area.contains(pos),

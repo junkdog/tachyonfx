@@ -35,7 +35,7 @@ The library includes a variety of effects, categorized as follows:
 
 #### Text/Character Effects
 - **coalesce:** The reverse of dissolve, coalesces text over the specified duration.
-- **dissolve:** Dissolves the current text into the new text over the specified duration.
+- **dissolve:** Dissolves the current text over the specified duration.
 - **sweep_in:** Sweeps in from the specified color.
 - **sweep_out:** Sweeps out to the specified color.
 
