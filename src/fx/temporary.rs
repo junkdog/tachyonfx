@@ -56,10 +56,6 @@ impl Shader for TemporaryEffect {
         self.effect.set_cell_selection(strategy);
     }
 
-    fn reverse(&mut self) {
-        self.effect.reverse()
-    }
-
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.duration)
     }

@@ -126,7 +126,11 @@ pub trait Shader {
     fn set_cell_selection(&mut self, filter: CellFilter);
 
     /// Reverses the shader effect.
-    fn reverse(&mut self) {}
+    fn reverse(&mut self) {
+        if let Some(timer) = self.timer_mut() {
+            *timer = timer.reversed()
+        }
+    }
 
     /// Returns a mutable reference to the shader's timer, if any.
     ///

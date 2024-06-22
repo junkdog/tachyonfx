@@ -87,10 +87,6 @@ impl Shader for ResizeArea {
         }
     }
 
-    fn reverse(&mut self) {
-        self.lifetime = self.lifetime.reversed();
-    }
-
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.lifetime)
     }
