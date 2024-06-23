@@ -1,5 +1,7 @@
 # Changelog
 
+## tachyonfx 0.2.0 - 2024-06-23
+
 ### Added
 - `fx::effect_fn()`: creates custom effects from user-defined functions.
 - Add `CellFilter::AnyOf(filters)` and `CellFilter::NoneOf(filters)` variants.
