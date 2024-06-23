@@ -1,6 +1,7 @@
 # Changelog
 
 ### Added
+- `fx::effect_fn()`: creates custom effects from user-defined functions.
 - Add `CellFilter::AnyOf(filters)` and `CellFilter::NoneOf(filters)` variants.
 - Implemented `ToRgbComponents` trait for `Color` to standardize extraction of RGB components.
 

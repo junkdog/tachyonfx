@@ -1,4 +1,5 @@
 use std::time::Duration;
+use ratatui::layout::Rect;
 use ratatui::style::Color;
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
@@ -33,8 +34,49 @@ mod sweep_in;
 mod temporary;
 mod translate;
 mod hsl_shift;
+mod shader_fn;
 
 use ping_pong::PingPong;
+use shader_fn::ShaderFn;
+use crate::CellIterator;
+
+/// Creates a custom effect using a user-defined function.
+///
+/// This function allows you to define custom effects by providing a closure that will be called
+/// with the current alpha value, duration, area, and a cell iterator. You can use this closure
+/// to apply custom transformations or animations to the terminal cells.
+///
+/// # Arguments
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
+/// * `f` - A closure that defines the custom effect. The closure takes four parameters:
+///   * `alpha`: A float representing the progress of the effect (from 0.0 to 1.0).
+///   * `duration`: The duration since the last invocation.
+///   * `area`: The rectangular area within the terminal where the effect is applied.
+///   * `cell_iter`: An iterator over the terminal cells.
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::style::Color;
+/// use tachyonfx::*;
+///
+/// let timer = EffectTimer::from_ms(1000, Interpolation::CubicInOut);
+/// fx::effect_fn(timer, |alpha, _duration, _area, cell_iter| {
+///    let mut fg_mapper = ColorMapper::default();
+///
+///    for (_, cell) in cell_iter {
+///        let color = fg_mapper.map(cell.fg, alpha, |c| c.lerp(&Color::Indexed(35), alpha));
+///        cell.set_fg(color);
+///    }
+/// }).with_cell_selection(CellFilter::FgColor(Color::DarkGray));
+/// ```
+pub fn effect_fn<F, T>(timer: T, f: F) -> Effect
+where
+    F: FnMut(f32, Duration, Rect, CellIterator) + 'static,
+    T: Into<EffectTimer>
+{
+    ShaderFn::new(f, timer).into_effect()
+}
 
 /// changes the hue, saturation, and lightness of the foreground and background colors.
 pub fn hsl_shift<T: Into<EffectTimer>>(
