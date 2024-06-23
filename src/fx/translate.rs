@@ -51,7 +51,7 @@ impl Shader for Translate {
         lerped_area.y = y.max(0) as u16;
 
         self.set_area(lerped_area);
-        if let Some(fx) = self.fx.as_mut() {
+        if let Some(fx) = &mut self.fx {
             fx.process(duration, buf, lerped_area);
         }
 
@@ -71,7 +71,7 @@ impl Shader for Translate {
     }
 
     fn area(&self) -> Option<Rect> {
-        if let Some(fx) = self.fx.as_ref() {
+        if let Some(fx) = &self.fx {
             if fx.area().is_some() {
                 return fx.area();
             }
@@ -81,26 +81,25 @@ impl Shader for Translate {
 
     fn set_area(&mut self, area: Rect) {
         self.area = Some(area);
-        if let Some(fx) = self.fx.as_mut() {
+        if let Some(fx) = &mut self.fx {
             fx.set_area(area)
         }
     }
 
     fn set_cell_selection(&mut self, strategy: CellFilter) {
-        if let Some(fx) = self.fx.as_mut() {
+        if let Some(fx) = &mut self.fx {
             fx.set_cell_selection(strategy)
         }
     }
 
-    fn reverse(&mut self) {
-        self.lifetime = self.lifetime.reversed()
-    }
-
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        todo!()
+        Some(&mut self.lifetime)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {
-        todo!()
+        if let Some(fx) = self.fx.as_ref() {
+            return fx.cell_selection();
+        }
+        None
     }
 }

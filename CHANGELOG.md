@@ -1,6 +1,11 @@
-## Changelog
+# Changelog
 
-- Added `CellFilter::AnyOf(filters)` and `CellFilter::NoneOf(filters)` variants.
+### Added
+- Add `CellFilter::AnyOf(filters)` and `CellFilter::NoneOf(filters)` variants.
 
-## tachyonfx 0.1.0: 2024-06-20
-- Initial release of the library.
+### Fixed
+- `fx::translate()`: replace `todo!()` in cell_selection().
+
+## tachyonfx 0.1.0 - 2024-06-20
+
+Initial release of the library.

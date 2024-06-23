@@ -1,5 +1,4 @@
 use ratatui::style::Color;
-use crate::interpolation::Interpolatable;
 
 /// A utility struct for mapping and transforming colors based on
 /// a given alpha value. The `ColorMapper` caches the original color
