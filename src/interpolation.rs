@@ -1,5 +1,6 @@
 use ratatui::style::{Color, Style};
 use simple_easing::{back_in, back_in_out, back_out, bounce_in, bounce_in_out, bounce_out, circ_in, circ_in_out, circ_out, cubic_in, elastic_in, elastic_in_out, elastic_out, expo_in, expo_in_out, expo_out, quad_in, quad_in_out, quad_out, quart_in, quart_in_out, quart_out, quint_in, quint_in_out, quint_out, reverse, sine_in, sine_in_out, sine_out};
+use crate::color_ext::ToRgbComponents;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub enum Interpolation {
@@ -193,13 +194,10 @@ impl HslConvertable for Color {
     }
 
     fn to_hsl(&self) -> (f32, f32, f32) {
-        match self {
-            Color::Rgb(r, g, b) => {
-                let rgb = colorsys::Rgb::from([*r, *g, *b]);
-                let hsl: colorsys::Hsl = rgb.as_ref().into();
-                (hsl.hue() as f32, hsl.saturation() as f32, hsl.lightness() as f32)
-            }
-            _ => (0.0, 0.0, 0.0)
-        }
+        let (r, g, b) = self.to_rgb();
+
+        let rgb = colorsys::Rgb::from([r, g, b]);
+        let hsl: colorsys::Hsl = rgb.as_ref().into();
+        (hsl.hue() as f32, hsl.saturation() as f32, hsl.lightness() as f32)
     }
 }
