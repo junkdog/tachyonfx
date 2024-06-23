@@ -14,7 +14,7 @@ Add tachyonfx to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-tachyonfx = "0.1.0"
+tachyonfx = "0.2.0"
 ```
 
 ## Overview
