@@ -8,22 +8,46 @@ use ratatui::layout::Rect;
 use crate::{CellFilter, CellIterator, EffectTimer, Shader};
 
 #[derive(Clone)]
-pub struct ShaderFn {
-    code: Rc<RefCell<dyn FnMut(f32, Duration, Rect, CellIterator)>>,
+pub struct ShaderFn<S> {
+    state: S,
+    code: Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, CellIterator)>>,
     timer: EffectTimer,
     cell_filter: Option<CellFilter>,
     area: Option<Rect>,
 }
 
-impl ShaderFn {
+/// Context provided to the shader function, containing timing and area information.
+pub struct ShaderFnContext<'a> {
+    pub last_tick: Duration,
+    pub timer: &'a EffectTimer,
+    pub area: Rect,
+}
+
+impl<'a> ShaderFnContext<'a> {
+    pub fn new(area: Rect, last_tick: Duration, timer: &'a EffectTimer) -> Self {
+        Self {
+            last_tick,
+            timer,
+            area
+        }
+    }
+
+    pub fn alpha(&self) -> f32 {
+        self.timer.alpha()
+    }
+}
+
+impl<S: Clone + 'static> ShaderFn<S> {
     pub fn new<F, T>(
+        state: S,
         code: F,
         timer: T
     ) -> Self
-        where F: FnMut(f32, Duration, Rect, CellIterator) + 'static,
+        where F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static,
               T: Into<EffectTimer>
     {
         Self {
+            state,
             code: Rc::new(RefCell::new(code)),
             timer: timer.into(),
             cell_filter: None,
@@ -32,7 +56,7 @@ impl ShaderFn {
     }
 }
 
-impl Shader for ShaderFn {
+impl<S: Clone + 'static> Shader for ShaderFn<S> {
     fn process(
         &mut self,
         duration: Duration,
@@ -40,11 +64,9 @@ impl Shader for ShaderFn {
         area: Rect
     ) -> Option<Duration> {
         let overflow = self.timer.process(duration);
-        let alpha = self.timer.alpha();
 
         let requested_cells = self.cell_iter(buf, area);
-
-        self.code.borrow_mut()(alpha, duration, area, requested_cells);
+        self.code.borrow_mut()(&mut self.state, ShaderFnContext::new(area, duration, &self.timer), requested_cells);
 
         overflow
     }

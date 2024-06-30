@@ -1,5 +1,10 @@
 # Changelog
 
+### Changed
+- `fx::effect_fn()`: updated the function signature to include an initial state parameter and `ShaderFnContext`
+  context parameter. The custom effect closure now takes three parameters: mutable state, `ShaderFnContext`, and a
+  cell iterator.
+
 ## tachyonfx 0.2.0 - 2024-06-23
 
 ### Added

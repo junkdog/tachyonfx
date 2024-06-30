@@ -1,6 +1,13 @@
 use std::time::Duration;
-use ratatui::layout::Rect;
+
 use ratatui::style::Color;
+
+pub use glitch::Glitch;
+use ping_pong::PingPong;
+pub use shader_fn::*;
+pub use sweep_in::Direction;
+
+use crate::CellIterator;
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::fx::ansi256::Ansi256;
@@ -8,16 +15,13 @@ use crate::fx::consume_tick::ConsumeTick;
 use crate::fx::containers::{ParallelEffect, SequentialEffect};
 use crate::fx::dissolve::Dissolve;
 use crate::fx::fade::FadeColors;
+use crate::fx::hsl_shift::HslShift;
 use crate::fx::never_complete::NeverComplete;
-use crate::fx::resize::ResizeArea;
 use crate::fx::repeat::Repeat;
+use crate::fx::resize::ResizeArea;
 use crate::fx::sleep::Sleep;
 use crate::fx::sweep_in::SweepIn;
 use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
-
-pub use glitch::Glitch;
-use hsl_shift::HslShift;
-pub use sweep_in::Direction;
 
 mod ansi256;
 mod consume_tick;
@@ -36,23 +40,23 @@ mod translate;
 mod hsl_shift;
 mod shader_fn;
 
-use ping_pong::PingPong;
-use shader_fn::ShaderFn;
-use crate::CellIterator;
-
 /// Creates a custom effect using a user-defined function.
 ///
 /// This function allows you to define custom effects by providing a closure that will be called
-/// with the current alpha value, duration, area, and a cell iterator. You can use this closure
-/// to apply custom transformations or animations to the terminal cells.
+/// with the current state, `ShaderFnContext`, and a cell iterator. You can use this closure
+/// to apply custom transformations or animations to the terminal cells. The function also takes
+/// an initial state that can be used to maintain state across invocations.
 ///
 /// # Arguments
+/// * `state` - An initial state that will be passed to the closure on each invocation.
 /// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
-/// * `f` - A closure that defines the custom effect. The closure takes four parameters:
-///   * `alpha`: A float representing the progress of the effect (from 0.0 to 1.0).
-///   * `duration`: The duration since the last invocation.
-///   * `area`: The rectangular area within the terminal where the effect is applied.
+/// * `f` - A closure that defines the custom effect. The closure takes three parameters:
+///   * `state`: A mutable reference to the state provided during the creation of the effect.
+///   * `context`: A `ShaderFnContext` instance containing timing and area information.
 ///   * `cell_iter`: An iterator over the terminal cells.
+///
+/// # Returns
+/// * An `Effect` instance that can be used with other effects or applied directly to terminal cells.
 ///
 /// # Examples
 ///
@@ -61,21 +65,30 @@ use crate::CellIterator;
 /// use tachyonfx::*;
 ///
 /// let timer = EffectTimer::from_ms(1000, Interpolation::CubicInOut);
-/// fx::effect_fn(timer, |alpha, _duration, _area, cell_iter| {
-///    let mut fg_mapper = ColorMapper::default();
+/// let initial_state = (); // no state to keep track of
 ///
-///    for (_, cell) in cell_iter {
+/// fx::effect_fn(timer, |_state, context, cell_iter| {
+///    let mut fg_mapper = ColorMapper::default();
+///    let alpha = context.alpha();
+///
+///    for (_pos, cell) in cell_iter {
+///        // context.timer.progress() is already interpolated, so we can linearly lerp to the target color
 ///        let color = fg_mapper.map(cell.fg, alpha, |c| c.lerp(&Color::Indexed(35), alpha));
 ///        cell.set_fg(color);
 ///    }
 /// }).with_cell_selection(CellFilter::FgColor(Color::DarkGray));
 /// ```
-pub fn effect_fn<F, T>(timer: T, f: F) -> Effect
+///
+/// In this example, the custom effect function interpolates the foreground color of each
+/// cell to a new color over the specified duration. The effect is only applied to cells with
+/// a foreground color of `Color::DarkGray`.
+pub fn effect_fn<F, S, T>(state: S, timer: T, f: F) -> Effect
 where
-    F: FnMut(f32, Duration, Rect, CellIterator) + 'static,
-    T: Into<EffectTimer>
+    S: Clone + 'static,
+    T: Into<EffectTimer>,
+    F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static,
 {
-    ShaderFn::new(f, timer).into_effect()
+    ShaderFn::new(state, f, timer).into_effect()
 }
 
 /// changes the hue, saturation, and lightness of the foreground and background colors.

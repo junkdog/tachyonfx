@@ -16,8 +16,27 @@ use ratatui::widgets::{Block, Clear, Widget};
 
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
-use tachyonfx::{CellFilter, CenteredShrink, ColorMapper, Effect, EffectRenderer, fx, Interpolatable, Interpolation, Shader};
-use tachyonfx::fx::{Direction, Glitch, never_complete, parallel, sequence, timed_never_complete, with_duration};
+use tachyonfx::{
+    CellFilter,
+    CellIterator,
+    CenteredShrink,
+    ColorMapper,
+    Effect,
+    EffectRenderer,
+    fx::{
+        self,
+        Direction,
+        Glitch,
+        never_complete,
+        parallel,
+        sequence,
+        timed_never_complete,
+        with_duration,
+    },
+    Interpolatable,
+    Interpolation,
+    Shader,
+};
 
 use crate::gruvbox::Gruvbox;
 use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
@@ -223,9 +242,10 @@ impl EffectsRepository {
             .cell_glitch_ratio(1.0)
             .into();
 
-        // short
-        let custom_fade = fx::effect_fn(slow, |alpha, _duration, _area, cell_iter| {
+        // fx from lambdas
+        let custom_fade = fx::effect_fn((), slow, |_state, ctx, cell_iter: CellIterator| {
             let mut fg_mapper = ColorMapper::default();
+            let alpha = ctx.alpha();
 
             for (_, cell) in cell_iter {
                 let color = fg_mapper.map(cell.fg, alpha, |c| c.lerp(&Color::Indexed(35), alpha));
