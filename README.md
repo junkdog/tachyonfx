@@ -57,6 +57,8 @@ The library includes a variety of effects, categorized as follows:
 - **parallel:** Runs effects in parallel, all at the same time. Reports completion once all effects have completed.
 - **sequence:** Runs effects in sequence, one after the other. Reports completion once the last effect has completed.
 
+#### Other Effects
+- **effect_fn:** Creates custom effects from user-defined functions.
 
 
 ### EffectTimer and Interpolations
