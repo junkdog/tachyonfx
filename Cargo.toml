@@ -16,7 +16,7 @@ authors = ["Adrian Papari <junkdog@angelhill.net>"]
 colorsys = "0.6.7"
 derive_builder = "0.20.0"
 rand = { version = "0.8.5", features = ["small_rng"] }
-ratatui = "0.26.3"
+ratatui = "0.27.0"
 simple-easing = "1.0.1"
 
 [dev-dependencies]

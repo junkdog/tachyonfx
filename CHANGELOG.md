@@ -4,6 +4,7 @@
 - `fx::effect_fn()`: updated the function signature to include an initial state parameter and `ShaderFnContext`
   context parameter. The custom effect closure now takes three parameters: mutable state, `ShaderFnContext`, and a
   cell iterator.
+- `ratatui` updated to 0.27.0. This is also the minimum version required for tachyonfx.
 
 ## tachyonfx 0.2.0 - 2024-06-23
 

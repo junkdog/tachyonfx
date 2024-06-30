@@ -124,8 +124,8 @@ impl CellSelector {
     fn resolve_area(area: Rect, mode: &CellFilter) -> Rect {
         match mode {
             CellFilter::All           => area,
-            CellFilter::Inner(margin) => area.inner(margin),
-            CellFilter::Outer(margin) => area.inner(margin),
+            CellFilter::Inner(margin) => area.inner(*margin),
+            CellFilter::Outer(margin) => area.inner(*margin),
             CellFilter::Text          => area,
             CellFilter::AllOf(_)      => area,
             CellFilter::AnyOf(_)      => area,

@@ -180,7 +180,7 @@ fn ui(
         Constraint::Length(2),
         Constraint::Length(7),
         Constraint::Length(6),
-    ]).split(content_area.inner(&Margin::new(1, 1)));
+    ]).split(content_area.inner(Margin::new(1, 1)));
 
     let active_animation: Line = Line::from(vec![
         Span::from("Active animation: ").style(anim_style[0]),
