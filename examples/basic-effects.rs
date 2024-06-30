@@ -1,7 +1,7 @@
 use std::{io, panic};
 use std::error::Error;
 use std::io::Stdout;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
@@ -243,14 +243,17 @@ impl EffectsRepository {
             .into();
 
         // fx from lambdas
-        let custom_fade = fx::effect_fn((), slow, |_state, ctx, cell_iter: CellIterator| {
-            let mut fg_mapper = ColorMapper::default();
-            let alpha = ctx.alpha();
+        let custom_color_cycle = fx::effect_fn(Instant::now(), slow, |state, _ctx, cell_iter| {
+            let cycle: f64 = (state.elapsed().as_millis() % 3600) as f64;
 
-            for (_, cell) in cell_iter {
-                let color = fg_mapper.map(cell.fg, alpha, |c| c.lerp(&Color::Indexed(35), alpha));
-                cell.set_fg(color);
-            }
+            cell_iter
+                .filter(|(_, cell)| cell.symbol() != " ")
+                .enumerate()
+                .for_each(|(i, (_pos, cell))| {
+                    let hue = (2.0 * i as f64 + cycle * 0.2) % 360.0;
+                    let color = Color::from_hsl(hue, 100.0, 50.0);
+                    cell.set_fg(color);
+                });
         }).with_cell_selection(CellFilter::FgColor(Light3.into()));
 
         let effects = vec![
@@ -304,7 +307,7 @@ impl EffectsRepository {
                     ])),
                 ])
             )),
-            ("custom fade", never_complete(custom_fade)),
+            ("custom color cycle", never_complete(custom_color_cycle)),
         ];
 
         Self { effects }

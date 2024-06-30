@@ -82,6 +82,30 @@ mod shader_fn;
 /// In this example, the custom effect function interpolates the foreground color of each
 /// cell to a new color over the specified duration. The effect is only applied to cells with
 /// a foreground color of `Color::DarkGray`.
+///
+/// ```no_run
+/// use std::time::Instant;
+/// use ratatui::style::Color;
+/// use tachyonfx::fx;
+///
+/// fx::never_complete(fx::effect_fn(Instant::now(), 0, |state, _ctx, cell_iter| {
+///     let cycle: f64 = (state.elapsed().as_millis() % 3600) as f64;
+///
+///     cell_iter
+///         .filter(|(_, cell)| cell.symbol() != " ")
+///         .enumerate()
+///         .for_each(|(i, (_pos, cell))| {
+///             let hue = (2.0 * i as f64 + cycle * 0.2) % 360.0;
+///             let color = Color::from_hsl(hue, 100.0, 50.0);
+///             cell.set_fg(color);
+///         });
+/// }));
+/// ```
+///
+/// This example creates an effect that runs indefinitely and cycles the color of each
+/// foreground cell based on the elapsed time. Each cell's color is slightly offset by
+/// the cell's position.
+///
 pub fn effect_fn<F, S, T>(state: S, timer: T, f: F) -> Effect
 where
     S: Clone + 'static,
