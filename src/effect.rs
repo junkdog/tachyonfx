@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use ratatui::buffer::{Buffer, Cell};
+use ratatui::layout;
 use ratatui::layout::{Margin, Position, Rect};
 use ratatui::style::Color;
 use crate::{CellIterator, EffectTimer};
@@ -107,6 +108,8 @@ pub enum CellFilter {
     NoneOf(Vec<CellFilter>),
     /// Negates the given filter
     Not(Box<CellFilter>),
+    /// Selects cells within the specified layout, denoted by the index
+    Layout(layout::Layout, u16)
 }
 
 pub struct CellSelector {
@@ -123,16 +126,17 @@ impl CellSelector {
 
     fn resolve_area(area: Rect, mode: &CellFilter) -> Rect {
         match mode {
-            CellFilter::All           => area,
-            CellFilter::Inner(margin) => area.inner(*margin),
-            CellFilter::Outer(margin) => area.inner(*margin),
-            CellFilter::Text          => area,
-            CellFilter::AllOf(_)      => area,
-            CellFilter::AnyOf(_)      => area,
-            CellFilter::NoneOf(_)     => area,
-            CellFilter::Not(m)        => Self::resolve_area(area, m.as_ref()),
-            CellFilter::FgColor(_)    => area,
-            CellFilter::BgColor(_)    => area,
+            CellFilter::All                  => area,
+            CellFilter::Inner(margin)        => area.inner(*margin),
+            CellFilter::Outer(margin)        => area.inner(*margin),
+            CellFilter::Text                 => area,
+            CellFilter::AllOf(_)             => area,
+            CellFilter::AnyOf(_)             => area,
+            CellFilter::NoneOf(_)            => area,
+            CellFilter::Not(m)               => Self::resolve_area(area, m.as_ref()),
+            CellFilter::FgColor(_)           => area,
+            CellFilter::BgColor(_)           => area,
+            CellFilter::Layout(layout, idx)  => layout.split(area)[*idx as usize],
         }
     }
 
@@ -145,19 +149,20 @@ impl CellSelector {
 
     fn valid_position(&self, pos: Position, mode: &CellFilter) -> bool {
         match mode {
-            CellFilter::All        => self.inner_area.contains(pos),
-            CellFilter::Inner(_)   => self.inner_area.contains(pos),
-            CellFilter::Outer(_)   => !self.inner_area.contains(pos),
-            CellFilter::Text       => self.inner_area.contains(pos),
-            CellFilter::AllOf(s)   => s.iter()
+            CellFilter::All          => self.inner_area.contains(pos),
+            CellFilter::Layout(_, _) => self.inner_area.contains(pos),
+            CellFilter::Inner(_)     => self.inner_area.contains(pos),
+            CellFilter::Outer(_)     => !self.inner_area.contains(pos),
+            CellFilter::Text         => self.inner_area.contains(pos),
+            CellFilter::AllOf(s)     => s.iter()
                 .all(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
-            CellFilter::AnyOf(s)   => s.iter()
+            CellFilter::AnyOf(s)     => s.iter()
                 .any(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
-            CellFilter::NoneOf(s)  => s.iter()
+            CellFilter::NoneOf(s)    => s.iter()
                 .all(|mode| !mode.selector(self.inner_area).valid_position(pos, mode)),
-            CellFilter::Not(m)  => self.valid_position(pos, m.as_ref()),
-            CellFilter::FgColor(_) => self.inner_area.contains(pos),
-            CellFilter::BgColor(_) => self.inner_area.contains(pos),
+            CellFilter::Not(m)       => self.valid_position(pos, m.as_ref()),
+            CellFilter::FgColor(_)   => self.inner_area.contains(pos),
+            CellFilter::BgColor(_)   => self.inner_area.contains(pos),
         }
     }
 
