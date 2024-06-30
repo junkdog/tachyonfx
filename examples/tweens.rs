@@ -11,8 +11,8 @@ use ratatui::buffer::Buffer;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Margin, Rect};
 use ratatui::layout::Constraint::Ratio;
-use ratatui::prelude::Marker;
 use ratatui::style::{Modifier, Style};
+use ratatui::symbols::Marker;
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Axis, Block, Chart, Clear, Dataset, GraphType, LegendPosition, StatefulWidget, Widget};
 
@@ -234,7 +234,7 @@ impl InterpolationWidget {
                 Constraint::Min(1),
                 Constraint::Percentage(50),
             ]
-        ).split(area.inner(&Margin::new(1, 0)));
+        ).split(area.inner(Margin::new(1, 0)));
 
         Text::from("coalesce/dissolve")
             .style(Style::default().fg(OrangeBright.into()))

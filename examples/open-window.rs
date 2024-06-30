@@ -241,7 +241,7 @@ impl StatefulWidget for HelloWorldPopup {
         buf.render_effect(&mut state.window_fx, area, self.last_tick);
         let content_area = state.window_fx.area()
             .unwrap_or(area)
-            .inner(&Margin::new(1, 1));
+            .inner(Margin::new(1, 1));
 
         state.text.clone().render(content_area, buf);
 
