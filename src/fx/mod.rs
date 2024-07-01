@@ -1,5 +1,5 @@
 use std::time::Duration;
-
+use ratatui::buffer::Buffer;
 use ratatui::style::Color;
 
 pub use glitch::Glitch;
@@ -112,7 +112,17 @@ where
     T: Into<EffectTimer>,
     F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static,
 {
-    ShaderFn::new(state, f, timer).into_effect()
+    ShaderFn::with_iterator(state, f, timer).into_effect()
+}
+
+/// Creates a custom effect using a user-defined function that operates on a buffer.
+pub fn effect_fn_buf<F, S, T>(state: S, timer: T, f: F) -> Effect
+where
+    S: Clone + 'static,
+    T: Into<EffectTimer>,
+    F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static,
+{
+    ShaderFn::with_buffer(state, f, timer).into_effect()
 }
 
 /// changes the hue, saturation, and lightness of the foreground and background colors.

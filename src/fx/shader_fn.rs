@@ -10,25 +10,39 @@ use crate::{CellFilter, CellIterator, EffectTimer, Shader};
 #[derive(Clone)]
 pub struct ShaderFn<S> {
     state: S,
-    code: Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, CellIterator)>>,
+    code: ShaderFnSignature<S>,
     timer: EffectTimer,
     cell_filter: Option<CellFilter>,
     area: Option<Rect>,
 }
+
+#[derive(Clone)]
+enum ShaderFnSignature<S> {
+    Iter(Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, CellIterator)>>),
+    Buffer(Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, &mut Buffer)>>),
+}
+
 
 /// Context provided to the shader function, containing timing and area information.
 pub struct ShaderFnContext<'a> {
     pub last_tick: Duration,
     pub timer: &'a EffectTimer,
     pub area: Rect,
+    pub filter: Option<CellFilter>,
 }
 
 impl<'a> ShaderFnContext<'a> {
-    pub fn new(area: Rect, last_tick: Duration, timer: &'a EffectTimer) -> Self {
+    fn new(
+        area: Rect,
+        filter: Option<CellFilter>,
+        last_tick: Duration,
+        timer: &'a EffectTimer
+    ) -> Self {
         Self {
             last_tick,
             timer,
-            area
+            area,
+            filter,
         }
     }
 
@@ -38,7 +52,7 @@ impl<'a> ShaderFnContext<'a> {
 }
 
 impl<S: Clone + 'static> ShaderFn<S> {
-    pub fn new<F, T>(
+    pub fn with_iterator<F, T>(
         state: S,
         code: F,
         timer: T
@@ -48,7 +62,24 @@ impl<S: Clone + 'static> ShaderFn<S> {
     {
         Self {
             state,
-            code: Rc::new(RefCell::new(code)),
+            code: ShaderFnSignature::Iter(Rc::new(RefCell::new(code))),
+            timer: timer.into(),
+            cell_filter: None,
+            area: None
+        }
+    }
+
+    pub fn with_buffer<F, T>(
+        state: S,
+        code: F,
+        timer: T
+    ) -> Self
+        where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static,
+              T: Into<EffectTimer>
+    {
+        Self {
+            state,
+            code: ShaderFnSignature::Buffer(Rc::new(RefCell::new(code))),
             timer: timer.into(),
             cell_filter: None,
             area: None
@@ -65,8 +96,17 @@ impl<S: Clone + 'static> Shader for ShaderFn<S> {
     ) -> Option<Duration> {
         let overflow = self.timer.process(duration);
 
-        let requested_cells = self.cell_iter(buf, area);
-        self.code.borrow_mut()(&mut self.state, ShaderFnContext::new(area, duration, &self.timer), requested_cells);
+        match self.code.clone() {
+            ShaderFnSignature::Iter(f) => {
+                let cells = self.cell_iter(buf, area);
+                let ctx = ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
+                f.borrow_mut()(&mut self.state, ctx, cells)
+            }
+            ShaderFnSignature::Buffer(f) => {
+                let ctx = ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
+                f.borrow_mut()(&mut self.state, ctx, buf)
+            }
+        }
 
         overflow
     }

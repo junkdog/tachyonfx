@@ -1,5 +1,8 @@
 # Changelog
 
+### Added
+- `fx::effect_fn_buf()`: to create custom effects operating on a `Buffer` instead of `CellIterator`.
+
 ## tachyonfx 0.3.0 - 2024-06-30
 
 ### Changed

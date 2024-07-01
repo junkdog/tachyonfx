@@ -18,9 +18,7 @@ use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
 use tachyonfx::{
     CellFilter,
-    CellIterator,
     CenteredShrink,
-    ColorMapper,
     Effect,
     EffectRenderer,
     fx::{
