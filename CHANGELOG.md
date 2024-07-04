@@ -1,6 +1,8 @@
 # Changelog
 
 ### Added
+- `fx::slide_in()` and `fx::slide_out()`: slides in/out cells by "shrinking" the cells horizontally or
+  vertically along the given area.
 - `fx::effect_fn_buf()`: to create custom effects operating on a `Buffer` instead of `CellIterator`.
 
 ## tachyonfx 0.3.0 - 2024-06-30

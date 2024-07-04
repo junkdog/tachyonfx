@@ -31,11 +31,9 @@ use tachyonfx::{
         timed_never_complete,
         with_duration,
     },
-    Interpolatable,
     Interpolation,
     Shader,
 };
-
 use crate::gruvbox::Gruvbox;
 use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
 
@@ -233,7 +231,7 @@ impl EffectsRepository {
         let medium = Duration::from_millis(750);
         let short = Duration::from_millis(320);
 
-        let glitch = Glitch::builder()
+        let _glitch: Effect = Glitch::builder()
             .rng(SmallRng::from_entropy())
             .action_ms(200..400)
             .action_start_delay_ms(0..1)
@@ -265,11 +263,17 @@ impl EffectsRepository {
             ])),
             ("coalesce",
                 fx::coalesce(100, (medium, CubicOut))),
-            ("glitchy coalesce", parallel(vec![
-                fx::coalesce(100, (medium, CubicOut)),
-                timed_never_complete(medium, glitch)
-            ])),
-            ("change hue, saturation and lightness" ,sequence(vec![
+            ("slide in", fx::repeating(sequence(vec![
+                parallel(vec![
+                    fx::fade_from_fg(bg, (2000, ExpoInOut)),
+                    fx::slide_in(Direction::UpToDown, 20, Dark0Hard, medium),
+                ]),
+                fx::sleep(medium),
+                fx::timed_never_complete(medium * 2,
+                    fx::slide_out(Direction::LeftToRight, 80, Dark0Hard, medium),
+                ),
+            ]))),
+            ("change hue, saturation and lightness", sequence(vec![
                 fx::hsl_shift_fg([360.0, 0.0, 0.0], medium),
                 fx::hsl_shift_fg([0.0, -100.0, 0.0], medium),
                 fx::hsl_shift_fg([0.0, -100.0, 0.0], medium).reversed(),

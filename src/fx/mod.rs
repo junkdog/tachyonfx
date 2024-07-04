@@ -5,7 +5,9 @@ use ratatui::style::Color;
 pub use glitch::Glitch;
 use ping_pong::PingPong;
 pub use shader_fn::*;
+use slide::SlideCell;
 pub use sweep_in::Direction;
+pub use slide::SlideDirection;
 
 use crate::CellIterator;
 use crate::effect::{Effect, IntoEffect};
@@ -39,6 +41,8 @@ mod temporary;
 mod translate;
 mod hsl_shift;
 mod shader_fn;
+mod slide;
+mod moving_window;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -174,13 +178,8 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
     faded_color: C,
     lifetime: T,
 ) -> Effect {
-    let flipped = match direction {
-        Direction::LeftToRight => Direction::RightToLeft,
-        Direction::RightToLeft => Direction::LeftToRight,
-        Direction::UpToDown => Direction::DownToUp,
-        Direction::DownToUp => Direction::UpToDown,
-    };
-    sweep_in(flipped, gradient_length, faded_color, lifetime).reversed()
+    sweep_in(direction.flipped(), gradient_length, faded_color, lifetime)
+        .reversed()
 }
 
 /// Sweeps in a from the specified color.
@@ -192,6 +191,40 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
 ) -> Effect {
     SweepIn::new(direction, gradient_length, faded_color.into(), lifetime.into())
         .into_effect()
+}
+
+/// Changes the character and colors of cells as if they are sliding
+/// in from one direction
+pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
+    direction: Direction,
+    gradient_length: u16,
+    color_behind_cells: C,
+    timer: T,
+) -> Effect {
+    slide_out(direction.flipped(), gradient_length, color_behind_cells, timer)
+        .reversed()
+}
+
+pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
+    direction: Direction,
+    gradient_length: u16,
+    color_behind_cells: C,
+    timer: T,
+) -> Effect {
+    let timer: EffectTimer = timer.into();
+    let timer = match direction {
+        Direction::LeftToRight => timer.reversed(),
+        Direction::RightToLeft => timer,
+        Direction::UpToDown    => timer,
+        Direction::DownToUp    => timer.reversed(),
+    };
+
+    SlideCell::builder()
+        .timer(timer)
+        .color_behind_cell(color_behind_cells.into())
+        .gradient_length(gradient_length)
+        .direction(direction)
+        .into()
 }
 
 pub fn translate<T: Into<EffectTimer>>(
