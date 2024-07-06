@@ -28,8 +28,6 @@ use tachyonfx::{
         never_complete,
         parallel,
         sequence,
-        timed_never_complete,
-        with_duration,
     },
     Interpolation,
     Shader,
@@ -263,7 +261,7 @@ impl EffectsRepository {
             ])),
             ("coalesce",
                 fx::coalesce(100, (medium, CubicOut))),
-            ("slide in", fx::repeating(sequence(vec![
+            ("slide in/out", fx::repeating(sequence(vec![
                 parallel(vec![
                     fx::fade_from_fg(bg, (2000, ExpoInOut)),
                     fx::slide_in(Direction::UpToDown, 20, Dark0Hard, medium),
@@ -284,31 +282,6 @@ impl EffectsRepository {
                 fx::hsl_shift_fg([0.0, 0.0, 100.0], medium),
                 fx::hsl_shift_fg([0.0, 0.0, 100.0], medium).reversed(),
             ])),
-            ("repeating fade in, dissolving fade out", fx::repeating(
-                sequence(vec![
-                    // fade in content area
-                    with_duration(slow + short, parallel(vec![
-                        never_complete(fx::dissolve(1, 0)),
-                        never_complete(fx::fade_from(screen_bg, screen_bg, (slow, QuadOut))),
-                    ])),
-                    // fade in; all content visible
-                    fx::fade_from_fg(bg, (slow, QuadOut)),
-                    // do nothing for a while
-                    fx::sleep(slow * 2),
-                    // simultaneously dissolve and fade out content
-                    parallel(vec![
-                        fx::dissolve(100, (slow, CubicOut)),
-                        fx::fade_to_fg(bg, (slow, QuadOut)),
-                    ]),
-                    // content hidden for some time
-                    timed_never_complete(short, fx::dissolve(1, 0)),
-                    // fade out content area
-                    with_duration(slow + short, parallel(vec![
-                        never_complete(fx::dissolve(1, 0)),
-                        never_complete(fx::fade_to(screen_bg, screen_bg, (slow, QuadOut))),
-                    ])),
-                ])
-            )),
             ("custom color cycle", never_complete(custom_color_cycle)),
         ];
 

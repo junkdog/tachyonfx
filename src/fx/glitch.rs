@@ -35,7 +35,7 @@ impl GlitchCell {
 }
 
 /// applies a glitch effect to random parts of the screen.
-#[derive(Builder, Clone, Debug)]
+#[derive(Builder, Clone)]
 #[builder(pattern = "owned")]
 pub struct Glitch {
     cell_glitch_ratio: f32,

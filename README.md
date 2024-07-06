@@ -33,10 +33,12 @@ The library includes a variety of effects, categorized as follows:
 - **term256_colors:** Downsamples to 256 color mode.
 
 #### Text/Character Effects
-- **coalesce:** The reverse of dissolve, coalesces text over the specified duration.
-- **dissolve:** Dissolves the current text over the specified duration.
-- **sweep_in:** Sweeps in from the specified color.
-- **sweep_out:** Sweeps out to the specified color.
+- **coalesce:**   The reverse of dissolve, coalesces text over the specified duration.
+- **dissolve:**   Dissolves the current text over the specified duration.
+- **slide_in:**   Applies a directional sliding in effect to terminal cells.
+- **slide_out:**  Applies a directional sliding out effect to terminal cells.
+- **sweep_in:**   Sweeps in from the specified color.
+- **sweep_out:**  Sweeps out to the specified color.
 
 #### Timing and Control Effects
 - **consume_tick:**         Consumes a single tick.
@@ -58,7 +60,8 @@ The library includes a variety of effects, categorized as follows:
 - **sequence:** Runs effects in sequence, one after the other. Reports completion once the last effect has completed.
 
 #### Other Effects
-- **effect_fn:** Creates custom effects from user-defined functions.
+- **effect_fn:** Creates custom effects from user-defined functions, operating over `CellIterator`.
+- **effect_fn_buf:** Creates custom effects from functions, operating over `Buffer`.
 
 
 ### EffectTimer and Interpolations

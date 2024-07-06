@@ -1,6 +1,7 @@
 # Changelog
 
 ### Added
+- `CellFilter::PositionFn`: filter cells based on a predicate function.
 - `fx::slide_in()` and `fx::slide_out()`: slides in/out cells by "shrinking" the cells horizontally or
   vertically along the given area.
 - `fx::effect_fn_buf()`: to create custom effects operating on a `Buffer` instead of `CellIterator`.

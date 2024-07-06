@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 use ratatui::buffer::{Buffer, Cell};
@@ -85,7 +87,7 @@ impl Effect {
 }
 
 /// A filter mode enables effects to operate on specific cells.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub enum CellFilter {
     /// Selects every cell
     #[default]
@@ -109,7 +111,17 @@ pub enum CellFilter {
     /// Negates the given filter
     Not(Box<CellFilter>),
     /// Selects cells within the specified layout, denoted by the index
-    Layout(layout::Layout, u16)
+    Layout(layout::Layout, u16),
+    /// Selects cells by predicate function
+    PositionFn(Rc<RefCell<dyn Fn(Position) -> bool>>),
+}
+
+impl CellFilter {
+    pub fn position_fn<F>(f: F) -> Self
+        where F: Fn(Position) -> bool + 'static
+    {
+        CellFilter::PositionFn(Rc::new(RefCell::new(f)))
+    }
 }
 
 pub struct CellSelector {
@@ -137,6 +149,7 @@ impl CellSelector {
             CellFilter::FgColor(_)           => area,
             CellFilter::BgColor(_)           => area,
             CellFilter::Layout(layout, idx)  => layout.split(area)[*idx as usize],
+            CellFilter::PositionFn(_)        => area,
         }
     }
 
@@ -149,20 +162,21 @@ impl CellSelector {
 
     fn valid_position(&self, pos: Position, mode: &CellFilter) -> bool {
         match mode {
-            CellFilter::All          => self.inner_area.contains(pos),
-            CellFilter::Layout(_, _) => self.inner_area.contains(pos),
-            CellFilter::Inner(_)     => self.inner_area.contains(pos),
-            CellFilter::Outer(_)     => !self.inner_area.contains(pos),
-            CellFilter::Text         => self.inner_area.contains(pos),
-            CellFilter::AllOf(s)     => s.iter()
+            CellFilter::All           => self.inner_area.contains(pos),
+            CellFilter::Layout(_, _)  => self.inner_area.contains(pos),
+            CellFilter::Inner(_)      => self.inner_area.contains(pos),
+            CellFilter::Outer(_)      => !self.inner_area.contains(pos),
+            CellFilter::Text          => self.inner_area.contains(pos),
+            CellFilter::AllOf(s)      => s.iter()
                 .all(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
-            CellFilter::AnyOf(s)     => s.iter()
+            CellFilter::AnyOf(s)      => s.iter()
                 .any(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
-            CellFilter::NoneOf(s)    => s.iter()
+            CellFilter::NoneOf(s)     => s.iter()
                 .all(|mode| !mode.selector(self.inner_area).valid_position(pos, mode)),
-            CellFilter::Not(m)       => self.valid_position(pos, m.as_ref()),
-            CellFilter::FgColor(_)   => self.inner_area.contains(pos),
-            CellFilter::BgColor(_)   => self.inner_area.contains(pos),
+            CellFilter::Not(m)        => self.valid_position(pos, m.as_ref()),
+            CellFilter::FgColor(_)    => self.inner_area.contains(pos),
+            CellFilter::BgColor(_)    => self.inner_area.contains(pos),
+            CellFilter::PositionFn(f) => f.borrow()(pos),
         }
     }
 

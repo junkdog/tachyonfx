@@ -7,7 +7,6 @@ use ping_pong::PingPong;
 pub use shader_fn::*;
 use slide::SlideCell;
 pub use sweep_in::Direction;
-pub use slide::SlideDirection;
 
 use crate::CellIterator;
 use crate::effect::{Effect, IntoEffect};
@@ -213,8 +212,8 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
 ) -> Effect {
     let timer: EffectTimer = timer.into();
     let timer = match direction {
-        Direction::LeftToRight => timer.reversed(),
-        Direction::RightToLeft => timer,
+        Direction::LeftToRight => timer,
+        Direction::RightToLeft => timer.reversed(),
         Direction::UpToDown    => timer,
         Direction::DownToUp    => timer.reversed(),
     };
