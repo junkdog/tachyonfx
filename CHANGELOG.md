@@ -6,6 +6,9 @@
   vertically along the given area.
 - `fx::effect_fn_buf()`: to create custom effects operating on a `Buffer` instead of `CellIterator`.
 
+### Fixed
+- `fx::translate()`: translate can now move out-of-bounds.
+
 ## tachyonfx 0.3.0 - 2024-06-30
 
 ### Changed

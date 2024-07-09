@@ -110,6 +110,12 @@ pub trait Interpolatable<T> {
     }
 }
 
+impl<T: Interpolatable<T>> Interpolatable<(T, T)> for (T, T) {
+    fn lerp(&self, target: &(T, T), alpha: f32) -> (T, T) {
+        (self.0.lerp(&target.0, alpha), self.1.lerp(&target.1, alpha))
+    }
+}
+
 impl Interpolatable<u16> for u16 {
     fn lerp(&self, target: &u16, alpha: f32) -> u16 {
         (*self as f32).lerp(

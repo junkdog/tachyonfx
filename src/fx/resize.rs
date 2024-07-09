@@ -17,7 +17,7 @@ pub struct ResizeArea {
     target_area: Rect,
     initial_w: u16,
     initial_h: u16,
-    lifetime: EffectTimer,
+    timer: EffectTimer,
 }
 
 impl ResizeArea {
@@ -27,7 +27,7 @@ impl ResizeArea {
         initial_h: u16,
         lifetime: EffectTimer
     ) -> Self {
-        Self { fx, initial_w, initial_h, lifetime, target_area: Rect::default() }
+        Self { fx, initial_w, initial_h, timer: lifetime, target_area: Rect::default() }
     }
 }
 
@@ -39,8 +39,8 @@ impl Shader for ResizeArea {
         area: Rect
     ) -> Option<Duration> {
         
-        let a = self.lifetime.alpha();
-        let remaining = self.lifetime.process(duration);
+        let a = self.timer.alpha();
+        let remaining = self.timer.process(duration);
         
         let w = self.initial_w.lerp(&area.width, a);
         let h = self.initial_h.lerp(&area.height, a);
@@ -61,7 +61,7 @@ impl Shader for ResizeArea {
     }
 
     fn done(&self) -> bool {
-        self.lifetime.done()
+        self.timer.done()
             && (self.fx.as_ref().is_some_and(|fx| fx.done()) || self.fx.is_none())
     }
 
@@ -88,7 +88,7 @@ impl Shader for ResizeArea {
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.lifetime)
+        Some(&mut self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

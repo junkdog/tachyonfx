@@ -15,6 +15,7 @@ mod rect_ext;
 mod render_effect;
 
 pub mod fx;
+mod bounding_box;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;

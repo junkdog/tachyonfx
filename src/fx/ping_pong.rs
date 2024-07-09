@@ -9,6 +9,7 @@ use crate::{CellFilter, CellIterator, Effect, EffectTimer, Shader};
 pub struct PingPong {
     fx: Effect,
     fx_original: Effect,
+    fx_area_old: Option<Rect>,
     is_reversing: bool,
     strategy: CellFilter,
 }
@@ -18,6 +19,7 @@ impl PingPong {
         Self {
             fx_original: fx.clone(),
             fx,
+            fx_area_old: None,
             is_reversing: false,
             strategy: CellFilter::default(),
         }
@@ -32,17 +34,22 @@ impl Shader for PingPong {
         buf: &mut Buffer,
         area: Rect
     ) -> Option<Duration> {
-        let overflow = self.fx.process(duration, buf, area);
-        if let Some(overflow) = overflow {
-            if !self.is_reversing {
-                self.is_reversing = true;
-                self.fx = self.fx_original.clone();
-                self.fx.reverse();
-                return self.fx.process(overflow, buf, area)
-            }
-        }
+        // if let Some(fx) = self.fx_area_old {
+        //     self.fx.set_area(fx);
+        // }
+        // self.fx_area_old = None; // old fx area is only valid for one frame
 
-        overflow
+        let overflow = self.fx.process(duration, buf, area);
+
+        if overflow.is_some() && !self.is_reversing {
+            self.is_reversing = true;
+            // self.fx_area_old = self.fx.area();
+            self.fx = self.fx_original.clone();
+            self.fx.reverse();
+            None // consumes any overflow when reversing, to reset the area
+        } else {
+            overflow
+        }
     }
 
     fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
@@ -59,6 +66,13 @@ impl Shader for PingPong {
 
     fn area(&self) -> Option<Rect> {
         self.fx.area()
+
+        // let area = self.fx.area().or_else(|| self.fx_area_old);
+        // if area.is_some() {
+        //     area
+        // } else {
+        //     None
+        // }
     }
 
     fn set_area(&mut self, area: Rect) {
@@ -74,7 +88,7 @@ impl Shader for PingPong {
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        self.fx.timer_mut()
+        None
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {
