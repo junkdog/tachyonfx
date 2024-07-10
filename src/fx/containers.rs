@@ -79,6 +79,10 @@ impl Shader for ParallelEffect {
     fn cell_selection(&self) -> Option<CellFilter> {
         None
     }
+
+    fn reset(&mut self) {
+        self.effects.iter_mut().for_each(Effect::reset)
+    }
 }
 
 impl Shader for SequentialEffect {
@@ -132,4 +136,9 @@ impl Shader for SequentialEffect {
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
 
     fn cell_selection(&self) -> Option<CellFilter> { None }
+
+    fn reset(&mut self) {
+        self.current = 0;
+        self.effects.iter_mut().for_each(Effect::reset)
+    }
 }

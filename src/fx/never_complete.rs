@@ -46,4 +46,8 @@ impl Shader for NeverComplete {
     fn cell_selection(&self) -> Option<CellFilter> {
         self.effect.cell_selection()
     }
+
+    fn reset(&mut self) {
+        self.effect.reset();
+    }
 }

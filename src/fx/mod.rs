@@ -137,7 +137,7 @@ pub fn hsl_shift<T: Into<EffectTimer>>(
     HslShift::builder()
         .hsl_mod_fg(hsl_fg_change)
         .hsl_mod_bg(hsl_bg_change)
-        .lifetime(lifetime.into())
+        .timer(lifetime.into())
         .into()
 }
 
@@ -347,6 +347,6 @@ fn fade<C: Into<Color>>(
     FadeColors::builder()
         .fg(fg.map(|c| c.into()))
         .bg(bg.map(|c| c.into()))
-        .lifetime(if reverse { lifetime.reversed() } else { lifetime })
+        .timer(if reverse { lifetime.reversed() } else { lifetime })
         .into()
 }

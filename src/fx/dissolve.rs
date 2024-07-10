@@ -9,7 +9,7 @@ use crate::shader::Shader;
 
 #[derive(Clone)]
 pub struct Dissolve {
-    lifetime: EffectTimer,
+    timer: EffectTimer,
     cyclic_cell_activation: Vec<f32>,
     area: Option<Rect>,
     cell_filter: CellFilter,
@@ -23,7 +23,7 @@ impl Dissolve {
         let mut rng = SmallRng::from_rng(thread_rng()).unwrap();
 
         Self {
-            lifetime,
+            timer: lifetime,
             cyclic_cell_activation: (0..cell_cycle).map(|_| rng.gen_range(0.0..1.0)).collect(),
             area: None,
             cell_filter: CellFilter::All,
@@ -44,7 +44,7 @@ impl Shader for Dissolve {
     }
 
     fn done(&self) -> bool {
-          self.lifetime.done()
+          self.timer.done()
      }
 
      fn clone_box(&self) -> Box<dyn Shader> {
@@ -64,7 +64,7 @@ impl Shader for Dissolve {
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.lifetime)
+        Some(&mut self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

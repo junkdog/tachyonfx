@@ -259,6 +259,10 @@ impl Shader for Effect {
     fn cell_selection(&self) -> Option<CellFilter> {
         self.shader.cell_selection()
     }
+
+    fn reset(&mut self) {
+        self.shader.reset()
+    }
 }
 
 

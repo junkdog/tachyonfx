@@ -10,7 +10,7 @@ use crate::shader::Shader;
 #[derive(Clone, Default, Builder)]
 #[builder(pattern = "owned")]
 pub struct HslShift {
-    lifetime: EffectTimer,
+    timer: EffectTimer,
     #[builder(default)]
     hsl_mod_fg: Option<[f32; 3]>,
     #[builder(default)]
@@ -58,7 +58,7 @@ impl Shader for HslShift {
     }
 
     fn done(&self) -> bool {
-        self.lifetime.done()
+        self.timer.done()
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -75,7 +75,7 @@ impl Shader for HslShift {
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.lifetime)
+        Some(&mut self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

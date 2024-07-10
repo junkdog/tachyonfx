@@ -10,14 +10,13 @@ use crate::shader::Shader;
 #[derive(Clone)]
 pub struct Repeat {
     fx: Effect,
-    original: Effect,
-    mode: RepeatMode
+    mode: RepeatMode,
+    original_mode: RepeatMode,
 }
 
 impl Repeat {
     pub fn new(fx: Effect, mode: RepeatMode) -> Self {
-        let original = fx.clone();
-        Self { fx, original, mode }
+        Self { fx, mode, original_mode: mode }
     }
 
     fn process_effect(
@@ -29,7 +28,7 @@ impl Repeat {
         match self.fx.process(duration, buf, area) {
             None => None,
             Some(overflow) => {
-                self.fx = self.original.clone();
+                self.fx.reset();
                 Some(overflow)
             }
         }
@@ -42,7 +41,7 @@ impl Shader for Repeat {
             RepeatMode::Forever => {
                 let overflow = self.fx.process(duration, buf, area);
                 if overflow.is_some() {
-                    self.fx = self.original.clone();
+                    self.fx.reset();
                 }
                 None
             }
@@ -58,7 +57,7 @@ impl Shader for Repeat {
                 let overflow = self.fx.process(duration, buf, area);
                 if overflow.is_some() {
                     self.mode = RepeatMode::Times(n - 1);
-                    self.fx = self.original.clone();
+                    self.fx.reset();
                 }
 
                 overflow
@@ -111,9 +110,14 @@ impl Shader for Repeat {
     fn cell_selection(&self) -> Option<CellFilter> {
         self.fx.cell_selection()
     }
+
+    fn reset(&mut self) {
+        self.fx.reset();
+        self.mode = self.original_mode.clone();
+    }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum RepeatMode {
     Forever,
     Times(u32),

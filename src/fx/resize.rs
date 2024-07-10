@@ -94,4 +94,11 @@ impl Shader for ResizeArea {
     fn cell_selection(&self) -> Option<CellFilter> {
         self.fx.as_ref().and_then(Effect::cell_selection)
     }
+
+    fn reset(&mut self) {
+        self.timer.reset();
+        if let Some(fx) = self.fx.as_mut() {
+            fx.reset();
+        }
+    }
 }

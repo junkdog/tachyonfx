@@ -42,6 +42,10 @@ impl Shader for Sleep {
     fn cell_selection(&self) -> Option<CellFilter> {
         None
     }
+
+    fn reset(&mut self) {
+        self.timer.reset();
+    }
 }
 
 

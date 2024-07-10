@@ -4,7 +4,7 @@ use ratatui::layout::{Rect};
 use crate::cell_iter::CellIterator;
 
 use crate::effect::CellFilter;
-use crate::EffectTimer;
+use crate::{EffectTimer, fx};
 
 /// A trait representing a shader-like object that can be processed for a duration.
 /// The `Shader` trait defines the interface for objects that can apply visual effects
@@ -152,4 +152,14 @@ pub trait Shader {
     /// # Returns
     /// * An `Option` containing the shader's `CellFilter`, or `None` if not applicable.
     fn cell_selection(&self) -> Option<CellFilter> { None }
+
+    /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and [fx::repeat]
+    /// to reset the hosted shader effect to its initial state.
+    fn reset(&mut self) {
+        if let Some(timer) = self.timer_mut() {
+            timer.reset();
+        } else {
+            panic!("Shader must implement reset()")
+        }
+    }
 }

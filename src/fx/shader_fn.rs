@@ -8,8 +8,9 @@ use ratatui::layout::Rect;
 use crate::{CellFilter, CellIterator, EffectTimer, Shader};
 
 #[derive(Clone)]
-pub struct ShaderFn<S> {
+pub struct ShaderFn<S: Clone> {
     state: S,
+    original_state: S,
     code: ShaderFnSignature<S>,
     timer: EffectTimer,
     cell_filter: Option<CellFilter>,
@@ -61,6 +62,7 @@ impl<S: Clone + 'static> ShaderFn<S> {
               T: Into<EffectTimer>
     {
         Self {
+            original_state: state.clone(),
             state,
             code: ShaderFnSignature::Iter(Rc::new(RefCell::new(code))),
             timer: timer.into(),
@@ -78,6 +80,7 @@ impl<S: Clone + 'static> ShaderFn<S> {
               T: Into<EffectTimer>
     {
         Self {
+            original_state: state.clone(),
             state,
             code: ShaderFnSignature::Buffer(Rc::new(RefCell::new(code))),
             timer: timer.into(),
@@ -135,5 +138,10 @@ impl<S: Clone + 'static> Shader for ShaderFn<S> {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         self.cell_filter.clone()
+    }
+
+    fn reset(&mut self) {
+        self.timer.reset();
+        self.state = self.original_state.clone();
     }
 }

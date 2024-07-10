@@ -35,4 +35,8 @@ impl Shader for ConsumeTick {
     fn area(&self) -> Option<Rect> { None }
     fn set_area(&mut self, _area: Rect) {}
     fn set_cell_selection(&mut self, _strategy: CellFilter) {}
+
+    fn reset(&mut self) {
+        self.has_consumed_tick = false;
+    }
 }

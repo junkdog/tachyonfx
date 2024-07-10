@@ -8,8 +8,6 @@ use crate::{CellFilter, CellIterator, Effect, EffectTimer, Shader};
 #[derive(Clone)]
 pub struct PingPong {
     fx: Effect,
-    fx_original: Effect,
-    fx_area_old: Option<Rect>,
     is_reversing: bool,
     strategy: CellFilter,
 }
@@ -17,9 +15,7 @@ pub struct PingPong {
 impl PingPong {
     pub fn new(fx: Effect) -> Self {
         Self {
-            fx_original: fx.clone(),
             fx,
-            fx_area_old: None,
             is_reversing: false,
             strategy: CellFilter::default(),
         }
@@ -43,8 +39,7 @@ impl Shader for PingPong {
 
         if overflow.is_some() && !self.is_reversing {
             self.is_reversing = true;
-            // self.fx_area_old = self.fx.area();
-            self.fx = self.fx_original.clone();
+            self.fx.reset();
             self.fx.reverse();
             None // consumes any overflow when reversing, to reset the area
         } else {
@@ -66,13 +61,6 @@ impl Shader for PingPong {
 
     fn area(&self) -> Option<Rect> {
         self.fx.area()
-
-        // let area = self.fx.area().or_else(|| self.fx_area_old);
-        // if area.is_some() {
-        //     area
-        // } else {
-        //     None
-        // }
     }
 
     fn set_area(&mut self, area: Rect) {
@@ -93,5 +81,10 @@ impl Shader for PingPong {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.strategy.clone())
+    }
+
+    fn reset(&mut self) {
+        // self.fx.reset();
+        self.is_reversing = false;
     }
 }

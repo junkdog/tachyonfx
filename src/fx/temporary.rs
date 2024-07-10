@@ -10,12 +10,12 @@ use crate::shader::Shader;
 #[derive(Clone)]
 pub struct TemporaryEffect {
     effect: Effect,
-    duration: EffectTimer,
+    timer: EffectTimer,
 }
 
 impl TemporaryEffect {
     pub fn new(effect: Effect, duration: Duration) -> Self {
-        Self { effect, duration: EffectTimer::new(duration, Linear) }
+        Self { effect, timer: EffectTimer::new(duration, Linear) }
     }
 }
 
@@ -26,7 +26,7 @@ impl Shader for TemporaryEffect {
         buf: &mut Buffer,
         area: Rect
     ) -> Option<Duration> {
-        let remaining = self.duration.process(duration);
+        let remaining = self.timer.process(duration);
         let effect_area = self.effect.area().unwrap_or(area);
         self.effect.process(duration, buf, effect_area);
         remaining
@@ -37,7 +37,7 @@ impl Shader for TemporaryEffect {
     }
 
     fn done(&self) -> bool {
-        self.duration.done() || self.effect.done()
+        self.timer.done() || self.effect.done()
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -57,11 +57,16 @@ impl Shader for TemporaryEffect {
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.duration)
+        Some(&mut self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {
         self.effect.cell_selection()
+    }
+
+    fn reset(&mut self) {
+        self.effect.reset();
+        self.timer.reset();
     }
 }
 

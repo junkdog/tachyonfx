@@ -102,6 +102,13 @@ impl Shader for Translate {
         }
         None
     }
+
+    fn reset(&mut self) {
+        self.timer.reset();
+        if let Some(fx) = &mut self.fx {
+            fx.reset();
+        }
+    }
 }
 
 #[cfg(test)]

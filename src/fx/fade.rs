@@ -13,7 +13,7 @@ use crate::shader::Shader;
 pub struct FadeColors {
     fg: Option<Color>,
     bg: Option<Color>,
-    lifetime: EffectTimer,
+    timer: EffectTimer,
     #[builder(default)]
     area: Option<Rect>,
     #[builder(default)]
@@ -51,7 +51,7 @@ impl Shader for FadeColors {
     }
 
     fn done(&self) -> bool {
-        self.lifetime.done()
+        self.timer.done()
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -71,7 +71,7 @@ impl Shader for FadeColors {
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.lifetime)
+        Some(&mut self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

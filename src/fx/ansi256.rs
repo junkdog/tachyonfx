@@ -57,4 +57,6 @@ impl Shader for Ansi256 {
     }
 
     fn set_cell_selection(&mut self, _strategy: CellFilter) {}
+
+    fn reset(&mut self) {}
 }
