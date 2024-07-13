@@ -56,10 +56,14 @@ impl Shader for Translate {
         if let Some(fx) = &mut self.fx {
             let fx_area = translated_area.unwrap_or_default();
             fx.set_area(fx_area);
-            fx.process(duration, buf, fx_area);
+            let hosted_overflow = fx.process(duration, buf, fx_area);
+            match (overflow, hosted_overflow) {
+                (Some(a), Some(b)) => Some(a.min(b)),
+                _ => None
+            }
+        } else {
+            overflow
         }
-
-        overflow
     }
 
     fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {

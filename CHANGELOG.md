@@ -8,6 +8,7 @@
 
 ### Fixed
 - `fx::translate()`: translate can now move out-of-bounds.
+- `fx::translate()`: hosted effects with extended duration no longer end prematurely.
 - `fx::effect_fn()`: effect state now correctly resets between iterations when using `fx::repeat()`, `fx::repeating()`
   and `fx::ping_pong()`.
 
