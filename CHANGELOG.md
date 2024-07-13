@@ -8,6 +8,8 @@
 
 ### Fixed
 - `fx::translate()`: translate can now move out-of-bounds.
+- `fx::effect_fn()`: effect state now correctly resets between iterations when using `fx::repeat()`, `fx::repeating()`
+  and `fx::ping_pong()`.
 
 ## tachyonfx 0.3.0 - 2024-06-30
 

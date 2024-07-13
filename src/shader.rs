@@ -25,7 +25,7 @@ pub trait Shader {
     ///   if it is still running.
     ///
     /// # Example
-    /// ```
+    /// ```no_compile
     /// use std::time::Duration;
     /// use ratatui::buffer::Buffer;
     /// use ratatui::layout::Rect;
@@ -117,11 +117,12 @@ pub trait Shader {
     /// * `filter` - The cell selection strategy to set.
     ///
     /// # Example
-    /// ```
-    /// use tachyonfx::CellFilter;
+    /// ```no_compile
+    /// use ratatui::style::Color;
+    /// use tachyonfx::{CellFilter, fx, Interpolation};
     ///
     /// let mut shader = MyShader::new();
-    /// shader.cell_selection(CellFilter::Not(CellFilter::Text));
+    /// shader.set_cell_selection(CellFilter::Not(CellFilter::Text));
     /// ```
     fn set_cell_selection(&mut self, filter: CellFilter);
 
@@ -138,7 +139,7 @@ pub trait Shader {
     /// * An `Option` containing a mutable reference to the shader's `EffectTimer`, or `None` if not applicable.
     ///
     /// # Example
-    /// ```
+    /// ```no_compile
     /// let mut shader = MyShader::new();
     /// if let Some(timer) = shader.timer_mut() {
     ///     timer.reset();

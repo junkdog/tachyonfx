@@ -40,11 +40,10 @@ impl Effect {
     ///
     /// # Example
     /// ```
-    /// use tachyonfx::Effect;
+    /// use tachyonfx::{Effect, EffectTimer, fx, Interpolation};
     /// use ratatui::layout::Rect;
     ///
-    /// let shader = MyShader::new();
-    /// let effect = Effect::new(shader)
+    /// fx::dissolve(20, EffectTimer::from_ms(120, Interpolation::CircInOut))
     ///     .with_area(Rect::new(0, 0, 10, 10));
     /// ```
     pub fn with_area(&self, area: Rect) -> Self {
@@ -63,10 +62,11 @@ impl Effect {
     ///
     /// # Example
     /// ```
-    /// use tachyonfx::{Effect, CellFilter};
+    /// use ratatui::style::Color;
+    /// use tachyonfx::{Effect, CellFilter, fx, Interpolation};
     ///
-    /// let shader = MyShader::new();
-    /// let effect = Effect::new(shader)
+    /// let color = Color::from_hsl(180.0, 85.0, 62.0);
+    /// let shader = fx::fade_to_fg(color, (300, Interpolation::SineIn))
     ///     .with_cell_selection(CellFilter::Text);
     /// ```
     pub fn with_cell_selection(&self, mode: CellFilter) -> Self {

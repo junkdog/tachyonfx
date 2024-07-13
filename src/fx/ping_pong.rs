@@ -30,11 +30,6 @@ impl Shader for PingPong {
         buf: &mut Buffer,
         area: Rect
     ) -> Option<Duration> {
-        // if let Some(fx) = self.fx_area_old {
-        //     self.fx.set_area(fx);
-        // }
-        // self.fx_area_old = None; // old fx area is only valid for one frame
-
         let overflow = self.fx.process(duration, buf, area);
 
         if overflow.is_some() && !self.is_reversing {

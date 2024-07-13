@@ -68,9 +68,9 @@ mod moving_window;
 /// use tachyonfx::*;
 ///
 /// let timer = EffectTimer::from_ms(1000, Interpolation::CubicInOut);
-/// let initial_state = (); // no state to keep track of
+/// let no_state = (); // no state to keep track of
 ///
-/// fx::effect_fn(timer, |_state, context, cell_iter| {
+/// fx::effect_fn(no_state, timer, |_state, context, cell_iter| {
 ///    let mut fg_mapper = ColorMapper::default();
 ///    let alpha = context.alpha();
 ///
