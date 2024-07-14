@@ -24,6 +24,7 @@ pub struct OpenWindow {
     border_style: Style,
     border_type: BorderType,
     background: Style,
+    borders: Borders,
 }
 
 impl From<OpenWindowBuilder> for Effect {
@@ -49,6 +50,7 @@ impl OpenWindow {
             .title_style(self.title_style)
             .title(self.title.clone())
             .border_style(self.border_style)
+            .borders(self.borders)
             .border_type(self.border_type)
             .style(self.background)
     }

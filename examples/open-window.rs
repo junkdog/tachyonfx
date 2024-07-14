@@ -12,15 +12,15 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Margin, Rect, Size};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{BorderType, Clear, StatefulWidget, Widget};
+use ratatui::widgets::{Borders, BorderType, Clear, StatefulWidget, Widget};
 
 use CellFilter::Text;
 use Interpolation::*;
 use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, fx, Interpolation, Shader};
 use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer};
-use tachyonfx::fx::{never_complete, parallel, repeating, sequence, sleep, with_duration};
+use tachyonfx::fx::{Direction, never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration};
 
-use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Dark1, Light2, YellowBright};
+use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Light2, YellowBright};
 use crate::window::OpenWindow;
 
 #[path = "common/gruvbox.rs"]
@@ -46,13 +46,31 @@ impl App {
                 fx::ping_pong( // pre-render fx
                     fx::translate(Some(fx::sleep(1300)), (0, 20), (1200, QuartInOut))
                 ),
-                open_window_fx(Dark0Hard)
+                glitchy_window_fx(Dark0Hard),
+                Style::default()
+                    .fg(YellowBright.into())
+                    .bg(Dark0.into()),
+                BorderType::Rounded,
+                Borders::ALL,
+                Style::default()
+                    .fg(Light2.into())
+                    .bg(Dark0.into()),
             ),
             win_right: HelloWorldPopupState::new(
-                fx::ping_pong( // pre-render fx
-                    fx::resize_area(Some(fx::sleep(3700)), Size::new(35, 1), (500, Interpolation::SineInOut))
+                fx::repeating(
+                    fx::resize_area(Some(fx::sleep(4000)), Size::new(35, 1), (500, SineInOut)),
                 ),
-                open_window_fx(Dark0Hard)
+                stylized_window_fx(),
+                Style::default()
+                    .fg(Dark0.into())
+                    .bg(Color::LightCyan)
+                    .add_modifier(Modifier::BOLD),
+                BorderType::QuadrantOutside,
+                Borders::TOP,
+                Style::default()
+                    .fg(Dark0.into())
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             ),
         }
     }
@@ -150,6 +168,10 @@ impl HelloWorldPopupState {
     fn new(
         pre_render_fx: Effect,
         content_fx: Effect,
+        border_style: Style,
+        border_type: BorderType,
+        borders: Borders,
+        content_style: Style,
     ) -> Self {
         let styles = [
             Style::default()
@@ -161,37 +183,35 @@ impl HelloWorldPopupState {
 
         let text = text::Text::from(vec![
             Line::from("Hello, World!").style(styles[0]),
-            Line::from("").style(styles[1]),
-            Line::from("Lorem ipsum dolor sit amet, consectetur").style(styles[1]),
-            Line::from("adipiscing elit. Sed imperdiet, turpis at").style(styles[1]),
-            Line::from("tempor interdum, ligula est sagittis mauris,").style(styles[1]),
-            Line::from("vitae semper eros nisl eget nisi. ").style(styles[1]),
+            Line::from("").style(content_style),
+            Line::from("Lorem ipsum dolor sit amet, consectetur").style(content_style),
+            Line::from("adipiscing elit. Sed imperdiet, turpis at").style(content_style),
+            Line::from("tempor interdum, ligula est sagittis mauris,").style(content_style),
+            Line::from("vitae semper eros nisl eget nisi. ").style(content_style),
         ]);
 
-        let border_style = Style::default()
-            .fg(YellowBright.into());
-        let title_style = Style::default()
-            .fg(Dark0.into())
-            .bg(YellowBright.into())
-            .add_modifier(Modifier::BOLD);
+        let title_style = border_style.clone().add_modifier(Modifier::BOLD);
 
+        
+        
         let title = Line::from(vec![
-            Span::from("┫").style(border_style),
+            // Span::from("┫").style(border_style),
             Span::from(" ").style(title_style),
             Span::from("Hello, world!").style(title_style),
             Span::from(" ").style(title_style),
-            Span::from("┣").style(border_style),
+            // Span::from("┣").style(border_style),
         ]);
 
 
         let window_fx = OpenWindow::builder()
             .title(title)
             .border_style(border_style)
-            .border_type(BorderType::Rounded)
+            .border_type(border_type)
+            .borders(borders)
             .title_style(title_style)
             .pre_render_fx(pre_render_fx)
             .content_fx(content_fx)
-            .background(Style::default().bg(Dark1.into()))
+            .background(content_style)
             .build()
             .unwrap();
 
@@ -199,7 +219,7 @@ impl HelloWorldPopupState {
     }
 }
 
-fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
+fn glitchy_window_fx<C: Into<Color>>(bg: C) -> Effect {
     let margin = Margin::new(1, 1);
     let border_text        = AllOf(vec![Outer(margin), Text]);
     let border_decorations = AllOf(vec![Outer(margin), Not(Text.into())]);
@@ -245,6 +265,30 @@ fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
                 fx::dissolve(111, (Duration::from_millis(220) * time_scale, ElasticOut)),
             ]),
         ]).with_cell_selection(Inner(margin)),
+    ]))
+}
+
+fn stylized_window_fx() -> Effect {
+    let layout = Layout::vertical([Constraint::Length(1), Constraint::Percentage(100)]);
+    let content_area = CellFilter::Layout(layout, 1);
+
+    let cyan = Color::from_hsl(180.0, 100.0, 50.0);
+    repeating(parallel(vec![
+        // content area
+        sequence(vec![
+            parallel(vec![
+                sequence(vec![
+                    with_duration(Duration::from_millis(1000), parallel(vec![
+                        never_complete(fx::fade_to(cyan, cyan, 0)),
+                    ])),
+                    timed_never_complete(Duration::from_millis(2500),
+                        fx::fade_from(cyan, cyan, (400, QuadOut))
+                    ),
+                    fx::fade_to(Color::Black, Color::Black, (500, CircInOut)),
+                ]),
+                fx::slide_in(Direction::UpToDown, 10, Dark0, (900, QuadOut)),
+            ]),
+        ]).with_cell_selection(content_area),
     ]))
 }
 

@@ -5,9 +5,9 @@
 - `fx::slide_in()` and `fx::slide_out()`: slides in/out cells by "shrinking" the cells horizontally or
   vertically along the given area.
 - `fx::effect_fn_buf()`: to create custom effects operating on a `Buffer` instead of `CellIterator`.
-- `Shader::reset`: reinitializes the shader(*) to its original state. Previously, this function cloned
-  the shader from a copy of the original instance, occasionally resulting in unintended behavior when
-  certain internal states were expected to persist through resets.
+- `Shader::reset`: reinitializes the shader(*) to its original state. Previously, the approach was to
+  clone the shader from a copy of the original instance, occasionally resulting in unintended behavior
+  when certain internal states were expected to persist through resets.
 
 *: _Note that "shader" here is used loosely, as no GPU is involved, only terminal cells._
 
