@@ -14,7 +14,7 @@ use crate::shader::Shader;
 pub struct Translate {
     fx: Option<Effect>,
     area: Option<Rect>,
-    original: Option<BoundingBox>,
+    original_area: Option<BoundingBox>,
     translate_by: (f32, f32),
     timer: EffectTimer,
 }
@@ -41,15 +41,15 @@ impl Shader for Translate {
         let overflow = self.timer.process(duration);
         let alpha = self.timer.alpha();
 
-        if self.original.is_none() {
-            self.original = Some(BoundingBox::from_rect(area));
+        if self.original_area.is_none() {
+            self.original_area = Some(BoundingBox::from_rect(area));
         }
 
         let (dx, dy) = (0.0, 0.0).lerp(&self.translate_by, alpha);
-        let translated_area = self.original.as_ref()
-            .unwrap()
-            .translate(dx, dy)
-            .to_rect(buf.area);
+        let translated_area = self.original_area.as_ref()
+            .map(|a| a.translate(dx, dy))
+            .map(|a| a.to_rect(buf.area))
+            .flatten();
 
         self.area = translated_area.clone();
 
@@ -57,6 +57,7 @@ impl Shader for Translate {
             let fx_area = translated_area.unwrap_or_default();
             fx.set_area(fx_area);
             let hosted_overflow = fx.process(duration, buf, fx_area);
+            // only return the overflow if the fx is done and this translate is done
             match (overflow, hosted_overflow) {
                 (Some(a), Some(b)) => Some(a.min(b)),
                 _ => None

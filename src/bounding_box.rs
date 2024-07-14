@@ -9,9 +9,6 @@ pub(crate) struct BoundingBox {
 }
 
 impl BoundingBox {
-    pub(crate) fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self { x, y, width, height }
-    }
 
     pub(crate) fn from_rect(rect: Rect) -> Self {
         Self {
@@ -41,13 +38,8 @@ impl BoundingBox {
         }
     }
 
-    pub fn translate(&self, dx: f32, dy: f32) -> Self {
-        Self {
-            x: self.x + dx,
-            y: self.y + dy,
-            width: self.width,
-            height: self.height,
-        }
+    pub fn translate(self, dx: f32, dy: f32) -> Self {
+        Self { x: self.x + dx, y: self.y + dy, ..self }
     }
 }
 

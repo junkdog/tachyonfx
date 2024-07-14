@@ -102,18 +102,18 @@ sequence(vec![
 ![tweens](images/example-tweens.png)
 
 ```
-cargo run --example=tweens 
+cargo run --release --example=tweens 
 ```
 
 ### Example: `basic-effects`
 ![basic effeects](images/example-basic-effects.png)
 ```
-cargo run --example=basic-effects 
+cargo run --release --example=basic-effects 
 ```
 
 
 ### Example: `open-window`
 
 ```
-cargo run --example=open-window  
+cargo run --release --example=open-window  
 ```

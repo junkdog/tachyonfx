@@ -4,7 +4,7 @@ use ratatui::layout::{Rect};
 use crate::cell_iter::CellIterator;
 
 use crate::effect::CellFilter;
-use crate::{EffectTimer, fx};
+use crate::EffectTimer;
 
 /// A trait representing a shader-like object that can be processed for a duration.
 /// The `Shader` trait defines the interface for objects that can apply visual effects

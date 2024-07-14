@@ -5,7 +5,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::Line;
-use ratatui::widgets::{Block, Borders, BorderType, Clear};
+use ratatui::widgets::{Block, Borders, BorderType};
 use ratatui::widgets::Widget;
 
 use tachyonfx::{CellFilter, CellIterator, Effect, EffectTimer, IntoEffect, Shader};
@@ -81,18 +81,19 @@ impl Shader for OpenWindow {
             _                        => Some(duration)
         };
 
-        let area = self.pre_render_fx.as_ref()
-            .map(Effect::area)
-            .flatten()
-            .map(|area| area.clamp(buf.area))
-            .unwrap_or(area);
+        let area = if let Some(fx) = self.pre_render_fx.as_ref() {
+            fx.area().map(|a| a.intersection(buf.area)).unwrap_or(Rect::default())
+        } else {
+            area
+        };
 
         if let Some(content_fx) = self.content_fx.as_mut() {
             content_fx.set_area(area)
         }
 
-        Clear.render(area, buf);
-        self.window_block().render(area, buf);
+        if area != Rect::default() {
+            self.window_block().render(area, buf);
+        }
 
         overflow
     }
@@ -133,5 +134,11 @@ impl Shader for OpenWindow {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         self.pre_render_fx.as_ref().map(Effect::cell_selection).flatten()
+    }
+
+    fn reset(&mut self) {
+        if let Some(fx) = self.pre_render_fx.as_mut() {
+            fx.reset();
+        }
     }
 }

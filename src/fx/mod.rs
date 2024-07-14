@@ -1,5 +1,6 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
+use ratatui::layout::Size;
 use ratatui::style::Color;
 
 pub use glitch::Glitch;
@@ -119,6 +120,22 @@ where
 }
 
 /// Creates a custom effect using a user-defined function that operates on a buffer.
+///
+/// This function allows you to define custom effects by providing a closure that will be called
+/// with the current state, `ShaderFnContext`, and a mutable buffer. You can use this closure
+/// to apply custom transformations or animations to the terminal buffer. The function also takes
+/// an initial state that can be used to maintain state across invocations.
+///
+/// # Arguments
+/// * `state` - An initial state that will be passed to the closure on each invocation.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
+/// * `f` - A closure that defines the custom effect. The closure takes three parameters:
+///   * `state`: A mutable reference to the state provided during the creation of the effect.
+///   * `context`: A `ShaderFnContext` instance containing timing and area information.
+///   * `buffer`: A mutable reference to the terminal buffer.
+///
+/// # Returns
+/// * An `Effect` instance that can be used with other effects or applied directly to terminal cells.
 pub fn effect_fn_buf<F, S, T>(state: S, timer: T, f: F) -> Effect
 where
     S: Clone + 'static,
@@ -132,12 +149,12 @@ where
 pub fn hsl_shift<T: Into<EffectTimer>>(
     hsl_fg_change: Option<[f32; 3]>,
     hsl_bg_change: Option<[f32; 3]>,
-    lifetime: T,
+    timer: T,
 ) -> Effect {
     HslShift::builder()
         .hsl_mod_fg(hsl_fg_change)
         .hsl_mod_bg(hsl_bg_change)
-        .timer(lifetime.into())
+        .timer(timer.into())
         .into()
 }
 
@@ -145,9 +162,9 @@ pub fn hsl_shift<T: Into<EffectTimer>>(
 /// over the specified duration.
 pub fn hsl_shift_fg<T: Into<EffectTimer>>(
     hsl_fg_change: [f32; 3],
-    lifetime: T,
+    timer: T,
 ) -> Effect {
-    hsl_shift(Some(hsl_fg_change), None, lifetime)
+    hsl_shift(Some(hsl_fg_change), None, timer)
 }
 
 /// Returns an effect that downsamples to 256 color mode.
@@ -175,9 +192,9 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Direction,
     gradient_length: u16,
     faded_color: C,
-    lifetime: T,
+    timer: T,
 ) -> Effect {
-    sweep_in(direction.flipped(), gradient_length, faded_color, lifetime)
+    sweep_in(direction.flipped(), gradient_length, faded_color, timer)
         .reversed()
 }
 
@@ -186,14 +203,45 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Direction,
     gradient_length: u16,
     faded_color: C,
-    lifetime: T,
+    timer: T,
 ) -> Effect {
-    SweepIn::new(direction, gradient_length, faded_color.into(), lifetime.into())
+    SweepIn::new(direction, gradient_length, faded_color.into(), timer.into())
         .into_effect()
 }
 
-/// Changes the character and colors of cells as if they are sliding
-/// in from one direction
+/// Creates an effect that slides terminal cells in from a specified direction with a gradient.
+///
+/// This function creates a sliding effect that moves terminal cells in from a specified direction.
+/// The effect can include a gradient length and a color behind the cells. The effect duration and
+/// timing are controlled by the provided timer.
+///
+/// # Arguments
+/// * `direction` - The direction from which the cells slide in.
+/// * `gradient_length` - The length of the gradient used for the sliding effect.
+/// * `color_behind_cells` - The color behind the sliding cells.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
+///
+/// # Returns
+/// * An `Effect` instance that applies the sliding-in effect.
+///
+/// # Usage Notes
+/// This effect should be applied before rendering any affected `ratatui` widgets. Other effects,
+/// such as `fx::dissolve` or `fx::fade_to_fg`, are applied after rendering. You can manually retrieve
+/// the currently recalculated draw area using the `area()` function of the effect.
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::style::Color;
+/// use tachyonfx::*;
+/// use tachyonfx::fx::Direction;
+///
+/// let timer = EffectTimer::from_ms(2000, Interpolation::Linear);
+/// let slide_effect = fx::slide_in(Direction::LeftToRight, 10, Color::Black, timer);
+/// ```
+///
+/// This example creates a sliding effect that moves cells in from the left to the right
+/// with a gradient length of 10 and a black background color over two seconds.
 pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Direction,
     gradient_length: u16,
@@ -204,6 +252,34 @@ pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
         .reversed()
 }
 
+/// Creates an effect that slides terminal cells out to a specified direction with a gradient.
+///
+/// This function creates a sliding effect that moves terminal cells out to a specified direction.
+/// The effect can include a gradient length and a color behind the cells. The effect duration and
+/// timing are controlled by the provided timer.
+///
+/// # Arguments
+/// * `direction` - The direction in which the cells slide out.
+/// * `gradient_length` - The length of the gradient used for the sliding effect.
+/// * `color_behind_cells` - The color behind the sliding cells.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
+///
+/// # Returns
+/// * An `Effect` instance that applies the sliding-out effect.
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::style::Color;
+/// use tachyonfx::*;
+/// use tachyonfx::fx::Direction;
+///
+/// let timer = EffectTimer::from_ms(2000, Interpolation::CubicInOut);
+/// let slide_effect = fx::slide_out(Direction::UpToDown, 10, Color::Black, timer);
+/// ```
+///
+/// This example creates a sliding effect that moves cells out from the top to the bottom
+/// with a gradient length of 10 and a black background color over two seconds.
 pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Direction,
     gradient_length: u16,
@@ -226,23 +302,84 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
         .into()
 }
 
+/// Translates an effect by a specified amount over a specified duration.
+///
+/// This function creates a translation effect that moves an existing effect by a given
+/// amount of rows and columns over the specified duration. If no effect is provided, only
+/// the translation is applied.
+///
+/// # Arguments
+/// * `fx` - An optional `Effect`, receives the .
+/// * `translate_by` - A tuple specifying the number of rows and columns to translate the effect by.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the translation.
+///
+/// # Returns
+/// * An `Effect` instance that applies the translation to the given effect or as a standalone effect.
+///
+/// # Usage Notes
+/// This effect should be applied before rendering any affected `ratatui` widgets. Other effects,
+/// such as `fx::dissolve` or `fx::slide_in`, are applied after rendering. You can manually retrieve
+/// the currently recalculated draw area using the `area()` function of the effect.
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::style::Color;
+/// use tachyonfx::*;
+///
+/// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
+/// let effect = fx::fade_to_fg(Color::Red, timer);
+/// fx::translate(Some(effect), (5, 10), timer);
+/// ```
+///
+/// This example creates a translation effect that moves a fade-to-red effect by 5 rows
+/// and 10 columns over one second.
 pub fn translate<T: Into<EffectTimer>>(
     fx: Option<Effect>,
     translate_by: (i16, i16),
-    lifetime: T,
+    timer: T,
 ) -> Effect {
-    translate::Translate::new(fx, translate_by, lifetime.into()).into_effect()
+    translate::Translate::new(fx, translate_by, timer.into()).into_effect()
 }
 
-/// An effect that resizes the area of the wrapped effect to the specified
-/// dimensions. The effect will be rendered within the resized area.
+/// Resizes the area of the wrapped effect to the specified dimensions over a specified duration.
+///
+/// This function creates a resizing effect that changes the dimensions of an existing effect's
+/// rendering area over the specified duration. If no effect is provided, only the resizing is applied.
+///
+/// # Arguments
+/// * `fx` - An optional `Effect`, receives the resized area.
+/// * `initial_size` - A `Size` instance specifying the initial dimensions of the effect area.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the resizing.
+///
+/// # Returns
+/// * An `Effect` instance that applies the resizing to the given effect or as a standalone effect.
+///
+/// # Usage Notes
+/// This effect should be applied before rendering any affected `ratatui` widgets. Most other effects,
+/// such as `fx::dissolve` or `fx::slide_in`, are applied after rendering. You can manually retrieve
+/// the currently recalculated draw area using the `area()` function of the effect.
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::layout::Size;
+/// use ratatui::style::Color;
+/// use tachyonfx::*;
+///
+/// let timer = EffectTimer::from_ms(2, Interpolation::CubicInOut);
+/// let effect = fx::fade_to_fg(Color::Blue, timer);
+/// fx::resize_area(Some(effect), Size::new(20, 10), timer);
+/// ```
+///
+/// This example creates a resizing effect that changes the dimensions of a fade-to-blue effect's
+/// rendering area to 20 by 10 over two seconds.
 pub fn resize_area<T: Into<EffectTimer>>(
     fx: Option<Effect>,
-    initial_w: u16,
-    initial_h: u16,
-    lifetime: T,
+    initial_size: Size,
+    timer: T,
 ) -> Effect {
-    ResizeArea::new(fx, initial_w, initial_h, lifetime.into()).into_effect()
+    ResizeArea::new(fx, initial_size, timer.into()).into_effect()
 }
 
 /// Runs the effects in sequence, one after the other. Reports completion
@@ -260,15 +397,14 @@ pub fn parallel(effects: Vec<Effect>) -> Effect {
 /// Dissolves the current text into the new text over the specified duration. The
 /// `cycle_len` parameter specifies the number of cell states are tracked before
 /// it cycles and repeats.
-pub fn dissolve<T: Into<EffectTimer>>(cycle_len: usize, lifetime: T) -> Effect {
-    Dissolve::new(lifetime.into(), cycle_len)
+pub fn dissolve<T: Into<EffectTimer>>(cycle_len: usize, timer: T) -> Effect {
+    Dissolve::new(timer.into(), cycle_len)
         .into_effect()
 }
 
 /// The reverse of [dissolve()].
-pub fn coalesce<T: Into<EffectTimer>>(cycle_len: usize, lifetime: T) -> Effect {
-    let lifetime = lifetime.into().reversed();
-    Dissolve::new(lifetime, cycle_len)
+pub fn coalesce<T: Into<EffectTimer>>(cycle_len: usize, timer: T) -> Effect {
+    Dissolve::new(timer.into().reversed(), cycle_len)
         .into_effect()
 }
 
@@ -276,35 +412,35 @@ pub fn coalesce<T: Into<EffectTimer>>(cycle_len: usize, lifetime: T) -> Effect {
 /// Fades the foreground color to the specified color over the specified duration.
 pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(
     fg: C,
-    lifetime: T,
+    timer: T,
 ) -> Effect {
-    fade(Some(fg), None, lifetime.into(), false)
+    fade(Some(fg), None, timer.into(), false)
 }
 
 /// Fades the foreground color from the specified color over the specified duration.
 pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(
     fg: C,
-    lifetime: T,
+    timer: T,
 ) -> Effect {
-    fade(Some(fg), None, lifetime.into(), true)
+    fade(Some(fg), None, timer.into(), true)
 }
 
 /// Fades to the specified the background and foreground colors over the specified duration.
 pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(
     fg: C,
     bg: C,
-    lifetime: T,
+    timer: T,
 ) -> Effect {
-    fade(Some(fg), Some(bg), lifetime.into(), false)
+    fade(Some(fg), Some(bg), timer.into(), false)
 }
 
 /// Fades from the specified the background and foreground colors over the specified duration.
 pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(
     fg: C,
     bg: C,
-    lifetime: T,
+    timer: T,
 ) -> Effect {
-    fade(Some(fg), Some(bg), lifetime.into(), true)
+    fade(Some(fg), Some(bg), timer.into(), true)
 }
 
 
@@ -341,12 +477,12 @@ pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
 fn fade<C: Into<Color>>(
     fg: Option<C>,
     bg: Option<C>,
-    lifetime: EffectTimer,
+    timer: EffectTimer,
     reverse: bool,
 ) -> Effect {
     FadeColors::builder()
         .fg(fg.map(|c| c.into()))
         .bg(bg.map(|c| c.into()))
-        .timer(if reverse { lifetime.reversed() } else { lifetime })
+        .timer(if reverse { timer.reversed() } else { timer })
         .into()
 }

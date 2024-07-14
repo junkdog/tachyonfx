@@ -9,7 +9,7 @@ use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScree
 use ratatui::{Frame, text};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Margin, Rect};
+use ratatui::layout::{Constraint, Layout, Margin, Rect, Size};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{BorderType, Clear, StatefulWidget, Widget};
@@ -34,14 +34,26 @@ type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
 
 struct App {
     last_tick: Duration,
-    pub popup_state: HelloWorldPopupState,
+    pub win_left: HelloWorldPopupState,
+    pub win_right: HelloWorldPopupState,
 }
 
 impl App {
     fn new() -> Self {
         Self {
             last_tick: Duration::ZERO,
-            popup_state: HelloWorldPopupState::new(),
+            win_left: HelloWorldPopupState::new(
+                fx::ping_pong( // pre-render fx
+                    fx::translate(Some(fx::sleep(1300)), (0, 20), (1200, QuartInOut))
+                ),
+                open_window_fx(Dark0Hard)
+            ),
+            win_right: HelloWorldPopupState::new(
+                fx::ping_pong( // pre-render fx
+                    fx::resize_area(Some(fx::sleep(3700)), Size::new(35, 1), (500, Interpolation::SineInOut))
+                ),
+                open_window_fx(Dark0Hard)
+            ),
         }
     }
 }
@@ -101,12 +113,20 @@ fn ui(
 ) {
     if f.size().height == 0 { return; }
 
-    let mut popup_area = f.size().inner_centered(58, 7);
-    popup_area.y = f.size().height - 8;
-
     Clear.render(f.size(), f.buffer_mut());
+
+    let area = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(f.size());
+
+    let mut popup_area_l = area[0].inner_centered(45, 7);
+    popup_area_l.y = area[0].height / 2;
     HelloWorldPopup::new(app.last_tick)
-        .render(popup_area, f.buffer_mut(), &mut app.popup_state);
+        .render(popup_area_l, f.buffer_mut(), &mut app.win_left);
+
+    let mut popup_area_r = area[1].inner_centered(45, 7);
+    popup_area_r.y = area[1].height / 2;
+    HelloWorldPopup::new(app.last_tick)
+        .render(popup_area_r, f.buffer_mut(), &mut app.win_right);
 }
 
 
@@ -127,7 +147,10 @@ struct HelloWorldPopupState {
 }
 
 impl HelloWorldPopupState {
-    fn new() -> Self {
+    fn new(
+        pre_render_fx: Effect,
+        content_fx: Effect,
+    ) -> Self {
         let styles = [
             Style::default()
                 .fg(BlueBright.into())
@@ -139,9 +162,10 @@ impl HelloWorldPopupState {
         let text = text::Text::from(vec![
             Line::from("Hello, World!").style(styles[0]),
             Line::from("").style(styles[1]),
-            Line::from("Lorem ipsum dolor sit amet, consectetur adipiscing elit.").style(styles[1]),
-            Line::from("Sed imperdiet, turpis at tempor interdum, ligula est").style(styles[1]),
-            Line::from("sagittis mauris, vitae semper eros nisl eget nisi.").style(styles[1]),
+            Line::from("Lorem ipsum dolor sit amet, consectetur").style(styles[1]),
+            Line::from("adipiscing elit. Sed imperdiet, turpis at").style(styles[1]),
+            Line::from("tempor interdum, ligula est sagittis mauris,").style(styles[1]),
+            Line::from("vitae semper eros nisl eget nisi. ").style(styles[1]),
         ]);
 
         let border_style = Style::default()
@@ -159,24 +183,20 @@ impl HelloWorldPopupState {
             Span::from("┣").style(border_style),
         ]);
 
-        let move_in_window = fx::ping_pong(
-            fx::translate(None, (0, -25), (1200, QuartInOut)).reversed()
-        );
 
         let window_fx = OpenWindow::builder()
             .title(title)
             .border_style(border_style)
             .border_type(BorderType::Rounded)
             .title_style(title_style)
-            .pre_render_fx(move_in_window)
-            .content_fx(open_window_fx(Dark0Hard))
+            .pre_render_fx(pre_render_fx)
+            .content_fx(content_fx)
             .background(Style::default().bg(Dark1.into()))
             .build()
             .unwrap();
 
         Self { text, window_fx }
     }
-
 }
 
 fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
@@ -201,8 +221,7 @@ fn open_window_fx<C: Into<Color>>(bg: C) -> Effect {
                 fx::coalesce(111, (duration, BounceOut)),
             ]),
             fx::fade_from(Dark0, Dark0, duration * time_scale)
-                .with_cell_selection(border_decorations),
-        ]),
+        ]).with_cell_selection(border_decorations),
 
         // window title and shortcuts
         sequence(vec![
@@ -239,12 +258,15 @@ impl StatefulWidget for HelloWorldPopup {
         state: &mut Self::State
     ) {
         buf.render_effect(&mut state.window_fx, area, self.last_tick);
+        if state.window_fx.area().is_none() {
+            return;
+        }
+
         let content_area = state.window_fx.area()
             .unwrap_or(area)
             .inner(Margin::new(1, 1));
 
         state.text.clone().render(content_area, buf);
-
         state.window_fx.processing_content_fx(self.last_tick, buf, content_area);
     }
 }
