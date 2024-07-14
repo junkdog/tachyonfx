@@ -1,5 +1,7 @@
 # Changelog
 
+## tachyonfx 0.4.0 - 2024-07-14
+
 ### Added
 - `CellFilter::PositionFn`: filter cells based on a predicate function.
 - `fx::slide_in()` and `fx::slide_out()`: slides in/out cells by "shrinking" the cells horizontally or
