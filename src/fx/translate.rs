@@ -2,10 +2,10 @@ use std::time::Duration;
 
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
+
 use crate::bounding_box::BoundingBox;
 use crate::CellIterator;
-
-use crate::effect::{Effect, CellFilter};
+use crate::effect::{CellFilter, Effect};
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
 use crate::shader::Shader;
@@ -119,8 +119,10 @@ impl Shader for Translate {
 #[cfg(test)]
 mod tests {
     use ratatui::widgets::{Block, Borders, Widget};
-    use crate::{CenteredShrink, fx};
+
+    use crate::CenteredShrink;
     use crate::Interpolation::Linear;
+
     use super::*;
 
     fn assert_translation(

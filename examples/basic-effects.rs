@@ -227,7 +227,6 @@ impl EffectsRepository {
 
         let slow = Duration::from_millis(1250);
         let medium = Duration::from_millis(750);
-        let short = Duration::from_millis(320);
 
         let _glitch: Effect = Glitch::builder()
             .rng(SmallRng::from_entropy())

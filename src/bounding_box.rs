@@ -9,6 +9,10 @@ pub(crate) struct BoundingBox {
 }
 
 impl BoundingBox {
+    #[allow(dead_code)]
+    pub(crate) fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
+        Self { x, y, width, height }
+    }
 
     pub(crate) fn from_rect(rect: Rect) -> Self {
         Self {
