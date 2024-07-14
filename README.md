@@ -1,5 +1,8 @@
 ## tachyonfx
 
+[![Crate Badge]][Crate] [![API Badge]][API] [![Deps.rs
+Badge]][Deps.rs]
+
 tachyonfx is a [ratatui][ratatui] library for creating shader-like effects in terminal UIs.
 This library provides a collection of effects that can be used to enhance the
 visual appeal of terminal applications, offering capabilities such as color
@@ -117,3 +120,10 @@ cargo run --release --example=basic-effects
 ```
 cargo run --release --example=open-window  
 ```
+
+  [API Badge]: https://docs.rs/tachyonfx/badge.svg
+  [API]: https://docs.rs/tachyonfx
+  [Crate Badge]: https://img.shields.io/crates/v/tachyonfx.svg
+  [Crate]: https://crates.io/crates/tachyonfx
+  [Deps.rs Badge]: https://deps.rs/repo/github/junkdog/tachyonfx/status.svg
+  [Deps.rs]: https://deps.rs/repo/github/junkdog/tachyonfx
