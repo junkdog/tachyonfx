@@ -404,16 +404,20 @@ pub fn resize_area<T: Into<EffectTimer>>(
 /// ```no_run
 /// use std::cell::RefCell;
 /// use std::rc::Rc;
+/// use std::time::Duration;
 /// use ratatui::prelude::{Buffer, Color, Rect};
-/// use tachyonfx::{fx, Effect, EffectTimer, Interpolation};
+/// use tachyonfx::{fx, Effect, EffectTimer, Interpolation, Shader};
+///
+/// let duration = Duration::from_millis(16);
+/// let mut main_buffer = Buffer::empty(Rect::new(0, 0, 80, 24));
 ///
 /// let area = Rect::new(0, 0, 80, 24);
 /// let offscreen_buffer = Rc::new(RefCell::new(Buffer::empty(area)));
 ///
 /// let fade_effect = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));
-/// let offscreen_effect = fx::offscreen_buffer(fade_effect, offscreen_buffer.clone());
+/// let mut offscreen_effect = fx::offscreen_buffer(fade_effect, offscreen_buffer.clone());
 ///
-/// // Later, in your rendering loop:
+/// // Later, in your rendering loop
 /// offscreen_effect.process(duration, &mut main_buffer, area);
 /// // Composite the offscreen buffer onto the main buffer as needed
 /// ```
