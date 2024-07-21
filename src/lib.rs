@@ -16,6 +16,7 @@ mod render_effect;
 
 pub mod fx;
 mod bounding_box;
+mod buffer_renderer;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
@@ -26,4 +27,6 @@ pub use rect_ext::CenteredShrink;
 pub use render_effect::EffectRenderer;
 pub use shader::Shader;
 pub use interpolation::*;
+pub use buffer_renderer::BufferRenderer;
+pub use buffer_renderer::blit_buffer;
 
