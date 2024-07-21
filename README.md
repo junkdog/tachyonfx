@@ -24,7 +24,7 @@ tachyonfx = "0.4.0"
 
 ### Effects
 
-The library includes a variety of effects, categorized as follows:
+The library includes a variety of effects, loosely categorized as follows:
 
 #### Color Effects
 - **fade_from:**      Fades from the specified background and foreground colors
@@ -63,8 +63,9 @@ The library includes a variety of effects, categorized as follows:
 - **sequence:** Runs effects in sequence, one after the other. Reports completion once the last effect has completed.
 
 #### Other Effects
-- **effect_fn:** Creates custom effects from user-defined functions, operating over `CellIterator`.
-- **effect_fn_buf:** Creates custom effects from functions, operating over `Buffer`.
+- **effect_fn:**        Creates custom effects from user-defined functions, operating over `CellIterator`.
+- **effect_fn_buf:**    Creates custom effects from functions, operating over `Buffer`.
+- **offscreen_buffer:** Wraps an existing effect and redirects its rendering to a separate buffer.
 
 
 ### EffectTimer and Interpolations

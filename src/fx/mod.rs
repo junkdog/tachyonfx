@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Size;
@@ -43,6 +45,7 @@ mod hsl_shift;
 mod shader_fn;
 mod slide;
 mod moving_window;
+mod offscreen_buffer;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -380,6 +383,46 @@ pub fn resize_area<T: Into<EffectTimer>>(
     timer: T,
 ) -> Effect {
     ResizeArea::new(fx, initial_size, timer.into()).into_effect()
+}
+
+/// Creates an effect that renders to an offscreen buffer.
+///
+/// This function wraps an existing effect and redirects its rendering to a separate buffer,
+/// allowing for complex effects to be computed without affecting the main render buffer.
+/// The offscreen buffer can then be composited onto the main buffer as needed.
+///
+/// # Arguments
+/// * `fx` - The effect to be rendered offscreen.
+/// * `render_target` - A shared, mutable reference to the offscreen `Buffer`.
+///
+/// # Returns
+/// * An `Effect` that renders to the specified offscreen buffer.
+///
+/// # Examples
+///
+///
+/// ```no_run
+/// use std::cell::RefCell;
+/// use std::rc::Rc;
+/// use ratatui::prelude::{Buffer, Color, Rect};
+/// use tachyonfx::{fx, Effect, EffectTimer, Interpolation};
+///
+/// let area = Rect::new(0, 0, 80, 24);
+/// let offscreen_buffer = Rc::new(RefCell::new(Buffer::empty(area)));
+///
+/// let fade_effect = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));
+/// let offscreen_effect = fx::offscreen_buffer(fade_effect, offscreen_buffer.clone());
+///
+/// // Later, in your rendering loop:
+/// offscreen_effect.process(duration, &mut main_buffer, area);
+/// // Composite the offscreen buffer onto the main buffer as needed
+/// ```
+///
+/// This example creates an offscreen buffer and applies a fade effect to it. The effect can be
+/// processed independently of the main render buffer, allowing for more complex or
+/// performance-intensive effects to be computed separately.
+pub fn offscreen_buffer(fx: Effect, render_target: Rc<RefCell<Buffer>>) -> Effect {
+    offscreen_buffer::OffscreenBuffer::new(fx, render_target).into_effect()
 }
 
 /// Runs the effects in sequence, one after the other. Reports completion

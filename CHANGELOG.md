@@ -1,5 +1,14 @@
 # Changelog
 
+### Added
+- `fx::offscreen_buffer()`: wraps an existing effect and redirects its rendering
+  to a separate buffer.  This allows for more complex effect compositions and can
+  improve performance for certain types of effects.
+- `BufferRenderer` trait: enables rendering of one buffer onto another with offset support.
+This allows for more complex composition of UI elements and effects.
+- fn `blit_buffer()`: copies the contents of a source buffer onto a destination buffer with a specified offset.
+
+
 ## tachyonfx 0.4.0 - 2024-07-14
 
 ### Added
