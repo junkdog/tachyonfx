@@ -36,6 +36,10 @@ impl Repeat {
 }
 
 impl Shader for Repeat {
+    fn name(&self) -> &'static str {
+        "repeat"
+    }
+
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         match self.mode {
             RepeatMode::Forever => {

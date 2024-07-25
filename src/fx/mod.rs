@@ -46,6 +46,7 @@ mod shader_fn;
 mod slide;
 mod moving_window;
 mod offscreen_buffer;
+mod flattenable;
 
 /// Creates a custom effect using a user-defined function.
 ///

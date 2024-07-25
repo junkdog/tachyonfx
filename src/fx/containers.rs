@@ -29,6 +29,10 @@ impl ParallelEffect {
 }
 
 impl Shader for ParallelEffect {
+    fn name(&self) -> &'static str {
+        "parallel"
+    }
+
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let mut remaining = Some(duration);
 
@@ -86,6 +90,10 @@ impl Shader for ParallelEffect {
 }
 
 impl Shader for SequentialEffect {
+    fn name(&self) -> &'static str {
+        "sequential"
+    }
+
     fn process(
         &mut self,
         duration: Duration,

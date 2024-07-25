@@ -20,6 +20,10 @@ impl TemporaryEffect {
 }
 
 impl Shader for TemporaryEffect {
+    fn name(&self) -> &'static str {
+        "with_duration"
+    }
+
     fn process(
         &mut self,
         duration: Duration,

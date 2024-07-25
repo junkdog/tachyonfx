@@ -31,6 +31,10 @@ impl ResizeArea {
 }
 
 impl Shader for ResizeArea {
+    fn name(&self) -> &'static str {
+        "resize_area"
+    }
+
     fn process(
         &mut self,
         duration: Duration,

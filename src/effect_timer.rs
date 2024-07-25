@@ -82,6 +82,10 @@ impl EffectTimer {
         Self { reverse: !self.reverse, ..self }
     }
 
+    pub fn is_reversed(&self) -> bool {
+        self.reverse
+    }
+
     /// Checks if the timer has started.
     ///
     /// # Returns

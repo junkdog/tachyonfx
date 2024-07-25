@@ -23,6 +23,9 @@ impl PingPong {
 }
 
 impl Shader for PingPong {
+    fn name(&self) -> &'static str {
+        "ping_pong"
+    }
 
     fn process(
         &mut self,

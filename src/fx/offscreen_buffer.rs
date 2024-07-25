@@ -18,6 +18,10 @@ impl OffscreenBuffer {
 }
 
 impl Shader for OffscreenBuffer {
+    fn name(&self) -> &'static str {
+        "offscreen_buffer"
+    }
+
     fn process(
         &mut self,
         duration: Duration,

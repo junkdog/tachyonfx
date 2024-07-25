@@ -28,6 +28,10 @@ impl HslShift {
 }
 
 impl Shader for HslShift {
+    fn name(&self) -> &'static str {
+        "hsl_shift"
+    }
+
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();

@@ -15,6 +15,10 @@ pub struct Ansi256 {
 }
 
 impl Shader for Ansi256 {
+    fn name(&self) -> &'static str {
+        "ansi256"
+    }
+
     fn process(
         &mut self,
         _duration: Duration,

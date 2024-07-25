@@ -65,6 +65,10 @@ impl SweepIn {
 }
 
 impl Shader for SweepIn {
+    fn name(&self) -> &'static str {
+        if self.timer.is_reversed() { "sweep_out" } else { "sweep_in" }
+    }
+
     fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {
         let direction = self.direction;
         let gradient = match direction {

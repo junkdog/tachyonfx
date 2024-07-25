@@ -219,6 +219,10 @@ impl Clone for Effect {
 }
 
 impl Shader for Effect {
+    fn name(&self) -> &'static str {
+        self.shader.name()
+    }
+
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let area = self.shader.area().unwrap_or(area);
         self.shader.process(duration, buf, area)

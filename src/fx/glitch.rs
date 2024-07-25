@@ -105,6 +105,10 @@ impl Glitch {
 }
 
 impl Shader for Glitch {
+    fn name(&self) -> &'static str {
+        "glitch"
+    }
+
     fn process(
         &mut self,
         duration: Duration,

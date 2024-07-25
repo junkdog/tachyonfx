@@ -14,6 +14,10 @@ pub struct ConsumeTick {
 }
 
 impl Shader for ConsumeTick {
+    fn name(&self) -> &'static str {
+        "consume_tick"
+    }
+
     fn process(
         &mut self,
         _duration: Duration,

@@ -33,6 +33,10 @@ impl From<FadeColorsBuilder> for Effect {
 }
 
 impl Shader for FadeColors {
+    fn name(&self) -> &'static str {
+        if self.timer.is_reversed() { "fade-out" } else { "fade-in" }
+    }
+
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();

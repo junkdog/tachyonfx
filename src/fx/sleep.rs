@@ -19,6 +19,10 @@ impl Sleep {
 }
 
 impl Shader for Sleep {
+    fn name(&self) -> &'static str {
+        "sleep"
+    }
+
     fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {
          // slept
     }

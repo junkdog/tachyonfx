@@ -32,6 +32,10 @@ impl Translate {
 }
 
 impl Shader for Translate {
+    fn name(&self) -> &'static str {
+        "translate_by"
+    }
+
     fn process(
         &mut self,
         duration: Duration,

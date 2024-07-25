@@ -17,6 +17,10 @@ impl NeverComplete {
 }
 
 impl Shader for NeverComplete {
+    fn name(&self) -> &'static str {
+        "never_complete"
+    }
+
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         self.effect.process(duration, buf, area);
         None

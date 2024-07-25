@@ -36,6 +36,9 @@ impl Dissolve {
 }
 
 impl Shader for Dissolve {
+    fn name(&self) -> &'static str {
+        if self.timer.is_reversed() { "coalesce" } else { "dissolve" }
+    }
 
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         cell_iter.enumerate()

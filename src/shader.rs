@@ -10,6 +10,8 @@ use crate::EffectTimer;
 /// The `Shader` trait defines the interface for objects that can apply visual effects
 /// to terminal cells over time.
 pub trait Shader {
+    fn name(&self) -> &'static str;
+
     /// Processes the shader for the given duration. Returns any overflowed
     /// duration if the shader has completed.
     ///
