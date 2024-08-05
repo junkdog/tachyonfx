@@ -1,10 +1,11 @@
-
+use std::time::Duration;
 use ratatui::layout::Rect;
 use crate::CellIterator;
 
 
 use crate::effect::CellFilter;
 use crate::effect_timer::EffectTimer;
+use crate::fxchart::EffectSpan;
 use crate::shader::Shader;
 
 #[derive(Clone)]
@@ -41,6 +42,14 @@ impl Shader for Sleep {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, Vec::default())
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

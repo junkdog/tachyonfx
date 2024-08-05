@@ -66,6 +66,10 @@ impl Shader for Dissolve {
         self.cell_filter = strategy
     }
 
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
+    }
+
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
     }

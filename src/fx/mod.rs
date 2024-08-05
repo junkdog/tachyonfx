@@ -29,7 +29,7 @@ use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
 
 mod ansi256;
 mod consume_tick;
-mod containers;
+pub(crate) mod containers;
 mod dissolve;
 mod fade;
 mod glitch;
@@ -46,7 +46,6 @@ mod shader_fn;
 mod slide;
 mod moving_window;
 mod offscreen_buffer;
-mod flattenable;
 
 /// Creates a custom effect using a user-defined function.
 ///

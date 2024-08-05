@@ -4,7 +4,8 @@ use ratatui::layout::{Rect};
 use crate::cell_iter::CellIterator;
 
 use crate::effect::CellFilter;
-use crate::EffectTimer;
+use crate::{Effect, EffectTimer};
+use crate::fxchart::EffectSpan;
 
 /// A trait representing a shader-like object that can be processed for a duration.
 /// The `Shader` trait defines the interface for objects that can apply visual effects
@@ -149,6 +150,7 @@ pub trait Shader {
     /// ```
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
 
+    fn timer(&self) -> Option<EffectTimer> { None }
 
     /// Returns the cell selection strategy for the shader, if any.
     ///
@@ -164,5 +166,9 @@ pub trait Shader {
         } else {
             panic!("Shader must implement reset()")
         }
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, Vec::default())
     }
 }

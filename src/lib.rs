@@ -17,7 +17,7 @@ mod render_effect;
 pub mod fx;
 mod bounding_box;
 mod buffer_renderer;
-mod effect_chart;
+mod fxchart;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;

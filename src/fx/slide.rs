@@ -97,6 +97,10 @@ impl Shader for SlideCell {
         Some(&mut self.timer)
     }
 
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
+    }
+
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
     }

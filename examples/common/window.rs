@@ -134,6 +134,10 @@ impl Shader for OpenWindow {
         self.pre_render_fx.as_mut().and_then(Effect::timer_mut)
     }
 
+    fn timer(&self) -> Option<&EffectTimer> {
+        self.pre_render_fx.as_ref().and_then(Effect::timer)
+    }
+
     fn cell_selection(&self) -> Option<CellFilter> {
         self.pre_render_fx.as_ref().map(Effect::cell_selection).flatten()
     }

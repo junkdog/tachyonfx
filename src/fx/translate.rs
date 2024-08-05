@@ -105,6 +105,10 @@ impl Shader for Translate {
         Some(&mut self.timer)
     }
 
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
+    }
+
     fn cell_selection(&self) -> Option<CellFilter> {
         if let Some(fx) = self.fx.as_ref() {
             return fx.cell_selection();

@@ -7,6 +7,7 @@ use ratatui::layout;
 use ratatui::layout::{Margin, Position, Rect};
 use ratatui::style::Color;
 use crate::{CellIterator, EffectTimer};
+use crate::fxchart::EffectSpan;
 use crate::shader::Shader;
 
 /// Represents an effect that can be applied to terminal cells.
@@ -256,6 +257,10 @@ impl Shader for Effect {
         self.shader.reverse()
     }
 
+    fn timer(&self) -> Option<EffectTimer> {
+        self.shader.timer()
+    }
+
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         self.shader.timer_mut()
     }
@@ -266,6 +271,13 @@ impl Shader for Effect {
 
     fn reset(&mut self) {
         self.shader.reset()
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan
+    where
+        Self: Sized + Clone,
+    {
+        self.shader.as_ref().as_effect_span(offset)
     }
 }
 

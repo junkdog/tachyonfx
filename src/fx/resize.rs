@@ -7,6 +7,7 @@ use ratatui::widgets::Widget;
 use crate::CellIterator;
 use crate::effect::{Effect, CellFilter};
 use crate::effect_timer::EffectTimer;
+use crate::fxchart::EffectSpan;
 use crate::interpolation::Interpolatable;
 use crate::rect_ext::CenteredShrink;
 use crate::shader::Shader;
@@ -102,6 +103,17 @@ impl Shader for ResizeArea {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        match &self.fx {
+            Some(fx) => EffectSpan::new(self, offset, vec![fx.as_effect_span(offset)]),
+            None     => EffectSpan::new(self, offset, Vec::default())
+        }
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

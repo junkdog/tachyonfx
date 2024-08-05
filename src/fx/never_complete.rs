@@ -3,6 +3,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use crate::{CellIterator, EffectTimer};
 use crate::effect::{Effect, CellFilter};
+use crate::fxchart::EffectSpan;
 use crate::shader::Shader;
 
 #[derive(Clone)]
@@ -53,5 +54,9 @@ impl Shader for NeverComplete {
 
     fn reset(&mut self) {
         self.effect.reset();
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)])
     }
 }

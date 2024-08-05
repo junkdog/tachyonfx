@@ -4,6 +4,7 @@ use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use crate::{CellFilter, CellIterator, Effect, Shader};
+use crate::fxchart::EffectSpan;
 
 #[derive(Clone)]
 pub struct OffscreenBuffer {
@@ -57,5 +58,9 @@ impl Shader for OffscreenBuffer {
 
     fn set_cell_selection(&mut self, filter: CellFilter) {
         self.fx.set_cell_selection(filter);
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 }

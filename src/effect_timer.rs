@@ -1,3 +1,4 @@
+use std::ops::Mul;
 use std::time::Duration;
 use crate::interpolation::Interpolation;
 
@@ -137,6 +138,10 @@ impl EffectTimer {
         self.interpolation.alpha(a)
     }
 
+    pub(crate) fn duration(&self) -> Duration {
+        self.total
+    }
+
     /// Processes the timer by reducing the remaining duration by the specified amount.
     ///
     /// # Arguments
@@ -201,5 +206,13 @@ impl From<(Duration, Interpolation)> for EffectTimer {
 impl From<Duration> for EffectTimer {
     fn from(duration: Duration) -> Self {
         EffectTimer::new(duration, Interpolation::Linear)
+    }
+}
+
+impl Mul<u32> for EffectTimer {
+    type Output = (EffectTimer);
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        EffectTimer::new(self.duration() * rhs, self.interpolation)
     }
 }

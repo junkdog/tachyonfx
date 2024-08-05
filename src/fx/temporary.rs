@@ -4,6 +4,7 @@ use ratatui::layout::Rect;
 use crate::CellIterator;
 use crate::effect::{Effect, CellFilter, IntoEffect};
 use crate::effect_timer::EffectTimer;
+use crate::fxchart::EffectSpan;
 use crate::interpolation::Interpolation::Linear;
 use crate::shader::Shader;
 
@@ -62,6 +63,14 @@ impl Shader for TemporaryEffect {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        return EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)]);
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

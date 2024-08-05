@@ -4,6 +4,7 @@ use ratatui::layout::Rect;
 use std::time::Duration;
 
 use crate::{CellFilter, CellIterator, Effect, EffectTimer, Shader};
+use crate::fxchart::EffectSpan;
 
 #[derive(Clone)]
 pub struct PingPong {
@@ -75,6 +76,14 @@ impl Shader for PingPong {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         None
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        self.fx.timer().as_ref().map(|t| t.clone() * 2)
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {
