@@ -20,7 +20,7 @@ ratatui = "0.27.0"
 simple-easing = "1.0.1"
 
 [dev-dependencies]
-crossterm = "0.27.0"
+crossterm = "0.28.1"
 
 [[example]]
 name = "open-window"
