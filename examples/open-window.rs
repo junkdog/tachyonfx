@@ -129,12 +129,12 @@ fn ui(
     f: &mut Frame,
     app: &mut App,
 ) {
-    if f.size().height == 0 { return; }
+    if f.area().height == 0 { return; }
 
-    Clear.render(f.size(), f.buffer_mut());
+    Clear.render(f.area(), f.buffer_mut());
 
     let area = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(f.size());
+        .split(f.area());
 
     let mut popup_area_l = area[0].inner_centered(45, 7);
     popup_area_l.y = area[0].height / 2;

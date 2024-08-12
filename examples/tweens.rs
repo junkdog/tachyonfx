@@ -137,19 +137,19 @@ fn ui(
     f: &mut Frame,
     app: &mut App,
 ) {
-    if f.size().height == 0 { return; }
+    if f.area().height == 0 { return; }
 
-    Clear.render(f.size(), f.buffer_mut());
+    Clear.render(f.area(), f.buffer_mut());
     Block::default()
         .style(Style::default().fg(Light2.into()).bg(Dark0.into()))
-        .render(f.size(), f.buffer_mut());
+        .render(f.area(), f.buffer_mut());
 
     let layout = Layout::vertical(
         vec![
             Constraint::Min(2),
             Constraint::Percentage(100),
         ]
-    ).split(f.size());
+    ).split(f.area());
 
     render_shortcuts(app, f, layout[0]);
 
@@ -359,14 +359,16 @@ impl StatefulWidget for InterpolationWidget {
             ]
         ).split(area);
 
-        let axis_x = Axis::default()
-            .title("x")
-            .bounds([0.0, 1.0])
-            .labels(vec!["0.0".into(), "0.5".into(), "1.0".into()]);
-        let axis_y = Axis::default()
-            .title("y")
-            .bounds([-0.2, 1.2])
-            .labels(vec!["-0.2".into(), "0.5".into(), "1.2".into()]);
+        let axis_x = Axis::default().title("x").bounds([0.0, 1.0]).labels([
+            Line::from("0.0"),
+            Line::from("0.5"),
+            Line::from("1.0"),
+        ]);
+        let axis_y = Axis::default().title("y").bounds([-0.2, 1.2]).labels([
+            Line::from("-0.2"),
+            Line::from("0.5"),
+            Line::from("1.2"),
+        ]);
 
         let chart = Chart::new(state.dataset())
             .x_axis(axis_x)

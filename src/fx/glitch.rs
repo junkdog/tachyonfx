@@ -128,7 +128,7 @@ impl Shader for Glitch {
             let x = cell.cell_idx % area.width as usize;
             let y = cell.cell_idx / area.width as usize;
             let pos = Position::new(area.x + x as u16, area.y + y as u16);
-            let c  = buf.get_mut(area.x + x as u16, area.y + y as u16);
+            let c  = buf.cell_mut(Position::new(area.x + x as u16, area.y + y as u16)).unwrap();
 
             if !selector.is_valid(pos, c) {
                 return;

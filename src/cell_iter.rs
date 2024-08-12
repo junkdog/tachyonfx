@@ -17,14 +17,14 @@ impl<'a> CellIterator<'a> {
     ) -> Self {
         Self { current: 0, area, buf, filter }
     }
-    
-    fn cell_mut(&mut self) -> (Position, &mut Cell) {
+
+    fn cell_mut(&mut self) -> Option<(Position, &mut Cell)> {
         let x = self.current % self.area.width;
         let y = self.current / self.area.width;
 
         let pos = Position::new(self.area.x + x, self.area.y + y);
-        let cell = self.buf.get_mut(pos.x, pos.y);
-        (pos, cell)
+        let cell = self.buf.cell_mut(Position::new(pos.x, pos.y))?;
+        Some((pos, cell))
     }
 }
 
@@ -34,7 +34,7 @@ impl<'a> Iterator for CellIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let selector = self.filter.as_ref().map(|f| f.selector(self.area));
         while self.current < self.area.area() {
-            let (pos, cell) = self.cell_mut();
+            let (pos, cell) = self.cell_mut()?;
             // enforce cell's lifetime. this is safe because `buf` is guaranteed to outlive `'a`
             let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
             self.current += 1;
