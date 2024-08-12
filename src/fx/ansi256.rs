@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::layout::{Position, Rect};
 
 use crate::CellIterator;
 use crate::color_ext::AsIndexedColor;
@@ -26,7 +26,7 @@ impl Shader for Ansi256 {
         
         for y in area.top()..area.bottom() {
             for x in area.left()..area.right() {
-                let cell = buf.get_mut(x, y);
+                let cell = buf.cell_mut(Position::new(x, y))?;
                 let fg = fg_mapper.map(cell.fg, 0.0, |c| c.as_indexed_color());
                 let bg = bg_mapper.map(cell.bg, 0.0, |c| c.as_indexed_color());
 

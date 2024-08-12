@@ -1,7 +1,7 @@
+use ratatui::buffer::Buffer;
+use ratatui::layout::{Offset, Position};
 use std::cell::RefCell;
 use std::rc::Rc;
-use ratatui::buffer::Buffer;
-use ratatui::layout::Offset;
 
 /// A trait for rendering the contents of one buffer onto another.
 ///
@@ -77,10 +77,17 @@ pub fn blit_buffer(
         return;
     }
 
-    for y in l_clip_y..(aux_area.height  - r_clip_y) {
+    for y in l_clip_y..(aux_area.height - r_clip_y) {
         for x in l_clip_x..(aux_area.width - r_clip_x) {
-            let c = dst.get_mut(x + aux_area.x - l_clip_x, y + aux_area.y - l_clip_y);
-            *c = src.get(x, y).clone();
+            if let (Some(c), Some(new_c)) = (
+                dst.cell_mut(Position::new(
+                    x + aux_area.x - l_clip_x,
+                    y + aux_area.y - l_clip_y,
+                )),
+                src.cell(Position::new(x, y)),
+            ) {
+                *c = new_c.clone();
+            }
         }
     }
 }

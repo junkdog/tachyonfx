@@ -149,12 +149,12 @@ fn ui(
     let screen_bg: Color = Dark0Hard.into();
     let bg: Color = Dark0Soft.into();
 
-    Clear.render(f.size(), f.buffer_mut());
+    Clear.render(f.area(), f.buffer_mut());
     Block::default()
         .style(Style::default().bg(screen_bg))
-        .render(f.size(), f.buffer_mut());
+        .render(f.area(), f.buffer_mut());
 
-    let content_area = f.size().inner_centered(80, 17);
+    let content_area = f.area().inner_centered(80, 17);
     Block::default()
         .style(Style::default().bg(bg))
         .render(content_area, f.buffer_mut());
