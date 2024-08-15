@@ -16,7 +16,7 @@ transformations, animations, and complex effect combinations.
 Add tachyonfx to your `Cargo.toml`:
 
 ```toml
-tachyonfx = "0.4.0"
+tachyonfx = "0.5.0"
 ```
 
 ## Overview
@@ -54,8 +54,9 @@ The library includes a variety of effects, loosely categorized as follows:
 - **with_duration:**        Wraps an effect and enforces a duration on it.
 
 #### Geometry Effects
-- **translate:**   Moves the effect area by a specified amount.
-- **resize_area:** Resizes the area of the wrapped effect.
+- **translate:**     Moves the effect area by a specified amount.
+- **translate_buf:** Copies the contents from an aux buffer, moving it by a specified amount.
+- **resize_area:**   Resizes the area of the wrapped effect.
 
  
 #### Combination Effects
