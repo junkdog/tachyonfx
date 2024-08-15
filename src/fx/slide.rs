@@ -43,6 +43,10 @@ impl SlideCell {
 }
 
 impl Shader for SlideCell {
+    fn name(&self) -> &'static str {
+        if self.timer.is_reversed() { "slide_out" } else { "slide_in" }
+    }
+
     fn execute(&mut self, alpha: f32, area: Rect, cells: CellIterator) {
         let direction = self.direction;
 
@@ -91,6 +95,10 @@ impl Shader for SlideCell {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

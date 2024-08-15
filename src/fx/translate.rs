@@ -4,8 +4,8 @@ use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 
 use crate::bounding_box::BoundingBox;
-use crate::CellIterator;
-use crate::effect::{CellFilter, Effect};
+use crate::{CellFilter, CellIterator};
+use crate::effect::Effect;
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
 use crate::shader::Shader;
@@ -32,6 +32,10 @@ impl Translate {
 }
 
 impl Shader for Translate {
+    fn name(&self) -> &'static str {
+        "translate_by"
+    }
+
     fn process(
         &mut self,
         duration: Duration,
@@ -99,6 +103,10 @@ impl Shader for Translate {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

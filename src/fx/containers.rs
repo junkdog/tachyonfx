@@ -1,8 +1,10 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Rect};
-use crate::{CellIterator, EffectTimer};
-use crate::effect::{Effect, CellFilter};
+use crate::{CellFilter, CellIterator, EffectTimer};
+use crate::effect::Effect;
+use crate::widget::EffectSpan;
+use crate::Interpolation::Linear;
 use crate::shader::Shader;
 
 #[derive(Default, Clone)]
@@ -29,6 +31,10 @@ impl ParallelEffect {
 }
 
 impl Shader for ParallelEffect {
+    fn name(&self) -> &'static str {
+        "parallel"
+    }
+
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let mut remaining = Some(duration);
 
@@ -76,6 +82,16 @@ impl Shader for ParallelEffect {
         None
     }
 
+    fn timer(&self) -> Option<EffectTimer> {
+        self.effects.iter()
+            .map(|fx| fx.timer())
+            .filter(|t| t.is_some())
+            .map(|t| t.unwrap())
+            .map(|t| t.duration())
+            .max()
+            .map(|d| EffectTimer::new(d, Linear))
+    }
+
     fn cell_selection(&self) -> Option<CellFilter> {
         None
     }
@@ -83,9 +99,21 @@ impl Shader for ParallelEffect {
     fn reset(&mut self) {
         self.effects.iter_mut().for_each(Effect::reset)
     }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        let children = self.effects.iter()
+            .map(|e| e.as_effect_span(offset))
+            .collect();
+
+        EffectSpan::new(self, offset, children)
+    }
 }
 
 impl Shader for SequentialEffect {
+    fn name(&self) -> &'static str {
+        "sequential"
+    }
+
     fn process(
         &mut self,
         duration: Duration,
@@ -135,10 +163,38 @@ impl Shader for SequentialEffect {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
 
+    fn timer(&self) -> Option<EffectTimer> {
+        let duration: Duration = self.effects.iter()
+            .map(|fx| fx.timer())
+            .filter(|t| t.is_some())
+            .map(|t| t.unwrap().duration())
+            .sum();
+
+        if duration.is_zero() {
+            None
+        } else {
+            Some(EffectTimer::new(duration, Linear))
+        }
+    }
+
     fn cell_selection(&self) -> Option<CellFilter> { None }
 
     fn reset(&mut self) {
         self.current = 0;
         self.effects.iter_mut().for_each(Effect::reset)
     }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        let mut acc = Duration::from_secs(0);
+        let children = self.effects.iter()
+            .map(|e| {
+                let span = e.as_effect_span(offset + acc);
+                acc += e.timer().map(|t| t.duration()).unwrap_or_default();
+                span
+            })
+            .collect();
+
+        EffectSpan::new(self, offset, children)
+    }
 }
+

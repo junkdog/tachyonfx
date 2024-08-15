@@ -1,17 +1,23 @@
 # Changelog
 
+![effect-timeline-widget](images/effect-timeline-widget.png)
+The effect timeline widget visualizes the composition of effects. It also supports rendering the
+widget as an ansi-escaped string, suitable for saving to a file or straight to `println!()`.
+
 ### Added
+- `widget::EffectTimeline`: a widget for visualizing the composition of effects.
 - `fx::offscreen_buffer()`: wraps an existing effect and redirects its rendering
   to a separate buffer.  This allows for more complex effect compositions and can
   improve performance for certain types of effects.
 - `BufferRenderer` trait: enables rendering of one buffer onto another with offset support.
-This allows for more complex composition of UI elements and effects.
+  This allows for more complex composition of UI elements and effects.
 - fn `blit_buffer()`: copies the contents of a source buffer onto a destination buffer with a specified offset.
-
+- fn `render_as_ansi_string()`: converts a buffer to a string containing ANSI escape codes for styling.
 
 ## tachyonfx 0.4.0 - 2024-07-14
 
 ### Added
+- `EffectTimeline::save_to_file()`: saves the effect timeline to a file.
 - `CellFilter::PositionFn`: filter cells based on a predicate function.
 - `fx::slide_in()` and `fx::slide_out()`: slides in/out cells by "shrinking" the cells horizontally or
   vertically along the given area.
@@ -23,6 +29,7 @@ This allows for more complex composition of UI elements and effects.
 *: _Note that "shader" here is used loosely, as no GPU is involved, only terminal cells._
 
 ### Breaking
+- Shader trait now requires `name()` and `timer()` methods.
 - `fx::resize_area`:  signature updated with `initial_size: Size`, replacing the u16 tuple.
 
 ### Fixed

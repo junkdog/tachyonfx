@@ -30,3 +30,6 @@ name = "basic-effects"
 
 [[example]]
 name = "tweens"
+
+[[example]]
+name = "fx-chart"

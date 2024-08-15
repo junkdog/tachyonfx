@@ -1,7 +1,8 @@
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Offset, Position};
 use std::cell::RefCell;
 use std::rc::Rc;
+use ratatui::buffer::Buffer;
+use ratatui::layout::{Offset, Position};
+use ratatui::style::{Color, Modifier, Style};
 
 /// A trait for rendering the contents of one buffer onto another.
 ///
@@ -28,7 +29,14 @@ pub trait BufferRenderer {
 
 impl BufferRenderer for Rc<RefCell<Buffer>> {
     fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
-        blit_buffer(&*self.as_ref().borrow(), buf, offset);
+        (&*self.as_ref().borrow())
+            .render_buffer(offset, buf);
+    }
+}
+
+impl BufferRenderer for Buffer {
+    fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
+        blit_buffer(self, buf, offset);
     }
 }
 
@@ -92,8 +100,110 @@ pub fn blit_buffer(
     }
 }
 
+/// Converts a `Buffer` to an ANSI-encoded string representation.
+///
+/// This function takes a `Buffer` and converts it to a string that includes ANSI escape codes
+/// for styling. The resulting string represents the content of the buffer with all styling
+/// information (colors and text modifiers) preserved.
+///
+/// # Arguments
+///
+/// * `buffer` - A reference to the `Buffer` to be converted.
+///
+/// # Returns
+///
+/// A `String` containing the styled representation of the buffer's content.
+pub fn render_as_ansi_string(buffer: &Buffer) -> String {
+    let mut s = String::new();
+    for y in 0..buffer.area.height {
+        for x in 0..buffer.area.width {
+            let cell = buffer.get(x, y);
+            s.push_str(&escape_code_of(cell.style()));
+            s.push_str(cell.symbol());
+            s.push_str("\x1b[0m"); // reset
+        }
+        s.push_str("\n");
+    }
+    s
+}
+
+fn escape_code_of(style: Style) -> String {
+    let mut result = String::new();
+
+    // Foreground color
+    if let Some(color) = style.fg {
+        if color != Color::Reset {
+            result.push_str(&color_code(color, true));
+        }
+    }
+
+    // Background color
+    if let Some(color) = style.bg {
+        if color != Color::Reset {
+            result.push_str(&color_code(color, false));
+        }
+    }
+
+    // Modifiers
+    if style.add_modifier.contains(Modifier::BOLD) {
+        result.push_str("\x1b[1m");
+    }
+    if style.add_modifier.contains(Modifier::DIM) {
+        result.push_str("\x1b[2m");
+    }
+    if style.add_modifier.contains(Modifier::ITALIC) {
+        result.push_str("\x1b[3m");
+    }
+    if style.add_modifier.contains(Modifier::UNDERLINED) {
+        result.push_str("\x1b[4m");
+    }
+    if style.add_modifier.contains(Modifier::SLOW_BLINK) {
+        result.push_str("\x1b[5m");
+    }
+    if style.add_modifier.contains(Modifier::RAPID_BLINK) {
+        result.push_str("\x1b[6m");
+    }
+    if style.add_modifier.contains(Modifier::REVERSED) {
+        result.push_str("\x1b[7m");
+    }
+    if style.add_modifier.contains(Modifier::HIDDEN) {
+        result.push_str("\x1b[8m");
+    }
+    if style.add_modifier.contains(Modifier::CROSSED_OUT) {
+        result.push_str("\x1b[9m");
+    }
+
+    result
+}
+
+fn color_code(color: Color, foreground: bool) -> String {
+    let base = if foreground { 38 } else { 48 };
+    match color {
+        Color::Reset        => "\x1b[0m".to_string(),
+        Color::Black        => format!("\x1b[{};5;0m", base),
+        Color::Red          => format!("\x1b[{};5;1m", base),
+        Color::Green        => format!("\x1b[{};5;2m", base),
+        Color::Yellow       => format!("\x1b[{};5;3m", base),
+        Color::Blue         => format!("\x1b[{};5;4m", base),
+        Color::Magenta      => format!("\x1b[{};5;5m", base),
+        Color::Cyan         => format!("\x1b[{};5;6m", base),
+        Color::Gray         => format!("\x1b[{};5;7m", base),
+        Color::DarkGray     => format!("\x1b[{};5;8m", base),
+        Color::LightRed     => format!("\x1b[{};5;9m", base),
+        Color::LightGreen   => format!("\x1b[{};5;10m", base),
+        Color::LightYellow  => format!("\x1b[{};5;11m", base),
+        Color::LightBlue    => format!("\x1b[{};5;12m", base),
+        Color::LightMagenta => format!("\x1b[{};5;13m", base),
+        Color::LightCyan    => format!("\x1b[{};5;14m", base),
+        Color::White        => format!("\x1b[{};5;15m", base),
+        Color::Indexed(i)   => format!("\x1b[{};5;{}m", base, i),
+        Color::Rgb(r, g, b) => format!("\x1b[{};2;{};{};{}m", base, r, g, b),
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use ratatui::buffer::Buffer;
     use super::*;
 
     fn assert_buffer_to_buffer_copy(

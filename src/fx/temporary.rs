@@ -1,9 +1,10 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::CellIterator;
-use crate::effect::{Effect, CellFilter, IntoEffect};
+use crate::{CellFilter, CellIterator};
+use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
+use crate::widget::EffectSpan;
 use crate::interpolation::Interpolation::Linear;
 use crate::shader::Shader;
 
@@ -20,6 +21,10 @@ impl TemporaryEffect {
 }
 
 impl Shader for TemporaryEffect {
+    fn name(&self) -> &'static str {
+        "with_duration"
+    }
+
     fn process(
         &mut self,
         duration: Duration,
@@ -58,6 +63,14 @@ impl Shader for TemporaryEffect {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        return EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)]);
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

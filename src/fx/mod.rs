@@ -29,7 +29,7 @@ use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
 
 mod ansi256;
 mod consume_tick;
-mod containers;
+pub(crate) mod containers;
 mod dissolve;
 mod fade;
 mod glitch;

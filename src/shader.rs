@@ -1,15 +1,18 @@
-use std::time::Duration;
-use ratatui::buffer::{Buffer};
-use ratatui::layout::{Rect};
 use crate::cell_iter::CellIterator;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use std::time::Duration;
 
-use crate::effect::CellFilter;
+use crate::widget::EffectSpan;
+use crate::CellFilter;
 use crate::EffectTimer;
 
 /// A trait representing a shader-like object that can be processed for a duration.
 /// The `Shader` trait defines the interface for objects that can apply visual effects
 /// to terminal cells over time.
 pub trait Shader {
+    fn name(&self) -> &'static str;
+
     /// Processes the shader for the given duration. Returns any overflowed
     /// duration if the shader has completed.
     ///
@@ -147,6 +150,24 @@ pub trait Shader {
     /// ```
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
 
+    /// Returns the timer associated with this shader effect.
+    ///
+    /// This method is primarily used for visualization purposes, such as in the `EffectTimeline` widget.
+    /// It provides information about the duration and timing of the effect.
+    ///
+    /// # Returns
+    /// An `Option<EffectTimer>`:
+    /// - `Some(EffectTimer)` if the shader has an associated timer.
+    /// - `None` if the shader doesn't have a specific duration (e.g., for indefinite effects).
+    ///
+    /// # Notes
+    /// - For composite effects (like parallel or sequential effects), this may return an approximation
+    ///   of the total duration based on the timers of child effects.
+    /// - Some effects may modify the returned timer to reflect their specific behavior
+    ///   (e.g., a ping-pong effect might double the duration).
+    /// - The returned timer should reflect the total expected duration of the effect, which may differ
+    ///   from the current remaining time.
+    fn timer(&self) -> Option<EffectTimer> { None }
 
     /// Returns the cell selection strategy for the shader, if any.
     ///
@@ -162,5 +183,9 @@ pub trait Shader {
         } else {
             panic!("Shader must implement reset()")
         }
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, Vec::default())
     }
 }

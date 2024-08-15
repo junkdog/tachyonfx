@@ -91,6 +91,10 @@ impl<S: Clone + 'static> ShaderFn<S> {
 }
 
 impl<S: Clone + 'static> Shader for ShaderFn<S> {
+    fn name(&self) -> &'static str {
+        "shader_fn"
+    }
+
     fn process(
         &mut self,
         duration: Duration,

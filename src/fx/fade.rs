@@ -2,9 +2,9 @@ use derive_builder::Builder;
 use ratatui::layout::Rect;
 use ratatui::prelude::Color;
 
-use crate::{CellIterator, Interpolatable};
+use crate::{CellFilter, CellIterator, Interpolatable};
 use crate::color_mapper::ColorMapper;
-use crate::effect::{CellFilter, Effect, IntoEffect};
+use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 
@@ -33,6 +33,10 @@ impl From<FadeColorsBuilder> for Effect {
 }
 
 impl Shader for FadeColors {
+    fn name(&self) -> &'static str {
+        if self.timer.is_reversed() { "fade_out" } else { "fade_in" }
+    }
+
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
@@ -72,6 +76,10 @@ impl Shader for FadeColors {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {
