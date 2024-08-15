@@ -6,6 +6,7 @@ widget as an ansi-escaped string, suitable for saving to a file or straight to `
 
 ### Added
 - `widget::EffectTimeline`: a widget for visualizing the composition of effects.
+- `EffectTimeline::save_to_file()`: saves the effect timeline to a file.
 - `fx::offscreen_buffer()`: wraps an existing effect and redirects its rendering
   to a separate buffer.  This allows for more complex effect compositions and can
   improve performance for certain types of effects.
@@ -14,10 +15,14 @@ widget as an ansi-escaped string, suitable for saving to a file or straight to `
 - fn `blit_buffer()`: copies the contents of a source buffer onto a destination buffer with a specified offset.
 - fn `render_as_ansi_string()`: converts a buffer to a string containing ANSI escape codes for styling.
 
+### Breaking
+- Shader trait now requires `name()`, `timer()` and `as_effect_span()` methods.
+- `ratatui` updated to 0.28.0. This is also the minimum version required for tachyonfx.
+
+
 ## tachyonfx 0.4.0 - 2024-07-14
 
 ### Added
-- `EffectTimeline::save_to_file()`: saves the effect timeline to a file.
 - `CellFilter::PositionFn`: filter cells based on a predicate function.
 - `fx::slide_in()` and `fx::slide_out()`: slides in/out cells by "shrinking" the cells horizontally or
   vertically along the given area.
@@ -29,9 +34,7 @@ widget as an ansi-escaped string, suitable for saving to a file or straight to `
 *: _Note that "shader" here is used loosely, as no GPU is involved, only terminal cells._
 
 ### Breaking
-- Shader trait now requires `name()` and `timer()` methods.
 - `fx::resize_area`:  signature updated with `initial_size: Size`, replacing the u16 tuple.
-- `ratatui` updated to 0.28.0. This is also the minimum version required for tachyonfx.
 
 ### Fixed
 - `fx::translate()`: translate can now move out-of-bounds.
