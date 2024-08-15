@@ -3,7 +3,7 @@ use ratatui::layout::Rect;
 use ratatui::style::Color;
 
 use crate::{CellIterator, ColorMapper, Effect, HslConvertable, Interpolatable, IntoEffect};
-use crate::effect::CellFilter;
+use crate::CellFilter;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 
@@ -28,6 +28,10 @@ impl HslShift {
 }
 
 impl Shader for HslShift {
+    fn name(&self) -> &'static str {
+        "hsl_shift"
+    }
+
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
@@ -76,6 +80,10 @@ impl Shader for HslShift {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

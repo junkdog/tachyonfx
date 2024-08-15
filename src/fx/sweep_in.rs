@@ -4,7 +4,7 @@ use ratatui::prelude::Color;
 use Interpolation::CircOut;
 
 use crate::{CellIterator, ColorMapper};
-use crate::effect::CellFilter;
+use crate::CellFilter;
 use crate::effect_timer::EffectTimer;
 use crate::fx::moving_window::{horizontal_gradient, vertical_gradient, window_alpha_fn};
 use crate::interpolation::{Interpolatable, Interpolation};
@@ -65,6 +65,10 @@ impl SweepIn {
 }
 
 impl Shader for SweepIn {
+    fn name(&self) -> &'static str {
+        if self.timer.is_reversed() { "sweep_out" } else { "sweep_in" }
+    }
+
     fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {
         let direction = self.direction;
         let gradient = match direction {
@@ -121,6 +125,10 @@ impl Shader for SweepIn {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

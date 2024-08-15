@@ -3,7 +3,7 @@ use rand::prelude::{SeedableRng, SmallRng};
 use ratatui::layout::Rect;
 
 use crate::CellIterator;
-use crate::effect::CellFilter;
+use crate::CellFilter;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 
@@ -36,6 +36,9 @@ impl Dissolve {
 }
 
 impl Shader for Dissolve {
+    fn name(&self) -> &'static str {
+        if self.timer.is_reversed() { "coalesce" } else { "dissolve" }
+    }
 
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
         cell_iter.enumerate()
@@ -61,6 +64,10 @@ impl Shader for Dissolve {
 
     fn set_cell_selection(&mut self, strategy: CellFilter) {
         self.cell_filter = strategy
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {

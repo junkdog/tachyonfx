@@ -65,6 +65,10 @@ impl OpenWindow {
 }
 
 impl Shader for OpenWindow {
+    fn name(&self) -> &'static str {
+        "window"
+    }
+
     fn process(
         &mut self,
         duration: Duration,
@@ -132,6 +136,10 @@ impl Shader for OpenWindow {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         self.pre_render_fx.as_mut().and_then(Effect::timer_mut)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        self.pre_render_fx.as_ref().and_then(Effect::timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

@@ -1,8 +1,9 @@
 use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::{CellIterator, EffectTimer};
-use crate::effect::{Effect, CellFilter};
+use crate::{CellFilter, CellIterator, EffectTimer};
+use crate::effect::Effect;
+use crate::widget::EffectSpan;
 use crate::shader::Shader;
 
 #[derive(Clone)]
@@ -17,6 +18,10 @@ impl NeverComplete {
 }
 
 impl Shader for NeverComplete {
+    fn name(&self) -> &'static str {
+        "never_complete"
+    }
+
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         self.effect.process(duration, buf, area);
         None
@@ -49,5 +54,9 @@ impl Shader for NeverComplete {
 
     fn reset(&mut self) {
         self.effect.reset();
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)])
     }
 }

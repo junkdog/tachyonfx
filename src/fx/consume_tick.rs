@@ -4,7 +4,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
 use crate::CellIterator;
-use crate::effect::CellFilter;
+use crate::CellFilter;
 use crate::shader::Shader;
 
 /// consumes any remaining duration for a single tick.
@@ -14,6 +14,10 @@ pub struct ConsumeTick {
 }
 
 impl Shader for ConsumeTick {
+    fn name(&self) -> &'static str {
+        "consume_tick"
+    }
+
     fn process(
         &mut self,
         _duration: Duration,

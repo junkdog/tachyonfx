@@ -2,9 +2,10 @@ use std::time::Duration;
 
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
-use crate::{CellIterator, EffectTimer};
+use crate::{CellFilter, CellIterator, EffectTimer};
 
-use crate::effect::{Effect, CellFilter};
+use crate::effect::Effect;
+use crate::widget::EffectSpan;
 use crate::shader::Shader;
 
 #[derive(Clone)]
@@ -36,6 +37,10 @@ impl Repeat {
 }
 
 impl Shader for Repeat {
+    fn name(&self) -> &'static str {
+        "repeat"
+    }
+
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         match self.mode {
             RepeatMode::Forever => {
@@ -105,6 +110,18 @@ impl Shader for Repeat {
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         None
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        match self.mode {
+            RepeatMode::Forever     => self.fx.timer(),
+            RepeatMode::Times(n)    => self.fx.timer().map(|t| t * n),
+            RepeatMode::Duration(d) => Some(EffectTimer::from(d)),
+        }
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        return EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)]);
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

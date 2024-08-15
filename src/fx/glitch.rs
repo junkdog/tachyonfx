@@ -7,8 +7,8 @@ use rand::prelude::SmallRng;
 use rand::Rng;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
-use crate::{CellIterator, EffectTimer};
-use crate::effect::{Effect, CellFilter, IntoEffect};
+use crate::{CellFilter, CellIterator, EffectTimer};
+use crate::effect::{Effect, IntoEffect};
 use crate::shader::Shader;
 
 
@@ -105,6 +105,10 @@ impl Glitch {
 }
 
 impl Shader for Glitch {
+    fn name(&self) -> &'static str {
+        "glitch"
+    }
+
     fn process(
         &mut self,
         duration: Duration,

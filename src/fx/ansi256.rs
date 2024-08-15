@@ -6,7 +6,7 @@ use ratatui::layout::{Position, Rect};
 use crate::CellIterator;
 use crate::color_ext::AsIndexedColor;
 use crate::color_mapper::ColorMapper;
-use crate::effect::CellFilter;
+use crate::CellFilter;
 use crate::shader::Shader;
 
 #[derive(Clone, Default)]
@@ -15,6 +15,10 @@ pub struct Ansi256 {
 }
 
 impl Shader for Ansi256 {
+    fn name(&self) -> &'static str {
+        "ansi256"
+    }
+
     fn process(
         &mut self,
         _duration: Duration,

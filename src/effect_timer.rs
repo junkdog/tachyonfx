@@ -1,3 +1,4 @@
+use std::ops::Mul;
 use std::time::Duration;
 use crate::interpolation::Interpolation;
 
@@ -82,6 +83,10 @@ impl EffectTimer {
         Self { reverse: !self.reverse, ..self }
     }
 
+    pub fn is_reversed(&self) -> bool {
+        self.reverse
+    }
+
     /// Checks if the timer has started.
     ///
     /// # Returns
@@ -131,6 +136,10 @@ impl EffectTimer {
 
         let a = if self.reverse { inv_alpha } else { 1.0 - inv_alpha };
         self.interpolation.alpha(a)
+    }
+
+    pub(crate) fn duration(&self) -> Duration {
+        self.total
     }
 
     /// Processes the timer by reducing the remaining duration by the specified amount.
@@ -197,5 +206,13 @@ impl From<(Duration, Interpolation)> for EffectTimer {
 impl From<Duration> for EffectTimer {
     fn from(duration: Duration) -> Self {
         EffectTimer::new(duration, Interpolation::Linear)
+    }
+}
+
+impl Mul<u32> for EffectTimer {
+    type Output = EffectTimer;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        EffectTimer::new(self.duration() * rhs, self.interpolation)
     }
 }
