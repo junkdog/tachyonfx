@@ -117,7 +117,7 @@ pub fn render_as_ansi_string(buffer: &Buffer) -> String {
     let mut s = String::new();
     for y in 0..buffer.area.height {
         for x in 0..buffer.area.width {
-            let cell = buffer.get(x, y);
+            let cell = buffer.cell(Position::new(x, y)).unwrap();
             s.push_str(&escape_code_of(cell.style()));
             s.push_str(cell.symbol());
             s.push_str("\x1b[0m"); // reset
