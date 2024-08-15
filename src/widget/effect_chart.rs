@@ -2,7 +2,7 @@ use crate::widget::effect_span::effect_span_tree;
 use crate::widget::{CellFilterRegistry, ColorRegistry, EffectSpan};
 use crate::{CellFilter, Effect, HslConvertable, Shader};
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
@@ -96,7 +96,7 @@ impl EffectTimeline {
         let mut draw_column_marker = |s: &str, area: Rect| {
             let mut y = axis_row.y - 1;
             loop {
-                let cell = buf.get_mut(area.x, y);
+                let cell = buf.cell_mut(Position::new(area.x, y)).unwrap();
                 if cell.symbol() == " " {
                     cell.set_symbol(s);
                     cell.fg = Color::DarkGray;

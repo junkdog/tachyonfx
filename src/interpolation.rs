@@ -1,3 +1,4 @@
+use ratatui::layout::Offset;
 use ratatui::style::{Color, Style};
 use simple_easing::{back_in, back_in_out, back_out, bounce_in, bounce_in_out, bounce_out, circ_in, circ_in_out, circ_out, cubic_in, elastic_in, elastic_in_out, elastic_out, expo_in, expo_in_out, expo_out, quad_in, quad_in_out, quad_out, quart_in, quart_in_out, quart_out, quint_in, quint_in_out, quint_out, reverse, sine_in, sine_in_out, sine_out};
 use crate::color_ext::ToRgbComponents;
@@ -140,6 +141,12 @@ impl Interpolatable<f32> for f32 {
     }
 }
 
+impl Interpolatable<i32> for i32 {
+    fn lerp(&self, target: &i32, alpha: f32) -> i32 {
+        self + ((target - self) as f64 * alpha as f64).round() as i32
+    }
+}
+
 impl Interpolatable<Style> for Style {
     fn lerp(&self, target: &Style, alpha: f32) -> Style {
         let fg = self.fg.lerp(&target.fg, alpha);
@@ -178,6 +185,15 @@ impl Interpolatable<Option<Color>> for Option<Color> {
             (Some(c1), None)     => Some(*c1),
             (None,     Some(c2)) => Some(*c2),
             (None,     None)     => None,
+        }
+    }
+}
+
+impl Interpolatable<Offset> for Offset {
+    fn lerp(&self, target: &Offset, alpha: f32) -> Offset {
+        Offset {
+            x: self.x.lerp(&target.x, alpha),
+            y: self.y.lerp(&target.y, alpha),
         }
     }
 }

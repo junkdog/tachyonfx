@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 use ratatui::buffer::Buffer;
-use ratatui::layout::Size;
+use ratatui::layout::{Offset, Size};
 use ratatui::style::Color;
 
 pub use glitch::Glitch;
@@ -26,6 +26,7 @@ use crate::fx::resize::ResizeArea;
 use crate::fx::sleep::Sleep;
 use crate::fx::sweep_in::SweepIn;
 use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
+use crate::fx::translate_buffer::TranslateBuffer;
 
 mod ansi256;
 mod consume_tick;
@@ -41,6 +42,7 @@ mod sleep;
 mod sweep_in;
 mod temporary;
 mod translate;
+mod translate_buffer;
 mod hsl_shift;
 mod shader_fn;
 mod slide;
@@ -343,6 +345,31 @@ pub fn translate<T: Into<EffectTimer>>(
     timer: T,
 ) -> Effect {
     translate::Translate::new(fx, translate_by, timer.into()).into_effect()
+}
+
+/// Creates an effect that translates the contents of an auxiliary buffer onto the main buffer.
+///
+/// This function creates a `TranslateBuffer` shader, which efficiently translates pre-rendered
+/// content without re-rendering it on every frame. It's particularly useful for large or complex
+/// content that doesn't change frequently.
+///
+/// # Arguments
+///
+/// * `translate_by` - An `Offset` specifying the final translation amount.
+/// * `timer` - Specifies the duration and interpolation of the translation effect. Can be any type
+///   that implements `Into<EffectTimer>`.
+/// * `aux_buffer` - A shared reference to the auxiliary buffer containing the pre-rendered content
+///   to be translated.
+///
+/// # Returns
+///
+/// Returns an `Effect` that can be used with other effects or applied directly to a buffer.
+pub fn translate_buffer<T: Into<EffectTimer>>(
+    translate_by: Offset,
+    timer: T,
+    aux_buffer: Rc<RefCell<Buffer>>,
+) -> Effect {
+    TranslateBuffer::new(aux_buffer, translate_by, timer.into()).into_effect()
 }
 
 /// Resizes the area of the wrapped effect to the specified dimensions over a specified duration.

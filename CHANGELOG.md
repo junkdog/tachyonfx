@@ -5,11 +5,12 @@ The effect timeline widget visualizes the composition of effects. It also suppor
 widget as an ansi-escaped string, suitable for saving to a file or straight to `println!()`.
 
 ### Added
-- `widget::EffectTimeline`: a widget for visualizing the composition of effects.
-- `EffectTimeline::save_to_file()`: saves the effect timeline to a file.
 - `fx::offscreen_buffer()`: wraps an existing effect and redirects its rendering
   to a separate buffer.  This allows for more complex effect compositions and can
   improve performance for certain types of effects.
+- `fx::translate_buf()`: translates the contents of an auxiliary buffer onto the main buffer.
+- `widget::EffectTimeline`: a widget for visualizing the composition of effects.
+- `EffectTimeline::save_to_file()`: saves the effect timeline to a file.
 - `BufferRenderer` trait: enables rendering of one buffer onto another with offset support.
   This allows for more complex composition of UI elements and effects.
 - fn `blit_buffer()`: copies the contents of a source buffer onto a destination buffer with a specified offset.
