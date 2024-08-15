@@ -1,5 +1,7 @@
 # Changelog
 
+## tachyonfx 0.5.0 - 2024-08-16
+
 ![effect-timeline-widget](images/effect-timeline-widget.png)
 The effect timeline widget visualizes the composition of effects. It also supports rendering the
 widget as an ansi-escaped string, suitable for saving to a file or straight to `println!()`.
@@ -15,6 +17,7 @@ widget as an ansi-escaped string, suitable for saving to a file or straight to `
   This allows for more complex composition of UI elements and effects.
 - fn `blit_buffer()`: copies the contents of a source buffer onto a destination buffer with a specified offset.
 - fn `render_as_ansi_string()`: converts a buffer to a string containing ANSI escape codes for styling.
+- new example: `fx-chart`.
 
 ### Breaking
 - Shader trait now requires `name()`, `timer()` and `as_effect_span()` methods.
