@@ -31,6 +31,7 @@ widget as an ansi-escaped string, suitable for saving to a file or straight to `
 ### Breaking
 - Shader trait now requires `name()` and `timer()` methods.
 - `fx::resize_area`:  signature updated with `initial_size: Size`, replacing the u16 tuple.
+- `ratatui` updated to 0.28.0. This is also the minimum version required for tachyonfx.
 
 ### Fixed
 - `fx::translate()`: translate can now move out-of-bounds.
