@@ -364,10 +364,10 @@ pub fn translate<T: Into<EffectTimer>>(
 /// # Returns
 ///
 /// Returns an `Effect` that can be used with other effects or applied directly to a buffer.
-pub fn translate_buffer<T: Into<EffectTimer>>(
+pub fn translate_buf<T: Into<EffectTimer>>(
     translate_by: Offset,
-    timer: T,
     aux_buffer: Rc<RefCell<Buffer>>,
+    timer: T,
 ) -> Effect {
     TranslateBuffer::new(aux_buffer, translate_by, timer.into()).into_effect()
 }
@@ -517,13 +517,63 @@ pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(
     fade(Some(fg), Some(bg), timer.into(), true)
 }
 
-
-/// Pauses for the specified duration.
+/// Creates an effect that pauses for the specified duration.
+///
+/// This function creates an effect that does nothing for the given duration,
+/// effectively creating a pause or delay in a sequence of effects.
+///
+/// # Arguments
+///
+/// * `duration` - The duration of the sleep effect. This can be any type that
+///   can be converted into an `EffectTimer`.
+///
+/// # Returns
+///
+/// An `Effect` that, when processed, will pause for the specified duration.
 pub fn sleep<T: Into<EffectTimer>>(duration: T) -> Effect {
     Sleep::new(duration).into_effect()
 }
 
-/// Consumes a single tick.
+/// Creates an effect that delays the execution of another effect.
+///
+/// This function creates a sequence of two effects: a sleep effect followed by
+/// the provided effect. This effectively delays the start of the provided effect
+/// by the specified duration.
+///
+/// # Arguments
+///
+/// * `duration` - The duration of the delay. This can be any type that can be
+///   converted into an `EffectTimer`.
+/// * `effect` - The effect to be delayed.
+///
+/// # Returns
+///
+/// An `Effect` that, when processed, will first pause for the specified duration
+/// and then apply the provided effect.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::{fx, Effect, EffectTimer};
+/// use std::time::Duration;
+/// use ratatui::style::Color;
+///
+/// let fade_effect = fx::fade_to_fg(Color::Red, Duration::from_secs(1));
+/// let delayed_fade: Effect = fx::delay(Duration::from_secs(2), fade_effect);
+/// ```
+pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
+    sequence(vec![sleep(duration), effect])
+}
+
+/// Creates an effect that consumes a single tick of processing time.
+///
+/// This function creates an effect that does nothing but mark itself as complete
+/// after a single processing tick. It can be useful for creating very short pauses
+/// or for synchronizing effects in complex sequences.
+///
+/// # Returns
+///
+/// An `Effect` that completes after a single processing tick.
 pub fn consume_tick() -> Effect {
     ConsumeTick::default().into_effect()
 }
