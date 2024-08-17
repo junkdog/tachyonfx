@@ -1,6 +1,6 @@
 # Changelog
 
-## tachyonfx 0.5.0 - 2024-08-16
+## tachyonfx 0.5.0 - 2024-08-17
 
 ![effect-timeline-widget](images/effect-timeline-widget.png)
 The effect timeline widget visualizes the composition of effects. It also supports rendering the
