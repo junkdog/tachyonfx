@@ -7,4 +7,7 @@ pub(crate) use effect_span::EffectSpan;
 pub(crate) use cell_filter_registry::CellFilterRegistry;
 pub(crate) use color_registry::ColorRegistry;
 
-pub use effect_chart::EffectTimeline;
+pub use effect_chart::{
+    EffectTimeline,
+    EffectTimelineRects
+};
