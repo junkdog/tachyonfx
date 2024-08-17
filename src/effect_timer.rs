@@ -138,7 +138,7 @@ impl EffectTimer {
         self.interpolation.alpha(a)
     }
 
-    pub(crate) fn duration(&self) -> Duration {
+    pub fn duration(&self) -> Duration {
         self.total
     }
 

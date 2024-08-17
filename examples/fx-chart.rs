@@ -1,27 +1,26 @@
-use std::{io, panic};
 use std::cell::RefCell;
 use std::error::Error;
 use std::io::Stdout;
 use std::rc::Rc;
 use std::time::Duration;
+use std::{io, panic};
 
-use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::{event, execute};
 use rand::prelude::SeedableRng;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::{Frame, widgets};
-use ratatui::layout::{Margin, Offset, Position, Rect};
+use ratatui::layout::{Margin, Offset, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::{Block, Clear, StatefulWidget, Widget};
+use ratatui::Frame;
 
-use Interpolation::*;
-use tachyonfx::{BufferRenderer, CenteredShrink, Effect, EffectRenderer, fx, Interpolation, Shader, EffectTimer};
-use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer, Text};
-use tachyonfx::fx::{effect_fn, never_complete, parallel, sequence, term256_colors, with_duration, Direction};
+use tachyonfx::fx::{never_complete, parallel, sequence, with_duration, Direction};
 use tachyonfx::widget::EffectTimeline;
-use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft};
+use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer, Text};
+use tachyonfx::{fx, BufferRenderer, CenteredShrink, Effect, EffectRenderer, Interpolation, Shader};
+use Interpolation::*;
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
@@ -34,7 +33,7 @@ struct App {
     last_tick: Duration,
     use_aux_buffer: bool,
     aux_buffer: Rc<RefCell<Buffer>>,
-    inspected_effect: Effect,
+    inspected_effect: Rc<RefCell<Effect>>,
     screen_area: Rect,
     timeline: EffectTimeline,
 }
@@ -88,7 +87,7 @@ impl App {
             aux_buffer: Rc::new(RefCell::new(Buffer::empty(aux_buffer_area))),
             timeline: EffectTimeline::from(&fx),
             screen_area: Rect::default(),
-            inspected_effect: fx,
+            inspected_effect: Rc::new(RefCell::new(fx)),
         }
     }
 
@@ -100,21 +99,75 @@ impl App {
             .style(Style::default().bg(Color::Black))
             .render(buf.area, &mut buf);
 
-        EffectTimeline::from(&effect)
+        EffectTimeline::from(&effect.borrow())
             .render(buf.area, &mut buf);
     }
 }
 
 mod effects {
+    use ratatui::buffer::Buffer;
+    use ratatui::layout::{Offset, Rect};
     use std::cell::RefCell;
     use std::rc::Rc;
     use std::time::Duration;
-    use crossterm::style::Color;
-    use ratatui::buffer::Buffer;
-    use ratatui::layout::{Offset, Rect};
-    use tachyonfx::{fx, CellFilter, Effect, Interpolation};
+    use rand::{Rng, SeedableRng};
+    use ratatui::style::Color;
     use tachyonfx::fx::*;
-    use tachyonfx::Interpolation::{BounceIn, BounceInOut, BounceOut, CircIn, CircOut, ExpoIn, ExpoInOut, ExpoOut, QuadIn, QuadInOut, QuadOut, QuartIn, QuartOut, SineIn};
+    use tachyonfx::widget::EffectTimelineRects;
+    use tachyonfx::Interpolation::{BounceInOut, BounceOut, CircIn, ExpoInOut, ExpoOut, QuadOut, SineIn};
+    use tachyonfx::{CellFilter, Effect, Shader};
+
+    pub(super) fn transition_fx(
+        screen: Rect,
+        fx_in: Effect,
+    ) -> Effect {
+        let out_fx = out_fx_1(screen);
+        let out_duration = out_fx.timer().unwrap_or_default().duration();
+
+        sequence(vec![
+            timed_never_complete(out_duration + Duration::from_millis(500), out_fx),
+            // update_inspected_effect,
+            fx_in,
+        ])
+    }
+
+
+    pub(super) fn random_fx_in(
+        areas: EffectTimelineRects,
+        aux_buf: &Rc<RefCell<Buffer>>,
+    ) -> Effect {
+        let rng = &mut rand::rngs::SmallRng::from_entropy();
+        match rng.gen_range(0..3) {
+            0 => effect_in_1(areas),
+            1 => effect_in_2(areas),
+            _ => effect_in_3(areas),
+            // _ => move_in_fx(Direction::LeftToRight, aux_buf.clone()),
+        }
+    }
+
+    pub(super) fn effect_in_1(areas: EffectTimelineRects) -> Effect {
+        parallel(vec![
+            tree_fx_1(areas.tree),
+            chart_fx_1(areas.chart),
+            cell_filter_fx(areas.cell_filter, areas.legend),
+        ])
+    }
+
+    pub(super) fn effect_in_2(areas: EffectTimelineRects) -> Effect {
+        parallel(vec![
+            tree_fx_1(areas.tree),
+            chart_fx_2(areas.chart),
+            cell_filter_fx(areas.cell_filter, areas.legend),
+        ])
+    }
+
+    pub(super) fn effect_in_3(areas: EffectTimelineRects) -> Effect {
+        parallel(vec![
+            tree_fx_1(areas.tree),
+            chart_fx_3(areas.chart),
+            cell_filter_fx(areas.cell_filter, areas.legend),
+        ])
+    }
 
     pub(super) fn out_fx_1(area: Rect) -> Effect {
         let step = Duration::from_millis(100);
@@ -126,7 +179,7 @@ mod effects {
         ]).with_area(area))
     }
 
-    pub(super) fn tree_fx_1(area: Rect) -> Effect {
+    fn tree_fx_1(area: Rect) -> Effect {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
@@ -137,43 +190,59 @@ mod effects {
         ]).with_area(area)
     }
 
-    pub(super) fn chart_fx_1(area: Rect) -> Effect {
+    fn chart_fx_1(area: Rect) -> Effect {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
         sequence(vec![
-            timed_never_complete(step * 3, fade_to_fg(bg, 0)),
-            sweep_in(Direction::LeftToRight, 20, bg, step * 5),
+            timed_never_complete(step * 4, fade_to_fg(bg, 0)),
+            sweep_in(Direction::RightToLeft, 5, bg, step * 3),
         ]).with_area(area)
     }
 
-    pub(super) fn chart_fx_2(area: Rect) -> Effect {
+    fn chart_fx_2(area: Rect) -> Effect {
         let step = Duration::from_millis(100);
-        let bg = Color::Black;
+        let color1 = Color::from_u32(0x102020);
+        let color2 = Color::from_u32(0x204040);
 
-        sequence(vec![
-            timed_never_complete(step * 3, fade_to_fg(bg, 0)),
-            fade_from_fg(bg, (step * 7, ExpoOut)),
+        parallel(vec![
+            parallel(vec![
+                timed_never_complete(step * 10, fade_to(Color::Black, Color::Black, 0)),
+                timed_never_complete(step * 10, fade_to(color1, color1, (step * 5, QuadOut))),
+            ]),
+            sequence(vec![
+                sleep(step * 10),
+                parallel(vec![
+                    slide_in(Direction::DownToUp, 15, color2, step * 5),
+                    fade_from_fg(color1, (step * 10, ExpoOut)),
+                ]),
+            ])
         ]).with_area(area)
     }
 
-    pub(super) fn chart_fx_3(area: Rect) -> Effect {
+    fn chart_fx_3(area: Rect) -> Effect {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
         let hsl_shift = [0.0, -100.0, -50.0];
 
         parallel(vec![
-            // initially desaturated
-            sequence(vec![
-                timed_never_complete(9 * step, hsl_shift_fg(hsl_shift, 0)),
-                hsl_shift_fg(hsl_shift, (12 * step, SineIn)).reversed()
-            ]),
-            sequence(vec![
-                timed_never_complete(step * 3, fade_to_fg(bg, 0)),
-                sweep_in(Direction::LeftToRight, 20, bg, step * 5),
-            ]),
+            hsl_shift_fg(hsl_shift, (15 * step, CircIn)).reversed(),
+            sweep_in(Direction::LeftToRight, 80, bg, step * 15),
         ]).with_area(area)
+    }
+
+    pub fn cell_filter_fx(column_area: Rect, legend_area: Rect) -> Effect {
+        let base_delay = Duration::from_millis(500);
+
+        parallel(vec![
+            sweep_in(Direction::DownToUp, 1, Color::Black, (base_delay, QuadOut))
+                .with_area(column_area),
+            sequence(vec![
+                timed_never_complete(base_delay, fade_to_fg(Color::Black, 0)),
+                fade_from_fg(Color::Black, (700, QuadOut))
+            ]).with_area(legend_area),
+        ])
     }
 
     pub(super) fn move_in_fx(direction: Direction, buf: Rc<RefCell<Buffer>>) -> Effect {
@@ -185,7 +254,7 @@ mod effects {
             Direction::DownToUp    => Offset { x: 0, y: screen.height as i32 },
         };
 
-        translate_buf(offset, buf.clone(), (250, CircIn)).reversed()
+        translate_buf(offset, buf.clone(), (450, CircIn)).reversed()
     }
 }
 
@@ -222,7 +291,7 @@ fn run_app(
     let mut last_frame_instant = std::time::Instant::now();
 
     let mut effects = Effects::default();
-    // effects.add(effects::tree_fx_1(&app.inspected_effect, terminal.size()));
+    effects.push(effects::effect_in_1(app.timeline.layout(app.screen_area)));
     app.refresh_aux_buffer();
 
     loop {
@@ -247,35 +316,32 @@ fn run_app(
 
                     match key.code {
                         KeyCode::Esc       => return Ok(()),
-                        KeyCode::Char(' ') => app.refresh_aux_buffer(),
+                        KeyCode::Char(' ') => {
+                            let rects = app.timeline.layout(active_area());
+                            let fx_in = effects::random_fx_in(rects, &app.aux_buffer);
+                            let effect = effects::transition_fx(app.screen_area, fx_in);
+                            effects.push(effect)
+                        },
                         KeyCode::Char('1') => {
-                            let inspected = &app.inspected_effect;
-                            let rects = EffectTimeline::from(inspected).layout(active_area());
-                            effects.push(effects::tree_fx_1(rects.tree))
+                            let inspected = app.inspected_effect.borrow();
+                            let rects = EffectTimeline::from(&inspected).layout(active_area());
+                            effects.push(effects::effect_in_1(rects))
                         },
                         KeyCode::Char('2') => {
-                            let inspected = &app.inspected_effect;
-                            let rects = EffectTimeline::from(inspected).layout(active_area());
-                            effects.push(effects::chart_fx_1(rects.chart))
+                            let inspected = app.inspected_effect.borrow();
+                            let rects = EffectTimeline::from(&inspected).layout(active_area());
+                            effects.push(effects::effect_in_2(rects))
                         },
                         KeyCode::Char('3') => {
-                            let inspected = &app.inspected_effect;
-                            let rects = EffectTimeline::from(inspected).layout(active_area());
-                            effects.push(effects::chart_fx_2(rects.chart))
+                            let inspected = app.inspected_effect.borrow();
+                            let rects = EffectTimeline::from(&inspected).layout(active_area());
+                            effects.push(effects::effect_in_3(rects))
                         },
                         KeyCode::Char('4') => {
-                            effects.aux_buf_fx = Some(effects::move_in_fx(Direction::LeftToRight, app.aux_buffer.clone()))
-                        },
-                        KeyCode::Char('5') => {
-                            effects.aux_buf_fx = Some(effects::move_in_fx(Direction::UpToDown, app.aux_buffer.clone()))
-                        },
-                        KeyCode::Char('6') => {
                             effects.push(effects::out_fx_1(active_area()))
                         },
-                        KeyCode::Char('7') => {
-                            let inspected = &app.inspected_effect;
-                            let rects = EffectTimeline::from(inspected).layout(active_area());
-                            effects.push(effects::chart_fx_3(rects.chart))
+                        KeyCode::Char('5') => {
+                            effects.aux_buf_fx = Some(effects::move_in_fx(Direction::LeftToRight, app.aux_buffer.clone()))
                         },
                         KeyCode::Tab       => app.use_aux_buffer = !app.use_aux_buffer,
                         _ => {}
@@ -286,7 +352,7 @@ fn run_app(
     }
 }
 
-fn ui(
+fn  ui(
     f: &mut Frame,
     app: &App,
     effects: &mut Effects
