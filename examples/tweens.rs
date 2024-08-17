@@ -351,13 +351,11 @@ impl StatefulWidget for InterpolationWidget {
         Block::new().style(Style::default().bg(Dark0.into()))
             .render(area, buffer);
 
-        let layout = Layout::vertical(
-            vec![
-                Constraint::Percentage(100), // chart
-                Constraint::Min(1),          // separator
-                Constraint::Min(1),          // fx
-            ]
-        ).split(area);
+        let layout = Layout::vertical([
+            Constraint::Percentage(100), // chart
+            Constraint::Min(1),          // separator
+            Constraint::Min(1),          // fx
+        ]).split(area);
 
         let axis_x = Axis::default().title("x").bounds([0.0, 1.0]).labels([
             Line::from("0.0"),

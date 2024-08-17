@@ -251,7 +251,7 @@ impl EffectTimeline {
             });
     }
 
-    fn layout(&self, area: Rect) -> LayoutRects {
+    pub fn layout(&self, area: Rect) -> EffectTimelineRects {
         let tree = effect_span_tree(&self.color_resolver, &self.span);
         let label_len = tree.iter().map(|l| l.width() as u16).max().unwrap_or(0);
         let chart_rows = tree.len() as u16;
@@ -264,8 +264,9 @@ impl EffectTimeline {
             Constraint::Percentage(100),
         ]).split(clamped_area);
 
-        LayoutRects {
-            label: layout[0],
+        EffectTimelineRects {
+            widget: clamped_area,
+            tree: layout[0],
             cell_filter: layout[1],
             chart: layout[2],
             legend: Rect {
@@ -293,7 +294,7 @@ impl Widget for EffectTimeline {
         // labels
         tree.iter()
             .take(row_count.min(flattened_effect_count) as usize)
-            .zip(layout.label.rows())
+            .zip(layout.tree.rows())
             .for_each(|(effect, row)| effect.render(row, buf));
 
         // cell filter legend
@@ -332,15 +333,16 @@ fn as_background_area_line(bar: &str, base_color: Color) -> Line<'static> {
     }
 }
 
-struct LayoutRects {
-    label: Rect,
-    chart: Rect,
-    cell_filter: Rect,
-    legend: Rect,
+pub struct EffectTimelineRects {
+    pub widget: Rect, // all
+    pub tree: Rect,
+    pub chart: Rect,
+    pub cell_filter: Rect,
+    pub legend: Rect,
 }
 
-impl LayoutRects {
-    fn time_intervals(&self) -> Rect {
+impl EffectTimelineRects {
+    pub fn time_intervals(&self) -> Rect {
         Rect {
             x: self.chart.x,
             y: self.chart.height,
