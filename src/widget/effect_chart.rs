@@ -333,6 +333,7 @@ fn as_background_area_line(bar: &str, base_color: Color) -> Line<'static> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct EffectTimelineRects {
     pub widget: Rect, // all
     pub tree: Rect,
