@@ -7,6 +7,7 @@ The effect timeline widget visualizes the composition of effects. It also suppor
 widget as an ansi-escaped string, suitable for saving to a file or straight to `println!()`.
 
 ### Added
+- `fx::delay()`: delays the start of an effect by a specified duration.
 - `fx::offscreen_buffer()`: wraps an existing effect and redirects its rendering
   to a separate buffer.  This allows for more complex effect compositions and can
   improve performance for certain types of effects.
