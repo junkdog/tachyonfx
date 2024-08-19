@@ -21,6 +21,7 @@ use tachyonfx::widget::{EffectTimeline, EffectTimelineRects};
 use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer, Text};
 use tachyonfx::{fx, BufferRenderer, CenteredShrink, Effect, EffectRenderer, Interpolation, Shader};
 use Interpolation::*;
+use crate::effects::random_fx_in;
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
@@ -81,6 +82,7 @@ impl App {
         aux_buffer_area: Rect,
     ) -> Self {
         let fx = example_complex_fx();
+        let fx = random_fx_in(EffectTimelineRects::default());
         Self {
             last_tick: Duration::ZERO,
             use_aux_buffer: true,
@@ -134,14 +136,12 @@ mod effects {
 
     pub(super) fn random_fx_in(
         areas: EffectTimelineRects,
-        aux_buf: &Rc<RefCell<Buffer>>,
     ) -> Effect {
         let rng = &mut rand::rngs::SmallRng::from_entropy();
         match rng.gen_range(0..3) {
             0 => effect_in_1(areas),
             1 => effect_in_2(areas),
             _ => effect_in_3(areas),
-            // _ => move_in_fx(Direction::LeftToRight, aux_buf.clone()),
         }
     }
 
@@ -314,7 +314,7 @@ fn run_app(
                         KeyCode::Esc       => return Ok(()),
                         KeyCode::Char(' ') => {
                             let rects = app.timeline.layout(active_area());
-                            let fx_in = effects::random_fx_in(rects, &app.aux_buffer);
+                            let fx_in = effects::random_fx_in(rects);
                             let effect = effects::transition_fx(app.screen_area, fx_in);
                             effects.push(effect)
                         },
