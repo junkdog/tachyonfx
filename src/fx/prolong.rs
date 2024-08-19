@@ -100,7 +100,7 @@ impl Shader for Prolong {
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         let inner_offset = match self.position {
-            ProlongPosition::Start => offset + self.inner.timer().unwrap_or_default().duration(),
+            ProlongPosition::Start => offset + self.timer.duration(),
             ProlongPosition::End   => offset
         };
         EffectSpan::new(self, offset, vec![self.inner.as_effect_span(inner_offset)])

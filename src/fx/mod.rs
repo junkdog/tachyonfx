@@ -592,7 +592,7 @@ pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
 ///
 /// fx::prolong_start(500, // 500ms
 ///     fx::fade_from_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear))
-/// )
+/// );
 /// ```
 /// This example creates an effect that waits for 500ms before starting a fade effect from red to
 /// the original color over 1000ms. The total duration of this combined effect will be 1500ms.
@@ -625,7 +625,7 @@ pub fn prolong_start<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effec
 ///
 /// fx::prolong_end(500, // 500ms
 ///     fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear))
-/// )
+/// );
 /// ```
 ///
 /// This example creates an effect that fades the foreground color to red over 1000ms,
