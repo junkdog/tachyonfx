@@ -7,6 +7,7 @@ use ratatui::style::Color;
 
 pub use glitch::Glitch;
 use ping_pong::PingPong;
+use prolong::{Prolong, ProlongPosition};
 pub use shader_fn::*;
 use slide::SlideCell;
 pub use sweep_in::Direction;
@@ -48,6 +49,7 @@ mod shader_fn;
 mod slide;
 mod moving_window;
 mod offscreen_buffer;
+mod prolong;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -563,6 +565,74 @@ pub fn sleep<T: Into<EffectTimer>>(duration: T) -> Effect {
 /// ```
 pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
     sequence(vec![sleep(duration), effect])
+}
+
+/// Creates an effect that prolongs the start of another effect.
+///
+/// This function wraps the given effect with additional duration at its beginning.
+/// The original effect will not progress until the additional duration has elapsed.
+/// During this time, the wrapped effect will be processed with zero duration.
+///
+/// # Arguments
+///
+/// * `duration` - The additional duration to add before the effect starts. This can be
+///                any type that can be converted into an `EffectTimer`.
+/// * `effect` - The original effect to be prolonged.
+///
+/// # Returns
+///
+/// A new `Effect` that includes the additional duration at the start.
+///
+/// # Examples
+///
+/// ```
+/// use std::time::Duration;
+/// use ratatui::style::Color;
+/// use tachyonfx::{Effect, fx, EffectTimer, Interpolation};
+///
+/// fx::prolong_start(500, // 500ms
+///     fx::fade_from_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear))
+/// )
+/// ```
+/// This example creates an effect that waits for 500ms before starting a fade effect from red to
+/// the original color over 1000ms. The total duration of this combined effect will be 1500ms.
+pub fn prolong_start<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
+    Prolong::new(ProlongPosition::Start, duration.into(), effect).into_effect()
+}
+
+/// Creates an effect that prolongs the end of another effect.
+///
+/// This function wraps the given effect with additional duration at its end.
+/// The original effect will complete its normal progression, then the additional
+/// duration will keep the effect in its final state for the specified time.
+///
+/// # Arguments
+///
+/// * `duration` - The additional duration to add after the effect completes. This can be
+///                any type that can be converted into an `EffectTimer`.
+/// * `effect` - The original effect to be prolonged.
+///
+/// # Returns
+///
+/// A new `Effect` that includes the additional duration at the end.
+///
+/// # Examples
+///
+/// ```
+/// use std::time::Duration;
+/// use ratatui::style::Color;
+/// use tachyonfx::{Effect, fx, EffectTimer, Interpolation};
+///
+/// fx::prolong_end(500, // 500ms
+///     fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear))
+/// )
+/// ```
+///
+/// This example creates an effect that fades the foreground color to red over 1000ms,
+/// then holds the red color for an additional 500ms. The total duration of this combined
+/// effect will be 1500ms.
+pub fn prolong_end<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
+    Prolong::new(ProlongPosition::End, duration.into(), effect).into_effect()
 }
 
 /// Creates an effect that consumes a single tick of processing time.

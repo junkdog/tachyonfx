@@ -17,7 +17,7 @@ use ratatui::widgets::{Block, Clear, StatefulWidget, Widget};
 use ratatui::Frame;
 
 use tachyonfx::fx::{never_complete, parallel, sequence, with_duration, Direction};
-use tachyonfx::widget::EffectTimeline;
+use tachyonfx::widget::{EffectTimeline, EffectTimelineRects};
 use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer, Text};
 use tachyonfx::{fx, BufferRenderer, CenteredShrink, Effect, EffectRenderer, Interpolation, Shader};
 use Interpolation::*;
@@ -40,8 +40,8 @@ struct App {
 
 #[derive(Default)]
 struct Effects {
-    aux_buf_fx: Option<Effect>,
-    post_process: Vec<Effect>,
+    pub aux_buf_fx: Option<Effect>,
+    pub post_process: Vec<Effect>,
 }
 
 impl Effects {
@@ -126,7 +126,7 @@ mod effects {
 
         sequence(vec![
             timed_never_complete(out_duration + Duration::from_millis(500), out_fx),
-            // update_inspected_effect,
+            // todo: update_inspected_effect(),
             fx_in,
         ])
     }
@@ -194,10 +194,8 @@ mod effects {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
-        sequence(vec![
-            timed_never_complete(step * 4, fade_to_fg(bg, 0)),
-            sweep_in(Direction::RightToLeft, 5, bg, step * 3),
-        ]).with_area(area)
+        prolong_start(step * 4, sweep_in(Direction::RightToLeft, 5, bg, step * 3))
+            .with_area(area)
     }
 
     fn chart_fx_2(area: Rect) -> Effect {
@@ -238,10 +236,8 @@ mod effects {
         parallel(vec![
             sweep_in(Direction::DownToUp, 1, Color::Black, (base_delay, QuadOut))
                 .with_area(column_area),
-            sequence(vec![
-                timed_never_complete(base_delay, fade_to_fg(Color::Black, 0)),
-                fade_from_fg(Color::Black, (700, QuadOut))
-            ]).with_area(legend_area),
+            prolong_start(base_delay * 5, fade_from_fg(Color::Black, (700, QuadOut)))
+                .with_area(legend_area),
         ])
     }
 
@@ -254,7 +250,7 @@ mod effects {
             Direction::DownToUp    => Offset { x: 0, y: screen.height as i32 },
         };
 
-        translate_buf(offset, buf.clone(), (450, CircIn)).reversed()
+        translate_buf(offset, buf.clone(), (750, CircIn)).reversed()
     }
 }
 
@@ -291,7 +287,7 @@ fn run_app(
     let mut last_frame_instant = std::time::Instant::now();
 
     let mut effects = Effects::default();
-    effects.push(effects::effect_in_1(app.timeline.layout(app.screen_area)));
+    effects.aux_buf_fx = Some(effects::move_in_fx(Direction::LeftToRight, app.aux_buffer.clone()));
     app.refresh_aux_buffer();
 
     loop {

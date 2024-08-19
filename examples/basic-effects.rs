@@ -266,7 +266,7 @@ impl EffectsRepository {
                     fx::slide_in(Direction::UpToDown, 20, Dark0Hard, medium),
                 ]),
                 fx::sleep(medium),
-                fx::timed_never_complete(medium * 2,
+                fx::prolong_end(medium,
                     fx::slide_out(Direction::LeftToRight, 80, Dark0Hard, medium),
                 ),
             ]))),

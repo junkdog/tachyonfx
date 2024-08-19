@@ -47,6 +47,8 @@ The library includes a variety of effects, loosely categorized as follows:
 - **consume_tick:**         Consumes a single tick.
 - **never_complete:**       Makes an effect run indefinitely.
 - **ping_pong:**            Plays the effect forwards and then backwards.
+- **prolong_start**:        Extends the start of an effect by a specified duration.
+- **prolong_end**:          Extends the end of an effect by a specified duration.
 - **repeat:**               Repeats an effect indefinitely or for a specified number of times or duration.
 - **repeating:**            Repeats the effect indefinitely.
 - **sleep:**                Pauses for a specified duration.
@@ -122,6 +124,17 @@ cargo run --release --example=basic-effects
 ```
 cargo run --release --example=open-window  
 ```
+
+### Example: fx-chart
+![fx-chart](images/effect-timeline-widget.png)
+
+A demo of the `EffectTimelineWidget` showcasing the composition of effects. The widget is a "plain" widget
+without any effects as part of its rendering. The effects are instead applied after rendering the widget.
+
+```
+cargo run --release --example=open-window  
+```
+
 
   [API Badge]: https://docs.rs/tachyonfx/badge.svg
   [API]: https://docs.rs/tachyonfx
