@@ -11,6 +11,8 @@ widget as an ansi-escaped string, suitable for saving to a file or straight to `
 - `fx::offscreen_buffer()`: wraps an existing effect and redirects its rendering
   to a separate buffer.  This allows for more complex effect compositions and can
   improve performance for certain types of effects.
+- `fx::prolong_start`: extends the start of an effect by a specified duration.
+- `fx::prolong_end`: extends the end of an effect by a specified duration.
 - `fx::translate_buf()`: translates the contents of an auxiliary buffer onto the main buffer.
 - `widget::EffectTimeline`: a widget for visualizing the composition of effects.
 - `EffectTimeline::save_to_file()`: saves the effect timeline to a file.
