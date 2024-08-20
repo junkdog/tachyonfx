@@ -409,13 +409,13 @@ impl Widget for EffectTimeline {
             .zip(layout.tree.rows())
             .for_each(|(effect, row)| effect.render(row, buf));
 
-        // cell filter legend
+        // cell filter column
         let filters: Vec<_> = self.span.iter()
             .map(|span| span.cell_filter.clone())
             .collect();
         self.render_cell_filter_column(&filters, layout.cell_filter, buf);
 
-        // overridden effect areas
+        // overridden effect areas column
         let areas: Vec<_> = self.span.iter()
             .map(|span| span.area.clone())
             .collect();
@@ -635,6 +635,8 @@ mod tests {
         let fx = example_complex_fx();
         let timeline = EffectTimeline::from(&fx);
         let area = Rect::new(0, 0, 100, 35);
+
+        timeline.clone().save_to_file("effect_timeline.txt", 110).unwrap();
 
         let mut buf = Buffer::empty(area);
         timeline.render(area, &mut buf);

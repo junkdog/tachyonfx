@@ -88,16 +88,39 @@ impl App {
         }
     }
 
-    fn inspected_effect(&self) -> Effect {
-        let idx = self.inspected_effect_no;
-        let fx = effect_in(idx, EffectTimelineRects::default());
-        let layout = EffectTimeline::from(&fx).layout(self.aux_buffer.borrow().area);
+    fn inspected_effect(&self, areas: EffectTimelineRects) -> Effect {
+        effect_in(self.inspected_effect_no, areas)
+    }
 
-        effect_in(idx, layout)
+    fn effect_timeline(&self, areas: EffectTimelineRects) -> EffectTimeline {
+        let idx = self.inspected_effect_no;
+        let area = self.aux_buffer.borrow().area;
+        let fx = transition_fx(area, self.sender.clone(), effect_in(idx, areas));
+
+        EffectTimeline::from(&fx)
+    }
+
+    fn inspected_transition_effect(&self) -> Effect {
+        let area = self.aux_buffer.borrow().area;
+
+        // given an approximate layout, all rects will resolve to unique values,
+        // enabling us to get the actual layout from the effect timeline. something
+        // of a hack...
+        let layout = self.effect_timeline(EffectTimelineRects {
+            tree: Rect::new(0, 0, 25, 32),
+            chart: Rect::new(35, 0, 65, 32),
+            cell_filter: Rect::new(25, 0, 6, 32),
+            areas: Rect::new(31, 0, 4, 32),
+            legend: Rect::new(35, 34, 29, 6),
+            cell_filter_legend: Rect::new(35, 34, 9, 2),
+            areas_legend: Rect::new(48, 34, 16, 2),
+        }).layout(area);
+
+        transition_fx(area,  self.sender.clone(), self.inspected_effect(layout))
     }
 
     fn refresh_aux_buffer(&self) {
-        let effect = self.inspected_effect();
+        let effect = self.inspected_transition_effect();
 
         let mut buf = self.aux_buffer.borrow_mut();
         Clear.render(buf.area, &mut buf);
@@ -116,17 +139,13 @@ impl App {
             AppEvent::KeyPressed(key) => match key {
                 KeyCode::Esc => self.is_running = false,
                 KeyCode::Char(' ') => {
-                    effects.push(
-                        // sends RefreshAufBuffer after transitioning out
-                        transition_fx(self.screen_area, self.sender.clone(), self.inspected_effect())
-                    );
+                    // sends RefreshAufBuffer after transitioning out
+                    effects.push(self.inspected_transition_effect())
                 }
                 KeyCode::Enter => {
                     self.inspected_effect_no = (self.inspected_effect_no + 1) % 3;
-                    effects.push(
-                        // sends RefreshAufBuffer after transitioning out
-                        transition_fx(self.screen_area, self.sender.clone(), self.inspected_effect())
-                    );
+                    // sends RefreshAufBuffer after transitioning out
+                    effects.push(self.inspected_transition_effect())
                 },
                 _ => (),
             },
@@ -206,7 +225,7 @@ mod effects {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
-        with_duration(step * 15, parallel(vec![
+        with_duration(step * 7, parallel(vec![
             never_complete(dissolve(123, (step * 5, ExpoInOut))),
             never_complete(fade_to_fg(bg, (5 * step, BounceOut))),
         ]).with_area(area))
