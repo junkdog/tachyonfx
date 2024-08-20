@@ -1,3 +1,4 @@
+use std::fmt::format;
 use crate::widget::effect_span::effect_span_tree;
 use crate::widget::{CellFilterRegistry, ColorRegistry, EffectSpan};
 use crate::{CellFilter, Effect, HslConvertable, Shader};
@@ -9,6 +10,7 @@ use ratatui::widgets::Widget;
 use std::fs::File;
 use std::io::Write;
 use std::time::Duration;
+use crate::widget::area_registry::AreaRegistry;
 
 /// A widget that visualizes the timeline of effects in a `tachyonfx` Effect.
 ///
@@ -19,6 +21,7 @@ use std::time::Duration;
 pub struct EffectTimeline {
     span: EffectSpan,
     color_resolver: ColorRegistry,
+    area_resolver: AreaRegistry,
     cell_filter_resolver: CellFilterRegistry,
 }
 
@@ -39,11 +42,13 @@ impl EffectTimeline {
     ) -> EffectTimeline {
         let span = effect.as_effect_span(Duration::default());
         let color_resolver = ColorRegistry::from(&span);
+        let area_resolver = AreaRegistry::from(&span);
         let cell_filter_resolver = CellFilterRegistry::from(&span);
 
         Self {
             span,
             color_resolver,
+            area_resolver,
             cell_filter_resolver,
         }
     }
@@ -173,6 +178,20 @@ impl EffectTimeline {
         }
     }
 
+    fn render_areas_column(
+        &self,
+        areas: Vec<Option<Rect>>,
+        area: Rect,
+        buf: &mut Buffer
+    ) {
+        for (a, row) in areas.into_iter().zip(area.rows()) {
+            let s = self.area_resolver.id_of(a);
+            Line::from(s)
+                .style(Style::default().fg(Color::DarkGray))
+                .render(row, buf);
+        }
+    }
+
     fn render_cell_filter_legend(
         &self,
         area: Rect,
@@ -195,6 +214,28 @@ impl EffectTimeline {
             });
     }
 
+    fn render_areas_legend(
+        &self,
+        area: Rect,
+        buf: &mut Buffer
+    ) {
+        self.area_resolver.entries()
+            .iter()
+            .zip(area.rows())
+            .for_each(|((id, a), row)| {
+                let mut row = row;
+
+                Span::from(id)
+                    .style(Style::default().fg(Color::DarkGray))
+                    .render(row, buf);
+
+                row.x += 6;
+                Span::from(format!("{:}", a))
+                    .style(Style::default().fg(Color::Gray))
+                    .render(row, buf);
+            });
+    }
+
     fn render_chart(&self, chart_area: Rect, buf: &mut Buffer) {
         let scale = chart_area.width as f32 / self.span.end;
         let span_area = |row: Rect, span: &EffectSpan| -> Rect {
@@ -207,14 +248,14 @@ impl EffectTimeline {
         };
 
         let chart_rows: Vec<Rect> = chart_area.rows().into_iter().collect();
-        let resolver = &self.color_resolver;
+        let colors = &self.color_resolver;
         let spans = self.span.iter().collect::<Vec<_>>();
         self.span.iter()
             .take(chart_area.height as usize)
             .zip(&chart_rows)
             .enumerate()
             .for_each(|(i, (span, row))| {
-                let c = resolver.color_of(&span.label);
+                let c = colors.color_of(&span.label);
                 let bar = span_as_bar_line(span, scale);
 
                 let mut bar_area = span_area(*row, span);
@@ -260,20 +301,29 @@ impl EffectTimeline {
 
         let layout = Layout::horizontal([
             Constraint::Length(label_len + 1),
-            Constraint::Length(6),
+            Constraint::Length(6), // cell filter
+            Constraint::Length(4), // overridden areas
             Constraint::Percentage(100),
         ]).split(clamped_area);
 
+        let cell_filter_legend_rows = self.cell_filter_resolver.entries().len() as u16;
         EffectTimelineRects {
             widget: clamped_area,
             tree: layout[0],
             cell_filter: layout[1],
-            chart: layout[2],
-            legend: Rect {
+            areas: layout[2],
+            chart: layout[3],
+            cell_filter_legend: Rect {
                 x: layout[1].x,
                 y: layout[1].y + chart_rows + 2,
-                width: layout[1].width + layout[2].width,
-                height: self.cell_filter_resolver.entries().len() as u16,
+                width: layout[1].width + layout[2].width + layout[3].width,
+                height: cell_filter_legend_rows,
+            },
+            areas_legend: Rect {
+                x: layout[2].x,
+                y: layout[2].y + chart_rows + cell_filter_legend_rows + 3,
+                width: layout[2].width + layout[3].width,
+                height: self.area_resolver.entries().len() as u16,
             },
         }
     }
@@ -303,13 +353,19 @@ impl Widget for EffectTimeline {
             .collect();
         self.render_cell_filter_column(&filters, layout.cell_filter, buf);
 
+        // overridden effect areas
+        let areas: Vec<_> = self.span.iter()
+            .map(|span| span.area.clone())
+            .collect();
+        self.render_areas_column(areas, layout.areas, buf);
+
         // chart
         self.render_chart(layout.chart, buf);
         self.render_timeline_intervals(&self.span, layout.time_intervals(), buf);
 
-
-        let legend_area = layout.legend;
-        self.render_cell_filter_legend(legend_area, buf);
+        // legends
+        self.render_cell_filter_legend(layout.cell_filter_legend, buf);
+        self.render_areas_legend(layout.areas_legend, buf);
     }
 }
 
@@ -339,7 +395,9 @@ pub struct EffectTimelineRects {
     pub tree: Rect,
     pub chart: Rect,
     pub cell_filter: Rect,
-    pub legend: Rect,
+    pub areas: Rect,
+    pub cell_filter_legend: Rect,
+    pub areas_legend: Rect,
 }
 
 impl EffectTimelineRects {
