@@ -1,4 +1,3 @@
-use std::fmt::format;
 use crate::widget::effect_span::effect_span_tree;
 use crate::widget::{CellFilterRegistry, ColorRegistry, EffectSpan};
 use crate::{CellFilter, Effect, HslConvertable, Shader};
@@ -79,9 +78,8 @@ impl EffectTimeline {
     /// timeline.save_to_file("effect_timeline.txt", 100)?;
     /// ```
     pub fn save_to_file(self, path: &str, width: u16) -> std::io::Result<()> {
-        let height = self.span.iter().count() as u16
-            + 2 // time intervals + padding
-            + self.cell_filter_resolver.entries().len() as u16; // filter legend
+        let layout = self.layout(Rect::new(0, 0, width, 200));
+        let height = layout.areas_legend.y + layout.areas_legend.height;
 
         let area = Rect::new(0, 0, width, height);
         let mut buffer = Buffer::empty(area);
@@ -170,10 +168,11 @@ impl EffectTimeline {
         area: Rect,
         buf: &mut Buffer
     ) {
+        let fg = cell_filter_colors()[0];
         for (filter, row) in cell_filters.iter().zip(area.rows()) {
             let s = self.cell_filter_resolver.id_of(filter);
             Line::from(s)
-                .style(Style::default().fg(Color::DarkGray))
+                .style(Style::default().fg(fg))
                 .render(row, buf);
         }
     }
@@ -186,8 +185,9 @@ impl EffectTimeline {
     ) {
         for (a, row) in areas.into_iter().zip(area.rows()) {
             let s = self.area_resolver.id_of(a);
+            let fg = area_colors()[0];
             Line::from(s)
-                .style(Style::default().fg(Color::DarkGray))
+                .style(Style::default().fg(fg))
                 .render(row, buf);
         }
     }
@@ -197,6 +197,8 @@ impl EffectTimeline {
         area: Rect,
         buf: &mut Buffer
     ) {
+        let colors = cell_filter_colors();
+
         self.cell_filter_resolver.entries()
             .iter()
             .zip(area.rows())
@@ -204,12 +206,12 @@ impl EffectTimeline {
                 let mut row = row;
 
                 Span::from(id)
-                    .style(Style::default().fg(Color::DarkGray))
+                    .style(Style::default().fg(colors[0]))
                     .render(row, buf);
 
                 row.x += 6;
                 Span::from(filter)
-                    .style(Style::default().fg(Color::Gray))
+                    .style(Style::default().fg(colors[1]))
                     .render(row, buf);
             });
     }
@@ -219,6 +221,8 @@ impl EffectTimeline {
         area: Rect,
         buf: &mut Buffer
     ) {
+        let colors = area_colors();
+
         self.area_resolver.entries()
             .iter()
             .zip(area.rows())
@@ -226,12 +230,12 @@ impl EffectTimeline {
                 let mut row = row;
 
                 Span::from(id)
-                    .style(Style::default().fg(Color::DarkGray))
+                    .style(Style::default().fg(colors[0]))
                     .render(row, buf);
 
-                row.x += 6;
+                row.x += 4;
                 Span::from(format!("{:}", a))
-                    .style(Style::default().fg(Color::Gray))
+                    .style(Style::default().fg(colors[1]))
                     .render(row, buf);
             });
     }
@@ -296,38 +300,94 @@ impl EffectTimeline {
         let tree = effect_span_tree(&self.color_resolver, &self.span);
         let label_len = tree.iter().map(|l| l.width() as u16).max().unwrap_or(0);
         let chart_rows = tree.len() as u16;
+        let mut legend_rect = self.legend_rect();
         let mut clamped_area = area;
-        clamped_area.height = chart_rows;
+
+        // 1 row of padding between chart and legend
+        legend_rect.y = chart_rows + 3;
+        legend_rect.x = (clamped_area.width - legend_rect.width) /2;
+        clamped_area.height = chart_rows + 1;
 
         let layout = Layout::horizontal([
-            Constraint::Length(label_len + 1),
-            Constraint::Length(6), // cell filter
-            Constraint::Length(4), // overridden areas
-            Constraint::Percentage(100),
+            Constraint::Length(label_len + 1), // label
+            Constraint::Length(6),             // cell filter
+            Constraint::Length(4),             // overridden areas
+            Constraint::Percentage(100),       // chart
         ]).split(clamped_area);
 
-        let cell_filter_legend_rows = self.cell_filter_resolver.entries().len() as u16;
+        let layout_legend = Layout::horizontal([
+            Constraint::Length(self.legend_cell_filter_width()),
+            Constraint::Length(LEGEND_PADDING),
+            Constraint::Length(self.legend_areas_width()),
+        ]).split(legend_rect);
+
         EffectTimelineRects {
-            widget: clamped_area,
             tree: layout[0],
             cell_filter: layout[1],
             areas: layout[2],
             chart: layout[3],
+            legend: legend_rect,
             cell_filter_legend: Rect {
-                x: layout[1].x,
-                y: layout[1].y + chart_rows + 2,
-                width: layout[1].width + layout[2].width + layout[3].width,
-                height: cell_filter_legend_rows,
+                x: layout_legend[0].x,
+                y: layout_legend[0].y,
+                width: layout_legend[0].width,
+                height: layout_legend[0].height,
             },
             areas_legend: Rect {
-                x: layout[2].x,
-                y: layout[2].y + chart_rows + cell_filter_legend_rows + 3,
-                width: layout[2].width + layout[3].width,
-                height: self.area_resolver.entries().len() as u16,
+                x: layout_legend[2].x,
+                y: layout_legend[2].y,
+                width: layout_legend[2].width,
+                height: layout_legend[2].height,
             },
         }
     }
+
+    fn legend_cell_filter_width(&self) -> u16 {
+        self.cell_filter_resolver.entries()
+            .iter()
+            .map(|(id, cf)| id.chars().count() + 1 + cf.chars().count())
+            .map(|n| n as u16)
+            .max()
+            .unwrap_or(0)
+    }
+
+    fn legend_areas_width(&self) -> u16 {
+        self.area_resolver.entries()
+            .iter()
+            .map(|(id, a)| id.chars().count() + 1 + a.chars().count())
+            .map(|n| n as u16)
+            .max()
+            .unwrap_or(0)
+    }
+
+    fn legend_rect(&self) -> Rect {
+        let cf_rows = self.cell_filter_resolver.entries().len() as u16;
+        let a_rows = self.area_resolver.entries().len() as u16;
+
+        Rect {
+            x: 0,
+            y: 0,
+            width: self.legend_cell_filter_width() + LEGEND_PADDING + self.legend_areas_width(),
+            height: u16::max(cf_rows, a_rows),
+        }
+    }
 }
+
+fn cell_filter_colors() -> [Color; 2] {
+    [
+        Color::from_hsl(170.0, 20.0, 35.0),
+        Color::from_hsl(170.0, 40.0, 47.0),
+    ]
+}
+
+fn area_colors() -> [Color; 2] {
+    [
+        Color::from_hsl(40.0, 20.0, 35.0),
+        Color::from_hsl(40.0, 40.0, 47.0),
+    ]
+}
+
+const LEGEND_PADDING: u16 = 5;
 
 impl Widget for EffectTimeline {
     fn render(self, area: Rect, buf: &mut Buffer)
@@ -391,11 +451,11 @@ fn as_background_area_line(bar: &str, base_color: Color) -> Line<'static> {
 
 #[derive(Clone, Copy, Default)]
 pub struct EffectTimelineRects {
-    pub widget: Rect, // all
     pub tree: Rect,
     pub chart: Rect,
     pub cell_filter: Rect,
     pub areas: Rect,
+    pub legend: Rect,
     pub cell_filter_legend: Rect,
     pub areas_legend: Rect,
 }

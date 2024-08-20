@@ -153,7 +153,7 @@ mod effects {
         parallel(vec![
             tree_fx_1(areas.tree),
             chart_fx_1(areas.chart),
-            cell_filter_fx(areas.cell_filter, areas.cell_filter_legend),
+            cell_filter_and_area_fx(areas.cell_filter, areas.areas, areas.legend),
         ])
     }
 
@@ -161,7 +161,7 @@ mod effects {
         parallel(vec![
             tree_fx_1(areas.tree),
             chart_fx_2(areas.chart),
-            cell_filter_fx(areas.cell_filter, areas.cell_filter_legend),
+            cell_filter_and_area_fx(areas.cell_filter, areas.areas, areas.legend),
         ])
     }
 
@@ -169,7 +169,7 @@ mod effects {
         parallel(vec![
             tree_fx_1(areas.tree),
             chart_fx_3(areas.chart),
-            cell_filter_fx(areas.cell_filter, areas.cell_filter_legend),
+            cell_filter_and_area_fx(areas.cell_filter, areas.areas, areas.legend),
         ])
     }
 
@@ -234,14 +234,20 @@ mod effects {
         ]).with_area(area)
     }
 
-    pub fn cell_filter_fx(column_area: Rect, legend_area: Rect) -> Effect {
-        let base_delay = Duration::from_millis(500);
+    pub fn cell_filter_and_area_fx(
+        cell_filter_column: Rect,
+        area_column: Rect,
+        legend: Rect
+    ) -> Effect {
+        let d = Duration::from_millis(500);
 
         parallel(vec![
-            sweep_in(Direction::DownToUp, 1, Color::Black, (base_delay, QuadOut))
-                .with_area(column_area),
-            prolong_start(base_delay * 5, fade_from_fg(Color::Black, (700, QuadOut)))
-                .with_area(legend_area),
+            prolong_start(d, sweep_in(Direction::DownToUp, 1, Color::Black, (d, QuadOut)))
+                .with_area(cell_filter_column),
+            prolong_start(d * 2, sweep_in(Direction::UpToDown, 1, Color::Black, (d, QuadOut)))
+                .with_area(area_column),
+            prolong_start(d * 3,  fade_from_fg(Color::Black, (700, QuadOut)))
+                .with_area(legend),
         ])
     }
 
