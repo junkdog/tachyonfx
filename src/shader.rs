@@ -175,8 +175,8 @@ pub trait Shader {
     /// * An `Option` containing the shader's `CellFilter`, or `None` if not applicable.
     fn cell_selection(&self) -> Option<CellFilter> { None }
 
-    /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and [fx::repeat]
-    /// to reset the hosted shader effect to its initial state.
+    /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and
+    /// [fx::repeat](fx/fn.repeat.html) to reset the hosted shader effect to its initial state.
     fn reset(&mut self) {
         if let Some(timer) = self.timer_mut() {
             timer.reset();

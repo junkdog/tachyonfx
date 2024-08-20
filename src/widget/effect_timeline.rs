@@ -304,14 +304,16 @@ impl EffectTimeline {
         let mut clamped_area = area;
 
         // 1 row of padding between chart and legend
-        legend_rect.y = chart_rows + 3;
-        legend_rect.x = (clamped_area.width - legend_rect.width) /2;
-        clamped_area.height = chart_rows + 1;
+        legend_rect.y = chart_rows + 2;
+        legend_rect.x = (clamped_area.width - legend_rect.width) / 2;
+        clamped_area.height = chart_rows;
+
+        let areas_col_w = if self.area_resolver.entries().is_empty() { 0 } else { 4 };
 
         let layout = Layout::horizontal([
             Constraint::Length(label_len + 1), // label
             Constraint::Length(6),             // cell filter
-            Constraint::Length(4),             // overridden areas
+            Constraint::Length(areas_col_w),   // overridden areas
             Constraint::Percentage(100),       // chart
         ]).split(clamped_area);
 
@@ -571,7 +573,7 @@ mod tests {
             "└ sweep_out     * ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▐█████",
             "                  0ms        4000m8000ms",
             "                                        ",
-            "                * all                   ",
+            "                 * all                  ",
         ]));
     }
 
@@ -615,8 +617,8 @@ mod tests {
             "  └ slide_in           cf-01 ██████████▌▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
             "                             0ms              1333ms           2666ms     4000ms",
             "                                                                                ",
-            "                           * all                                                ",
-            "                       cf-01 layout(1)                                          ",
+            "                                  * all                                         ",
+            "                              cf-01 layout(1)                                   ",
         ]));
     }
 
