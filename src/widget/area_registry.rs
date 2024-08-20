@@ -1,8 +1,4 @@
 use crate::widget::EffectSpan;
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
-use ratatui::prelude::Color;
-use std::collections::BTreeSet;
 use ratatui::layout::Rect;
 
 #[derive(Clone)]
