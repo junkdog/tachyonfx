@@ -1,5 +1,6 @@
 use std::fmt;
 use std::time::Duration;
+use ratatui::layout::Rect;
 use ratatui::prelude::Line;
 use ratatui::style::Style;
 use ratatui::text::Span;
@@ -75,6 +76,7 @@ fn build_effect_span_tree<'a>(
 pub struct EffectSpan {
     pub(crate) label: String,
     pub(crate) cell_filter: CellFilter,
+    pub(crate) area: Option<Rect>,
     pub(crate) start: f32,
     pub(crate) end: f32,
     pub(crate) children: Vec<EffectSpan>,
@@ -103,6 +105,7 @@ impl EffectSpan {
         Self {
             label: effect.name().to_string(),
             cell_filter: effect.cell_selection().unwrap_or_default(),
+            area: effect.area(),
             start,
             end: start + end,
             children,

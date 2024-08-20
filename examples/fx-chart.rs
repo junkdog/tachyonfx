@@ -83,6 +83,10 @@ impl App {
     ) -> Self {
         let fx = example_complex_fx();
         let fx = random_fx_in(EffectTimelineRects::default());
+        let layout = EffectTimeline::from(&fx)
+            .layout(aux_buffer_area);
+        let fx = random_fx_in(layout);
+
         Self {
             last_tick: Duration::ZERO,
             use_aux_buffer: true,
@@ -149,7 +153,7 @@ mod effects {
         parallel(vec![
             tree_fx_1(areas.tree),
             chart_fx_1(areas.chart),
-            cell_filter_fx(areas.cell_filter, areas.legend),
+            cell_filter_fx(areas.cell_filter, areas.cell_filter_legend),
         ])
     }
 
@@ -157,7 +161,7 @@ mod effects {
         parallel(vec![
             tree_fx_1(areas.tree),
             chart_fx_2(areas.chart),
-            cell_filter_fx(areas.cell_filter, areas.legend),
+            cell_filter_fx(areas.cell_filter, areas.cell_filter_legend),
         ])
     }
 
@@ -165,7 +169,7 @@ mod effects {
         parallel(vec![
             tree_fx_1(areas.tree),
             chart_fx_3(areas.chart),
-            cell_filter_fx(areas.cell_filter, areas.legend),
+            cell_filter_fx(areas.cell_filter, areas.cell_filter_legend),
         ])
     }
 
