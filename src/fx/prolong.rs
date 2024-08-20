@@ -55,7 +55,7 @@ impl Shader for Prolong {
         }
     }
 
-    fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {}
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {}
 
     /// Checks if the prolonged effect is done.
     ///

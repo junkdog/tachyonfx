@@ -1,53 +1,47 @@
+use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::{event, execute};
+use ratatui::backend::CrosstermBackend;
+use ratatui::buffer::Buffer;
+use ratatui::layout::{Offset, Rect};
+use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, Clear, Widget};
+use ratatui::Frame;
 use std::cell::RefCell;
 use std::error::Error;
 use std::io::Stdout;
 use std::rc::Rc;
+use std::sync::mpsc;
 use std::time::Duration;
-use std::{io, panic};
+use std::{io, panic, thread};
 
-use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use crossterm::{event, execute};
-use rand::prelude::SeedableRng;
-use ratatui::backend::CrosstermBackend;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Margin, Offset, Rect};
-use ratatui::style::{Color, Style};
-use ratatui::widgets::{Block, Clear, StatefulWidget, Widget};
-use ratatui::Frame;
-
-use tachyonfx::fx::{never_complete, parallel, sequence, with_duration, Direction};
+use crate::effects::{effect_in, transition_fx};
+use tachyonfx::fx::Direction;
 use tachyonfx::widget::{EffectTimeline, EffectTimelineRects};
-use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer, Text};
-use tachyonfx::{fx, BufferRenderer, CenteredShrink, Effect, EffectRenderer, Interpolation, Shader};
-use Interpolation::*;
-use crate::effects::random_fx_in;
-
-#[path = "common/gruvbox.rs"]
-mod gruvbox;
+use tachyonfx::{BufferRenderer, Effect, Shader};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
 
 
 struct App {
+    sender: mpsc::Sender<AppEvent>,
+    is_running: bool,
     last_tick: Duration,
-    use_aux_buffer: bool,
     aux_buffer: Rc<RefCell<Buffer>>,
-    inspected_effect: Rc<RefCell<Effect>>,
+    inspected_effect_no: u8,
     screen_area: Rect,
-    timeline: EffectTimeline,
 }
 
 #[derive(Default)]
 struct Effects {
     pub aux_buf_fx: Option<Effect>,
-    pub post_process: Vec<Effect>,
+    pub post_process: Option<Effect>,
 }
 
 impl Effects {
     fn push(&mut self, effect: Effect) {
-        self.post_process.push(effect);
+        self.post_process = Some(effect);
     }
 
     fn process_active_fx(
@@ -59,7 +53,9 @@ impl Effects {
         self.post_process.iter_mut()
             .for_each(|effect| { effect.process(duration, buf, area); });
 
-        self.post_process.retain(|effect| !effect.done());
+        if self.post_process.iter().all(Effect::done) {
+            self.post_process = None;
+        }
     }
 
     fn process_buf_fx(
@@ -79,70 +75,103 @@ impl Effects {
 
 impl App {
     fn new(
+        sender: mpsc::Sender<AppEvent>,
         aux_buffer_area: Rect,
     ) -> Self {
-        let fx = example_complex_fx();
-        let fx = random_fx_in(EffectTimelineRects::default());
-        let layout = EffectTimeline::from(&fx)
-            .layout(aux_buffer_area);
-        let fx = random_fx_in(layout);
-
         Self {
+            sender,
+            is_running: true,
             last_tick: Duration::ZERO,
-            use_aux_buffer: true,
             aux_buffer: Rc::new(RefCell::new(Buffer::empty(aux_buffer_area))),
-            timeline: EffectTimeline::from(&fx),
             screen_area: Rect::default(),
-            inspected_effect: Rc::new(RefCell::new(fx)),
+            inspected_effect_no: 0,
         }
     }
 
+    fn inspected_effect(&self) -> Effect {
+        let idx = self.inspected_effect_no;
+        let fx = effect_in(idx, EffectTimelineRects::default());
+        let layout = EffectTimeline::from(&fx).layout(self.aux_buffer.borrow().area);
+
+        effect_in(idx, layout)
+    }
+
     fn refresh_aux_buffer(&self) {
-        let effect = self.inspected_effect.clone();
+        let effect = self.inspected_effect();
 
         let mut buf = self.aux_buffer.borrow_mut();
+        Clear.render(buf.area, &mut buf);
+
         Block::new()
             .style(Style::default().bg(Color::Black))
             .render(buf.area, &mut buf);
 
-        EffectTimeline::from(&effect.borrow())
+        EffectTimeline::from(&effect)
             .render(buf.area, &mut buf);
+    }
+
+    fn apply_event(&mut self, effects: &mut Effects, e: AppEvent) {
+        match e {
+            AppEvent::Tick => (),
+            AppEvent::KeyPressed(key) => match key {
+                KeyCode::Esc => self.is_running = false,
+                KeyCode::Char(' ') => {
+                    effects.push(
+                        // sends RefreshAufBuffer after transitioning out
+                        transition_fx(self.screen_area, self.sender.clone(), self.inspected_effect())
+                    );
+                }
+                KeyCode::Enter => {
+                    self.inspected_effect_no = (self.inspected_effect_no + 1) % 3;
+                    effects.push(
+                        // sends RefreshAufBuffer after transitioning out
+                        transition_fx(self.screen_area, self.sender.clone(), self.inspected_effect())
+                    );
+                },
+                _ => (),
+            },
+            AppEvent::RefreshAufBuffer => {
+                self.refresh_aux_buffer();
+            },
+            AppEvent::Resize(r) => self.screen_area = r
+        }
     }
 }
 
 mod effects {
+    use crate::AppEvent;
     use ratatui::buffer::Buffer;
     use ratatui::layout::{Offset, Rect};
+    use ratatui::style::Color;
     use std::cell::RefCell;
     use std::rc::Rc;
+    use std::sync::mpsc;
     use std::time::Duration;
-    use rand::{Rng, SeedableRng};
-    use ratatui::style::Color;
     use tachyonfx::fx::*;
     use tachyonfx::widget::EffectTimelineRects;
-    use tachyonfx::Interpolation::{BounceInOut, BounceOut, CircIn, ExpoInOut, ExpoOut, QuadOut, SineIn};
-    use tachyonfx::{CellFilter, Effect, Shader};
+    use tachyonfx::Interpolation::{BounceOut, CircIn, ExpoInOut, ExpoOut, QuadOut};
+    use tachyonfx::{CellFilter, Effect};
 
     pub(super) fn transition_fx(
         screen: Rect,
+        sender: mpsc::Sender<AppEvent>,
         fx_in: Effect,
     ) -> Effect {
-        let out_fx = out_fx_1(screen);
-        let out_duration = out_fx.timer().unwrap_or_default().duration();
+
+        // refresh buffer after transitioning out
+        let update_inspected_effect = effect_fn_buf((), 1, move |_, _, _| {
+            sender.send(AppEvent::RefreshAufBuffer).unwrap();
+        });
 
         sequence(vec![
-            timed_never_complete(out_duration + Duration::from_millis(500), out_fx),
-            // todo: update_inspected_effect(),
+            out_fx_1(screen),
+            update_inspected_effect,
             fx_in,
         ])
     }
 
-
-    pub(super) fn random_fx_in(
-        areas: EffectTimelineRects,
-    ) -> Effect {
-        let rng = &mut rand::rngs::SmallRng::from_entropy();
-        match rng.gen_range(0..3) {
+    pub(super) fn effect_in(idx: u8, areas: EffectTimelineRects) -> Effect {
+        match idx {
             0 => effect_in_1(areas),
             1 => effect_in_2(areas),
             _ => effect_in_3(areas),
@@ -267,10 +296,13 @@ mod effects {
 fn main() -> Result<()> {
     let mut terminal = setup_terminal()?;
 
-    // create app and run it
-    let app = App::new(Rect::new(0, 0, 100, 40));
-    let res = run_app(&mut terminal, app);
+    // event handler
+    let event_handler = EventHandler::new(Duration::from_millis(33));
+    let sender = event_handler.sender();
 
+    // create app and run it
+    let app = App::new(sender, Rect::new(0, 0, 100, 40));
+    let res = run_app(&mut terminal, app, event_handler);
 
     // restore terminal
     disable_raw_mode()?;
@@ -293,6 +325,7 @@ pub type AuxBuffer = Rc<RefCell<Buffer>>;
 fn run_app(
     terminal: &mut Terminal,
     mut app: App,
+    event_handler: EventHandler,
 ) -> io::Result<()> {
     let mut last_frame_instant = std::time::Instant::now();
 
@@ -300,62 +333,18 @@ fn run_app(
     effects.aux_buf_fx = Some(effects::move_in_fx(Direction::LeftToRight, app.aux_buffer.clone()));
     app.refresh_aux_buffer();
 
-    loop {
+    while app.is_running {
+        event_handler.receive_events(|e| app.apply_event(&mut effects, e));
+
         app.last_tick = last_frame_instant.elapsed();
         last_frame_instant = std::time::Instant::now();
         terminal.draw(|f| {
             app.screen_area = f.area();
             ui(f, &app, &mut effects)
         })?;
-
-        if event::poll(Duration::from_millis(32))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-
-                    let active_area = || {
-                        if app.use_aux_buffer {
-                            app.aux_buffer.borrow().area
-                        } else {
-                            app.screen_area
-                        }
-                    };
-
-                    match key.code {
-                        KeyCode::Esc       => return Ok(()),
-                        KeyCode::Char(' ') => {
-                            let rects = app.timeline.layout(active_area());
-                            let fx_in = effects::random_fx_in(rects);
-                            let effect = effects::transition_fx(app.screen_area, fx_in);
-                            effects.push(effect)
-                        },
-                        KeyCode::Char('1') => {
-                            let inspected = app.inspected_effect.borrow();
-                            let rects = EffectTimeline::from(&inspected).layout(active_area());
-                            effects.push(effects::effect_in_1(rects))
-                        },
-                        KeyCode::Char('2') => {
-                            let inspected = app.inspected_effect.borrow();
-                            let rects = EffectTimeline::from(&inspected).layout(active_area());
-                            effects.push(effects::effect_in_2(rects))
-                        },
-                        KeyCode::Char('3') => {
-                            let inspected = app.inspected_effect.borrow();
-                            let rects = EffectTimeline::from(&inspected).layout(active_area());
-                            effects.push(effects::effect_in_3(rects))
-                        },
-                        KeyCode::Char('4') => {
-                            effects.push(effects::out_fx_1(active_area()))
-                        },
-                        KeyCode::Char('5') => {
-                            effects.aux_buf_fx = Some(effects::move_in_fx(Direction::LeftToRight, app.aux_buffer.clone()))
-                        },
-                        KeyCode::Tab       => app.use_aux_buffer = !app.use_aux_buffer,
-                        _ => {}
-                    }
-                }
-            }
-        }
     }
+
+    Ok(())
 }
 
 fn  ui(
@@ -369,19 +358,10 @@ fn  ui(
     let buf: &mut Buffer = f.buffer_mut();
     Clear.render(rect, buf);
 
-    if app.use_aux_buffer {
-        if effects.aux_buf_fx.is_some() {
-            effects.process_buf_fx(app.last_tick, buf, rect);
-        } else {
-            app.aux_buffer.render_buffer(Offset::default(), buf);
-        }
+    if effects.aux_buf_fx.is_some() {
+        effects.process_buf_fx(app.last_tick, buf, rect);
     } else {
-        Block::new()
-            .style(Style::default().bg(Color::from_u32(0x201416)))
-            .render(rect, buf);
-
-        app.timeline.clone()
-            .render(rect, buf);
+        app.aux_buffer.render_buffer(Offset::default(), buf);
     }
 
     effects.process_active_fx(app.last_tick, buf, rect);
@@ -411,50 +391,78 @@ fn setup_terminal() -> Result<Terminal> {
     Ok(terminal)
 }
 
+enum AppEvent {
+    Tick,
+    KeyPressed(KeyCode),
+    Resize(Rect),
+    RefreshAufBuffer,
+}
 
-fn example_complex_fx() -> Effect {
-    let margin = Margin::new(1, 1);
-    let border_text        = AllOf(vec![Outer(margin), Text]);
-    let border_decorations = AllOf(vec![Outer(margin), Not(Text.into())]);
+pub struct EventHandler {
+    sender: mpsc::Sender<AppEvent>,
+    receiver: mpsc::Receiver<AppEvent>,
+    _handler: thread::JoinHandle<()>
+}
 
-    let short = Duration::from_millis(220);
-    let duration = Duration::from_millis(320);
-    let time_scale = 2;
+impl EventHandler {
+    pub fn new(tick_rate: Duration) -> Self {
+        let (sender, receiver) = mpsc::channel();
 
-    let bg = Color::DarkGray;
-    let gray = Color::Gray;
+        let handler = {
+            let sender = sender.clone();
+            thread::spawn(move || {
+                let mut last_tick = std::time::Instant::now();
+                loop {
+                    let timeout = tick_rate
+                        .checked_sub(last_tick.elapsed())
+                        .unwrap_or(tick_rate);
 
-    fx::repeating(fx::parallel(vec![
-        // window borders
-        parallel(vec![
-            sequence(vec![
-                with_duration(short * time_scale, never_complete(fx::dissolve(1, 0))),
-                fx::coalesce(111, (duration, BounceOut)),
-            ]),
-            fx::fade_from(gray, gray, duration * time_scale)
-        ]).with_cell_selection(border_decorations),
+                    if event::poll(timeout).expect("unable to poll for events") {
+                        Self::apply_event(&sender);
+                    }
 
-        // window title and shortcuts
-        sequence(vec![
-            with_duration(duration * time_scale, never_complete(fx::fade_to(gray, gray, 0))),
-            fx::fade_from(gray, gray, (320 * time_scale, QuadOut)),
-        ]).with_cell_selection(border_text),
+                    if last_tick.elapsed() >= tick_rate {
+                        sender.send(AppEvent::Tick)
+                            .expect("failed to send tick event");
 
-        // content area
-        sequence(vec![
-            with_duration(Duration::from_millis(270) * time_scale, parallel(vec![
-                never_complete(fx::dissolve(1, 0)), // hiding icons/emoji
-                never_complete(fx::fade_to(bg, bg, 0)),
-            ])),
-            parallel(vec![
-                fx::coalesce(111, Duration::from_millis(220) * time_scale),
-                fx::fade_from(bg, bg, (250 * time_scale, QuadOut))
-            ]),
-            fx::sleep(3000),
-            parallel(vec![
-                fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
-                fx::dissolve(111, (Duration::from_millis(220) * time_scale, ElasticOut)),
-            ]),
-        ]).with_cell_selection(Inner(margin)),
-    ]))
+                        last_tick = std::time::Instant::now();
+                    }
+                }
+            })
+        };
+
+        Self { sender, receiver, _handler: handler }
+    }
+
+    pub(crate) fn sender(&self) -> mpsc::Sender<AppEvent> {
+        self.sender.clone()
+    }
+
+    fn next(&self) -> std::result::Result<AppEvent, mpsc::RecvError> {
+        self.receiver.recv()
+    }
+
+    fn try_next(&self) -> Option<AppEvent> {
+        match self.receiver.try_recv() {
+            Ok(e) => Some(e),
+            Err(_) => None
+        }
+    }
+
+    pub(crate) fn receive_events<F>(&self, mut f: F)
+    where F: FnMut(AppEvent)
+    {
+        f(self.next().unwrap());
+        while let Some(event) = self.try_next() { f(event) }
+    }
+
+    fn apply_event(sender: &mpsc::Sender<AppEvent>) {
+        match event::read().expect("unable to read event") {
+            Event::Key(e) if e.kind == KeyEventKind::Press =>
+                sender.send(AppEvent::KeyPressed(e.code)),
+            Event::Resize(w, h) =>
+                sender.send(AppEvent::Resize(Rect::new(0, 0, w, h))),
+            _ => Ok(())
+        }.expect("failed to send event")
+    }
 }
