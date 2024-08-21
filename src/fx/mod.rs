@@ -680,3 +680,106 @@ fn fade<C: Into<Color>>(
         .timer(if reverse { timer.reversed() } else { timer })
         .into()
 }
+
+#[cfg(test)]
+mod tests {
+    use ratatui::prelude::Color;
+    use super::*;
+    use crate::Shader;
+
+
+    const DIRECTIONS: [Direction; 4] = [
+        Direction::DownToUp,
+        Direction::UpToDown,
+        Direction::LeftToRight,
+        Direction::RightToLeft,
+    ];
+
+    #[test]
+    fn test_name_fade() {
+        assert_eq!(
+            fade_to(Color::Red, Color::Green, 1000).name(),
+            "fade_to"
+        );
+
+        assert_eq!(
+            fade_from_fg(Color::Red, 1000).name(),
+            "fade_from"
+        );
+
+        assert_eq!(
+            fade_to(Color::Red, Color::Green, 1000).reversed().name(),
+            "fade_from"
+        );
+
+        assert_eq!(
+            fade_from_fg(Color::Red, 1000).reversed().name(),
+            "fade_to"
+        );
+    }
+
+    #[test]
+    fn test_name_sweep() {
+        let c = Color::Red;
+
+        DIRECTIONS.iter().for_each(|dir| {
+            assert_eq!(sweep_out(Direction::DownToUp, 1, c, 1000).name(), "sweep_out",
+                "testing for direction={:?}", dir
+            );
+        });
+
+        DIRECTIONS.iter().for_each(|dir| {
+            assert_eq!(sweep_out(Direction::DownToUp, 1, c, 1000).reversed().name(), "sweep_in",
+                "testing reversed() for direction={:?}", dir
+            );
+        });
+
+        DIRECTIONS.iter().for_each(|dir| {
+            assert_eq!(sweep_in(Direction::DownToUp, 1, c, 1000).name(), "sweep_in",
+                "testing for direction={:?}", dir
+            );
+        });
+
+        DIRECTIONS.iter().for_each(|dir| {
+            assert_eq!(sweep_in(Direction::DownToUp, 1, c, 1000).reversed().name(), "sweep_out",
+                "testing reversed() for direction={:?}", dir
+            );
+        });
+    }
+
+    #[test]
+    fn test_name_slide() {
+        let c = Color::Red;
+
+        let directions = [
+            Direction::DownToUp,
+            Direction::UpToDown,
+            Direction::LeftToRight,
+            Direction::RightToLeft,
+        ];
+
+        directions.iter().for_each(|dir| {
+            assert_eq!(slide_out(Direction::DownToUp, 1, c, 1000).name(), "slide_out",
+                "testing for direction={:?}", dir
+            );
+        });
+
+        directions.iter().for_each(|dir| {
+            assert_eq!(slide_out(Direction::DownToUp, 1, c, 1000).reversed().name(), "slide_in",
+                "testing reversed() for direction={:?}", dir
+            );
+        });
+
+        directions.iter().for_each(|dir| {
+            assert_eq!(slide_in(Direction::DownToUp, 1, c, 1000).name(), "slide_in",
+                "testing for direction={:?}", dir
+            );
+        });
+
+        directions.iter().for_each(|dir| {
+            assert_eq!(slide_in(Direction::DownToUp, 1, c, 1000).reversed().name(), "slide_out",
+                "testing reversed() for direction={:?}", dir
+            );
+        });
+    }
+}

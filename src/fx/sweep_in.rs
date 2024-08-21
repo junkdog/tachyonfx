@@ -20,7 +20,7 @@ pub struct SweepIn {
     cell_filter: CellFilter,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum Direction {
     LeftToRight,
     RightToLeft,
@@ -37,6 +37,10 @@ impl Direction {
             Self::DownToUp    => Self::UpToDown,
         }
     }
+
+    pub(crate) fn flips_timer(&self) -> bool {
+        self == &Direction::RightToLeft || self == &Direction::DownToUp
+    }
 }
 
 impl SweepIn {
@@ -46,18 +50,11 @@ impl SweepIn {
         faded_color: Color,
         lifetime: EffectTimer,
     ) -> Self {
-        let timer = match direction {
-            Direction::RightToLeft => lifetime.reversed(),
-            Direction::LeftToRight => lifetime,
-            Direction::UpToDown => lifetime,
-            Direction::DownToUp => lifetime.reversed(),
-        };
-
         Self {
             direction,
             gradient_length,
             faded_color,
-            timer: timer,
+            timer: if direction.flips_timer() { lifetime.reversed() } else { lifetime },
             area: None,
             cell_filter: CellFilter::All,
         }
@@ -66,7 +63,11 @@ impl SweepIn {
 
 impl Shader for SweepIn {
     fn name(&self) -> &'static str {
-        if self.timer.is_reversed() { "sweep_out" } else { "sweep_in" }
+        if self.timer.is_reversed() ^ self.direction.flips_timer() {
+            "sweep_out"
+        } else {
+            "sweep_in"
+        }
     }
 
     fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {

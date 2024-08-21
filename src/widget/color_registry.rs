@@ -50,5 +50,7 @@ fn id_of(effect: &str) -> &str {
     effect
         .strip_suffix("_out")
         .or(effect.strip_suffix("_in"))
+        .or(effect.strip_suffix("_to"))
+        .or(effect.strip_suffix("_from"))
         .unwrap_or(effect)
 }

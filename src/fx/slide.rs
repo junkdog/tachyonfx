@@ -44,7 +44,11 @@ impl SlideCell {
 
 impl Shader for SlideCell {
     fn name(&self) -> &'static str {
-        if self.timer.is_reversed() { "slide_out" } else { "slide_in" }
+        if self.timer.is_reversed() ^ self.direction.flips_timer() {
+            "slide_in"
+        } else {
+            "slide_out"
+        }
     }
 
     fn execute(&mut self, alpha: f32, area: Rect, cells: CellIterator) {

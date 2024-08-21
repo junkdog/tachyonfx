@@ -34,7 +34,7 @@ impl From<FadeColorsBuilder> for Effect {
 
 impl Shader for FadeColors {
     fn name(&self) -> &'static str {
-        if self.timer.is_reversed() { "fade_out" } else { "fade_in" }
+        if self.timer.is_reversed() { "fade_from" } else { "fade_to" }
     }
 
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
