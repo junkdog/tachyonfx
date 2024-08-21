@@ -4,7 +4,7 @@ use crossterm::{event, execute};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Rect};
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Clear, Widget};
 use ratatui::Frame;
 use std::cell::RefCell;
@@ -14,9 +14,8 @@ use std::rc::Rc;
 use std::sync::mpsc;
 use std::time::Duration;
 use std::{io, panic, thread};
-
+use ratatui::text::{Line, Span};
 use crate::effects::{effect_in, transition_fx};
-use tachyonfx::fx::Direction;
 use tachyonfx::widget::{EffectTimeline, EffectTimelineRects};
 use tachyonfx::{BufferRenderer, Effect, Shader};
 
@@ -35,7 +34,6 @@ struct App {
 
 #[derive(Default)]
 struct Effects {
-    pub aux_buf_fx: Option<Effect>,
     pub post_process: Option<Effect>,
 }
 
@@ -55,20 +53,6 @@ impl Effects {
 
         if self.post_process.iter().all(Effect::done) {
             self.post_process = None;
-        }
-    }
-
-    fn process_buf_fx(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect
-    ) {
-        if let Some(effect) = self.aux_buf_fx.as_mut() {
-            effect.process(duration, buf, area);
-            if effect.done() {
-                self.aux_buf_fx = None;
-            }
         }
     }
 }
@@ -102,20 +86,7 @@ impl App {
 
     fn inspected_transition_effect(&self) -> Effect {
         let area = self.aux_buffer.borrow().area;
-
-        // given an approximate layout, all rects will resolve to unique values,
-        // enabling us to get the actual layout from the effect timeline. something
-        // of a hack...
-        let layout = self.effect_timeline(EffectTimelineRects {
-            tree: Rect::new(0, 0, 25, 32),
-            chart: Rect::new(35, 0, 65, 32),
-            cell_filter: Rect::new(25, 0, 6, 32),
-            areas: Rect::new(31, 0, 4, 32),
-            legend: Rect::new(35, 34, 29, 6),
-            cell_filter_legend: Rect::new(35, 34, 9, 2),
-            areas_legend: Rect::new(48, 34, 16, 2),
-        }).layout(area);
-
+        let layout = self.effect_timeline(baseline_rects()).layout(area);
         transition_fx(area,  self.sender.clone(), self.inspected_effect(layout))
     }
 
@@ -159,11 +130,8 @@ impl App {
 
 mod effects {
     use crate::AppEvent;
-    use ratatui::buffer::Buffer;
-    use ratatui::layout::{Offset, Rect};
+    use ratatui::layout::Rect;
     use ratatui::style::Color;
-    use std::cell::RefCell;
-    use std::rc::Rc;
     use std::sync::mpsc;
     use std::time::Duration;
     use tachyonfx::fx::*;
@@ -298,18 +266,6 @@ mod effects {
                 .with_area(legend),
         ])
     }
-
-    pub(super) fn move_in_fx(direction: Direction, buf: Rc<RefCell<Buffer>>) -> Effect {
-        let screen = buf.borrow().area;
-        let offset: Offset = match direction {
-            Direction::LeftToRight => Offset { x: -(screen.width as i32), y: 0 },
-            Direction::RightToLeft => Offset { x: screen.width as i32, y: 0 },
-            Direction::UpToDown    => Offset { x: 0, y: -(screen.height as i32) },
-            Direction::DownToUp    => Offset { x: 0, y: screen.height as i32 },
-        };
-
-        translate_buf(offset, buf.clone(), (750, CircIn)).reversed()
-    }
 }
 
 fn main() -> Result<()> {
@@ -349,7 +305,7 @@ fn run_app(
     let mut last_frame_instant = std::time::Instant::now();
 
     let mut effects = Effects::default();
-    effects.aux_buf_fx = Some(effects::move_in_fx(Direction::LeftToRight, app.aux_buffer.clone()));
+    effects.push(app.inspected_effect(baseline_rects()));
     app.refresh_aux_buffer();
 
     while app.is_running {
@@ -377,13 +333,31 @@ fn  ui(
     let buf: &mut Buffer = f.buffer_mut();
     Clear.render(rect, buf);
 
-    if effects.aux_buf_fx.is_some() {
-        effects.process_buf_fx(app.last_tick, buf, rect);
-    } else {
-        app.aux_buffer.render_buffer(Offset::default(), buf);
-    }
+    let shortcut_key_style = Style::default()
+        .fg(Color::DarkGray)
+        .add_modifier(Modifier::BOLD);
+    let shortcut_label_style = Style::default()
+        .fg(Color::DarkGray);
 
+    app.aux_buffer.render_buffer(Offset::default(), buf);
     effects.process_active_fx(app.last_tick, buf, rect);
+
+    let shortcuts = Line::from(vec![
+        Span::from("ENTER ").style(shortcut_key_style),
+        Span::from("next transition ").style(shortcut_label_style),
+        Span::from(" SPACE ").style(shortcut_key_style),
+        Span::from("replay transition ").style(shortcut_label_style),
+        Span::from(" ESC ").style(shortcut_key_style),
+        Span::from("quit").style(shortcut_label_style),
+    ]);
+
+    let centered = Rect {
+        x: rect.x + (rect.width - shortcuts.width() as u16) / 2,
+        y: rect.y + rect.height - 1,
+        width: shortcuts.width() as u16,
+        height: 1,
+    };
+    shortcuts.render(centered, buf);
 }
 
 
@@ -392,7 +366,7 @@ fn setup_terminal() -> Result<Terminal> {
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = ratatui::Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
     let panic_hook = panic::take_hook();
@@ -469,7 +443,7 @@ impl EventHandler {
     }
 
     pub(crate) fn receive_events<F>(&self, mut f: F)
-    where F: FnMut(AppEvent)
+        where F: FnMut(AppEvent)
     {
         f(self.next().unwrap());
         while let Some(event) = self.try_next() { f(event) }
@@ -483,5 +457,20 @@ impl EventHandler {
                 sender.send(AppEvent::Resize(Rect::new(0, 0, w, h))),
             _ => Ok(())
         }.expect("failed to send event")
+    }
+}
+
+fn baseline_rects() -> EffectTimelineRects {
+    // giving an approximate layout so that all rects resolve to unique values,
+    // enabling us to get the actual layout from the effect timeline. something
+    // of a hack...
+    EffectTimelineRects {
+        tree: Rect::new(0, 0, 25, 32),
+        chart: Rect::new(35, 0, 65, 32),
+        cell_filter: Rect::new(25, 0, 6, 32),
+        areas: Rect::new(31, 0, 4, 32),
+        legend: Rect::new(35, 34, 29, 6),
+        cell_filter_legend: Rect::new(35, 34, 9, 2),
+        areas_legend: Rect::new(48, 34, 16, 2),
     }
 }
