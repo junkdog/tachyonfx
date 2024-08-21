@@ -125,13 +125,13 @@ cargo run --release --example=open-window
 ```
 
 ### Example: fx-chart
-![fx-chart](images/effect-timeline-widget.png)
+![fx-chart](images/effect-timeline.gif)
 
 A demo of the `EffectTimelineWidget` showcasing the composition of effects. The widget is a "plain" widget
 without any effects as part of its rendering. The effects are instead applied after rendering the widget.
 
 ```
-cargo run --release --example=fx-chart  
+cargo run --release --example=fx-chart
 ```
 
 
