@@ -1,6 +1,6 @@
 [package]
 name = "tachyonfx"
-version = "0.5.0"
+version = "0.6.0-dev"
 edition = "2021"
 license = "MIT"
 description = "A ratatui library for creating shader-like effects in TUIs."
