@@ -60,7 +60,6 @@ The library includes a variety of effects, loosely categorized as follows:
 - **translate_buf:** Copies the contents from an aux buffer, moving it by a specified amount.
 - **resize_area:**   Resizes the area of the wrapped effect.
 
- 
 #### Combination Effects
 - **parallel:** Runs effects in parallel, all at the same time. Reports completion once all effects have completed.
 - **sequence:** Runs effects in sequence, one after the other. Reports completion once the last effect has completed.
@@ -132,7 +131,7 @@ A demo of the `EffectTimelineWidget` showcasing the composition of effects. The 
 without any effects as part of its rendering. The effects are instead applied after rendering the widget.
 
 ```
-cargo run --release --example=open-window  
+cargo run --release --example=fx-chart  
 ```
 
 
