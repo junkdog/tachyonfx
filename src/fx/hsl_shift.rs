@@ -1,30 +1,21 @@
-use derive_builder::Builder;
+use bon::builder;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 
-use crate::{CellIterator, ColorMapper, Effect, HslConvertable, Interpolatable, IntoEffect};
-use crate::CellFilter;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
+use crate::CellFilter;
+use crate::{CellIterator, ColorMapper, HslConvertable, Interpolatable};
 
-#[derive(Clone, Default, Builder)]
-#[builder(pattern = "owned")]
+#[derive(Clone, Default)]
+#[builder]
 pub struct HslShift {
     timer: EffectTimer,
-    #[builder(default)]
     hsl_mod_fg: Option<[f32; 3]>,
-    #[builder(default)]
     hsl_mod_bg: Option<[f32; 3]>,
-    #[builder(default)]
     area: Option<Rect>,
     #[builder(default)]
     cell_filter: CellFilter,
-}
-
-impl HslShift {
-    pub fn builder() -> HslShiftBuilder {
-        HslShiftBuilder::default()
-    }
 }
 
 impl Shader for HslShift {
@@ -88,11 +79,5 @@ impl Shader for HslShift {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
-    }
-}
-
-impl From<HslShiftBuilder> for Effect {
-    fn from(builder: HslShiftBuilder) -> Self {
-        builder.build().unwrap().into_effect()
     }
 }

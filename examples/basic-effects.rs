@@ -21,6 +21,7 @@ use tachyonfx::{
     CenteredShrink,
     Effect,
     EffectRenderer,
+    IntoEffect,
     fx::{
         self,
         Direction,
@@ -116,7 +117,8 @@ fn run_app(
                                 .action_start_delay_ms(0..3000)
                                 .rng(rng)
                                 .action_ms(8000..10_000)
-                                .into())
+                                .build()
+                                .into_effect())
                             );
                         },
                         KeyCode::Enter     => {
@@ -233,7 +235,8 @@ impl EffectsRepository {
             .action_ms(200..400)
             .action_start_delay_ms(0..1)
             .cell_glitch_ratio(1.0)
-            .into();
+            .build()
+            .into_effect();
 
         // fx from lambdas
         let custom_color_cycle = fx::effect_fn(Instant::now(), slow, |state, _ctx, cell_iter| {
