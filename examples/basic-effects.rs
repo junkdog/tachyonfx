@@ -252,7 +252,7 @@ impl EffectsRepository {
         let effects = vec![
             ("sweep in",
                 fx::sweep_in(Direction::LeftToRight, 30, screen_bg, (slow, QuadOut))),
-            ("sweep out/sweep in", sequence(vec![
+            ("sweep out/sweep in", sequence(&[
                 fx::sweep_out(Direction::DownToUp, 5, bg, (2000, QuadOut)),
                 fx::sweep_in(Direction::UpToDown, 5, bg, (2000, QuadOut)),
                 fx::sweep_out(Direction::UpToDown, 5, bg, (2000, QuadOut)),
@@ -260,8 +260,8 @@ impl EffectsRepository {
             ])),
             ("coalesce",
                 fx::coalesce(100, (medium, CubicOut))),
-            ("slide in/out", fx::repeating(sequence(vec![
-                parallel(vec![
+            ("slide in/out", fx::repeating(sequence(&[
+                parallel(&[
                     fx::fade_from_fg(bg, (2000, ExpoInOut)),
                     fx::slide_in(Direction::UpToDown, 20, Dark0Hard, medium),
                 ]),
@@ -270,7 +270,7 @@ impl EffectsRepository {
                     fx::slide_out(Direction::LeftToRight, 80, Dark0Hard, medium),
                 ),
             ]))),
-            ("change hue, saturation and lightness", sequence(vec![
+            ("change hue, saturation and lightness", sequence(&[
                 fx::hsl_shift_fg([360.0, 0.0, 0.0], medium),
                 fx::hsl_shift_fg([0.0, -100.0, 0.0], medium),
                 fx::hsl_shift_fg([0.0, -100.0, 0.0], medium).reversed(),

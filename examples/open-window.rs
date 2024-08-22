@@ -233,10 +233,10 @@ fn glitchy_window_fx<C: Into<Color>>(bg: C) -> Effect {
     let short = Duration::from_millis(220);
     let duration = Duration::from_millis(320);
     let time_scale = 2;
-    repeating(parallel(vec![
+    repeating(parallel(&[
         // window borders
-        parallel(vec![
-            sequence(vec![
+        parallel(&[
+            sequence(&[
                 with_duration(short * time_scale, never_complete(fx::dissolve(1, 0))),
                 fx::coalesce(111, (duration, BounceOut)),
             ]),
@@ -244,23 +244,23 @@ fn glitchy_window_fx<C: Into<Color>>(bg: C) -> Effect {
         ]).with_cell_selection(border_decorations),
 
         // window title and shortcuts
-        sequence(vec![
+        sequence(&[
             with_duration(duration * time_scale, never_complete(fx::fade_to(Dark0, Dark0, 0))),
             fx::fade_from(Dark0, Dark0, (320 * time_scale, QuadOut)),
         ]).with_cell_selection(border_text),
 
         // content area
-        sequence(vec![
-            with_duration(Duration::from_millis(270) * time_scale, parallel(vec![
+        sequence(&[
+            with_duration(Duration::from_millis(270) * time_scale, parallel(&[
                 never_complete(fx::dissolve(1, 0)), // hiding icons/emoji
                 never_complete(fx::fade_to(bg, bg, 0)),
             ])),
-            parallel(vec![
+            parallel(&[
                 fx::coalesce(111, Duration::from_millis(220) * time_scale),
                 fx::fade_from(bg, bg, (250 * time_scale, QuadOut))
             ]),
             sleep(3000),
-            parallel(vec![
+            parallel(&[
                 fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
                 fx::dissolve(111, (Duration::from_millis(220) * time_scale, ElasticOut)),
             ]),
@@ -273,12 +273,12 @@ fn stylized_window_fx() -> Effect {
     let content_area = CellFilter::Layout(layout, 1);
 
     let cyan = Color::from_hsl(180.0, 100.0, 50.0);
-    repeating(parallel(vec![
+    repeating(parallel(&[
         // content area
-        sequence(vec![
-            parallel(vec![
-                sequence(vec![
-                    with_duration(Duration::from_millis(1000), parallel(vec![
+        sequence(&[
+            parallel(&[
+                sequence(&[
+                    with_duration(Duration::from_millis(1000), parallel(&[
                         never_complete(fx::fade_to(cyan, cyan, 0)),
                     ])),
                     timed_never_complete(Duration::from_millis(2500),

@@ -150,7 +150,7 @@ mod effects {
             sender.send(AppEvent::RefreshAufBuffer).unwrap();
         });
 
-        sequence(vec![
+        sequence(&[
             out_fx_1(screen),
             update_inspected_effect,
             fx_in,
@@ -166,7 +166,7 @@ mod effects {
     }
 
     pub(super) fn effect_in_1(areas: EffectTimelineRects) -> Effect {
-        parallel(vec![
+        parallel(&[
             tree_fx_1(areas.tree),
             chart_fx_1(areas.chart),
             cell_filter_and_area_fx(areas.cell_filter, areas.areas, areas.legend),
@@ -174,7 +174,7 @@ mod effects {
     }
 
     pub(super) fn effect_in_2(areas: EffectTimelineRects) -> Effect {
-        parallel(vec![
+        parallel(&[
             tree_fx_1(areas.tree),
             chart_fx_2(areas.chart),
             cell_filter_and_area_fx(areas.cell_filter, areas.areas, areas.legend),
@@ -182,7 +182,7 @@ mod effects {
     }
 
     pub(super) fn effect_in_3(areas: EffectTimelineRects) -> Effect {
-        parallel(vec![
+        parallel(&[
             tree_fx_1(areas.tree),
             chart_fx_3(areas.chart),
             cell_filter_and_area_fx(areas.cell_filter, areas.areas, areas.legend),
@@ -193,7 +193,7 @@ mod effects {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
-        with_duration(step * 7, parallel(vec![
+        with_duration(step * 7, parallel(&[
             never_complete(dissolve(123, (step * 5, ExpoInOut))),
             never_complete(fade_to_fg(bg, (5 * step, BounceOut))),
         ]).with_area(area))
@@ -203,7 +203,7 @@ mod effects {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
-        parallel(vec![
+        parallel(&[
             coalesce(100, (step * 5, ExpoInOut))
                 .with_cell_selection(CellFilter::Text),
             sweep_in(Direction::UpToDown, 1, bg, step * 3),
@@ -223,14 +223,14 @@ mod effects {
         let color1 = Color::from_u32(0x102020);
         let color2 = Color::from_u32(0x204040);
 
-        parallel(vec![
-            parallel(vec![
+        parallel(&[
+            parallel(&[
                 timed_never_complete(step * 10, fade_to(Color::Black, Color::Black, 0)),
                 timed_never_complete(step * 10, fade_to(color1, color1, (step * 5, QuadOut))),
             ]),
-            sequence(vec![
+            sequence(&[
                 sleep(step * 10),
-                parallel(vec![
+                parallel(&[
                     slide_in(Direction::DownToUp, 15, color2, step * 5),
                     fade_from_fg(color1, (step * 10, ExpoOut)),
                 ]),
@@ -244,7 +244,7 @@ mod effects {
 
         let hsl_shift = [0.0, -100.0, -50.0];
 
-        parallel(vec![
+        parallel(&[
             hsl_shift_fg(hsl_shift, (15 * step, CircIn)).reversed(),
             sweep_in(Direction::LeftToRight, 80, bg, step * 15),
         ]).with_area(area)
@@ -257,7 +257,7 @@ mod effects {
     ) -> Effect {
         let d = Duration::from_millis(500);
 
-        parallel(vec![
+        parallel(&[
             prolong_start(d, sweep_in(Direction::DownToUp, 1, Color::Black, (d, QuadOut)))
                 .with_area(cell_filter_column),
             prolong_start(d * 2, sweep_in(Direction::UpToDown, 1, Color::Black, (d, QuadOut)))

@@ -1,5 +1,8 @@
 # Changelog
 
+### Breaking
+- `fx::sequence` and `fx::parallel` are now parameterized with `&[Effect]` instead of `Vec<Effect>`.
+
 ## tachyonfx 0.5.0 - 2024-08-21
 
 ![effect-timeline-widget](images/effect-timeline-widget.png)
