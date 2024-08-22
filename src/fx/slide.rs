@@ -1,14 +1,14 @@
-use derive_builder::Builder;
+use bon::builder;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 
-use crate::{CellFilter, CellIterator, Effect, EffectTimer, IntoEffect, Shader};
-use crate::fx::Direction;
 use crate::fx::moving_window::{horizontal_gradient, vertical_gradient, window_alpha_fn};
+use crate::fx::Direction;
+use crate::{CellFilter, CellIterator, EffectTimer, Shader};
 
 /// A shader that applies a directional sliding effect to terminal cells.
-#[derive(Builder, Clone)]
-#[builder(pattern = "owned")]
+#[derive(Clone)]
+#[builder]
 pub struct SlideCell {
     /// The color behind the sliding cell.
     color_behind_cell: Color,
@@ -19,7 +19,6 @@ pub struct SlideCell {
     /// The timer controlling the duration and progress of the effect.
     timer: EffectTimer,
     /// The area within which the effect is applied.
-    #[builder(default)]
     area: Option<Rect>,
     /// The cell selection strategy used to filter cells.
     #[builder(default)]
@@ -27,9 +26,9 @@ pub struct SlideCell {
 }
 
 impl SlideCell {
-    pub fn builder() -> SlideCellBuilder {
-        SlideCellBuilder::default()
-    }
+    // pub fn builder() -> SlideCellBuilder {
+    //     SlideCellBuilder::default()
+    // }
 
     fn slided_cell(&self, alpha: f32) -> char {
         let alpha = alpha.clamp(0.0, 1.0);
@@ -107,12 +106,6 @@ impl Shader for SlideCell {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
-    }
-}
-
-impl From<SlideCellBuilder> for Effect {
-    fn from(value: SlideCellBuilder) -> Self {
-        value.build().unwrap().into_effect()
     }
 }
 

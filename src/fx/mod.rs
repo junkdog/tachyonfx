@@ -158,11 +158,31 @@ pub fn hsl_shift<T: Into<EffectTimer>>(
     hsl_bg_change: Option<[f32; 3]>,
     timer: T,
 ) -> Effect {
-    HslShift::builder()
-        .hsl_mod_fg(hsl_fg_change)
-        .hsl_mod_bg(hsl_bg_change)
-        .timer(timer.into())
-        .into()
+    match (hsl_fg_change, hsl_bg_change) {
+        (Some(hsl_fg_change), Some(hsl_bg_change)) => {
+            HslShift::builder()
+                .hsl_mod_fg(hsl_fg_change)
+                .hsl_mod_bg(hsl_bg_change)
+                .timer(timer.into())
+                .build()
+                .into_effect()
+        }
+        (Some(hsl_fg_change), None) => {
+            HslShift::builder()
+                .hsl_mod_fg(hsl_fg_change)
+                .timer(timer.into())
+                .build()
+                .into_effect()
+        }
+        (None, Some(hsl_bg_change)) => {
+            HslShift::builder()
+                .hsl_mod_bg(hsl_bg_change)
+                .timer(timer.into())
+                .build()
+                .into_effect()
+        }
+        (None, None) => panic!("At least one of hsl_fg_change or hsl_bg_change must be provided"),
+    }
 }
 
 /// Shifts the foreground color by the specified hue, saturation, and lightness
@@ -306,7 +326,8 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
         .color_behind_cell(color_behind_cells.into())
         .gradient_length(gradient_length)
         .direction(direction)
-        .into()
+        .build()
+        .into_effect()
 }
 
 /// Translates an effect by a specified amount over a specified duration.
@@ -674,11 +695,31 @@ fn fade<C: Into<Color>>(
     timer: EffectTimer,
     reverse: bool,
 ) -> Effect {
-    FadeColors::builder()
-        .fg(fg.map(|c| c.into()))
-        .bg(bg.map(|c| c.into()))
-        .timer(if reverse { timer.reversed() } else { timer })
-        .into()
+    match (fg, bg) {
+        (Some(fg), Some(bg)) => {
+            FadeColors::builder()
+                .fg(fg.into())
+                .bg(bg.into())
+                .timer(if reverse { timer.reversed() } else { timer })
+                .build()
+                .into_effect()
+        }
+        (Some(fg), None) => {
+            FadeColors::builder()
+                .fg(fg.into())
+                .timer(if reverse { timer.reversed() } else { timer })
+                .build()
+                .into_effect()
+        }
+        (None, Some(bg)) => {
+            FadeColors::builder()
+                .bg(bg.into())
+                .timer(if reverse { timer.reversed() } else { timer })
+                .build()
+                .into_effect()
+        }
+        (None, None) => panic!("At least one of fg or bg must be provided"),
+    }
 }
 
 #[cfg(test)]

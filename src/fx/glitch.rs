@@ -1,14 +1,13 @@
+use bon::builder;
 use std::fmt::Debug;
 use std::ops::Range;
 use std::time::Duration;
 
-use derive_builder::Builder;
 use rand::prelude::SmallRng;
 use rand::Rng;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
 use crate::{CellFilter, CellIterator, EffectTimer};
-use crate::effect::{Effect, IntoEffect};
 use crate::shader::Shader;
 
 
@@ -20,9 +19,8 @@ enum GlitchType {
 }
 
 /// A glitch effect that can be applied to a cell.
-#[derive(Builder)]
-#[builder(pattern = "owned")]
 #[derive(Clone, Debug)]
+#[builder]
 pub struct GlitchCell {
     cell_idx: usize,
     glitch_remaining_ms: u32,
@@ -30,13 +28,9 @@ pub struct GlitchCell {
     glitch: GlitchType,
 }
 
-impl GlitchCell {
-    fn builder() -> GlitchCellBuilder { GlitchCellBuilder::default() }
-}
-
 /// applies a glitch effect to random parts of the screen.
-#[derive(Builder, Clone)]
-#[builder(pattern = "owned")]
+#[derive(Clone)]
+#[builder]
 pub struct Glitch {
     cell_glitch_ratio: f32,
     action_start_delay_ms: Range<u32>,
@@ -45,21 +39,12 @@ pub struct Glitch {
     #[builder(default)]
     selection: CellFilter,
 
-    #[builder(setter(skip))]
+    #[builder(skip)]
     glitch_cells: Vec<GlitchCell>,
-    #[builder(default)]
     area: Option<Rect>,
 }
 
-impl From<GlitchBuilder> for Effect {
-    fn from(value: GlitchBuilder) -> Self {
-        value.build().unwrap().into_effect()
-    }
-}
-
 impl Glitch {
-    pub fn builder() -> GlitchBuilder { GlitchBuilder::default() }
-
     fn ensure_population(
         &mut self,
         screen: &Rect,
@@ -70,14 +55,13 @@ impl Glitch {
         let current_population = self.glitch_cells.len() as u32;
         if current_population < total_cells {
             for _ in 0..(total_cells - current_population) {
-                GlitchCell::builder()
+                let cell = GlitchCell::builder()
                     .cell_idx(self.rng.gen_range(0..(screen.width * screen.height) as usize))
                     .glitch(self.glitch_type())
                     .glitch_remaining_ms(self.rng.gen_range(self.action_ms.clone()))
                     .presleep_remaining_ms(self.rng.gen_range(self.action_start_delay_ms.clone()))
-                    .build()
-                    .map(|glitch| self.glitch_cells.push(glitch))
-                    .expect("Failed to build GlitchCell");
+                    .build();
+                self.glitch_cells.push(cell);
             }
         }
     }
