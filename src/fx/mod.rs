@@ -123,7 +123,13 @@ where
     T: Into<EffectTimer>,
     F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static,
 {
-    ShaderFn::with_iterator(state, f, timer).into_effect()
+    ShaderFn::builder()
+        .name("shader_fn")
+        .state(state)
+        .code(ShaderFnSignature::new_iter(f))
+        .timer(timer)
+        .build()
+        .into_effect()
 }
 
 /// Creates a custom effect using a user-defined function that operates on a buffer.
@@ -149,7 +155,13 @@ where
     T: Into<EffectTimer>,
     F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static,
 {
-    ShaderFn::with_buffer(state, f, timer).into_effect()
+    ShaderFn::builder()
+        .name("shader_fn_buf")
+        .state(state)
+        .code(ShaderFnSignature::new_buffer(f))
+        .timer(timer)
+        .build()
+        .into_effect()
 }
 
 /// changes the hue, saturation, and lightness of the foreground and background colors.
@@ -158,31 +170,16 @@ pub fn hsl_shift<T: Into<EffectTimer>>(
     hsl_bg_change: Option<[f32; 3]>,
     timer: T,
 ) -> Effect {
-    match (hsl_fg_change, hsl_bg_change) {
-        (Some(hsl_fg_change), Some(hsl_bg_change)) => {
-            HslShift::builder()
-                .hsl_mod_fg(hsl_fg_change)
-                .hsl_mod_bg(hsl_bg_change)
-                .timer(timer.into())
-                .build()
-                .into_effect()
-        }
-        (Some(hsl_fg_change), None) => {
-            HslShift::builder()
-                .hsl_mod_fg(hsl_fg_change)
-                .timer(timer.into())
-                .build()
-                .into_effect()
-        }
-        (None, Some(hsl_bg_change)) => {
-            HslShift::builder()
-                .hsl_mod_bg(hsl_bg_change)
-                .timer(timer.into())
-                .build()
-                .into_effect()
-        }
-        (None, None) => panic!("At least one of hsl_fg_change or hsl_bg_change must be provided"),
+    if hsl_fg_change.is_none() && hsl_bg_change.is_none() {
+        panic!("At least one of the foreground or background color must be changed");
     }
+
+    HslShift::builder()
+        .maybe_hsl_mod_fg(hsl_fg_change)
+        .maybe_hsl_mod_bg(hsl_bg_change)
+        .timer(timer.into())
+        .build()
+        .into_effect()
 }
 
 /// Shifts the foreground color by the specified hue, saturation, and lightness
