@@ -460,14 +460,14 @@ pub fn offscreen_buffer(fx: Effect, render_target: Rc<RefCell<Buffer>>) -> Effec
 
 /// Runs the effects in sequence, one after the other. Reports completion
 /// once the last effect has completed.
-pub fn sequence(effects: Vec<Effect>) -> Effect {
-    SequentialEffect::new(effects).into_effect()
+pub fn sequence(effects: &[Effect]) -> Effect {
+    SequentialEffect::new(effects.into()).into_effect()
 }
 
 /// Runs the effects in parallel, all at the same time. Reports completion
 /// once all effects have completed.
-pub fn parallel(effects: Vec<Effect>) -> Effect {
-    ParallelEffect::new(effects).into_effect()
+pub fn parallel(effects: &[Effect]) -> Effect {
+    ParallelEffect::new(effects.into()).into_effect()
 }
 
 /// Dissolves the current text into the new text over the specified duration. The
@@ -564,7 +564,7 @@ pub fn sleep<T: Into<EffectTimer>>(duration: T) -> Effect {
 /// let delayed_fade: Effect = fx::delay(Duration::from_secs(2), fade_effect);
 /// ```
 pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
-    sequence(vec![sleep(duration), effect])
+    sequence(&[sleep(duration), effect])
 }
 
 /// Creates an effect that prolongs the start of another effect.
