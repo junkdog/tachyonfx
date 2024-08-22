@@ -40,10 +40,10 @@ struct App {
 impl App {
     fn new() -> Self {
         let tween_idx = 0;
-        let shortcut_fx = repeating(sequence(vec![
+        let shortcut_fx = repeating(sequence(&[
             fx::sweep_in(Direction::RightToLeft, 20, Dark0, EffectTimer::from_ms(1000, QuadIn)),
             fx::sleep(5_000),
-            parallel(vec![
+            parallel(&[
                 fx::fade_to_fg(Dark0, EffectTimer::from_ms(500, BounceOut)),
                 fx::dissolve(30, EffectTimer::from_ms(500, BounceOut)),
             ]),
@@ -261,12 +261,12 @@ fn chart_fx() -> Effect {
     let duration = Duration::from_millis(300);
     let timer = EffectTimer::new(duration, QuadInOut);
 
-    parallel(vec![
+    parallel(&[
         // chart axis
         fx::sweep_in(Direction::UpToDown, 15, Dark0, timer)
             .with_cell_selection(CellFilter::FgColor(Light2.into())),
         // chart data
-        sequence(vec![
+        sequence(&[
             fx::timed_never_complete(duration, fx::dissolve(1, 0))
                 .with_cell_selection(CellFilter::FgColor(OrangeBright.into())),
             fx::sweep_in(Direction::LeftToRight, 15, Dark0, timer)
@@ -296,11 +296,11 @@ impl InterpolationWidgetState {
         let timer = EffectTimer::from_ms(1000, tween);
 
         self.chart_fx = chart_fx();
-        self.coalesce_fx = repeating(sequence(vec![
+        self.coalesce_fx = repeating(sequence(&[
            fx::coalesce(20, timer),
            fx::dissolve(20, timer),
         ]));
-        self.fade_fx = repeating(sequence(vec![
+        self.fade_fx = repeating(sequence(&[
             fx::fade_from(Dark0, Dark0, timer),
             fx::fade_to_fg(Dark0, timer),
         ]));

@@ -514,10 +514,10 @@ mod tests {
         let bg = Color::DarkGray;
         let gray = Color::Gray;
 
-        repeating(parallel(vec![
+        repeating(parallel(&[
             // window borders
-            parallel(vec![
-                sequence(vec![
+            parallel(&[
+                sequence(&[
                     with_duration(short * time_scale, never_complete(fx::dissolve(1, 0))),
                     fx::coalesce(111, (duration, BounceOut)),
                 ]),
@@ -525,23 +525,23 @@ mod tests {
             ]).with_cell_selection(border_decorations),
 
             // window title and shortcuts
-            sequence(vec![
+            sequence(&[
                 with_duration(duration * time_scale, never_complete(fx::fade_to(gray, gray, 0))),
                 fx::fade_from(gray, gray, (320 * time_scale, QuadOut)),
             ]).with_cell_selection(border_text),
 
             // content area
-            sequence(vec![
-                with_duration(Duration::from_millis(270) * time_scale, parallel(vec![
+            sequence(&[
+                with_duration(Duration::from_millis(270) * time_scale, parallel(&[
                     never_complete(fx::dissolve(1, 0)), // hiding icons/emoji
                     never_complete(fx::fade_to(bg, bg, 0)),
                 ])),
-                parallel(vec![
+                parallel(&[
                     fx::coalesce(111, Duration::from_millis(220) * time_scale),
                     fx::fade_from(bg, bg, (250 * time_scale, QuadOut))
                 ]),
                 fx::sleep(3000),
-                parallel(vec![
+                parallel(&[
                     fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
                     fx::dissolve(111, (Duration::from_millis(220) * time_scale, ElasticOut)),
                 ]),
@@ -552,7 +552,7 @@ mod tests {
     #[test]
     fn test_widget_happy_path() {
         let bg = Color::Black;
-        let fx = sequence(vec![
+        let fx = sequence(&[
             fx::sweep_out(Direction::DownToUp, 5, bg, (2000, QuadOut)),
             fx::sweep_in(Direction::UpToDown, 5, bg, (2000, QuadOut)),
             fx::sweep_out(Direction::UpToDown, 5, bg, (2000, QuadOut)),
@@ -584,8 +584,8 @@ mod tests {
 
         let cyan = Color::from_hsl(180.0, 100.0, 50.0);
         let fx = fx::repeating(
-            parallel(vec![
-                sequence(vec![
+            parallel(&[
+                sequence(&[
                     fx::timed_never_complete(Duration::from_millis(1000), fx::fade_to(cyan, cyan, 0)),
                     fx::timed_never_complete(Duration::from_millis(2500),
                         fx::fade_from(cyan, cyan, (400, QuadOut))
