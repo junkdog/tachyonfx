@@ -1,3 +1,4 @@
+use bon::{bon, builder};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
@@ -8,9 +9,12 @@ use ratatui::layout::Rect;
 use crate::{CellFilter, CellIterator, EffectTimer, Shader};
 
 #[derive(Clone)]
+#[builder]
 pub struct ShaderFn<S: Clone> {
     state: S,
-    original_state: S,
+    #[builder(skip)]
+    original_state: Option<S>,
+    name: &'static str,
     code: ShaderFnSignature<S>,
     timer: EffectTimer,
     cell_filter: Option<CellFilter>,
@@ -18,9 +22,23 @@ pub struct ShaderFn<S: Clone> {
 }
 
 #[derive(Clone)]
-enum ShaderFnSignature<S> {
+pub(super) enum ShaderFnSignature<S> {
     Iter(Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, CellIterator)>>),
     Buffer(Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, &mut Buffer)>>),
+}
+
+impl<S> ShaderFnSignature<S> {
+    pub fn new_iter<F>(f: F) -> Self
+        where F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static
+    {
+        Self::Iter(Rc::new(RefCell::new(f)))
+    }
+
+    pub fn new_buffer<F>(f: F) -> Self
+        where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static
+    {
+        Self::Buffer(Rc::new(RefCell::new(f)))
+    }
 }
 
 
@@ -52,47 +70,58 @@ impl<'a> ShaderFnContext<'a> {
     }
 }
 
+#[bon]
 impl<S: Clone + 'static> ShaderFn<S> {
-    pub fn with_iterator<F, T>(
+    #[builder]
+    pub(self) fn with_iterator<F, T>(
+        name: Option<&'static str>,
         state: S,
         code: F,
-        timer: T
+        timer: T,
+        cell_filter: Option<CellFilter>,
+        area: Option<Rect>
     ) -> Self
         where F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static,
               T: Into<EffectTimer>
     {
         Self {
-            original_state: state.clone(),
+            name: name.unwrap_or("shader_fn"),
+            original_state: Some(state.clone()),
             state,
-            code: ShaderFnSignature::Iter(Rc::new(RefCell::new(code))),
+            code: ShaderFnSignature::new_iter(code),
             timer: timer.into(),
-            cell_filter: None,
-            area: None
+            cell_filter,
+            area
         }
     }
 
-    pub fn with_buffer<F, T>(
+    #[builder]
+    pub(self) fn with_buffer<F, T>(
+        name: Option<&'static str>,
         state: S,
         code: F,
-        timer: T
+        timer: T,
+        cell_filter: Option<CellFilter>,
+        area: Option<Rect>
     ) -> Self
         where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static,
               T: Into<EffectTimer>
     {
         Self {
-            original_state: state.clone(),
+            name: name.unwrap_or("shader_fn"),
+            original_state: Some(state.clone()),
             state,
-            code: ShaderFnSignature::Buffer(Rc::new(RefCell::new(code))),
+            code: ShaderFnSignature::new_buffer(code),
             timer: timer.into(),
-            cell_filter: None,
-            area: None
+            cell_filter,
+            area
         }
     }
 }
 
 impl<S: Clone + 'static> Shader for ShaderFn<S> {
     fn name(&self) -> &'static str {
-        "shader_fn"
+        self.name
     }
 
     fn process(
@@ -146,6 +175,7 @@ impl<S: Clone + 'static> Shader for ShaderFn<S> {
 
     fn reset(&mut self) {
         self.timer.reset();
-        self.state = self.original_state.clone();
+        self.state = self.original_state.as_ref().unwrap().clone();
     }
 }
+
