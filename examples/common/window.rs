@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use derive_builder::Builder;
+use bon::builder;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -8,18 +8,15 @@ use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, BorderType};
 use ratatui::widgets::Widget;
 
-use tachyonfx::{CellFilter, CellIterator, Effect, EffectTimer, IntoEffect, Shader};
+use tachyonfx::{CellFilter, CellIterator, Effect, EffectTimer, Shader};
 
-#[derive(Builder, Clone)]
-#[builder(pattern = "owned")]
+#[derive(Clone)]
+#[builder]
 pub struct OpenWindow {
     title: Line<'static>,
-    #[builder(default, setter(strip_option))]
-    pre_render_fx: Option<Effect>, // for setting up geometry etc
-    #[builder(default, setter(strip_option))]
+    pre_render_fx: Option<Effect>,    // for setting up geometry etc
     parent_window_fx: Option<Effect>, // applied to whole buffer
-    #[builder(default, setter(strip_option))]
-    content_fx: Option<Effect>, // applied to content area
+    content_fx: Option<Effect>,       // applied to content area
     title_style: Style,
     border_style: Style,
     border_type: BorderType,
@@ -27,23 +24,7 @@ pub struct OpenWindow {
     borders: Borders,
 }
 
-impl From<OpenWindowBuilder> for Effect {
-    fn from(value: OpenWindowBuilder) -> Self {
-        value.build().unwrap().into_effect()
-    }
-}
-
 impl OpenWindow {
-    pub fn builder() -> OpenWindowBuilder {
-        OpenWindowBuilder::default()
-    }
-
-    pub fn screen_area(&mut self, area: Rect) {
-        if let Some(fx) = self.parent_window_fx.as_mut() {
-            fx.set_area(area);
-        }
-    }
-
     fn window_block(&self) -> Block {
         Block::new()
             .borders(Borders::ALL)

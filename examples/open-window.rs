@@ -212,8 +212,7 @@ impl HelloWorldPopupState {
             .pre_render_fx(pre_render_fx)
             .content_fx(content_fx)
             .background(content_style)
-            .build()
-            .unwrap();
+            .build();
 
         Self { text, window_fx }
     }

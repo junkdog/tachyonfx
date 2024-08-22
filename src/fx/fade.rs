@@ -1,35 +1,21 @@
-use derive_builder::Builder;
+use bon::builder;
 use ratatui::layout::Rect;
 use ratatui::prelude::Color;
 
-use crate::{CellFilter, CellIterator, Interpolatable};
 use crate::color_mapper::ColorMapper;
-use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
+use crate::{CellFilter, CellIterator, Interpolatable};
 
-#[derive(Builder, Clone)]
-#[builder(pattern = "owned")]
+#[derive(Clone)]
+#[builder]
 pub struct FadeColors {
     fg: Option<Color>,
     bg: Option<Color>,
     timer: EffectTimer,
-    #[builder(default)]
     area: Option<Rect>,
     #[builder(default)]
     cell_filter: CellFilter,
-}
-
-impl FadeColors {
-    pub fn builder() -> FadeColorsBuilder {
-        FadeColorsBuilder::default()
-    }
-}
-
-impl From<FadeColorsBuilder> for Effect {
-    fn from(value: FadeColorsBuilder) -> Self {
-        value.build().unwrap().into_effect()
-    }
 }
 
 impl Shader for FadeColors {

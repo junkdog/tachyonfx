@@ -13,8 +13,8 @@ categories = ["command-line-interface"]
 authors = ["Adrian Papari <junkdog@angelhill.net>"]
 
 [dependencies]
+bon = "1.2.1"
 colorsys = "0.6.7"
-derive_builder = "0.20.0"
 rand = { version = "0.8.5", features = ["small_rng"] }
 ratatui = "0.28.0"
 simple-easing = "1.0.1"
