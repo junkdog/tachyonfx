@@ -1,8 +1,7 @@
 use crate::widget::EffectSpan;
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
 use ratatui::prelude::Color;
 use std::collections::BTreeSet;
+use crate::simple_rng::{shuffle, SimpleRng};
 
 #[derive(Clone)]
 pub(crate) struct ColorRegistry {
@@ -23,8 +22,8 @@ impl ColorRegistry {
             .map(|hue| Color::from_hsl(hue, 52.0, 62.0))
             .collect();
 
-        let mut rng = thread_rng();
-        colors.shuffle(&mut rng);
+        let mut lcg = SimpleRng::default();
+        shuffle(&mut colors, &mut lcg);
 
         let effect_to_color = effect_identifiers.iter()
             .enumerate()

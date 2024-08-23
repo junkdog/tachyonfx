@@ -40,7 +40,7 @@ impl Effect {
     /// use tachyonfx::{Effect, EffectTimer, fx, Interpolation};
     /// use ratatui::layout::Rect;
     ///
-    /// fx::dissolve(20, EffectTimer::from_ms(120, Interpolation::CircInOut))
+    /// fx::dissolve(EffectTimer::from_ms(120, Interpolation::CircInOut))
     ///     .with_area(Rect::new(0, 0, 10, 10));
     /// ```
     pub fn with_area(&self, area: Rect) -> Self {
