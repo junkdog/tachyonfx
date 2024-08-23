@@ -194,7 +194,7 @@ mod effects {
         let bg = Color::Black;
 
         with_duration(step * 7, parallel(&[
-            never_complete(dissolve(123, (step * 5, ExpoInOut))),
+            never_complete(dissolve((step * 5, ExpoInOut))),
             never_complete(fade_to_fg(bg, (5 * step, BounceOut))),
         ]).with_area(area))
     }
@@ -204,7 +204,7 @@ mod effects {
         let bg = Color::Black;
 
         parallel(&[
-            coalesce(100, (step * 5, ExpoInOut))
+            coalesce((step * 5, ExpoInOut))
                 .with_cell_selection(CellFilter::Text),
             sweep_in(Direction::UpToDown, 1, bg, step * 3),
         ]).with_area(area)

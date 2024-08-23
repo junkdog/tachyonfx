@@ -491,14 +491,14 @@ pub fn parallel(effects: &[Effect]) -> Effect {
 /// Dissolves the current text into the new text over the specified duration. The
 /// `cycle_len` parameter specifies the number of cell states are tracked before
 /// it cycles and repeats.
-pub fn dissolve<T: Into<EffectTimer>>(cycle_len: usize, timer: T) -> Effect {
-    Dissolve::new(timer.into(), cycle_len)
+pub fn dissolve<T: Into<EffectTimer>>(timer: T) -> Effect {
+    Dissolve::new(timer.into())
         .into_effect()
 }
 
 /// The reverse of [dissolve()].
-pub fn coalesce<T: Into<EffectTimer>>(cycle_len: usize, timer: T) -> Effect {
-    Dissolve::new(timer.into().reversed(), cycle_len)
+pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
+    Dissolve::new(timer.into().reversed())
         .into_effect()
 }
 

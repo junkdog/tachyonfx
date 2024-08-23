@@ -6,7 +6,6 @@ use std::time::{Duration, Instant};
 use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use rand::prelude::{SeedableRng, SmallRng};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Margin};
@@ -16,23 +15,14 @@ use ratatui::widgets::{Block, Clear, Widget};
 
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
-use tachyonfx::{
-    CellFilter,
-    CenteredShrink,
-    Effect,
-    EffectRenderer,
-    IntoEffect,
-    fx::{
-        self,
-        Direction,
-        Glitch,
-        never_complete,
-        parallel,
-        sequence,
-    },
-    Interpolation,
-    Shader,
-};
+use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, IntoEffect, fx::{
+    self,
+    Direction,
+    Glitch,
+    never_complete,
+    parallel,
+    sequence,
+}, Interpolation, Shader, SimpleRng};
 use crate::gruvbox::Gruvbox;
 use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
 
@@ -90,10 +80,12 @@ fn run_app(
     mut app: App,
     effects: EffectsRepository
 ) -> io::Result<()> {
-    let mut last_frame_instant = std::time::Instant::now();
+    let mut last_frame_instant = Instant::now();
+    let mut rng = SimpleRng::default();
+
     loop {
         app.last_tick = last_frame_instant.elapsed();
-        last_frame_instant = std::time::Instant::now();
+        last_frame_instant = Instant::now();
         terminal.draw(|f| ui(f, &mut app))?;
 
         if event::poll(Duration::from_millis(32))? {
@@ -102,7 +94,7 @@ fn run_app(
                     match key.code {
                         KeyCode::Esc       => return Ok(()),
                         KeyCode::Char('r') => {
-                            let fx_idx = rand::random::<usize>() % effects.len();
+                            let fx_idx = (rng.gen() % effects.len() as u32) as usize;
                             app.active_effect = effects.get_effect(fx_idx);
                             app.active_effect_idx = fx_idx;
                         },
@@ -111,11 +103,9 @@ fn run_app(
                         },
                         KeyCode::Char('s') => {
                             let duration = Duration::from_secs(7);
-                            let rng = SmallRng::from_entropy();
                             app.active_effect = ("scramble", fx::with_duration(duration, Glitch::builder()
                                 .cell_glitch_ratio(1f32)
                                 .action_start_delay_ms(0..3000)
-                                .rng(rng)
                                 .action_ms(8000..10_000)
                                 .build()
                                 .into_effect())
@@ -231,7 +221,7 @@ impl EffectsRepository {
         let medium = Duration::from_millis(750);
 
         let _glitch: Effect = Glitch::builder()
-            .rng(SmallRng::from_entropy())
+            .rng(SimpleRng::default())
             .action_ms(200..400)
             .action_start_delay_ms(0..1)
             .cell_glitch_ratio(1.0)
@@ -262,7 +252,7 @@ impl EffectsRepository {
                 fx::sweep_in(Direction::DownToUp, 5, bg, (2000, QuadOut)),
             ])),
             ("coalesce",
-                fx::coalesce(100, (medium, CubicOut))),
+                fx::coalesce((medium, CubicOut))),
             ("slide in/out", fx::repeating(sequence(&[
                 parallel(&[
                     fx::fade_from_fg(bg, (2000, ExpoInOut)),

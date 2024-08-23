@@ -1,5 +1,8 @@
 # Changelog
 
+### Changed
+- Replaced `rand` crate dependency with a fast `SimpleRng` implementation. 
+
 ### Breaking
 - `fx::sequence` and `fx::parallel` are now parameterized with `&[Effect]` instead of `Vec<Effect>`.
 
