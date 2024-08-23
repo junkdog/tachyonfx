@@ -4,7 +4,8 @@
 - Replaced `rand` crate dependency with a fast `SimpleRng` implementation. 
 
 ### Breaking
-- `fx::sequence` and `fx::parallel` are now parameterized with `&[Effect]` instead of `Vec<Effect>`.
+- `fx::dissolve`, `fx::coalesce`: removed `cycle_len` parameter, as cell visibility is recalculated on the fly.
+- `fx::sequence`, `fx::parallel`: now parameterized with `&[Effect]` instead of `Vec<Effect>`.
 
 ## tachyonfx 0.5.0 - 2024-08-21
 
