@@ -1,7 +1,8 @@
 # Changelog
 
 ### Changed
-- Replaced `rand` crate dependency with a fast `SimpleRng` implementation. 
+- Replaced `rand` crate dependency with a fast `SimpleRng` implementation.
+- `render_as_ansi_string()` produces a more compact output by reducing redundant ANSI escape codes.
 
 ### Breaking
 - `fx::dissolve`, `fx::coalesce`: removed `cycle_len` parameter, as cell visibility is recalculated on the fly.
