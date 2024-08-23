@@ -45,7 +45,7 @@ impl App {
             fx::sleep(5_000),
             parallel(&[
                 fx::fade_to_fg(Dark0, EffectTimer::from_ms(500, BounceOut)),
-                fx::dissolve(30, EffectTimer::from_ms(500, BounceOut)),
+                fx::dissolve(EffectTimer::from_ms(500, BounceOut)),
             ]),
         ]));
 
@@ -267,7 +267,7 @@ fn chart_fx() -> Effect {
             .with_cell_selection(CellFilter::FgColor(Light2.into())),
         // chart data
         sequence(&[
-            fx::timed_never_complete(duration, fx::dissolve(1, 0))
+            fx::timed_never_complete(duration, fx::dissolve(0))
                 .with_cell_selection(CellFilter::FgColor(OrangeBright.into())),
             fx::sweep_in(Direction::LeftToRight, 15, Dark0, timer)
                 .with_cell_selection(CellFilter::FgColor(OrangeBright.into())),
@@ -297,8 +297,8 @@ impl InterpolationWidgetState {
 
         self.chart_fx = chart_fx();
         self.coalesce_fx = repeating(sequence(&[
-           fx::coalesce(20, timer),
-           fx::dissolve(20, timer),
+           fx::coalesce(timer),
+           fx::dissolve(timer),
         ]));
         self.fade_fx = repeating(sequence(&[
             fx::fade_from(Dark0, Dark0, timer),

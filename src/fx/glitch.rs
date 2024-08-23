@@ -3,11 +3,10 @@ use std::fmt::Debug;
 use std::ops::Range;
 use std::time::Duration;
 
-use rand::prelude::SmallRng;
-use rand::Rng;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
 use crate::{CellFilter, CellIterator, EffectTimer};
+use crate::simple_rng::{RangeSampler, SimpleRng};
 use crate::shader::Shader;
 
 
@@ -35,7 +34,8 @@ pub struct Glitch {
     cell_glitch_ratio: f32,
     action_start_delay_ms: Range<u32>,
     action_ms: Range<u32>,
-    rng: SmallRng,
+    #[builder(default)]
+    rng: SimpleRng,
     #[builder(default)]
     selection: CellFilter,
 
@@ -82,7 +82,7 @@ impl Glitch {
         let idx: u32 = self.rng.gen();
         match idx % 2 {
             0 => GlitchType::ChangeCase,
-            1 => GlitchType::ChangeCharByValue(self.rng.gen_range(-10..10)),
+            1 => GlitchType::ChangeCharByValue(-10 + self.rng.gen_range(0..20) as i8),
             _ => unreachable!(),
         }
     }

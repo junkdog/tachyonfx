@@ -1,37 +1,29 @@
-use rand::{Rng, thread_rng};
-use rand::prelude::{SeedableRng, SmallRng};
 use ratatui::layout::Rect;
 
-use crate::CellIterator;
-use crate::CellFilter;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
+use crate::simple_rng::SimpleRng;
+use crate::CellFilter;
+use crate::CellIterator;
 
 #[derive(Clone)]
 pub struct Dissolve {
     timer: EffectTimer,
-    cyclic_cell_activation: Vec<f32>,
     area: Option<Rect>,
     cell_filter: CellFilter,
+    lcg: SimpleRng,
 }
 
 impl Dissolve {
     pub fn new(
         lifetime: EffectTimer,
-        cell_cycle: usize,
     ) -> Self {
-        let mut rng = SmallRng::from_rng(thread_rng()).unwrap();
-
         Self {
             timer: lifetime,
-            cyclic_cell_activation: (0..cell_cycle).map(|_| rng.gen_range(0.0..1.0)).collect(),
             area: None,
             cell_filter: CellFilter::All,
+            lcg: SimpleRng::default(),
         }
-    }
-
-    fn is_cell_idx_active(&self, idx: usize, a: f32) -> bool {
-        a > self.cyclic_cell_activation[idx % self.cyclic_cell_activation.len()]
     }
 }
 
@@ -41,9 +33,10 @@ impl Shader for Dissolve {
     }
 
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
-        cell_iter.enumerate()
-            .filter(|(idx, _)| self.is_cell_idx_active(*idx, alpha))
-            .for_each(|(_, (_, c))| { c.set_char(' '); });
+        let mut lcg = self.lcg.clone();
+        cell_iter
+            .filter(|_| alpha > lcg.gen_f32())
+            .for_each(|(_, c)| { c.set_char(' '); });
     }
 
     fn done(&self) -> bool {

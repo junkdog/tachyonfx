@@ -19,7 +19,7 @@ pub mod widget;
 mod bounding_box;
 mod buffer_renderer;
 mod cell_filter;
-
+mod simple_rng;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
@@ -32,4 +32,5 @@ pub use render_effect::EffectRenderer;
 pub use shader::Shader;
 pub use interpolation::*;
 pub use buffer_renderer::{BufferRenderer, blit_buffer, render_as_ansi_string};
+pub use simple_rng::*;
 

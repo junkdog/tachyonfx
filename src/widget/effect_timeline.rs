@@ -518,8 +518,8 @@ mod tests {
             // window borders
             parallel(&[
                 sequence(&[
-                    with_duration(short * time_scale, never_complete(fx::dissolve(1, 0))),
-                    fx::coalesce(111, (duration, BounceOut)),
+                    with_duration(short * time_scale, never_complete(fx::dissolve(0))),
+                    fx::coalesce((duration, BounceOut)),
                 ]),
                 fx::fade_from(gray, gray, duration * time_scale)
             ]).with_cell_selection(border_decorations),
@@ -533,17 +533,17 @@ mod tests {
             // content area
             sequence(&[
                 with_duration(Duration::from_millis(270) * time_scale, parallel(&[
-                    never_complete(fx::dissolve(1, 0)), // hiding icons/emoji
+                    never_complete(fx::dissolve(0)), // hiding icons/emoji
                     never_complete(fx::fade_to(bg, bg, 0)),
                 ])),
                 parallel(&[
-                    fx::coalesce(111, Duration::from_millis(220) * time_scale),
+                    fx::coalesce(Duration::from_millis(220) * time_scale),
                     fx::fade_from(bg, bg, (250 * time_scale, QuadOut))
                 ]),
                 fx::sleep(3000),
                 parallel(&[
                     fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
-                    fx::dissolve(111, (Duration::from_millis(220) * time_scale, ElasticOut)),
+                    fx::dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
                 ]),
             ]).with_cell_selection(Inner(margin)),
         ]))
