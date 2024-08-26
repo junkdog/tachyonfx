@@ -91,12 +91,12 @@ fx::sweep_in(Direction::UpToDown, 15, Dark0, timer)
 ```rust
 // apply effect to cells on the outer border of the area
 let margin = Margin::new(1, 1);
-let border_text = CellFilter::AllOf(vec![
+let border_text = CellFilter::AllOf(&[
     CellFilter::Outer(margin),
     CellFilter::Text
 ]);
 
-sequence(vec![
+sequence(&[
     with_duration(duration, never_complete(fx::fade_to(Dark0, Dark0, 0))),
     fx::fade_from(Dark0, Dark0, (320, QuadOut)),
 ]).with_cell_selection(border_text)
