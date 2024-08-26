@@ -1,3 +1,4 @@
+use bon::{bon, builder};
 use crate::widget::effect_span::effect_span_tree;
 use crate::widget::{CellFilterRegistry, ColorRegistry, EffectSpan};
 use crate::{CellFilter, Effect, HslConvertable, Shader};
@@ -5,11 +6,13 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::Widget;
+use ratatui::widgets::{Block, Widget};
 use std::fs::File;
 use std::io::Write;
+use std::ops::Range;
 use std::time::Duration;
 use crate::widget::area_registry::AreaRegistry;
+use crate::widget::color_registry::color_registry;
 
 /// A widget that visualizes the timeline of effects in a `tachyonfx` Effect.
 ///
@@ -22,9 +25,73 @@ pub struct EffectTimeline {
     color_resolver: ColorRegistry,
     area_resolver: AreaRegistry,
     cell_filter_resolver: CellFilterRegistry,
+    chart_style: Style,
+    interval_style: Style,
+    area_column_style: Style,
+    area_legend_style: Style,
+    cell_filter_column_style: Style,
+    cell_filter_legend_style: Style,
 }
 
+#[bon]
 impl EffectTimeline {
+
+    #[builder(finish_fn = build)]
+    pub fn builder(
+        effect: &Effect,
+
+        #[builder(default = 0.0..360.0)]
+        hue: Range<f64>,
+
+        #[builder(default = 59.0)]
+        saturation: f64,
+
+        #[builder(default = 52.0)]
+        lightness: f64,
+
+        #[builder(default = Style::default().fg(Color::DarkGray))]
+        interval_style: Style,
+
+        #[builder(default = Style::default().bg(Color::Black))]
+        chart_style: Style,
+
+        #[builder(default = Style::default().fg(Color::from_hsl(40.0, 20.0, 35.0)))]
+        area_column_style: Style,
+
+        #[builder(default = Style::default().fg(Color::from_hsl(40.0, 40.0, 47.0)))]
+        area_legend_style: Style,
+
+        #[builder(default = Style::default().fg(Color::from_hsl(170.0, 20.0, 35.0)))]
+        cell_filter_column_style: Style,
+
+        #[builder(default = Style::default().fg(Color::from_hsl(170.0, 40.0, 47.0)))]
+        cell_filter_legend_style: Style,
+    ) -> Self {
+        let span = effect.as_effect_span(Duration::default());
+        let color_resolver = color_registry()
+            .root_span(&span)
+            .hue(hue)
+            .saturation(saturation)
+            .lightness(lightness)
+            .call();
+
+        let area_resolver = AreaRegistry::from(&span);
+        let cell_filter_resolver = CellFilterRegistry::from(&span);
+
+        Self {
+            span,
+            color_resolver,
+            area_resolver,
+            cell_filter_resolver,
+            interval_style,
+            area_column_style,
+            area_legend_style,
+            cell_filter_column_style,
+            chart_style,
+            cell_filter_legend_style,
+        }
+    }
+
     /// Creates a new `EffectTimeline` from an `Effect`.
     ///
     /// This method analyzes the given effect and constructs a timeline representation.
@@ -36,20 +103,24 @@ impl EffectTimeline {
     /// # Returns
     ///
     /// A new `EffectTimeline` instance.
+    /// Creates a new `EffectTimeline` from an `Effect`.
+    ///
+    /// This method analyzes the given effect and constructs a timeline representation.
+    ///
+    /// # Arguments
+    ///
+    /// * `effect` - A reference to the `Effect` to visualize.
+    ///
+    /// # Returns
+    ///
+    /// A new `EffectTimeline` instance.
+    #[deprecated(note = "Use `EffectTimeline::builder()` instead.")]
     pub fn from(
         effect: &Effect,
     ) -> EffectTimeline {
-        let span = effect.as_effect_span(Duration::default());
-        let color_resolver = ColorRegistry::from(&span);
-        let area_resolver = AreaRegistry::from(&span);
-        let cell_filter_resolver = CellFilterRegistry::from(&span);
-
-        Self {
-            span,
-            color_resolver,
-            area_resolver,
-            cell_filter_resolver,
-        }
+        Self::builder()
+            .effect(effect)
+            .build()
     }
 
     /// Renders the EffectTimeline to a file as an ANSI-encoded string.
@@ -74,7 +145,7 @@ impl EffectTimeline {
     /// ```no_compile
     /// use tachyonfx::widget::EffectTimeline;
     ///
-    /// let timeline = EffectTimeline::from(&effect);
+    /// let timeline = EffectTimeline::builder().effect(&effect).build();
     /// timeline.save_to_file("effect_timeline.txt", 100)?;
     /// ```
     pub fn save_to_file(self, path: &str, width: u16) -> std::io::Result<()> {
@@ -130,7 +201,7 @@ impl EffectTimeline {
 
     fn render_timeline_intervals(&self, root: &EffectSpan, chart_row: Rect, buf: &mut Buffer) {
         let scale = chart_row.width as f32 / self.span.end;
-        let style = Style::default().fg(Color::DarkGray);
+        let style = self.interval_style;
 
         let n = (1 + chart_row.width / 25).max(2);
         let spans: Vec<Span> = (0..n)
@@ -168,11 +239,11 @@ impl EffectTimeline {
         area: Rect,
         buf: &mut Buffer
     ) {
-        let fg = cell_filter_colors()[0];
+        let style = self.cell_filter_column_style;
         for (filter, row) in cell_filters.iter().zip(area.rows()) {
             let s = self.cell_filter_resolver.id_of(filter);
             Line::from(s)
-                .style(Style::default().fg(fg))
+                .style(style)
                 .render(row, buf);
         }
     }
@@ -183,11 +254,11 @@ impl EffectTimeline {
         area: Rect,
         buf: &mut Buffer
     ) {
+        let style = self.area_column_style;
         for (a, row) in areas.into_iter().zip(area.rows()) {
             let s = self.area_resolver.id_of(a);
-            let fg = area_colors()[0];
             Line::from(s)
-                .style(Style::default().fg(fg))
+                .style(style)
                 .render(row, buf);
         }
     }
@@ -197,7 +268,8 @@ impl EffectTimeline {
         area: Rect,
         buf: &mut Buffer
     ) {
-        let colors = cell_filter_colors();
+        let col_style = self.cell_filter_column_style;
+        let legend_style = self.cell_filter_legend_style;
 
         self.cell_filter_resolver.entries()
             .iter()
@@ -206,12 +278,12 @@ impl EffectTimeline {
                 let mut row = row;
 
                 Span::from(id)
-                    .style(Style::default().fg(colors[0]))
+                    .style(col_style)
                     .render(row, buf);
 
                 row.x += 6;
                 Span::from(filter)
-                    .style(Style::default().fg(colors[1]))
+                    .style(legend_style)
                     .render(row, buf);
             });
     }
@@ -221,7 +293,8 @@ impl EffectTimeline {
         area: Rect,
         buf: &mut Buffer
     ) {
-        let colors = area_colors();
+        let col_style = self.area_column_style;
+        let legend_style = self.area_legend_style;
 
         self.area_resolver.entries()
             .iter()
@@ -230,12 +303,12 @@ impl EffectTimeline {
                 let mut row = row;
 
                 Span::from(id)
-                    .style(Style::default().fg(colors[0]))
+                    .style(col_style)
                     .render(row, buf);
 
                 row.x += 4;
                 Span::from(format!("{:}", a))
-                    .style(Style::default().fg(colors[1]))
+                    .style(legend_style)
                     .render(row, buf);
             });
     }
@@ -266,7 +339,7 @@ impl EffectTimeline {
                 bar_area.width = bar.chars().count() as u16;
 
                 Line::from(bar.as_str())
-                    .style(Style::default().fg(c))
+                    .style(self.chart_style.fg(c))
                     .render(bar_area, buf);
 
                 // draw background bars (area)
@@ -280,7 +353,7 @@ impl EffectTimeline {
                         if child_span.is_leaf {
                             let divider = "▁".repeat(chart_area.width as usize);
                             Line::from(divider)
-                                .style(Style::new().fg(c))
+                                .style(self.chart_style.fg(c))
                                 .render(chart_rows[i + offset], buf);
                         }
 
@@ -375,20 +448,6 @@ impl EffectTimeline {
     }
 }
 
-fn cell_filter_colors() -> [Color; 2] {
-    [
-        Color::from_hsl(170.0, 20.0, 35.0),
-        Color::from_hsl(170.0, 40.0, 47.0),
-    ]
-}
-
-fn area_colors() -> [Color; 2] {
-    [
-        Color::from_hsl(40.0, 20.0, 35.0),
-        Color::from_hsl(40.0, 40.0, 47.0),
-    ]
-}
-
 const LEGEND_PADDING: u16 = 5;
 
 impl Widget for EffectTimeline {
@@ -400,7 +459,6 @@ impl Widget for EffectTimeline {
         let layout = self.layout(area);
         let row_count = layout.chart.height;
 
-        // fx labels: hsl: 0..360, 59, 52
         let flattened_effect_count = tree.iter().count() as u16;
 
         // labels
@@ -422,6 +480,10 @@ impl Widget for EffectTimeline {
         self.render_areas_column(areas, layout.areas, buf);
 
         // chart
+        Block::new()
+            .style(self.chart_style)
+            .render(layout.chart, buf);
+
         self.render_chart(layout.chart, buf);
         self.render_timeline_intervals(&self.span, layout.time_intervals(), buf);
 
@@ -559,7 +621,7 @@ mod tests {
             fx::sweep_in(Direction::DownToUp, 5, bg, (2000, QuadOut)),
         ]);
 
-        let timeline = EffectTimeline::from(&fx);
+        let timeline = EffectTimeline::builder().effect(&fx).build();
         let area = Rect::new(0, 0, 40, 8);
         let mut buf = Buffer::empty(area);
         timeline.render(area, &mut buf);
@@ -596,7 +658,7 @@ mod tests {
             ]).with_cell_selection(content_area),
         );
 
-        let timeline = EffectTimeline::from(&fx);
+        let timeline = EffectTimeline::builder().effect(&fx).build();
         let area = Rect::new(0, 0, 80, 15);
         let mut buf = Buffer::empty(area);
         timeline.render(area, &mut buf);
@@ -633,7 +695,10 @@ mod tests {
     #[test]
     fn print_widget_to_stdout() {
         let fx = example_complex_fx();
-        let timeline = EffectTimeline::from(&fx);
+        let timeline = EffectTimeline::builder()
+            .effect(&fx)
+            .chart_style(Style::default().bg(Color::Red))
+            .build();
         let area = Rect::new(0, 0, 100, 35);
 
         timeline.clone().save_to_file("effect_timeline.txt", 110).unwrap();
