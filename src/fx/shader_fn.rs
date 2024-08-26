@@ -15,7 +15,10 @@ pub struct ShaderFn<S: Clone> {
     original_state: Option<S>,
     name: &'static str,
     code: ShaderFnSignature<S>,
+
+    #[builder(into)]
     timer: EffectTimer,
+
     cell_filter: Option<CellFilter>,
     area: Option<Rect>,
 }
@@ -177,4 +180,3 @@ impl<S: Clone + 'static> Shader for ShaderFn<S> {
         self.state = self.original_state.as_ref().unwrap().clone();
     }
 }
-

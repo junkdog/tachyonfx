@@ -1,4 +1,4 @@
-use bon::{bon, builder};
+use bon::bon;
 use crate::widget::effect_span::effect_span_tree;
 use crate::widget::{CellFilterRegistry, ColorResolver, EffectSpan};
 use crate::{CellFilter, Effect, HslConvertable, Shader};
