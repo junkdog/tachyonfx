@@ -127,6 +127,7 @@ pub fn render_as_ansi_string(buffer: &Buffer) -> String {
             }
             s.push_str(cell.symbol());
         }
+        s.push_str("\x1b[0m");
         s.push_str("\n");
     }
     s.push_str("\x1b[0m"); // reset

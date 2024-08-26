@@ -81,7 +81,9 @@ impl App {
         let area = self.aux_buffer.borrow().area;
         let fx = transition_fx(area, self.sender.clone(), effect_in(idx, areas));
 
-        EffectTimeline::from(&fx)
+        EffectTimeline::builder()
+            .effect(&fx)
+            .build()
     }
 
     fn inspected_transition_effect(&self) -> Effect {
@@ -100,7 +102,9 @@ impl App {
             .style(Style::default().bg(Color::Black))
             .render(buf.area, &mut buf);
 
-        EffectTimeline::from(&effect)
+        EffectTimeline::builder()
+            .effect(&effect)
+            .build()
             .render(buf.area, &mut buf);
     }
 
