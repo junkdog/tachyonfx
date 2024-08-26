@@ -1,6 +1,6 @@
 use bon::{bon, builder};
 use crate::widget::effect_span::effect_span_tree;
-use crate::widget::{CellFilterRegistry, ColorRegistry, EffectSpan};
+use crate::widget::{CellFilterRegistry, ColorResolver, EffectSpan};
 use crate::{CellFilter, Effect, HslConvertable, Shader};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Position, Rect};
@@ -12,7 +12,7 @@ use std::io::Write;
 use std::ops::Range;
 use std::time::Duration;
 use crate::widget::area_registry::AreaRegistry;
-use crate::widget::color_registry::color_registry;
+use crate::widget::color_resolver::color_registry;
 
 /// A widget that visualizes the timeline of effects in a `tachyonfx` Effect.
 ///
@@ -22,7 +22,7 @@ use crate::widget::color_registry::color_registry;
 #[derive(Clone)]
 pub struct EffectTimeline {
     span: EffectSpan,
-    color_resolver: ColorRegistry,
+    color_resolver: ColorResolver,
     area_resolver: AreaRegistry,
     cell_filter_resolver: CellFilterRegistry,
     chart_style: Style,
@@ -208,9 +208,7 @@ impl EffectTimeline {
             .map(|i| i as f32 * self.span.end / n as f32)
             .map(Duration::from_secs_f32)
             .map(|d| format!("{:?}ms", d.as_millis()))
-            .map(|s| {
-                Span::from(s).style(style)
-            })
+            .map(|s| Span::from(s).style(style))
             .collect();
 
         spans.iter().enumerate().for_each(|(i, span)| {

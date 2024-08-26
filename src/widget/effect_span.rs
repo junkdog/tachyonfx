@@ -4,18 +4,18 @@ use ratatui::layout::Rect;
 use ratatui::prelude::Line;
 use ratatui::style::Style;
 use ratatui::text::Span;
-use crate::widget::ColorRegistry;
+use crate::widget::ColorResolver;
 use crate::{CellFilter, Shader};
 
 pub(crate) fn effect_span_tree<'a>(
-    colorizer: &ColorRegistry,
+    colorizer: &ColorResolver,
     span: &EffectSpan
 ) -> Vec<Line<'a>> {
     build_effect_span_tree(colorizer, span, Vec::new(), 0, span.is_leaf)
 }
 
 fn build_effect_span_tree<'a>(
-    colorizer: &ColorRegistry,
+    colorizer: &ColorResolver,
     span: &EffectSpan,
     indent_spans: Vec<Style>,
     indent: u128,

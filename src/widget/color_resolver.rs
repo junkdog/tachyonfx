@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 use std::ops::Range;
 
 #[derive(Clone)]
-pub(crate) struct ColorRegistry {
+pub(crate) struct ColorResolver {
     effect_to_color: Vec<(String, Color)>,
 }
 
@@ -16,11 +16,11 @@ pub(crate) fn color_registry(
     hue: Range<f64>,
     saturation: f64,
     lightness: f64,
-) -> ColorRegistry {
-    ColorRegistry::from(root_span, hue, saturation, lightness)
+) -> ColorResolver {
+    ColorResolver::from(root_span, hue, saturation, lightness)
 }
 
-impl ColorRegistry {
+impl ColorResolver {
     fn from(
         root_span: &EffectSpan,
         hue: Range<f64>,
