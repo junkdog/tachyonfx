@@ -5,9 +5,61 @@ use std::time::SystemTime;
 ///
 /// This RNG is fast and uses minimal memory, and is definitely not suitable for
 /// cryptographic purposes or high-quality randomness.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::SimpleRng;
+///
+/// let mut rng = SimpleRng::new(12345);
+/// let random_u32 = rng.gen();
+/// let random_float = rng.gen_f32();
+/// println!("u32={} f32={}", random_u32, random_float);
+/// ```
 #[derive(Clone, Copy)]
 pub struct SimpleRng {
     state: u32,
+}
+
+impl SimpleRng {
+    const A: u32 = 1664525;
+    const C: u32 = 1013904223;
+
+    pub fn new(seed: u32) -> Self {
+        SimpleRng { state: seed }
+    }
+
+    /// Generates the next pseudo-random u32 value.
+    ///
+    /// This method updates the internal state and returns the new value.
+    ///
+    /// # Returns
+    ///
+    /// A pseudo-random u32 value.
+    pub fn gen(&mut self) -> u32 {
+        self.state = self.state.wrapping_mul(Self::A).wrapping_add(Self::C);
+        self.state
+    }
+
+    /// Generates a pseudo-random f32 value in the range [0, 1).
+    ///
+    /// This method uses bit manipulation for efficiency, generating
+    /// uniformly distributed float values.
+    ///
+    /// # Returns
+    ///
+    /// A pseudo-random f32 value in the range [0, 1).
+    pub fn gen_f32(&mut self) -> f32 {
+        const EXPONENT: u32 = 0x3f800000; // 1.0f32
+        let mantissa = self.gen() >> 9;   // 23 bits of randomness
+
+        f32::from_bits(EXPONENT | mantissa) - 1.0
+    }
+
+    fn gen_usize(&mut self) -> usize {
+        let mut g = || self.gen() as usize;
+        g() << 32 | g()
+    }
 }
 
 impl Default for SimpleRng {
@@ -20,31 +72,6 @@ impl Default for SimpleRng {
         SimpleRng::new(seed)
     }
 }
-
-impl SimpleRng {
-    const A: u32 = 1664525;
-    const C: u32 = 1013904223;
-
-    pub fn new(seed: u32) -> Self {
-        SimpleRng { state: seed }
-    }
-
-    pub fn gen(&mut self) -> u32 {
-        self.state = self.state.wrapping_mul(Self::A).wrapping_add(Self::C);
-        self.state
-    }
-
-    pub fn gen_f32(&mut self) -> f32 {
-        let value = self.gen() >> 8;
-        value as f32 / (1 << 24) as f32
-    }
-
-    fn gen_usize(&mut self) -> usize {
-        let mut g = || self.gen() as usize;
-        g() << 32 | g()
-    }
-}
-
 
 pub trait RangeSampler<T> {
     fn gen_range(&mut self, range: Range<T>) -> T;
