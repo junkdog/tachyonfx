@@ -12,7 +12,6 @@ use crate::{CellFilter, CellIterator, EffectTimer, Shader};
 #[builder]
 pub struct ShaderFn<S: Clone> {
     state: S,
-    #[builder(skip)]
     original_state: Option<S>,
     name: &'static str,
     code: ShaderFnSignature<S>,

@@ -8,6 +8,9 @@
 - `fx::dissolve`, `fx::coalesce`: removed `cycle_len` parameter, as cell visibility is recalculated on the fly.
 - `fx::sequence`, `fx::parallel`: now parameterized with `&[Effect]` instead of `Vec<Effect>`.
 
+### Deprecated
+- `EffectTimeline::from` is deprecated in favor of `EffectTimeline::builder`. 
+
 ## tachyonfx 0.5.0 - 2024-08-21
 
 ![effect-timeline-widget](images/effect-timeline-widget.png)
