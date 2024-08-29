@@ -43,10 +43,10 @@ impl EffectTimeline {
         #[builder(default = 0.0..360.0)]
         hue: Range<f64>,
 
-        #[builder(default = 59.0)]
+        #[builder(default = 52.0)]
         saturation: f64,
 
-        #[builder(default = 52.0)]
+        #[builder(default = 62.0)]
         lightness: f64,
 
         #[builder(default = Style::default().fg(Color::DarkGray))]
