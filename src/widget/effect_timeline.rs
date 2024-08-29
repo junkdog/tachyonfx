@@ -695,7 +695,6 @@ mod tests {
         let fx = example_complex_fx();
         let timeline = EffectTimeline::builder()
             .effect(&fx)
-            .chart_style(Style::default().bg(Color::Red))
             .build();
         let area = Rect::new(0, 0, 100, 35);
 
