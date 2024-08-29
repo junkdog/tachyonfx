@@ -129,6 +129,10 @@ pub fn render_as_ansi_string(buffer: &Buffer) -> String {
         }
         s.push_str("\x1b[0m");
         s.push_str("\n");
+
+        // need to reset the style at the end of each line,
+        // so that the style correctly carries over to the next line
+        style = Style::default();
     }
     s
 }
