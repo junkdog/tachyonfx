@@ -12,6 +12,7 @@ use crate::{CellFilter, CellIterator, Interpolatable};
 pub struct FadeColors {
     fg: Option<Color>,
     bg: Option<Color>,
+    #[builder(into)]
     timer: EffectTimer,
     area: Option<Rect>,
     #[builder(default)]

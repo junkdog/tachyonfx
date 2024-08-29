@@ -24,7 +24,7 @@ pub struct ShaderFn<S: Clone> {
 }
 
 #[derive(Clone)]
-pub(super) enum ShaderFnSignature<S> {
+pub enum ShaderFnSignature<S> {
     Iter(Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, CellIterator)>>),
     Buffer(Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, &mut Buffer)>>),
 }

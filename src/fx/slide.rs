@@ -17,6 +17,7 @@ pub struct SlideCell {
     /// The length of the gradient used for the sliding effect.
     gradient_length: u16,
     /// The timer controlling the duration and progress of the effect.
+    #[builder(into)]
     timer: EffectTimer,
     /// The area within which the effect is applied.
     area: Option<Rect>,

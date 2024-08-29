@@ -12,7 +12,7 @@ use crate::shader::Shader;
 
 /// Type of glitch transformation to apply to a cell.
 #[derive(Clone, Debug)]
-enum GlitchType {
+pub enum GlitchType { // fixme: make non-public again
     ChangeCase,
     ChangeCharByValue(i8),
 }

@@ -13,7 +13,7 @@ categories = ["command-line-interface"]
 authors = ["Adrian Papari <junkdog@angelhill.net>"]
 
 [dependencies]
-bon = { git = "https://github.com/elastio/bon" }
+bon = "2.0.1"
 colorsys = "0.6.7"
 ratatui = "0.28.0"
 simple-easing = "1.0.1"
