@@ -27,10 +27,6 @@ pub struct SlideCell {
 }
 
 impl SlideCell {
-    // pub fn builder() -> SlideCellBuilder {
-    //     SlideCellBuilder::default()
-    // }
-
     fn slided_cell(&self, alpha: f32) -> char {
         let alpha = alpha.clamp(0.0, 1.0);
         let char_idx = (LAST_IDX as f32 * alpha).round() as usize;
