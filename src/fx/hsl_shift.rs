@@ -10,6 +10,7 @@ use crate::{CellIterator, ColorMapper, HslConvertable, Interpolatable};
 #[derive(Clone, Default)]
 #[builder]
 pub struct HslShift {
+    #[builder(into)]
     timer: EffectTimer,
     hsl_mod_fg: Option<[f32; 3]>,
     hsl_mod_bg: Option<[f32; 3]>,
