@@ -692,31 +692,16 @@ fn fade<C: Into<Color>>(
     timer: EffectTimer,
     reverse: bool,
 ) -> Effect {
-    match (fg, bg) {
-        (Some(fg), Some(bg)) => {
-            FadeColors::builder()
-                .fg(fg.into())
-                .bg(bg.into())
-                .timer(if reverse { timer.reversed() } else { timer })
-                .build()
-                .into_effect()
-        }
-        (Some(fg), None) => {
-            FadeColors::builder()
-                .fg(fg.into())
-                .timer(if reverse { timer.reversed() } else { timer })
-                .build()
-                .into_effect()
-        }
-        (None, Some(bg)) => {
-            FadeColors::builder()
-                .bg(bg.into())
-                .timer(if reverse { timer.reversed() } else { timer })
-                .build()
-                .into_effect()
-        }
-        (None, None) => panic!("At least one of fg or bg must be provided"),
+    if fg.is_none() && bg.is_none() {
+        panic!("At least one of fg or bg must be provided");
     }
+
+    FadeColors::builder()
+        .maybe_fg(fg.map(Into::into))
+        .maybe_bg(bg.map(Into::into))
+        .timer(if reverse { timer.reversed() } else { timer })
+        .build()
+        .into_effect()
 }
 
 #[cfg(test)]
