@@ -6,7 +6,7 @@ use Interpolation::CircOut;
 use crate::{CellIterator, ColorMapper};
 use crate::CellFilter;
 use crate::effect_timer::EffectTimer;
-use crate::fx::moving_window::{horizontal_gradient, vertical_gradient, window_alpha_fn};
+use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
 use crate::interpolation::{Interpolatable, Interpolation};
 use crate::shader::Shader;
 
@@ -72,20 +72,19 @@ impl Shader for SweepIn {
 
     fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {
         let direction = self.direction;
-        let gradient = match direction {
-            Direction::LeftToRight | Direction::RightToLeft =>
-                horizontal_gradient(area, alpha, self.gradient_length),
-            Direction::UpToDown | Direction::DownToUp =>
-                vertical_gradient(area, alpha, self.gradient_length),
-        };
 
-        let window_alpha = window_alpha_fn(direction, gradient);
+        let window_alpha = SlidingWindowAlpha::builder()
+            .direction(direction)
+            .progress(alpha)
+            .area(area)
+            .gradient_len(self.gradient_length)
+            .build();
 
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
 
         cell_iter.for_each(|(pos, cell)| {
-            match window_alpha(pos) {
+            match window_alpha.alpha(pos) {
                 0.0 => {
                     cell.set_fg(self.faded_color);
                     cell.set_bg(self.faded_color);

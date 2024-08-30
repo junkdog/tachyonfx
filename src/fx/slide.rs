@@ -2,7 +2,7 @@ use bon::builder;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 
-use crate::fx::moving_window::{horizontal_gradient, vertical_gradient, window_alpha_fn};
+use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
 use crate::fx::Direction;
 use crate::{CellFilter, CellIterator, EffectTimer, Shader};
 
@@ -50,16 +50,15 @@ impl Shader for SlideCell {
     fn execute(&mut self, alpha: f32, area: Rect, cells: CellIterator) {
         let direction = self.direction;
 
-        let gradient = match direction {
-            Direction::LeftToRight | Direction::RightToLeft =>
-                horizontal_gradient(area, alpha, self.gradient_length),
-            Direction::UpToDown | Direction::DownToUp =>
-                vertical_gradient(area, alpha, self.gradient_length),
-        };
-        let window_alpha = window_alpha_fn(direction, gradient);
+        let window_alpha = SlidingWindowAlpha::builder()
+            .direction(direction)
+            .progress(alpha)
+            .area(area)
+            .gradient_len(self.gradient_length)
+            .build();
 
         cells.for_each(|(pos, cell)| {
-            match window_alpha(pos) {
+            match window_alpha.alpha(pos) {
                 0.0 => {},
                 1.0 => {
                     cell.set_char(' ');
