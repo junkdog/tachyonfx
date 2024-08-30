@@ -47,7 +47,7 @@ mod translate_buffer;
 mod hsl_shift;
 mod shader_fn;
 mod slide;
-mod moving_window;
+mod sliding_window_alpha;
 mod offscreen_buffer;
 mod prolong;
 
