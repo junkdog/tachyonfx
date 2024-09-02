@@ -1,30 +1,29 @@
-use std::{io, panic};
 use std::error::Error;
 use std::io::Stdout;
 use std::time::Instant;
+use std::io;
 
-use crossterm::{event, execute};
-use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
+use crossterm::event;
 use ratatui::backend::CrosstermBackend;
-use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Margin};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Clear, Widget};
+use ratatui::Frame;
 
-use Gruvbox::{Light3, Orange, OrangeBright};
-use Interpolation::*;
-use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, IntoEffect, fx::{
+use crate::gruvbox::Gruvbox;
+use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
+use tachyonfx::{fx::{
     self,
-    Direction,
-    Glitch,
     never_complete,
     parallel,
     sequence,
-}, Interpolation, Shader, SimpleRng, Duration};
-use crate::gruvbox::Gruvbox;
-use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
+    Direction,
+    Glitch,
+}, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect, Shader, SimpleRng};
+use Gruvbox::{Light3, Orange, OrangeBright};
+use Interpolation::*;
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
@@ -53,7 +52,7 @@ impl App {
 }
 
 fn main() -> Result<()> {
-    let mut terminal = setup_terminal()?;
+    let mut terminal = ratatui::init();
 
     // create app and run it
     let effects = EffectsRepository::new();
@@ -61,13 +60,7 @@ fn main() -> Result<()> {
     let res = run_app(&mut terminal, app, effects);
 
     // restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    ratatui::restore();
 
     if let Err(err) = res {
         println!("{err:?}");
@@ -288,27 +281,4 @@ impl EffectsRepository {
     fn len(&self) -> usize {
         self.effects.len()
     }
-}
-
-fn setup_terminal() -> Result<Terminal> {
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = ratatui::Terminal::new(backend)?;
-    terminal.hide_cursor()?;
-
-    let panic_hook = panic::take_hook();
-    panic::set_hook(Box::new(move |panic| {
-        let _ = disable_raw_mode();
-        let _ = execute!(
-            io::stderr(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        );
-
-        panic_hook(panic);
-    }));
-
-    Ok(terminal)
 }

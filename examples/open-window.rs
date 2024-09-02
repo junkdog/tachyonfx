@@ -1,23 +1,22 @@
-use std::{io, panic, vec};
 use std::error::Error;
 use std::io::Stdout;
+use std::{io, vec};
 
-use crossterm::{event, execute};
-use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use ratatui::{Frame, text};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
+use crossterm::event;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Margin, Rect, Size};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Borders, BorderType, Clear, StatefulWidget, Widget};
+use ratatui::widgets::{BorderType, Borders, Clear, StatefulWidget, Widget};
+use ratatui::{text, Frame};
 
+use tachyonfx::fx::{never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration, Direction};
+use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer};
+use tachyonfx::{fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, Shader};
 use CellFilter::Text;
 use Interpolation::*;
-use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, fx, Interpolation, Shader, Duration};
-use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer};
-use tachyonfx::fx::{Direction, never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration};
 
 use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Light2, YellowBright};
 use crate::window::OpenWindow;
@@ -78,20 +77,14 @@ impl App {
 }
 
 fn main() -> Result<()> {
-    let mut terminal = setup_terminal()?;
+    let mut terminal = ratatui::init();
 
     // create app and run it
     let app = App::new();
     let res = run_app(&mut terminal, app);
 
     // restore terminal
-    let _ = disable_raw_mode().expect("failed to disable raw mode");
-    let _ = execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    ).expect("failed to leave alternate screen");
-    terminal.show_cursor()?;
+    ratatui::restore();
 
     if let Err(err) = res {
         println!("{err:?}");
@@ -313,27 +306,4 @@ impl StatefulWidget for HelloWorldPopup {
         state.text.clone().render(content_area, buf);
         state.window_fx.processing_content_fx(self.last_tick, buf, content_area);
     }
-}
-
-fn setup_terminal() -> Result<Terminal> {
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-    terminal.hide_cursor()?;
-
-    let panic_hook = panic::take_hook();
-    panic::set_hook(Box::new(move |panic| {
-        let _ = disable_raw_mode();
-        let _ = execute!(
-            io::stderr(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        );
-
-        panic_hook(panic);
-    }));
-
-    Ok(terminal)
 }

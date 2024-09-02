@@ -17,6 +17,7 @@
 ### Deprecated
 - `EffectTimeline::from` is deprecated in favor of `EffectTimeline::builder`. 
 
+
 ## tachyonfx 0.5.0 - 2024-08-21
 
 ![effect-timeline-widget](images/effect-timeline-widget.png)
