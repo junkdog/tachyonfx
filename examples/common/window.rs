@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bon::builder;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -8,7 +6,7 @@ use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, BorderType};
 use ratatui::widgets::Widget;
 
-use tachyonfx::{CellFilter, CellIterator, Effect, EffectTimer, Shader};
+use tachyonfx::{CellFilter, CellIterator, Duration, Effect, EffectTimer, Shader};
 
 #[derive(Clone)]
 #[builder]

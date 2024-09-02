@@ -1,5 +1,5 @@
 use std::ops::Mul;
-use std::time::Duration;
+use crate::Duration;
 use crate::interpolation::Interpolation;
 
 /// A struct for managing the timing and interpolation of effects.
@@ -39,7 +39,7 @@ impl EffectTimer {
         duration: u32,
         interpolation: Interpolation,
     ) -> Self {
-        Self::new(Duration::from_millis(duration as u64), interpolation)
+        Self::new(Duration::from_millis(duration as _), interpolation)
     }
 
     /// Creates a new `EffectTimer` with the specified duration and interpolation method.
@@ -53,9 +53,8 @@ impl EffectTimer {
     ///
     /// # Example
     /// ```
-    /// use std::time::Duration;
-    /// use tachyonfx::{EffectTimer, Interpolation};
-    /// let timer = EffectTimer::new(Duration::from_secs(1), Interpolation::Linear);
+    /// use tachyonfx::{Duration, EffectTimer, Interpolation};
+    /// let timer = EffectTimer::new(Duration::from_millis(500), Interpolation::Linear);
     /// ```
     pub fn new(
         duration: Duration,
@@ -152,8 +151,7 @@ impl EffectTimer {
     ///
     /// # Example
     /// ```
-    /// use std::time::Duration;
-    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// use tachyonfx::{Duration, EffectTimer, Interpolation};
     /// let mut timer = EffectTimer::from_ms(1000, Interpolation::Linear);
     /// let overflow = timer.process(Duration::from_millis(500));
     /// assert!(overflow.is_none());
@@ -187,13 +185,13 @@ impl EffectTimer {
 
 impl From<u32> for EffectTimer {
     fn from(ms: u32) -> Self {
-        EffectTimer::new(Duration::from_millis(ms as u64), Interpolation::Linear)
+        EffectTimer::new(Duration::from_millis(ms as _), Interpolation::Linear)
     }
 }
 
 impl From<(u32, Interpolation)> for EffectTimer {
     fn from((ms, algo): (u32, Interpolation)) -> Self {
-        EffectTimer::new(Duration::from_millis(ms as u64), algo)
+        EffectTimer::new(Duration::from_millis(ms as _), algo)
     }
 }
 

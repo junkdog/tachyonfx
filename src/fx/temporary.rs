@@ -1,7 +1,6 @@
-use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::{CellFilter, CellIterator};
+use crate::{CellFilter, CellIterator, Duration};
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::widget::EffectSpan;

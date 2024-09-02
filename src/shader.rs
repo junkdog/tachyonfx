@@ -1,10 +1,9 @@
 use crate::cell_iter::CellIterator;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use std::time::Duration;
 
 use crate::widget::EffectSpan;
-use crate::CellFilter;
+use crate::{CellFilter, Duration};
 use crate::EffectTimer;
 
 /// A trait representing a shader-like object that can be processed for a duration.

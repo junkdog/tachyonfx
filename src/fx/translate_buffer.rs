@@ -1,11 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
-
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Rect};
 
-use crate::{BufferRenderer, CellFilter, CellIterator, EffectTimer, Interpolatable, Shader};
+use crate::{BufferRenderer, CellFilter, CellIterator, Duration, EffectTimer, Interpolatable, Shader};
 
 /// Translates the contents of an auxiliary buffer onto the main buffer.
 ///
@@ -142,7 +140,7 @@ mod tests {
 
         let mut buf = Buffer::empty(screen);
 
-        fx.process(Duration::from_millis(percent as u64), &mut buf, content);
+        fx.process(Duration::from_millis(percent as _), &mut buf, content);
 
         assert_eq!(buf, expected)
     }

@@ -1,9 +1,7 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use std::time::Duration;
-
-use crate::{CellFilter, CellIterator, Effect, EffectTimer, Shader};
+use crate::{CellFilter, CellIterator, Duration, Effect, EffectTimer, Shader};
 use crate::widget::EffectSpan;
 
 #[derive(Clone)]

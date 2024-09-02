@@ -1,9 +1,7 @@
-use std::time::Duration;
-
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
 
-use crate::CellIterator;
+use crate::{CellIterator, Duration};
 use crate::color_ext::AsIndexedColor;
 use crate::color_mapper::ColorMapper;
 use crate::CellFilter;

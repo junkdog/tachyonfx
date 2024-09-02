@@ -1,10 +1,8 @@
-use std::time::Duration;
-
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 
 use crate::bounding_box::BoundingBox;
-use crate::{CellFilter, CellIterator};
+use crate::{CellFilter, CellIterator, Duration};
 use crate::effect::Effect;
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
@@ -156,7 +154,7 @@ mod tests {
         let mut buf = Buffer::empty(screen);
 
         let mut fx = fx.clone();
-        fx.process(Duration::from_millis(percent as u64), &mut buf, content);
+        fx.process(Duration::from_millis(percent as _), &mut buf, content);
 
         let block = Block::new()
             .borders(Borders::ALL)

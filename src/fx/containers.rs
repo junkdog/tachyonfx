@@ -1,7 +1,6 @@
-use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Rect};
-use crate::{CellFilter, CellIterator, EffectTimer};
+use crate::{CellFilter, CellIterator, Duration, EffectTimer};
 use crate::effect::Effect;
 use crate::widget::EffectSpan;
 use crate::Interpolation::Linear;
@@ -185,7 +184,7 @@ impl Shader for SequentialEffect {
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        let mut acc = Duration::from_secs(0);
+        let mut acc = Duration::ZERO;
         let children = self.effects.iter()
             .map(|e| {
                 let span = e.as_effect_span(offset + acc);

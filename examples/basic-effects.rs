@@ -1,7 +1,7 @@
 use std::{io, panic};
 use std::error::Error;
 use std::io::Stdout;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
@@ -22,7 +22,7 @@ use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, IntoEffect, 
     never_complete,
     parallel,
     sequence,
-}, Interpolation, Shader, SimpleRng};
+}, Interpolation, Shader, SimpleRng, Duration};
 use crate::gruvbox::Gruvbox;
 use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
 
@@ -32,6 +32,7 @@ mod gruvbox;
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
 
+type StdDuration = std::time::Duration;
 
 struct App {
     active_effect: (&'static str, Effect),
@@ -84,11 +85,11 @@ fn run_app(
     let mut rng = SimpleRng::default();
 
     loop {
-        app.last_tick = last_frame_instant.elapsed();
+        app.last_tick = last_frame_instant.elapsed().into();
         last_frame_instant = Instant::now();
         terminal.draw(|f| ui(f, &mut app))?;
 
-        if event::poll(Duration::from_millis(32))? {
+        if event::poll(StdDuration::from_millis(32))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
