@@ -1,25 +1,24 @@
-use std::{io, panic, vec};
 use std::error::Error;
 use std::io::Stdout;
 use std::time::Instant;
+use std::{io, panic, vec};
 
-use crossterm::{event, execute};
-use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
+use crossterm::event;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout, Margin, Rect};
 use ratatui::layout::Constraint::Ratio;
+use ratatui::layout::{Constraint, Layout, Margin, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::symbols::Marker;
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Axis, Block, Chart, Clear, Dataset, GraphType, LegendPosition, StatefulWidget, Widget};
+use ratatui::Frame;
 
+use tachyonfx::fx::{parallel, repeating, sequence, Direction};
+use tachyonfx::{fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation, Shader};
 use Gruvbox::OrangeBright;
 use Interpolation::*;
-use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, EffectTimer, fx, Interpolation, Shader, Duration};
-use tachyonfx::fx::{Direction, parallel, repeating, sequence};
 
 use crate::gruvbox::Gruvbox;
 use crate::gruvbox::Gruvbox::{Dark0, Dark1, Light2};
@@ -71,20 +70,14 @@ impl App {
 }
 
 fn main() -> Result<()> {
-    let mut terminal = setup_terminal()?;
+    let mut terminal = ratatui::init();
 
     // create app and run it
     let app = App::new();
     let res = run_app(&mut terminal, app);
 
     // restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    ratatui::restore();
 
     if let Err(err) = res {
         println!("{err:?}");
@@ -189,30 +182,6 @@ fn render_shortcuts(app: &mut App, f: &mut Frame, area: Rect) {
     let content_area = area.inner_centered(line.width() as u16, 1);
     line.render(content_area, f.buffer_mut());
     f.render_effect(&mut app.shortcut_fx, content_area, app.last_tick)
-}
-
-
-fn setup_terminal() -> Result<Terminal> {
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = ratatui::Terminal::new(backend)?;
-    terminal.hide_cursor()?;
-
-    let panic_hook = panic::take_hook();
-    panic::set_hook(Box::new(move |panic| {
-        disable_raw_mode().expect("failed to disable raw mode");
-        execute!(
-            io::stderr(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        ).expect("failed to reset the terminal");
-
-        panic_hook(panic);
-    }));
-
-    Ok(terminal)
 }
 
 struct InterpolationWidget {

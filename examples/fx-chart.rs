@@ -1,10 +1,11 @@
-use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use crossterm::{event, execute};
+use crate::effects::{effect_in, transition_fx};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
+use crossterm::event;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Rect};
 use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Widget};
 use ratatui::Frame;
 use std::cell::RefCell;
@@ -12,9 +13,7 @@ use std::error::Error;
 use std::io::Stdout;
 use std::rc::Rc;
 use std::sync::mpsc;
-use std::{io, panic, thread};
-use ratatui::text::{Line, Span};
-use crate::effects::{effect_in, transition_fx};
+use std::{io, thread};
 use tachyonfx::widget::{EffectTimeline, EffectTimelineRects};
 use tachyonfx::{BufferRenderer, Duration, Effect, Shader};
 
@@ -271,7 +270,7 @@ mod effects {
 }
 
 fn main() -> Result<()> {
-    let mut terminal = setup_terminal()?;
+    let mut terminal = ratatui::init();
 
     // event handler
     let event_handler = EventHandler::new(Duration::from_millis(33));
@@ -281,14 +280,7 @@ fn main() -> Result<()> {
     let app = App::new(sender, Rect::new(0, 0, 100, 40));
     let res = run_app(&mut terminal, app, event_handler);
 
-    // restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    ratatui::restore();
 
     if let Err(err) = res {
         println!("{err:?}");
@@ -360,30 +352,6 @@ fn  ui(
         height: 1,
     };
     shortcuts.render(centered, buf);
-}
-
-
-fn setup_terminal() -> Result<Terminal> {
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-    terminal.hide_cursor()?;
-
-    let panic_hook = panic::take_hook();
-    panic::set_hook(Box::new(move |panic| {
-        let _ = disable_raw_mode();
-        let _ = execute!(
-            io::stderr(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        );
-
-        panic_hook(panic);
-    }));
-
-    Ok(terminal)
 }
 
 enum AppEvent {
