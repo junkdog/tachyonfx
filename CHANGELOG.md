@@ -1,10 +1,16 @@
 # Changelog
 
+### Added
+- New "std-duration" feature to opt-in to using `std::time::Duration`, which is the same behavior as before.
+- New `tachyon::Duration` type: a 4-byte wrapper around u32 milliseconds. When the "std-duration" feature is enabled,
+  it becomes an alias for the 16-byte `std::time::Duration`.
+
 ### Changed
 - Replaced `rand` crate dependency with a fast `SimpleRng` implementation.
 - `render_as_ansi_string()` produces a more compact output by reducing redundant ANSI escape codes.
 
 ### Breaking
+- Replace usage of `std::time::Duration` with `tachyonfx::Duration`.
 - `fx::dissolve`, `fx::coalesce`: removed `cycle_len` parameter, as cell visibility is recalculated on the fly.
 - `fx::sequence`, `fx::parallel`: now parameterized with `&[Effect]` instead of `Vec<Effect>`.
 

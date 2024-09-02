@@ -21,6 +21,9 @@ simple-easing = "1.0.1"
 [dev-dependencies]
 crossterm = "0.28.1"
 
+[features]
+std-duration = []
+
 [[example]]
 name = "open-window"
 

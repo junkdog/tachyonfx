@@ -1,7 +1,7 @@
-use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::Frame;
 use ratatui::layout::Rect;
+use crate::Duration;
 use crate::shader::Shader;
 
 pub trait EffectRenderer<T> {

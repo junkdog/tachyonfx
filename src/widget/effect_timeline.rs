@@ -1,7 +1,7 @@
 use bon::bon;
 use crate::widget::effect_span::effect_span_tree;
 use crate::widget::{CellFilterRegistry, ColorResolver, EffectSpan};
-use crate::{CellFilter, Effect, HslConvertable, Shader};
+use crate::{CellFilter, Duration, Effect, HslConvertable, Shader};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Style};
@@ -10,7 +10,6 @@ use ratatui::widgets::{Block, Widget};
 use std::fs::File;
 use std::io::Write;
 use std::ops::Range;
-use std::time::Duration;
 use crate::widget::area_registry::AreaRegistry;
 use crate::widget::color_resolver::color_registry;
 

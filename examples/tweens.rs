@@ -1,7 +1,7 @@
 use std::{io, panic, vec};
 use std::error::Error;
 use std::io::Stdout;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
@@ -18,7 +18,7 @@ use ratatui::widgets::{Axis, Block, Chart, Clear, Dataset, GraphType, LegendPosi
 
 use Gruvbox::OrangeBright;
 use Interpolation::*;
-use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, EffectTimer, fx, Interpolation, Shader};
+use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, EffectTimer, fx, Interpolation, Shader, Duration};
 use tachyonfx::fx::{Direction, parallel, repeating, sequence};
 
 use crate::gruvbox::Gruvbox;
@@ -29,6 +29,8 @@ mod gruvbox;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
+
+type StdDuration = std::time::Duration;
 
 struct App {
     last_tick: Duration,
@@ -95,14 +97,14 @@ fn run_app(
     terminal: &mut Terminal,
     mut app: App,
 ) -> io::Result<()> {
-    let mut last_frame_instant = std::time::Instant::now();
+    let mut last_frame_instant = Instant::now();
     loop {
-        app.last_tick = last_frame_instant.elapsed();
+        app.last_tick = last_frame_instant.elapsed().into();
         terminal.draw(|f| ui(f, &mut app))?;
         last_frame_instant = Instant::now();
 
-        while last_frame_instant.elapsed() < Duration::from_millis(32) {
-            if event::poll(Duration::from_millis(5))? {
+        while last_frame_instant.elapsed() < StdDuration::from_millis(32) {
+            if event::poll(StdDuration::from_millis(5))? {
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
                         match key.code {

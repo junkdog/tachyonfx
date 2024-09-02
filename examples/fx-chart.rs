@@ -12,12 +12,11 @@ use std::error::Error;
 use std::io::Stdout;
 use std::rc::Rc;
 use std::sync::mpsc;
-use std::time::Duration;
 use std::{io, panic, thread};
 use ratatui::text::{Line, Span};
 use crate::effects::{effect_in, transition_fx};
 use tachyonfx::widget::{EffectTimeline, EffectTimelineRects};
-use tachyonfx::{BufferRenderer, Effect, Shader};
+use tachyonfx::{BufferRenderer, Duration, Effect, Shader};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
@@ -137,11 +136,10 @@ mod effects {
     use ratatui::layout::Rect;
     use ratatui::style::Color;
     use std::sync::mpsc;
-    use std::time::Duration;
     use tachyonfx::fx::*;
     use tachyonfx::widget::EffectTimelineRects;
     use tachyonfx::Interpolation::{BounceOut, CircIn, ExpoInOut, ExpoOut, QuadOut};
-    use tachyonfx::{CellFilter, Effect};
+    use tachyonfx::{CellFilter, Duration, Effect};
 
     pub(super) fn transition_fx(
         screen: Rect,
@@ -315,7 +313,7 @@ fn run_app(
     while app.is_running {
         event_handler.receive_events(|e| app.apply_event(&mut effects, e));
 
-        app.last_tick = last_frame_instant.elapsed();
+        app.last_tick = last_frame_instant.elapsed().into();
         last_frame_instant = std::time::Instant::now();
         terminal.draw(|f| {
             app.screen_area = f.area();
@@ -404,6 +402,8 @@ pub struct EventHandler {
 impl EventHandler {
     pub fn new(tick_rate: Duration) -> Self {
         let (sender, receiver) = mpsc::channel();
+
+        let tick_rate: std::time::Duration = tick_rate.into();
 
         let handler = {
             let sender = sender.clone();

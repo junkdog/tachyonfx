@@ -1,7 +1,6 @@
 use std::{io, panic, vec};
 use std::error::Error;
 use std::io::Stdout;
-use std::time::Duration;
 
 use crossterm::{event, execute};
 use crossterm::event::{DisableMouseCapture, Event, KeyCode, KeyEventKind};
@@ -16,7 +15,7 @@ use ratatui::widgets::{Borders, BorderType, Clear, StatefulWidget, Widget};
 
 use CellFilter::Text;
 use Interpolation::*;
-use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, fx, Interpolation, Shader};
+use tachyonfx::{CellFilter, CenteredShrink, Effect, EffectRenderer, fx, Interpolation, Shader, Duration};
 use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer};
 use tachyonfx::fx::{Direction, never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration};
 
@@ -31,6 +30,8 @@ mod window;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
+
+type StdDuration = std::time::Duration;
 
 struct App {
     last_tick: Duration,
@@ -105,12 +106,12 @@ fn run_app(
 ) -> io::Result<()> {
     let mut last_frame_instant = std::time::Instant::now();
     loop {
-        app.last_tick = last_frame_instant.elapsed();
+        app.last_tick = last_frame_instant.elapsed().into();
         terminal.draw(|f| ui(f, &mut app))?;
         last_frame_instant = std::time::Instant::now();
 
-        while last_frame_instant.elapsed() < Duration::from_millis(32) {
-            if event::poll(Duration::from_millis(5))? {
+        while last_frame_instant.elapsed() < StdDuration::from_millis(32) {
+            if event::poll(StdDuration::from_millis(5))? {
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
                         match key.code {

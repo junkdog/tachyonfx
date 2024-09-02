@@ -1,11 +1,10 @@
 use bon::builder;
 use std::fmt::Debug;
 use std::ops::Range;
-use std::time::Duration;
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
-use crate::{CellFilter, CellIterator, EffectTimer};
+use crate::{CellFilter, CellIterator, Duration, EffectTimer};
 use crate::simple_rng::{RangeSampler, SimpleRng};
 use crate::shader::Shader;
 

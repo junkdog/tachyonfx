@@ -1,12 +1,10 @@
 use bon::{bon, builder};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
-
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use crate::{CellFilter, CellIterator, EffectTimer, Shader};
+use crate::{CellFilter, CellIterator, Duration, EffectTimer, Shader};
 
 #[derive(Clone)]
 #[builder]

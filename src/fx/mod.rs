@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Size};
 use ratatui::style::Color;
@@ -12,7 +11,7 @@ pub use shader_fn::*;
 use slide::SlideCell;
 pub use sweep_in::Direction;
 
-use crate::CellIterator;
+use crate::{CellIterator, Duration};
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::fx::ansi256::Ansi256;
@@ -451,9 +450,8 @@ pub fn resize_area<T: Into<EffectTimer>>(
 /// ```no_run
 /// use std::cell::RefCell;
 /// use std::rc::Rc;
-/// use std::time::Duration;
 /// use ratatui::prelude::{Buffer, Color, Rect};
-/// use tachyonfx::{fx, Effect, EffectTimer, Interpolation, Shader};
+/// use tachyonfx::{fx, Duration, Effect, EffectTimer, Interpolation, Shader};
 ///
 /// let duration = Duration::from_millis(16);
 /// let mut main_buffer = Buffer::empty(Rect::new(0, 0, 80, 24));
@@ -574,8 +572,7 @@ pub fn sleep<T: Into<EffectTimer>>(duration: T) -> Effect {
 /// # Examples
 ///
 /// ```
-/// use tachyonfx::{fx, Effect, EffectTimer};
-/// use std::time::Duration;
+/// use tachyonfx::{fx, Duration, Effect, EffectTimer};
 /// use ratatui::style::Color;
 ///
 /// let fade_effect = fx::fade_to_fg(Color::Red, Duration::from_secs(1));

@@ -1,11 +1,10 @@
 use std::fmt;
-use std::time::Duration;
 use ratatui::layout::Rect;
 use ratatui::prelude::Line;
 use ratatui::style::Style;
 use ratatui::text::Span;
 use crate::widget::ColorResolver;
-use crate::{CellFilter, Shader};
+use crate::{CellFilter, Duration, Shader};
 
 pub(crate) fn effect_span_tree<'a>(
     colorizer: &ColorResolver,
