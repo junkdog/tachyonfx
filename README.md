@@ -8,7 +8,7 @@ This library provides a collection of effects that can be used to enhance the
 visual appeal of terminal applications, offering capabilities such as color
 transformations, animations, and complex effect combinations.
 
-![demo](images/demo.gif)
+![demo](images/demo-0.6.0.gif)
 
  [ratatui]: https://ratatui.rs/
 
