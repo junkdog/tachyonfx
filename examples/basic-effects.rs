@@ -250,11 +250,11 @@ impl EffectsRepository {
             ("slide in/out", fx::repeating(sequence(&[
                 parallel(&[
                     fx::fade_from_fg(bg, (2000, ExpoInOut)),
-                    fx::slide_in(Direction::UpToDown, 20, 30, Dark0Hard, medium),
+                    fx::slide_in(Direction::UpToDown, 20, 0, Dark0Hard, medium),
                 ]),
                 fx::sleep(medium),
                 fx::prolong_end(medium,
-                    fx::slide_out(Direction::LeftToRight, 80, 30, Dark0Hard, medium),
+                    fx::slide_out(Direction::LeftToRight, 80, 0, Dark0Hard, medium),
                 ),
             ]))),
             ("change hue, saturation and lightness", sequence(&[
