@@ -1,5 +1,10 @@
 # Changelog
 
+## tachyonfx 0.6.0 - 2024-09-07
+
+This release introduces a lot of breaking changes in the form of added and removed parameters.
+Sorry for any inconvenience this may cause, I'll try to tread more carefully in the future.
+
 ### Added
 - New "std-duration" feature to opt-in to using `std::time::Duration`, which is the same behavior as before.
 - New `tachyon::Duration` type: a 4-byte wrapper around u32 milliseconds. When the "std-duration" feature is enabled,
