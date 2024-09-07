@@ -82,7 +82,7 @@ modifications and animations.
 
 ```rust
 // only apply to cells with `Light2` foreground color
-fx::sweep_in(Direction::UpToDown, 15, Dark0, timer)
+fx::sweep_in(Direction::UpToDown, 15, 0, Dark0, timer)
     .with_cell_selection(CellFilter::FgColor(Light2.into()))
 ```
 
@@ -96,10 +96,8 @@ let border_text = CellFilter::AllOf(&[
     CellFilter::Text
 ]);
 
-sequence(&[
-    with_duration(duration, never_complete(fx::fade_to(Dark0, Dark0, 0))),
-    fx::fade_from(Dark0, Dark0, (320, QuadOut)),
-]).with_cell_selection(border_text)
+prolong_start(duration, fx::fade_from(Dark0, Dark0, (320, QuadOut)),
+    .with_cell_selection(border_text)
 ```
 
 ## Examples

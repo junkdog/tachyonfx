@@ -77,6 +77,15 @@ pub trait RangeSampler<T> {
     fn gen_range(&mut self, range: Range<T>) -> T;
 }
 
+impl RangeSampler<u16> for SimpleRng {
+    fn gen_range(&mut self, range: Range<u16>) -> u16 {
+        let range_size = range.end.wrapping_sub(range.start);
+        assert!(range_size > 0, "range.end must be greater than range.start");
+
+        range.start + (self.gen() >> 16) as u16 % range_size
+    }
+}
+
 impl RangeSampler<u32> for SimpleRng {
     fn gen_range(&mut self, range: Range<u32>) -> u32 {
         let range_size = range.end.wrapping_sub(range.start);
@@ -104,20 +113,21 @@ impl RangeSampler<f32> for SimpleRng {
     }
 }
 
+impl RangeSampler<i16> for SimpleRng {
+    fn gen_range(&mut self, range: Range<i16>) -> i16 {
+        let range_size = range.end.wrapping_sub(range.start);
+        assert!(range_size > 0, "range.end must be greater than range.start");
+
+        range.start + (self.gen() % range_size as u32) as i16
+    }
+}
+
 impl RangeSampler<i32> for SimpleRng {
     fn gen_range(&mut self, range: Range<i32>) -> i32 {
         let range_size = range.end.wrapping_sub(range.start);
         assert!(range_size > 0, "range.end must be greater than range.start");
 
         range.start + (self.gen() % range_size as u32) as i32
-    }
-}
-
-pub fn shuffle<T>(vec: &mut Vec<T>, rng: &mut SimpleRng) {
-    let len = vec.len();
-    for i in 0..len {
-        let j = rng.gen_range(i..len);
-        vec.swap(i, j);
     }
 }
 
@@ -197,19 +207,6 @@ mod tests {
     fn test_gen_range_invalid() {
         let mut lcg = SimpleRng::new(12345);
         lcg.gen_range(20..10);
-    }
-
-    #[test]
-    fn test_shuffle() {
-        let mut lcg = SimpleRng::new(12345);
-        let mut vec = vec![1, 2, 3, 4, 5];
-        let original = vec.clone();
-
-        shuffle(&mut vec, &mut lcg);
-
-        assert_ne!(vec, original);
-        assert_eq!(vec.len(), original.len());
-        assert_eq!(vec.iter().sum::<i32>(), original.iter().sum::<i32>());
     }
 
     #[test]

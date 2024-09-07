@@ -1,18 +1,21 @@
-use ratatui::layout::Rect;
+use ratatui::buffer::Buffer;
+use ratatui::layout::{Position, Rect};
 use ratatui::prelude::Color;
 
 use Interpolation::CircOut;
 
-use crate::{CellIterator, ColorMapper};
-use crate::CellFilter;
 use crate::effect_timer::EffectTimer;
 use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
+use crate::fx::{Direction, DirectionalVariance};
 use crate::interpolation::{Interpolatable, Interpolation};
 use crate::shader::Shader;
+use crate::CellFilter;
+use crate::{CellIterator, ColorMapper, Duration};
 
 #[derive(Clone)]
 pub struct SweepIn {
     gradient_length: u16,
+    randomness_extent: u16,
     faded_color: Color,
     timer: EffectTimer,
     direction: Direction,
@@ -20,39 +23,19 @@ pub struct SweepIn {
     cell_filter: CellFilter,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
-pub enum Direction {
-    LeftToRight,
-    RightToLeft,
-    UpToDown,
-    DownToUp,
-}
-
-impl Direction {
-    pub(crate) fn flipped(&self) -> Self {
-        match self {
-            Self::LeftToRight => Self::RightToLeft,
-            Self::RightToLeft => Self::LeftToRight,
-            Self::UpToDown    => Self::DownToUp,
-            Self::DownToUp    => Self::UpToDown,
-        }
-    }
-
-    pub(crate) fn flips_timer(&self) -> bool {
-        self == &Direction::RightToLeft || self == &Direction::DownToUp
-    }
-}
 
 impl SweepIn {
     pub fn new(
         direction: Direction,
         gradient_length: u16,
+        randomness: u16,
         faded_color: Color,
         lifetime: EffectTimer,
     ) -> Self {
         Self {
             direction,
             gradient_length,
+            randomness_extent: randomness,
             faded_color,
             timer: if direction.flips_timer() { lifetime.reversed() } else { lifetime },
             area: None,
@@ -70,38 +53,84 @@ impl Shader for SweepIn {
         }
     }
 
-    fn execute(&mut self, alpha: f32, area: Rect, cell_iter: CellIterator) {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
+        let (overflow, alpha) = self.timer_mut()
+            .map(|t| (t.process(duration), t.alpha()))
+            .unwrap_or((None, 1.0));
+
         let direction = self.direction;
 
         let window_alpha = SlidingWindowAlpha::builder()
             .direction(direction)
             .progress(alpha)
             .area(area)
-            .gradient_len(self.gradient_length)
+            .gradient_len(self.gradient_length + self.randomness_extent)
             .build();
+
+        let mut axis_jitter = DirectionalVariance::from(area, direction, self.randomness_extent);
 
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
 
-        cell_iter.for_each(|(pos, cell)| {
-            match window_alpha.alpha(pos) {
-                0.0 => {
-                    cell.set_fg(self.faded_color);
-                    cell.set_bg(self.faded_color);
-                },
-                1.0 => {} // nothing to do
-                a => {
-                    let fg = fg_mapper
-                        .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
-                    let bg = bg_mapper
-                        .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
+        if self.randomness_extent == 0 || [Direction::LeftToRight, Direction::RightToLeft].contains(&direction) {
+            for y in area.y..area.y + area.height {
+                let row_variance = axis_jitter.next();
+                for x in area.x..area.x + area.width {
+                    let pos = Position { x, y };
+                    let cell = buf.cell_mut(pos).unwrap();
 
-                    cell.set_fg(fg);
-                    cell.set_bg(bg);
+                    match window_alpha.alpha(offset(pos, row_variance)) {
+                        0.0 => {
+                            cell.set_fg(self.faded_color);
+                            cell.set_bg(self.faded_color);
+                        },
+                        1.0 => {} // nothing to do
+                        a => {
+                            let fg = fg_mapper
+                                .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
+                            let bg = bg_mapper
+                                .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
+
+                            cell.set_fg(fg);
+                            cell.set_bg(bg);
+                        }
+                    }
                 }
             }
-        });
+        } else {
+            let col_variances = (area.x..area.x + area.width).into_iter()
+                .map(|_| axis_jitter.next().1)
+                .collect::<Vec<i16>>();
+
+            for y in area.y..area.y + area.height {
+                for x in area.x..area.x + area.width {
+                    let pos = Position { x, y };
+                    let cell = buf.cell_mut(pos).unwrap();
+                    let col_variance = (0, col_variances[(x - area.x) as usize]);
+
+                    match window_alpha.alpha(offset(pos, col_variance)) {
+                        0.0 => {
+                            cell.set_fg(self.faded_color);
+                            cell.set_bg(self.faded_color);
+                        },
+                        1.0 => {} // nothing to do
+                        a => {
+                            let fg = fg_mapper
+                                .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
+                            let bg = bg_mapper
+                                .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
+
+                            cell.set_fg(fg);
+                            cell.set_bg(bg);
+                        }
+                    }
+                }
+            }
+        }
+
+        overflow
     }
+    fn execute(&mut self, _alpha: f32, _area: Rect, _cell_iter: CellIterator) {}
 
     fn done(&self) -> bool {
         self.timer.done()
@@ -133,5 +162,12 @@ impl Shader for SweepIn {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
+    }
+}
+
+fn offset(p: Position, translate: (i16, i16)) -> Position {
+    Position {
+        x: (p.x as i16 + translate.0).max(0) as _,
+        y: (p.y as i16 + translate.1).max(0) as _,
     }
 }
