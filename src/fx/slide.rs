@@ -89,7 +89,7 @@ impl Shader for SlideCell {
                 }
             }
         } else {
-            let col_variances = (area.x..area.x + area.width).into_iter()
+            let col_variances = (area.x..area.x + area.width)
                 .map(|_| axis_jitter.next().1)
                 .collect::<Vec<i16>>();
 
@@ -144,7 +144,7 @@ impl Shader for SlideCell {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {
@@ -152,8 +152,8 @@ impl Shader for SlideCell {
     }
 }
 
-const SHRINK_V: &'static [char; 9] = &['█', '▇', '▆', '▅', '▄', '▃', '▂', '▁', ' '];
-const SHRINK_H: &'static [char; 9] = &['█', '▉', '▊', '▋', '▌', '▍', '▎', '▏', ' '];
+const SHRINK_V: &[char; 9] = &['█', '▇', '▆', '▅', '▄', '▃', '▂', '▁', ' '];
+const SHRINK_H: &[char; 9] = &['█', '▉', '▊', '▋', '▌', '▍', '▎', '▏', ' '];
 const LAST_IDX: usize = SHRINK_H.len() - 1;
 
 fn offset(p: Position, translate: (i16, i16)) -> Position {

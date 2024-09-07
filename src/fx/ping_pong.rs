@@ -77,7 +77,7 @@ impl Shader for PingPong {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        self.fx.timer().as_ref().map(|t| t.clone() * 2)
+        self.fx.timer().as_ref().map(|t| *t * 2)
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {

@@ -43,7 +43,7 @@ impl Shader for Sleep {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {

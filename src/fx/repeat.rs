@@ -83,11 +83,7 @@ impl Shader for Repeat {
     }
 
     fn done(&self) -> bool {
-        match self.mode {
-            RepeatMode::Times(0)                 => true,
-            RepeatMode::Duration(Duration::ZERO) => true,
-            _                                    => false,
-        }
+        matches!(self.mode, RepeatMode::Times(0) | RepeatMode::Duration(Duration::ZERO))
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -119,7 +115,7 @@ impl Shader for Repeat {
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        return EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)]);
+        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {
@@ -128,7 +124,7 @@ impl Shader for Repeat {
 
     fn reset(&mut self) {
         self.fx.reset();
-        self.mode = self.original_mode.clone();
+        self.mode = self.original_mode;
     }
 }
 

@@ -98,7 +98,7 @@ impl Shader for SweepIn {
                 }
             }
         } else {
-            let col_variances = (area.x..area.x + area.width).into_iter()
+            let col_variances = (area.x..area.x + area.width)
                 .map(|_| axis_jitter.next().1)
                 .collect::<Vec<i16>>();
 
@@ -157,7 +157,7 @@ impl Shader for SweepIn {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

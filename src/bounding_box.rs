@@ -23,7 +23,7 @@ impl BoundingBox {
         }
     }
 
-    pub(crate) fn to_rect(&self, screen: Rect) -> Option<Rect> {
+    pub(crate) fn as_rect(&self, screen: Rect) -> Option<Rect> {
         match () {
             _ if self.x + self.width < screen.x as f32  => None,
             _ if self.y + self.height < screen.y as f32 => None,
@@ -55,14 +55,14 @@ mod tests {
     fn test_to_rect_clamped() {
         let bb = BoundingBox::new(-1.0, -2.0, 3.0, 4.0);
         let screen = Rect::new(0, 0, 10, 10);
-        assert_eq!(bb.to_rect(screen), Some(Rect::new(0, 0, 2, 2)));
+        assert_eq!(bb.as_rect(screen), Some(Rect::new(0, 0, 2, 2)));
     }
 
     #[test]
     fn test_to_rect_outside() {
         let bb = BoundingBox::new(-1.0, -2.0, 3.0, 4.0);
         let screen = Rect::new(5, 5, 10, 10);
-        assert_eq!(bb.to_rect(screen), None);
+        assert_eq!(bb.as_rect(screen), None);
     }
 
     #[test]

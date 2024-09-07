@@ -84,7 +84,7 @@ impl Shader for ResizeArea {
     }
 
     fn area(&self) -> Option<Rect> {
-        self.area.clone()
+        self.area
     }
 
     fn set_area(&mut self, area: Rect) {
@@ -105,7 +105,7 @@ impl Shader for ResizeArea {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {

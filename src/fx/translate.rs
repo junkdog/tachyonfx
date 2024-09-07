@@ -50,10 +50,9 @@ impl Shader for Translate {
         let (dx, dy) = (0.0, 0.0).lerp(&self.translate_by, alpha);
         let translated_area = self.original_area.as_ref()
             .map(|a| a.translate(dx, dy))
-            .map(|a| a.to_rect(buf.area))
-            .flatten();
+            .and_then(|a| a.as_rect(buf.area));
 
-        self.area = translated_area.clone();
+        self.area = translated_area;
 
         if let Some(fx) = &mut self.fx {
             let fx_area = translated_area.unwrap_or_default();
@@ -104,7 +103,7 @@ impl Shader for Translate {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

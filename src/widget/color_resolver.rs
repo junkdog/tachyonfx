@@ -28,8 +28,8 @@ impl ColorResolver {
         lightness: f64,
     ) -> Self {
         assert!(hue.start >= 0.0 && hue.end <= 360.0, "hue range must be between 0 and 360");
-        assert!(saturation >= 0.0 && saturation <= 100.0, "saturation must be between 0 and 100");
-        assert!(lightness >= 0.0 && lightness <= 100.0, "lightness must be between 0 and 100");
+        assert!((0.0..=100.0).contains(&saturation), "saturation must be between 0 and 100");
+        assert!((0.0..=100.0).contains(&lightness), "lightness must be between 0 and 100");
 
         let effect_spans: Vec<&EffectSpan> = root_span.iter().collect();
         let effect_identifiers: BTreeSet<String> = effect_spans.iter()
@@ -64,7 +64,7 @@ impl ColorResolver {
         self.effect_to_color.iter()
             .find(|(label, _)| label == id)
             .map(|(_, color)| *color)
-            .expect(format!("effect not found: {id}").as_str())
+            .unwrap_or_else(|| panic!("effect not found: {id}"))
     }
 }
 
@@ -77,7 +77,7 @@ fn id_of(effect: &str) -> &str {
         .unwrap_or(effect)
 }
 
-fn shuffle<T>(vec: &mut Vec<T>, rng: &mut SimpleRng) {
+fn shuffle<T>(vec: &mut [T], rng: &mut SimpleRng) {
     let len = vec.len();
     for i in 0..len {
         let j = rng.gen_range(i..len);

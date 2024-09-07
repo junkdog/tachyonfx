@@ -185,14 +185,14 @@ impl EffectTimeline {
 
         (0..n).for_each(|i| {
             let offset = (i as f32 / n as f32 * root.end * scale) as u16;
-            let mut area = axis_row.clone();
+            let mut area = axis_row;
             area.x += offset;
             area.width -= offset;
 
             draw_column_marker("▏", area);
         });
 
-        let mut area = axis_row.clone();
+        let mut area = axis_row;
         area.x += area.width - 1;
         area.width -= 1;
         draw_column_marker("▕", area);
@@ -212,7 +212,7 @@ impl EffectTimeline {
 
         spans.iter().enumerate().for_each(|(i, span)| {
             let offset = (i as f32 / n as f32 * root.end * scale) as u16;
-            let mut area = chart_row.clone();
+            let mut area = chart_row;
             area.x += offset;
             area.width -= offset;
 
@@ -221,7 +221,7 @@ impl EffectTimeline {
 
         // last
         let last_label = format!("{:?}ms", Duration::from_secs_f32(self.span.end).as_millis());
-        let mut area = chart_row.clone();
+        let mut area = chart_row;
         area.x = area.right().saturating_sub(last_label.chars().count() as u16);
         Span::from(last_label)
             .style(style)
@@ -304,7 +304,7 @@ impl EffectTimeline {
                     .render(row, buf);
 
                 row.x += 4;
-                Span::from(format!("{:}", a))
+                Span::from(a.to_string())
                     .style(legend_style)
                     .render(row, buf);
             });
@@ -313,7 +313,7 @@ impl EffectTimeline {
     fn render_chart(&self, chart_area: Rect, buf: &mut Buffer) {
         let scale = chart_area.width as f32 / self.span.end;
         let span_area = |row: Rect, span: &EffectSpan| -> Rect {
-            let mut area = row.clone();
+            let mut area = row;
             let translate_x = (span.start * scale) as u16;
             area.x += translate_x;
             area.width -= translate_x;
@@ -321,7 +321,7 @@ impl EffectTimeline {
             area
         };
 
-        let chart_rows: Vec<Rect> = chart_area.rows().into_iter().collect();
+        let chart_rows: Vec<Rect> = chart_area.rows().collect();
         let colors = &self.color_resolver;
         let spans = self.span.iter().collect::<Vec<_>>();
         self.span.iter()
@@ -355,7 +355,7 @@ impl EffectTimeline {
                         }
 
                         // cloning area of original bar
-                        let mut child_row = bar_area.clone();
+                        let mut child_row = bar_area;
                         child_row.y += offset as u16;
 
                         if bg_bar.width() < row.width as usize {
@@ -456,7 +456,7 @@ impl Widget for EffectTimeline {
         let layout = self.layout(area);
         let row_count = layout.chart.height;
 
-        let flattened_effect_count = tree.iter().count() as u16;
+        let flattened_effect_count = tree.len() as u16;
 
         // labels
         tree.iter()
@@ -472,7 +472,7 @@ impl Widget for EffectTimeline {
 
         // overridden effect areas column
         let areas: Vec<_> = self.span.iter()
-            .map(|span| span.area.clone())
+            .map(|span| span.area)
             .collect();
         self.render_areas_column(areas, layout.areas, buf);
 

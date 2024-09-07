@@ -83,9 +83,7 @@ impl Shader for ParallelEffect {
 
     fn timer(&self) -> Option<EffectTimer> {
         self.effects.iter()
-            .map(|fx| fx.timer())
-            .filter(|t| t.is_some())
-            .map(|t| t.unwrap())
+            .filter_map(|fx| fx.timer())
             .map(|t| t.duration())
             .max()
             .map(|d| EffectTimer::new(d, Linear))

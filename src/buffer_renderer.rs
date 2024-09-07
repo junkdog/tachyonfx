@@ -29,7 +29,7 @@ pub trait BufferRenderer {
 
 impl BufferRenderer for Rc<RefCell<Buffer>> {
     fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
-        (&*self.as_ref().borrow())
+        (*self.as_ref().borrow())
             .render_buffer(offset, buf);
     }
 }
@@ -68,10 +68,10 @@ pub fn blit_buffer(
     aux_area.x = offset.x.max(0) as _;
     aux_area.y = offset.y.max(0) as _;
 
-    let target_area = dst.area().clone();
+    let target_area = *dst.area();
 
-    let l_clip_x: u16 = offset.x.min(0).abs() as _;
-    let l_clip_y: u16 = offset.y.min(0).abs() as _;
+    let l_clip_x: u16 = offset.x.min(0).unsigned_abs() as _;
+    let l_clip_y: u16 = offset.y.min(0).unsigned_abs() as _;
 
     let r_clip_x: u16 = aux_area.x + aux_area.width - l_clip_x;
     let r_clip_x: u16 = r_clip_x - r_clip_x.min(target_area.width);
@@ -128,7 +128,7 @@ pub fn render_as_ansi_string(buffer: &Buffer) -> String {
             s.push_str(cell.symbol());
         }
         s.push_str("\x1b[0m");
-        s.push_str("\n");
+        s.push('\n');
 
         // need to reset the style at the end of each line,
         // so that the style correctly carries over to the next line
