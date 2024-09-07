@@ -10,9 +10,7 @@ impl AreaRegistry {
     pub(crate) fn from(root_span: &EffectSpan) -> Self {
         let effect_spans: Vec<&EffectSpan> = root_span.iter().collect();
         let mut rects: Vec<Rect> = effect_spans.iter()
-            .map(|span| span.area.clone())
-            .filter(Option::is_some)
-            .map(Option::unwrap)
+            .filter_map(|span| span.area)
             .collect();
 
         let pack = |a: &Rect| -> u64 {
@@ -22,7 +20,7 @@ impl AreaRegistry {
                 | (a.height as u64)
         };
 
-        rects.sort_by(|a, b| pack(a).cmp(&pack(b)));
+        rects.sort_by_key(pack);
         rects.dedup();
 
         Self {

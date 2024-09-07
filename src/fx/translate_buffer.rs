@@ -90,7 +90,7 @@ impl Shader for TranslateBuffer {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

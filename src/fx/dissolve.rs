@@ -33,7 +33,7 @@ impl Shader for Dissolve {
     }
 
     fn execute(&mut self, alpha: f32, _area: Rect, cell_iter: CellIterator) {
-        let mut lcg = self.lcg.clone();
+        let mut lcg = self.lcg;
         cell_iter
             .filter(|_| alpha > lcg.gen_f32())
             .for_each(|(_, c)| { c.set_char(' '); });
@@ -60,7 +60,7 @@ impl Shader for Dissolve {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {

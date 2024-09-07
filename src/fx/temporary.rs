@@ -65,11 +65,11 @@ impl Shader for TemporaryEffect {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        return EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)]);
+        EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)])
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

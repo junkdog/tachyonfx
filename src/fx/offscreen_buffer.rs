@@ -29,8 +29,8 @@ impl Shader for OffscreenBuffer {
         _area: Rect
     ) -> Option<Duration> {
         let area = self.area().unwrap(); // guaranteed to be Some
-        let mut target = &mut self.render_target.as_ref().borrow_mut();
-        self.fx.process(duration, &mut target, area);
+        let target = &mut self.render_target.as_ref().borrow_mut();
+        self.fx.process(duration, target, area);
 
         None
     }
@@ -47,7 +47,7 @@ impl Shader for OffscreenBuffer {
 
     fn area(&self) -> Option<Rect> {
         self.fx.area()
-            .unwrap_or_else(|| self.render_target.as_ref().borrow().area().clone())
+            .unwrap_or_else(|| *self.render_target.as_ref().borrow().area())
             .into()
     }
 

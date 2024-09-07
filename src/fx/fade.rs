@@ -66,7 +66,7 @@ impl Shader for FadeColors {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn cell_selection(&self) -> Option<CellFilter> {

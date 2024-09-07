@@ -97,7 +97,7 @@ impl EffectSpan {
         let end = effect
             .timer()
             .map(|timer| timer.duration())
-            .unwrap_or(Duration::default())
+            .unwrap_or_default()
             .as_secs_f32();
 
         let start = offset.as_secs_f32();
