@@ -11,6 +11,7 @@ readme = "README.md"
 keywords = ["ratatui", "terminal", "effects", "UI", "TUI"]
 categories = ["command-line-interface"]
 authors = ["Adrian Papari <junkdog@angelhill.net>"]
+exclude = ["images/*.gif", ".*"]
 
 [dependencies]
 bon = "2.1.0"
