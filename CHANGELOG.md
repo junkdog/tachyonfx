@@ -10,7 +10,9 @@
 - `render_as_ansi_string()` produces a more compact output by reducing redundant ANSI escape codes.
 
 ### Breaking
+- `tachyonfx::Duration` is now the default duration type.
 - Replace usage of `std::time::Duration` with `tachyonfx::Duration`.
+- `fx::sweep_in`, `fx::sweep_out`, `fx::slide_in`, `fx::slide_out`: added `randomness` parameter.
 - `fx::dissolve`, `fx::coalesce`: removed `cycle_len` parameter, as cell visibility is recalculated on the fly.
 - `fx::sequence`, `fx::parallel`: now parameterized with `&[Effect]` instead of `Vec<Effect>`.
 

@@ -207,7 +207,7 @@ mod effects {
         parallel(&[
             coalesce((step * 5, ExpoInOut))
                 .with_cell_selection(CellFilter::Text),
-            sweep_in(Direction::UpToDown, 1, bg, step * 3),
+            sweep_in(Direction::UpToDown, 1, 0, bg, step * 3),
         ]).with_area(area)
     }
 
@@ -215,7 +215,7 @@ mod effects {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
-        prolong_start(step * 4, sweep_in(Direction::RightToLeft, 5, bg, step * 3))
+        prolong_start(step * 4, sweep_in(Direction::RightToLeft, 5, 0, bg, step * 3))
             .with_area(area)
     }
 
@@ -232,7 +232,7 @@ mod effects {
             sequence(&[
                 sleep(step * 10),
                 parallel(&[
-                    slide_in(Direction::DownToUp, 15, color2, step * 5),
+                    slide_in(Direction::DownToUp, 15, 30, color2, step * 5),
                     fade_from_fg(color1, (step * 10, ExpoOut)),
                 ]),
             ])
@@ -247,7 +247,7 @@ mod effects {
 
         parallel(&[
             hsl_shift_fg(hsl_shift, (15 * step, CircIn)).reversed(),
-            sweep_in(Direction::LeftToRight, 80, bg, step * 15),
+            sweep_in(Direction::LeftToRight, 80, 30, bg, step * 15),
         ]).with_area(area)
     }
 
@@ -259,9 +259,9 @@ mod effects {
         let d = Duration::from_millis(500);
 
         parallel(&[
-            prolong_start(d, sweep_in(Direction::DownToUp, 1, Color::Black, (d, QuadOut)))
+            prolong_start(d, sweep_in(Direction::DownToUp, 1, 0, Color::Black, (d, QuadOut)))
                 .with_area(cell_filter_column),
-            prolong_start(d * 2, sweep_in(Direction::UpToDown, 1, Color::Black, (d, QuadOut)))
+            prolong_start(d * 2, sweep_in(Direction::UpToDown, 1, 0, Color::Black, (d, QuadOut)))
                 .with_area(area_column),
             prolong_start(d * 3,  fade_from_fg(Color::Black, (700, QuadOut)))
                 .with_area(legend),

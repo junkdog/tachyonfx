@@ -9,7 +9,7 @@ use ping_pong::PingPong;
 use prolong::{Prolong, ProlongPosition};
 pub use shader_fn::*;
 use slide::SlideCell;
-pub use sweep_in::Direction;
+pub use direction::*;
 
 use crate::{CellIterator, Duration};
 use crate::effect::{Effect, IntoEffect};
@@ -49,6 +49,7 @@ mod slide;
 mod sliding_window_alpha;
 mod offscreen_buffer;
 mod prolong;
+mod direction;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -210,25 +211,91 @@ pub fn repeating(effect: Effect) -> Effect {
     repeat(effect, repeat::RepeatMode::Forever)
 }
 
-/// Sweeps out to the specified color.
+/// Creates an effect that sweeps out from a specified color with optional randomness.
+///
+/// Refer to [`sweep_in`](fn.sweep_in.html) for more information.
 pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Direction,
     gradient_length: u16,
+    randomness: u16,
     faded_color: C,
     timer: T,
 ) -> Effect {
-    sweep_in(direction.flipped(), gradient_length, faded_color, timer)
+    sweep_in(direction.flipped(), gradient_length, randomness, faded_color, timer)
         .reversed()
 }
 
-/// Sweeps in a from the specified color.
+/// Creates an effect that sweeps in from a specified color with optional randomness.
+///
+/// This function generates a sweeping effect that transitions from a specified color
+/// to the original content. The sweep can be applied in any of the four cardinal directions
+/// and includes options for gradient length and randomness to create more dynamic effects.
+///
+/// # Arguments
+///
+/// * `direction` - The direction of the sweep effect. Can be one of:
+///   - `Direction::LeftToRight`
+///   - `Direction::RightToLeft`
+///   - `Direction::UpToDown`
+///   - `Direction::DownToUp`
+///
+/// * `gradient_length` - The length of the gradient transition in cells. This determines
+///   how smooth the transition is between the faded color and the original content.
+///
+/// * `randomness` - The maximum random offset applied to each column or row of the effect.
+///   Higher values create a more irregular, "noisy" transition. Set to 0 for a uniform sweep.
+///
+/// * `faded_color` - The color from which the content sweeps in.
+///
+/// * `timer` - Controls the duration and timing of the effect.
+///
+/// # Returns
+///
+/// Returns a sweep `Effect`.
+///
+/// # Examples
+///
+/// Basic usage:
+/// ```
+/// use tachyonfx::{fx, EffectTimer, Interpolation};
+/// use tachyonfx::fx::Direction;
+/// use ratatui::style::Color;
+///
+/// let sweep_effect = fx::sweep_in(
+///     Direction::LeftToRight,
+///     10,
+///     0,
+///     Color::Blue,
+///     EffectTimer::from_ms(1000, Interpolation::Linear)
+/// );
+/// ```
+///
+/// With randomness:
+/// ```
+/// use tachyonfx::{fx, EffectTimer, Interpolation};
+/// use tachyonfx::fx::Direction;
+/// use ratatui::style::Color;
+///
+/// let sweep_effect = fx::sweep_in(
+///     Direction::UpToDown,
+///     15,
+///     5,
+///     Color::Cyan,
+///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
+/// );
+/// ```
+///
+/// # See Also
+///
+/// * [`sweep_out`](fn.sweep_out.html) - For the reverse effect.
 pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Direction,
     gradient_length: u16,
+    randomness: u16,
     faded_color: C,
     timer: T,
 ) -> Effect {
-    SweepIn::new(direction, gradient_length, faded_color.into(), timer.into())
+    SweepIn::new(direction, gradient_length, randomness, faded_color.into(), timer.into())
         .into_effect()
 }
 
@@ -260,7 +327,7 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
 /// use tachyonfx::fx::Direction;
 ///
 /// let timer = EffectTimer::from_ms(2000, Interpolation::Linear);
-/// let slide_effect = fx::slide_in(Direction::LeftToRight, 10, Color::Black, timer);
+/// let slide_effect = fx::slide_in(Direction::LeftToRight, 10, 0, Color::Black, timer);
 /// ```
 ///
 /// This example creates a sliding effect that moves cells in from the left to the right
@@ -268,10 +335,11 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
 pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Direction,
     gradient_length: u16,
+    randomness: u16,
     color_behind_cells: C,
     timer: T,
 ) -> Effect {
-    slide_out(direction.flipped(), gradient_length, color_behind_cells, timer)
+    slide_out(direction.flipped(), gradient_length, randomness, color_behind_cells, timer)
         .reversed()
 }
 
@@ -298,7 +366,7 @@ pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
 /// use tachyonfx::fx::Direction;
 ///
 /// let timer = EffectTimer::from_ms(2000, Interpolation::CubicInOut);
-/// let slide_effect = fx::slide_out(Direction::UpToDown, 10, Color::Black, timer);
+/// let slide_effect = fx::slide_out(Direction::UpToDown, 10, 0, Color::Black, timer);
 /// ```
 ///
 /// This example creates a sliding effect that moves cells out from the top to the bottom
@@ -306,6 +374,7 @@ pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
 pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Direction,
     gradient_length: u16,
+    randomness: u16,
     color_behind_cells: C,
     timer: T,
 ) -> Effect {
@@ -321,6 +390,7 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
         .timer(timer)
         .color_behind_cell(color_behind_cells.into())
         .gradient_length(gradient_length)
+        .randomness_extent(randomness)
         .direction(direction)
         .build()
         .into_effect()
@@ -707,7 +777,6 @@ mod tests {
     use super::*;
     use crate::Shader;
 
-
     const DIRECTIONS: [Direction; 4] = [
         Direction::DownToUp,
         Direction::UpToDown,
@@ -743,25 +812,25 @@ mod tests {
         let c = Color::Red;
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_out(*dir, 1, c, 1000).name(), "sweep_out",
+            assert_eq!(sweep_out(*dir, 1, 0, c, 1000).name(), "sweep_out",
                 "testing for direction={:?}", dir
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_out(*dir, 1, c, 1000).reversed().name(), "sweep_in",
+            assert_eq!(sweep_out(*dir, 1, 0, c, 1000).reversed().name(), "sweep_in",
                 "testing reversed() for direction={:?}", dir
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_in(*dir, 1, c, 1000).name(), "sweep_in",
+            assert_eq!(sweep_in(*dir, 1, 0, c, 1000).name(), "sweep_in",
                 "testing for direction={:?}", dir
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_in(*dir, 1, c, 1000).reversed().name(), "sweep_out",
+            assert_eq!(sweep_in(*dir, 1, 0, c, 1000).reversed().name(), "sweep_out",
                 "testing reversed() for direction={:?}", dir
             );
         });
@@ -779,27 +848,64 @@ mod tests {
         ];
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_out(*dir, 1, c, 1000).name(), "slide_out",
+            assert_eq!(slide_out(*dir, 1, 0, c, 1000).name(), "slide_out",
                 "testing for direction={:?}", dir
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_out(*dir, 1, c, 1000).reversed().name(), "slide_in",
+            assert_eq!(slide_out(*dir, 1, 0, c, 1000).reversed().name(), "slide_in",
                 "testing reversed() for direction={:?}", dir
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_in(*dir, 1, c, 1000).name(), "slide_in",
+            assert_eq!(slide_in(*dir, 1, 0, c, 1000).name(), "slide_in",
                 "testing for direction={:?}", dir
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_in(*dir, 1, c, 1000).reversed().name(), "slide_out",
+            assert_eq!(slide_in(*dir, 1, 0, c, 1000).reversed().name(), "slide_out",
                 "testing reversed() for direction={:?}", dir
             );
         });
     }
+}
+
+// just to track the size of the shader structs somewhere
+mod size_assertions {
+    use crate::fx::offscreen_buffer::OffscreenBuffer;
+    use crate::fx::translate::Translate;
+    use super::*;
+
+    macro_rules! verify_size {
+        ($a:ty, $b:expr) => {
+            const _: () = {
+                assert!(size_of::<$a>() == $b);
+            };
+        }
+    }
+
+    verify_size!(Ansi256,          10);
+    verify_size!(ConsumeTick,       1);
+    verify_size!(Dissolve,         72);
+    verify_size!(FadeColors,       72);
+    verify_size!(Glitch,          104);
+    verify_size!(HslShift,         96);
+    verify_size!(NeverComplete,    16);
+    verify_size!(OffscreenBuffer,  24);
+    verify_size!(ParallelEffect,   24);
+    verify_size!(PingPong,         64);
+    verify_size!(Prolong,          32);
+    verify_size!(Repeat,           32);
+    verify_size!(ResizeArea,       56);
+    verify_size!(SequentialEffect, 32);
+    verify_size!(ShaderFn<()>,    104);
+    verify_size!(Sleep,            12);
+    verify_size!(SlideCell,        72);
+    verify_size!(SweepIn,          72);
+    verify_size!(TemporaryEffect,  32);
+    verify_size!(Translate,        72);
+    verify_size!(TranslateBuffer,  32);
 }

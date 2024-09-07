@@ -279,7 +279,7 @@ fn stylized_window_fx() -> Effect {
                     ),
                     fx::fade_to(Color::Black, Color::Black, (500, CircInOut)),
                 ]),
-                fx::slide_in(Direction::UpToDown, 10, Dark0, (900, QuadOut)),
+                fx::slide_in(Direction::UpToDown, 10, 0, Dark0, (900, QuadOut)),
             ]),
         ]).with_cell_selection(content_area),
     ]))

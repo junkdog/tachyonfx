@@ -69,11 +69,7 @@ fn slide_down(
     position: Position,
     gradient: Range<f32>,
 ) -> f32 {
-    match position.y as f32 {
-        y if gradient.contains(&y) => (y - gradient.start) / (gradient.end - gradient.start),
-        y if y >= gradient.end     => 1.0,
-        _                          => 0.0,
-    }
+    1.0 - slide_up(position, gradient)
 }
 
 fn slide_right(
@@ -91,10 +87,5 @@ fn slide_left(
     position: Position,
     gradient: Range<f32>,
 ) -> f32 {
-    match position.x as f32 {
-        x if gradient.contains(&x) => 1.0 - (x - gradient.start) / (gradient.end - gradient.start),
-        x if x < gradient.start    => 1.0,
-        _                          => 0.0,
-    }
+    1.0 - slide_right(position, gradient)
 }
-

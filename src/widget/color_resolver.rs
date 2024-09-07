@@ -1,5 +1,5 @@
 use crate::widget::EffectSpan;
-use crate::{shuffle, SimpleRng};
+use crate::{RangeSampler, SimpleRng};
 use bon::builder;
 use ratatui::prelude::Color;
 use std::collections::BTreeSet;
@@ -75,4 +75,30 @@ fn id_of(effect: &str) -> &str {
         .or(effect.strip_suffix("_to"))
         .or(effect.strip_suffix("_from"))
         .unwrap_or(effect)
+}
+
+fn shuffle<T>(vec: &mut Vec<T>, rng: &mut SimpleRng) {
+    let len = vec.len();
+    for i in 0..len {
+        let j = rng.gen_range(i..len);
+        vec.swap(i, j);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shuffle() {
+        let mut lcg = SimpleRng::new(12345);
+        let mut vec = vec![1, 2, 3, 4, 5];
+        let original = vec.clone();
+
+        shuffle(&mut vec, &mut lcg);
+
+        assert_ne!(vec, original);
+        assert_eq!(vec.len(), original.len());
+        assert_eq!(vec.iter().sum::<i32>(), original.iter().sum::<i32>());
+    }
 }

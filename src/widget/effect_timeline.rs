@@ -612,10 +612,10 @@ mod tests {
     fn test_widget_happy_path() {
         let bg = Color::Black;
         let fx = sequence(&[
-            fx::sweep_out(Direction::DownToUp, 5, bg, (2000, QuadOut)),
-            fx::sweep_in(Direction::UpToDown, 5, bg, (2000, QuadOut)),
-            fx::sweep_out(Direction::UpToDown, 5, bg, (2000, QuadOut)),
-            fx::sweep_in(Direction::DownToUp, 5, bg, (2000, QuadOut)),
+            fx::sweep_out(Direction::DownToUp, 5, 0, bg, (2000, QuadOut)),
+            fx::sweep_in(Direction::UpToDown, 5, 0, bg, (2000, QuadOut)),
+            fx::sweep_out(Direction::UpToDown, 5, 0, bg, (2000, QuadOut)),
+            fx::sweep_in(Direction::DownToUp, 5, 0, bg, (2000, QuadOut)),
         ]);
 
         let timeline = EffectTimeline::builder().effect(&fx).build();
@@ -651,7 +651,7 @@ mod tests {
                     ),
                     fx::fade_to(Black, Black, (500, CircInOut)),
                 ]),
-                fx::slide_in(Direction::UpToDown, 10, Black, (900, QuadOut)),
+                fx::slide_in(Direction::UpToDown, 10, 0, Black, (900, QuadOut)),
             ]).with_cell_selection(content_area),
         );
 
