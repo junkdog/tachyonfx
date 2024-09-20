@@ -1,10 +1,14 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use ratatui::buffer::Cell;
 use ratatui::layout;
 use ratatui::layout::{Margin, Position, Rect};
 use ratatui::prelude::Color;
 use crate::color_ext::ToRgbComponents;
+use crate::{ref_count, RefCount, ThreadSafetyMarker};
+
+#[cfg(not(feature = "sendable"))]
+type PositionFnType = RefCount<dyn Fn(Position) -> bool>;
+#[cfg(feature = "sendable")]
+type PositionFnType = RefCount<dyn Fn(Position) -> bool + Send>;
 
 /// A filter mode enables effects to operate on specific cells.
 #[derive(Clone, Default)]
@@ -33,14 +37,14 @@ pub enum CellFilter {
     /// Selects cells within the specified layout, denoted by the index
     Layout(layout::Layout, u16),
     /// Selects cells by predicate function
-    PositionFn(Rc<RefCell<dyn Fn(Position) -> bool>>),
+    PositionFn(PositionFnType),
 }
 
 impl CellFilter {
-    pub fn position_fn<F>(f: F) -> Self
-        where F: Fn(Position) -> bool + 'static
+    pub fn apply_position_fn<F>(f: F) -> Self
+        where F: Fn(Position) -> bool + ThreadSafetyMarker + 'static
     {
-        CellFilter::PositionFn(Rc::new(RefCell::new(f)))
+        CellFilter::PositionFn(ref_count(f))
     }
 
     pub fn to_string(&self) -> String {
@@ -114,6 +118,13 @@ impl CellSelector {
     }
 
     fn valid_position(&self, pos: Position, mode: &CellFilter) -> bool {
+        fn apply_position_fn(f: &PositionFnType, pos: Position) -> bool {
+            #[cfg(not(feature = "sendable"))]
+            return f.borrow()(pos);
+            #[cfg(feature = "sendable")]
+            f.lock().unwrap()(pos)
+        }
+
         match mode {
             CellFilter::All           => self.inner_area.contains(pos),
             CellFilter::Layout(_, _)  => self.inner_area.contains(pos),
@@ -129,7 +140,7 @@ impl CellSelector {
             CellFilter::Not(m)        => self.valid_position(pos, m.as_ref()),
             CellFilter::FgColor(_)    => self.inner_area.contains(pos),
             CellFilter::BgColor(_)    => self.inner_area.contains(pos),
-            CellFilter::PositionFn(f) => f.borrow()(pos),
+            CellFilter::PositionFn(f) => apply_position_fn(f, pos),
         }
     }
 
@@ -211,7 +222,7 @@ mod tests {
         let filter = CellFilter::Layout(Layout::horizontal(&[]), 0);
         assert_eq!(filter.to_string(), "layout(0)");
 
-        let filter = CellFilter::PositionFn(Rc::new(RefCell::new(|_| true)));
+        let filter = CellFilter::PositionFn(ref_count(|_| true));
         assert_eq!(filter.to_string(), "position_fn");
     }
 }

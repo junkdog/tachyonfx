@@ -1,9 +1,7 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Rect};
 
-use crate::{BufferRenderer, CellFilter, CellIterator, Duration, EffectTimer, Interpolatable, Shader};
+use crate::{BufferRenderer, CellFilter, CellIterator, Duration, EffectTimer, Interpolatable, RefCount, Shader};
 
 /// Translates the contents of an auxiliary buffer onto the main buffer.
 ///
@@ -13,7 +11,7 @@ use crate::{BufferRenderer, CellFilter, CellIterator, Duration, EffectTimer, Int
 #[derive(Clone)]
 pub struct TranslateBuffer {
     /// The auxiliary buffer containing the pre-rendered content to be translated.
-    aux_buffer: Rc<RefCell<Buffer>>,
+    aux_buffer: RefCount<Buffer>,
     /// The offset to translate the buffer by.
     translate_by: Offset,
     /// Timer controlling the duration and progress of the translation effect.
@@ -29,7 +27,7 @@ impl TranslateBuffer {
     /// * `timer` - The timer controlling the duration and interpolation of the effect.
     /// * `aux_buffer` - The auxiliary buffer containing the pre-rendered content.
     pub fn new(
-        aux_buffer: Rc<RefCell<Buffer>>,
+        aux_buffer: RefCount<Buffer>,
         translate_by: Offset,
         timer: EffectTimer,
     ) -> Self {
@@ -106,11 +104,11 @@ impl Shader for TranslateBuffer {
 mod tests {
     use super::*;
     use ratatui::widgets::{Block, Borders, Widget};
-    use crate::{CenteredShrink, Interpolation};
+    use crate::{ref_count, CenteredShrink, Interpolation};
 
     fn translate_buffer_fx(translate_by: Offset) -> TranslateBuffer {
         let screen = Rect::new(0, 0, 20, 10);
-        let aux_buffer = Rc::new(RefCell::new(Buffer::empty(screen)));
+        let aux_buffer = ref_count(Buffer::empty(screen));
         TranslateBuffer::new(aux_buffer, translate_by, EffectTimer::from_ms(100, Interpolation::Linear))
     }
 
@@ -131,7 +129,10 @@ mod tests {
         let content = screen.inner_centered(10, 4);
 
         // Prepare the auxiliary buffer
+        #[cfg(not(feature = "sendable"))]
         let mut aux_buffer = fx.aux_buffer.borrow_mut();
+        #[cfg(feature = "sendable")]
+        let mut aux_buffer = fx.aux_buffer.lock().unwrap();
         let block = Block::default()
             .borders(Borders::ALL)
             .title("hello");

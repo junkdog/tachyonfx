@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Size};
 use ratatui::style::Color;
@@ -10,8 +8,7 @@ use prolong::{Prolong, ProlongPosition};
 pub use shader_fn::*;
 use slide::SlideCell;
 pub use direction::*;
-
-use crate::{CellIterator, Duration};
+use crate::{CellIterator, Duration, RefCount, ThreadSafetyMarker};
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::fx::ansi256::Ansi256;
@@ -119,9 +116,9 @@ mod direction;
 ///
 pub fn effect_fn<F, S, T>(state: S, timer: T, f: F) -> Effect
 where
-    S: Clone + 'static,
+    S: Clone + Send + 'static,
     T: Into<EffectTimer>,
-    F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static,
+    F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static,
 {
     ShaderFn::builder()
         .name("shader_fn")
@@ -151,9 +148,9 @@ where
 /// * An `Effect` instance that can be used with other effects or applied directly to terminal cells.
 pub fn effect_fn_buf<F, S, T>(state: S, timer: T, f: F) -> Effect
 where
-    S: Clone + 'static,
+    S: Clone + Send + 'static,
     T: Into<EffectTimer>,
-    F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static,
+    F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static,
 {
     ShaderFn::builder()
         .name("shader_fn_buf")
@@ -455,7 +452,7 @@ pub fn translate<T: Into<EffectTimer>>(
 /// Returns an `Effect` that can be used with other effects or applied directly to a buffer.
 pub fn translate_buf<T: Into<EffectTimer>>(
     translate_by: Offset,
-    aux_buffer: Rc<RefCell<Buffer>>,
+    aux_buffer: RefCount<Buffer>,
     timer: T,
 ) -> Effect {
     TranslateBuffer::new(aux_buffer, translate_by, timer.into()).into_effect()
@@ -521,13 +518,13 @@ pub fn resize_area<T: Into<EffectTimer>>(
 /// use std::cell::RefCell;
 /// use std::rc::Rc;
 /// use ratatui::prelude::{Buffer, Color, Rect};
-/// use tachyonfx::{fx, Duration, Effect, EffectTimer, Interpolation, Shader};
+/// use tachyonfx::{fx, ref_count, Duration, Effect, EffectTimer, Interpolation, Shader};
 ///
 /// let duration = Duration::from_millis(16);
 /// let mut main_buffer = Buffer::empty(Rect::new(0, 0, 80, 24));
 ///
 /// let area = Rect::new(0, 0, 80, 24);
-/// let offscreen_buffer = Rc::new(RefCell::new(Buffer::empty(area)));
+/// let offscreen_buffer = ref_count(Buffer::empty(area));
 ///
 /// let fade_effect = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));
 /// let mut offscreen_effect = fx::offscreen_buffer(fade_effect, offscreen_buffer.clone());
@@ -540,7 +537,7 @@ pub fn resize_area<T: Into<EffectTimer>>(
 /// This example creates an offscreen buffer and applies a fade effect to it. The effect can be
 /// processed independently of the main render buffer, allowing for more complex or
 /// performance-intensive effects to be computed separately.
-pub fn offscreen_buffer(fx: Effect, render_target: Rc<RefCell<Buffer>>) -> Effect {
+pub fn offscreen_buffer(fx: Effect, render_target: RefCount<Buffer>) -> Effect {
     offscreen_buffer::OffscreenBuffer::new(fx, render_target).into_effect()
 }
 
@@ -771,6 +768,25 @@ fn fade<C: Into<Color>>(
         .into_effect()
 }
 
+
+#[cfg(feature = "sendable")]
+macro_rules! invoke_fn {
+    // Arc<Mutex<F>> for sendable
+    ($f:expr, $($args:expr),* $(,)?) => {
+        $f.lock().unwrap()($($args),*)
+    };
+}
+
+#[cfg(not(feature = "sendable"))]
+macro_rules! invoke_fn {
+    // Rc<Arc<F>> for non-sendable
+    ($f:expr, $($args:expr),* $(,)?) => {
+        $f.borrow_mut()($($args),*)
+    };
+}
+
+pub (crate) use invoke_fn;
+
 #[cfg(test)]
 mod tests {
     use ratatui::prelude::Color;
@@ -887,6 +903,7 @@ mod size_assertions {
         }
     }
 
+    verify_size!(EffectTimer,      12);
     verify_size!(Ansi256,          10);
     verify_size!(ConsumeTick,       1);
     verify_size!(Dissolve,         72);

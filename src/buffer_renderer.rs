@@ -34,6 +34,14 @@ impl BufferRenderer for Rc<RefCell<Buffer>> {
     }
 }
 
+#[cfg(feature = "sendable")]
+impl BufferRenderer for crate::RefCount<Buffer> {
+    fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
+        (*self.lock().unwrap())
+            .render_buffer(offset, buf);
+    }
+}
+
 impl BufferRenderer for Buffer {
     fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
         blit_buffer(self, buf, offset);
@@ -214,19 +222,19 @@ fn color_code(color: Color, foreground: bool) -> String {
 #[cfg(test)]
 mod tests {
     use ratatui::buffer::Buffer;
+    use crate::ref_count;
     use super::*;
 
     fn assert_buffer_to_buffer_copy(
         offset: Offset,
         expected: Buffer,
     ) {
-
-        let aux_buffer = Rc::new(RefCell::new(Buffer::with_lines([
+        let aux_buffer = ref_count(Buffer::with_lines([
             "abcd",
             "efgh",
             "ijkl",
             "mnop",
-        ])));
+        ]));
 
         let mut buf = Buffer::with_lines([
             ". . . . ",
@@ -307,14 +315,14 @@ mod tests {
 
     #[test]
     fn test_render_from_larger_aux_buffer() {
-        let aux_buffer = Rc::new(RefCell::new(Buffer::with_lines([
+        let aux_buffer = ref_count(Buffer::with_lines([
             "AAAAAAAAAA",
             "BBBBBBBBBB",
             "CCCCCCCCCC",
             "DDDDDDDDDD",
             "EEEEEEEEEE",
             "FFFFFFFFFF",
-        ])));
+        ]));
 
         let buffer = || Buffer::with_lines([
             ". . . . ",

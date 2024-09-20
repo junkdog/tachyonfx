@@ -21,6 +21,7 @@ mod buffer_renderer;
 mod cell_filter;
 mod simple_rng;
 mod duration;
+mod features;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
@@ -35,3 +36,4 @@ pub use interpolation::*;
 pub use buffer_renderer::{BufferRenderer, blit_buffer, render_as_ansi_string};
 pub use simple_rng::*;
 pub use duration::Duration;
+pub use features::{ref_count, RefCount, ThreadSafetyMarker};
