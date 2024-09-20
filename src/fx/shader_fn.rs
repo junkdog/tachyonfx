@@ -1,10 +1,10 @@
 use bon::{bon, builder};
-use std::cell::RefCell;
-use std::rc::Rc;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use crate::{CellFilter, CellIterator, Duration, EffectTimer, Shader};
+use crate::{ref_count, CellFilter, CellIterator, Duration, EffectTimer, RefCount, Shader};
+use crate::fx::invoke_fn;
+use crate::ThreadSafetyMarker;
 
 #[derive(Clone)]
 #[builder]
@@ -21,26 +21,35 @@ pub struct ShaderFn<S: Clone> {
     area: Option<Rect>,
 }
 
+#[cfg(feature = "sendable")]
+type FnIterSignature<S> = dyn FnMut(&mut S, ShaderFnContext, CellIterator) + Send + 'static;
+#[cfg(feature = "sendable")]
+type FnBufSignature<S> = dyn FnMut(&mut S, ShaderFnContext, &mut Buffer) + Send + 'static;
+
+#[cfg(not(feature = "sendable"))]
+type FnIterSignature<S> = dyn FnMut(&mut S, ShaderFnContext, CellIterator) + 'static;
+#[cfg(not(feature = "sendable"))]
+type FnBufSignature<S> = dyn FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static;
+
 #[derive(Clone)]
 pub enum ShaderFnSignature<S> {
-    Iter(Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, CellIterator)>>),
-    Buffer(Rc<RefCell<dyn FnMut(&mut S, ShaderFnContext, &mut Buffer)>>),
+    Iter(RefCount<FnIterSignature<S>>),
+    Buffer(RefCount<FnBufSignature<S>>),
 }
 
 impl<S> ShaderFnSignature<S> {
     pub fn new_iter<F>(f: F) -> Self
-        where F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static
+        where F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static
     {
-        Self::Iter(Rc::new(RefCell::new(f)))
+        Self::Iter(ref_count(f))
     }
 
     pub fn new_buffer<F>(f: F) -> Self
-        where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static
+        where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static
     {
-        Self::Buffer(Rc::new(RefCell::new(f)))
+        Self::Buffer(ref_count(f))
     }
 }
-
 
 /// Context provided to the shader function, containing timing and area information.
 pub struct ShaderFnContext<'a> {
@@ -71,7 +80,7 @@ impl<'a> ShaderFnContext<'a> {
 }
 
 #[bon]
-impl<S: Clone + 'static> ShaderFn<S> {
+impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
     #[builder]
     pub(self) fn with_iterator<F, T>(
         name: Option<&'static str>,
@@ -81,8 +90,8 @@ impl<S: Clone + 'static> ShaderFn<S> {
         cell_filter: Option<CellFilter>,
         area: Option<Rect>
     ) -> Self
-        where F: FnMut(&mut S, ShaderFnContext, CellIterator) + 'static,
-              T: Into<EffectTimer>
+    where F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static,
+          T: Into<EffectTimer>
     {
         Self {
             name: name.unwrap_or("shader_fn"),
@@ -104,8 +113,8 @@ impl<S: Clone + 'static> ShaderFn<S> {
         cell_filter: Option<CellFilter>,
         area: Option<Rect>
     ) -> Self
-        where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static,
-              T: Into<EffectTimer>
+    where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static,
+          T: Into<EffectTimer>
     {
         Self {
             name: name.unwrap_or("shader_fn"),
@@ -119,7 +128,8 @@ impl<S: Clone + 'static> ShaderFn<S> {
     }
 }
 
-impl<S: Clone + 'static> Shader for ShaderFn<S> {
+
+impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
     fn name(&self) -> &'static str {
         self.name
     }
@@ -136,11 +146,11 @@ impl<S: Clone + 'static> Shader for ShaderFn<S> {
             ShaderFnSignature::Iter(f) => {
                 let cells = self.cell_iter(buf, area);
                 let ctx = ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
-                f.borrow_mut()(&mut self.state, ctx, cells)
+                invoke_fn!(f, &mut self.state, ctx, cells)
             }
             ShaderFnSignature::Buffer(f) => {
                 let ctx = ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
-                f.borrow_mut()(&mut self.state, ctx, buf)
+                invoke_fn!(f, &mut self.state, ctx, buf)
             }
         }
 

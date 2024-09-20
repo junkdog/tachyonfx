@@ -24,6 +24,7 @@ crossterm = "0.28.1"
 
 [features]
 std-duration = []
+sendable = []
 
 [[example]]
 name = "open-window"
