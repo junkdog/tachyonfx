@@ -1,18 +1,16 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::{CellFilter, CellIterator, Duration, Effect, Shader};
+use crate::{CellFilter, CellIterator, Duration, Effect, RefCount, Shader};
 use crate::widget::EffectSpan;
 
 #[derive(Clone)]
 pub struct OffscreenBuffer {
     fx: Effect,
-    render_target: Rc<RefCell<Buffer>>,
+    render_target: RefCount<Buffer>,
 }
 
 impl OffscreenBuffer {
-    pub fn new(fx: Effect, render_target: Rc<RefCell<Buffer>>) -> Self {
+    pub fn new(fx: Effect, render_target: RefCount<Buffer>) -> Self {
         Self { fx, render_target }
     }
 }
@@ -29,8 +27,14 @@ impl Shader for OffscreenBuffer {
         _area: Rect
     ) -> Option<Duration> {
         let area = self.area().unwrap(); // guaranteed to be Some
-        let target = &mut self.render_target.as_ref().borrow_mut();
-        self.fx.process(duration, target, area);
+        #[cfg(not(feature = "sendable"))] {
+            let target = &mut self.render_target.as_ref().borrow_mut();
+            self.fx.process(duration, target, area);
+        };
+        #[cfg(feature = "sendable")] {
+            let mut target = self.render_target.lock().unwrap();
+            self.fx.process(duration, &mut target, area);
+        };
 
         None
     }
@@ -45,9 +49,17 @@ impl Shader for OffscreenBuffer {
         Box::new(self.clone())
     }
 
+    #[cfg(not(feature = "sendable"))]
     fn area(&self) -> Option<Rect> {
         self.fx.area()
             .unwrap_or_else(|| *self.render_target.as_ref().borrow().area())
+            .into()
+    }
+
+    #[cfg(feature = "sendable")]
+    fn area(&self) -> Option<Rect> {
+        self.fx.area()
+            .unwrap_or_else(|| self.render_target.lock().unwrap().area)
             .into()
     }
 

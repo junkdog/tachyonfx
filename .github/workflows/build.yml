@@ -14,7 +14,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build
+    - name: build
       run: cargo build --verbose
-    - name: Run tests
+    - name: run tests
       run: cargo test --verbose
+    - name: run tests - sendable
+      run: cargo test --verbose --features=sendable
+#    - name: run tests - std-duration
+#      run: cargo test --verbose --features=std-duration

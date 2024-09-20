@@ -19,8 +19,13 @@ Add tachyonfx to your `Cargo.toml`:
 tachyonfx = "0.6.0"
 ```
 
-## Overview
+### Features
+- `sendable`: Enables the `Send` trait for effects, shaders, and associated parameters. This allows effects to be
+  safely transferred across thread boundaries. Note that enabling this feature requires all `Shader` implementations
+  to be `Send`, which may impose additional constraints on custom shader implementations.
+- `std-duration`:  Uses `std::time::Duration` instead of a custom 32-bit duration type.
 
+## Overview
 
 ### Effects
 
