@@ -127,7 +127,7 @@ impl EffectTimer {
     pub fn alpha(&self) -> f32 {
         let total = self.total.as_secs_f32();
         if total == 0.0 {
-            return 1.0;
+            return if self.reverse { 0.0 } else { 1.0 };
         }
 
         let remaining = self.remaining.as_secs_f32();
