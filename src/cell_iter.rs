@@ -33,7 +33,8 @@ impl<'a> Iterator for CellIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let selector = self.filter.as_ref().map(|f| f.selector(self.area));
-        while self.current < self.area.area() {
+        let area = self.area.area();
+        while self.current < area {
             let (pos, cell) = self.cell_mut()?;
             // enforce cell's lifetime. this is safe because `buf` is guaranteed to outlive `'a`
             let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
