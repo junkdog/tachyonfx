@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
 use ratatui::prelude::Color;
@@ -5,7 +6,7 @@ use ratatui::prelude::Color;
 use Interpolation::CircOut;
 
 use crate::effect_timer::EffectTimer;
-use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
+use crate::fx::sliding_window_alpha::{EdgeBehavior, SlidingWindowAlpha};
 use crate::fx::{Direction, DirectionalVariance};
 use crate::interpolation::{Interpolatable, Interpolation};
 use crate::shader::Shader;
@@ -13,7 +14,7 @@ use crate::CellFilter;
 use crate::{CellIterator, ColorMapper, Duration};
 
 #[derive(Clone)]
-pub struct SweepIn {
+pub struct SweepIn<Leading: EdgeBehavior, Trailing: EdgeBehavior> {
     gradient_length: u16,
     randomness_extent: u16,
     faded_color: Color,
@@ -21,10 +22,12 @@ pub struct SweepIn {
     direction: Direction,
     area: Option<Rect>,
     cell_filter: CellFilter,
+    phantom_leading: PhantomData<Leading>,
+    phantom_trailing: PhantomData<Trailing>,
 }
 
 
-impl SweepIn {
+impl<Leading: EdgeBehavior, Trailing: EdgeBehavior> SweepIn<Leading, Trailing> {
     pub fn new(
         direction: Direction,
         gradient_length: u16,
@@ -40,11 +43,17 @@ impl SweepIn {
             timer: if direction.flips_timer() { lifetime.reversed() } else { lifetime },
             area: None,
             cell_filter: CellFilter::All,
+            phantom_leading: PhantomData,
+            phantom_trailing: PhantomData,
         }
     }
 }
 
-impl Shader for SweepIn {
+impl<Leading, Trailing> Shader for SweepIn<Leading, Trailing>
+where
+    Leading: EdgeBehavior + Clone + 'static,
+    Trailing: EdgeBehavior + Clone + 'static
+{
     fn name(&self) -> &'static str {
         if self.timer.is_reversed() ^ self.direction.flips_timer() {
             "sweep_out"
@@ -80,11 +89,8 @@ impl Shader for SweepIn {
                     let cell = buf.cell_mut(pos).unwrap();
 
                     match window_alpha.alpha(offset(pos, row_variance)) {
-                        0.0 => {
-                            cell.set_fg(self.faded_color);
-                            cell.set_bg(self.faded_color);
-                        },
-                        1.0 => {} // nothing to do
+                        0.0 => Leading::apply_with_color(cell, self.faded_color),
+                        1.0 => Trailing::apply(cell),
                         a => {
                             let fg = fg_mapper
                                 .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
@@ -109,11 +115,8 @@ impl Shader for SweepIn {
                     let col_variance = (0, col_variances[(x - area.x) as usize]);
 
                     match window_alpha.alpha(offset(pos, col_variance)) {
-                        0.0 => {
-                            cell.set_fg(self.faded_color);
-                            cell.set_bg(self.faded_color);
-                        },
-                        1.0 => {} // nothing to do
+                        0.0 => Leading::apply_with_color(cell, self.faded_color),
+                        1.0 => Trailing::apply(cell),
                         a => {
                             let fg = fg_mapper
                                 .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));

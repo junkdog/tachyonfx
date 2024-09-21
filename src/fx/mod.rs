@@ -292,7 +292,7 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
     faded_color: C,
     timer: T,
 ) -> Effect {
-    SweepIn::new(direction, gradient_length, randomness, faded_color.into(), timer.into())
+    SweepIn::<SolidColor, NoOpEdgeBehavior>::new(direction, gradient_length, randomness, faded_color.into(), timer.into())
         .into_effect()
 }
 
@@ -786,6 +786,7 @@ macro_rules! invoke_fn {
 }
 
 pub (crate) use invoke_fn;
+use crate::fx::sliding_window_alpha::{NoOpEdgeBehavior, SolidColor};
 
 #[cfg(test)]
 mod tests {
@@ -892,6 +893,7 @@ mod tests {
 // just to track the size of the shader structs somewhere
 mod size_assertions {
     use crate::fx::offscreen_buffer::OffscreenBuffer;
+    use crate::fx::sliding_window_alpha::{NoOpEdgeBehavior, SolidColor};
     use crate::fx::translate::Translate;
     use super::*;
 
@@ -921,7 +923,7 @@ mod size_assertions {
     verify_size!(ShaderFn<()>,    104);
     verify_size!(Sleep,            12);
     verify_size!(SlideCell,        72);
-    verify_size!(SweepIn,          72);
+    verify_size!(SweepIn<SolidColor, NoOpEdgeBehavior>,          72);
     verify_size!(TemporaryEffect,  32);
     verify_size!(Translate,        72);
     verify_size!(TranslateBuffer,  32);

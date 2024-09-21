@@ -1,5 +1,7 @@
 use std::ops::Range;
+use ratatui::buffer::Cell;
 use ratatui::layout::{Position, Rect};
+use ratatui::style::Color;
 use crate::fx::Direction;
 
 pub struct SlidingWindowAlpha {
@@ -88,4 +90,36 @@ fn slide_left(
     gradient: Range<f32>,
 ) -> f32 {
     1.0 - slide_right(position, gradient)
+}
+
+pub(crate) trait EdgeBehavior {
+    fn apply(cell: &mut Cell) {
+        Self::apply_with_color(cell, Color::default());
+    }
+
+    fn apply_with_color(cell: &mut Cell, color_override: Color) {}
+}
+
+#[derive(Clone)]
+pub(crate) struct NoOpEdgeBehavior;
+#[derive(Clone)]
+pub(crate) struct BgToFgColor;
+#[derive(Clone)]
+pub(crate) struct SolidColor;
+
+impl EdgeBehavior for NoOpEdgeBehavior {}
+
+impl EdgeBehavior for BgToFgColor {
+    fn apply_with_color(cell: &mut Cell, color_override: Color) {
+        cell.set_char(' ');
+        cell.fg = cell.bg;
+        cell.bg = color_override;
+    }
+}
+
+impl EdgeBehavior for SolidColor {
+    fn apply_with_color(cell: &mut Cell, color_override: Color) {
+        cell.fg = color_override;
+        cell.bg = color_override;
+    }
 }
