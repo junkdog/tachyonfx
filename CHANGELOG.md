@@ -5,6 +5,9 @@
 be safely transferred across thread boundaries. Note that enabling this feature requires all `Shader` implementations
 to be `Send`, which may impose additional constraints on custom shader implementations.
 
+### Changed
+- `SlidingWindowAlpha`: Optimized alpha computations via pre-calculated gradient steps, reducing redundant calculations.
+
 ## tachyonfx 0.6.0 - 2024-09-07
 
 This release introduces a lot of breaking changes in the form of added and removed parameters.
