@@ -72,8 +72,8 @@ impl Shader for SweepIn {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
 
-        let mut apply_alpha = |cell: &mut Cell, alpha: f32| {
-            match alpha {
+        let mut apply_alpha = |cell: &mut Cell, pos: Position| {
+            match window_alpha.alpha(pos) {
                 0.0 => {
                     cell.set_fg(self.faded_color);
                     cell.set_bg(self.faded_color);
@@ -97,8 +97,7 @@ impl Shader for SweepIn {
                 for x in area.x..area.x + area.width {
                     let pos = Position { x, y };
                     let cell = buf.cell_mut(pos).unwrap();
-
-                    apply_alpha(cell, window_alpha.alpha(offset(pos, row_variance)));
+                    apply_alpha(cell, offset(pos, row_variance));
                 }
             }
         } else {
@@ -112,7 +111,7 @@ impl Shader for SweepIn {
                     let cell = buf.cell_mut(pos).unwrap();
                     let col_variance = (0, col_variances[(x - area.x) as usize]);
 
-                    apply_alpha(cell, window_alpha.alpha(offset(pos, col_variance)));
+                    apply_alpha(cell, offset(pos, col_variance));
                 }
             }
         }
