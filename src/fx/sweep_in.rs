@@ -1,4 +1,4 @@
-use ratatui::buffer::Buffer;
+use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Position, Rect};
 use ratatui::prelude::Color;
 
@@ -72,6 +72,25 @@ impl Shader for SweepIn {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
 
+        let mut apply_alpha = |cell: &mut Cell, alpha: f32| {
+            match alpha {
+                0.0 => {
+                    cell.set_fg(self.faded_color);
+                    cell.set_bg(self.faded_color);
+                },
+                1.0 => {} // nothing to do
+                a => {
+                    let fg = fg_mapper
+                        .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
+                    let bg = bg_mapper
+                        .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
+
+                    cell.set_fg(fg);
+                    cell.set_bg(bg);
+                }
+            }
+        };
+
         if self.randomness_extent == 0 || [Direction::LeftToRight, Direction::RightToLeft].contains(&direction) {
             for y in area.y..area.y + area.height {
                 let row_variance = axis_jitter.next();
@@ -79,22 +98,7 @@ impl Shader for SweepIn {
                     let pos = Position { x, y };
                     let cell = buf.cell_mut(pos).unwrap();
 
-                    match window_alpha.alpha(offset(pos, row_variance)) {
-                        0.0 => {
-                            cell.set_fg(self.faded_color);
-                            cell.set_bg(self.faded_color);
-                        },
-                        1.0 => {} // nothing to do
-                        a => {
-                            let fg = fg_mapper
-                                .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
-                            let bg = bg_mapper
-                                .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
-
-                            cell.set_fg(fg);
-                            cell.set_bg(bg);
-                        }
-                    }
+                    apply_alpha(cell, window_alpha.alpha(offset(pos, row_variance)));
                 }
             }
         } else {
@@ -108,22 +112,7 @@ impl Shader for SweepIn {
                     let cell = buf.cell_mut(pos).unwrap();
                     let col_variance = (0, col_variances[(x - area.x) as usize]);
 
-                    match window_alpha.alpha(offset(pos, col_variance)) {
-                        0.0 => {
-                            cell.set_fg(self.faded_color);
-                            cell.set_bg(self.faded_color);
-                        },
-                        1.0 => {} // nothing to do
-                        a => {
-                            let fg = fg_mapper
-                                .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
-                            let bg = bg_mapper
-                                .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
-
-                            cell.set_fg(fg);
-                            cell.set_bg(bg);
-                        }
-                    }
+                    apply_alpha(cell, window_alpha.alpha(offset(pos, col_variance)));
                 }
             }
         }
