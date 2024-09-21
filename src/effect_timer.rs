@@ -125,12 +125,12 @@ impl EffectTimer {
     /// let alpha = timer.alpha();
     /// ```
     pub fn alpha(&self) -> f32 {
-        let total = self.total.as_secs_f32();
+        let total = self.total.as_millis() as f32;
         if total == 0.0 {
             return if self.reverse { 0.0 } else { 1.0 };
         }
 
-        let remaining = self.remaining.as_secs_f32();
+        let remaining = self.remaining.as_millis() as f32;
         let inv_alpha = remaining / total;
 
         let a = if self.reverse { inv_alpha } else { 1.0 - inv_alpha };
