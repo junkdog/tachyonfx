@@ -7,10 +7,11 @@ to be `Send`, which may impose additional constraints on custom shader implement
 - `ref_count()`: wraps a value in an `Rc<RefCell<T>>` or an `Arc<Mutex<T>>` depending on the `sendable` feature.
 
 ### Changed
-- `SlidingWindowAlpha`: Optimized alpha computations via pre-calculated gradient steps, reducing redundant calculations.
+- `SlidingWindowAlpha`: Now uses multiplication instead of division when calculating alpha values for the gradient.
+- `EffectTimer::alpha`: removed two redundant divisions.
 
 ### Fixed
-- Fix alpha for `EffectTimer` when timer is reversed and duration is zero.
+- `EffectTimer::alpha` now correctly returns 0.0 for reversed timers with zero duration.
 
 ## tachyonfx 0.6.0 - 2024-09-07
 
