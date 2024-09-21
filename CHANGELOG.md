@@ -4,9 +4,13 @@
 - `sendable` feature: Enables the `Send` trait for effects, shaders, and associated parameters. This allows effects to
 be safely transferred across thread boundaries. Note that enabling this feature requires all `Shader` implementations
 to be `Send`, which may impose additional constraints on custom shader implementations.
+- `ref_count()`: wraps a value in an `Rc<RefCell<T>>` or an `Arc<Mutex<T>>` depending on the `sendable` feature.
 
 ### Changed
 - `SlidingWindowAlpha`: Optimized alpha computations via pre-calculated gradient steps, reducing redundant calculations.
+
+### Fixed
+- Fix alpha for `EffectTimer` when timer is reversed and duration is zero.
 
 ## tachyonfx 0.6.0 - 2024-09-07
 
