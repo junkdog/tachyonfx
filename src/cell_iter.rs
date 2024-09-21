@@ -23,7 +23,7 @@ impl<'a> CellIterator<'a> {
         let y = self.current / self.area.width;
 
         let pos = Position::new(self.area.x + x, self.area.y + y);
-        let cell = self.buf.cell_mut(Position::new(pos.x, pos.y))?;
+        let cell = self.buf.cell_mut(pos)?;
         Some((pos, cell))
     }
 }
