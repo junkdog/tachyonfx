@@ -1,5 +1,5 @@
 use bon::builder;
-use ratatui::buffer::Buffer;
+use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Position, Rect};
 use ratatui::style::Color;
 
@@ -67,25 +67,29 @@ impl Shader for SlideCell {
 
         let mut axis_jitter = DirectionalVariance::from(area, direction, self.randomness_extent);
 
+        let mut update_cell = |cell: &mut Cell, pos: Position| {
+            match window_alpha.alpha(pos) {
+                0.0 => {},
+                1.0 => {
+                    cell.set_char(' ');
+                    cell.fg = cell.bg;
+                    cell.bg = self.color_behind_cell;
+                }
+                a => {
+                    cell.set_char(self.slided_cell(a));
+                    cell.fg = cell.bg;
+                    cell.bg = self.color_behind_cell;
+                }
+            }
+        };
+
         if self.randomness_extent == 0 || [Direction::LeftToRight, Direction::RightToLeft].contains(&direction) {
             for y in area.y..area.y + area.height {
                 let row_variance = axis_jitter.next();
                 for x in area.x..area.x + area.width {
                     let pos = Position { x, y };
                     let cell = buf.cell_mut(pos).unwrap();
-                    match window_alpha.alpha(offset(pos, row_variance)) {
-                        0.0 => {},
-                        1.0 => {
-                            cell.set_char(' ');
-                            cell.fg = cell.bg;
-                            cell.bg = self.color_behind_cell;
-                        }
-                        a => {
-                            cell.set_char(self.slided_cell(a));
-                            cell.fg = cell.bg;
-                            cell.bg = self.color_behind_cell;
-                        }
-                    }
+                    update_cell(cell, offset(pos, row_variance));
                 }
             }
         } else {
@@ -96,22 +100,9 @@ impl Shader for SlideCell {
             for y in area.y..area.y + area.height {
                 for x in area.x..area.x + area.width {
                     let pos = Position { x, y };
-                    let cell = buf.cell_mut(pos).unwrap();
                     let col_variance = (0, col_variances[(x - area.x) as usize]);
-
-                    match window_alpha.alpha(offset(pos, col_variance)) {
-                        0.0 => {},
-                        1.0 => {
-                            cell.set_char(' ');
-                            cell.fg = cell.bg;
-                            cell.bg = self.color_behind_cell;
-                        }
-                        a => {
-                            cell.set_char(self.slided_cell(a));
-                            cell.fg = cell.bg;
-                            cell.bg = self.color_behind_cell;
-                        }
-                    }
+                    let cell = buf.cell_mut(pos).unwrap();
+                    update_cell(cell, offset(pos, col_variance));
                 }
             }
         }
