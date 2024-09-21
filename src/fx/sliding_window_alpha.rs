@@ -3,8 +3,9 @@ use ratatui::layout::{Position, Rect};
 use crate::fx::Direction;
 
 pub struct SlidingWindowAlpha {
-    alpha_fn: fn(Position, Range<f32>) -> f32,
+    alpha_fn: fn(Position, Range<f32>, f32) -> f32,
     gradient: Range<f32>,
+    alpha_per_cell: f32,
 }
 
 #[bon::bon]
@@ -25,41 +26,35 @@ impl SlidingWindowAlpha {
 
         let gradient = match direction {
             Direction::LeftToRight | Direction::RightToLeft =>
-                horizontal_gradient(area, progress, gradient_len),
+                gradient(progress, area.x, area.width, gradient_len),
             Direction::UpToDown | Direction::DownToUp =>
-                vertical_gradient(area, progress, gradient_len),
+                gradient(progress, area.y, area.height, gradient_len),
         };
 
-        Self { alpha_fn, gradient }
+        let alpha_per_cell = 1.0 / (gradient.end - gradient.start);
+        Self { alpha_fn, gradient, alpha_per_cell }
     }
 
     pub fn alpha(&self, position: Position) -> f32 {
-        (self.alpha_fn)(position, self.gradient.clone())
+        (self.alpha_fn)(position, self.gradient.clone(), self.alpha_per_cell)
     }
 }
 
-fn horizontal_gradient(area: Rect, alpha: f32, gradient_len: u16) -> Range<f32> {
+fn gradient(progress: f32, coordinate: u16, area_len: u16, gradient_len: u16) -> Range<f32> {
     let gradient_len = gradient_len as f32;
-    let x_start = (area.x as f32 - gradient_len) + ((area.width as f32 + gradient_len) * alpha);
-    let x_end = x_start + gradient_len;
+    let start = (coordinate as f32 - gradient_len) + ((area_len as f32 + gradient_len) * progress);
+    let end = start + gradient_len;
 
-    x_start..x_end
-}
-
-fn vertical_gradient(area: Rect, progress: f32, gradient_len: u16) -> Range<f32> {
-    let gradient_len = gradient_len as f32;
-    let y_start = (area.y as f32 - gradient_len) + ((area.height as f32 + gradient_len) * progress);
-    let y_end = y_start + gradient_len;
-
-    y_start..y_end
+    start..end
 }
 
 fn slide_up(
     position: Position,
     gradient: Range<f32>,
+    alpha_per_cell: f32,
 ) -> f32 {
     match position.y as f32 {
-        y if gradient.contains(&y) => 1.0 - (y - gradient.start) / (gradient.end - gradient.start),
+        y if gradient.contains(&y) => 1.0 - (alpha_per_cell * (y - gradient.start)),
         y if y < gradient.start    => 1.0,
         _                          => 0.0,
     }
@@ -68,16 +63,18 @@ fn slide_up(
 fn slide_down(
     position: Position,
     gradient: Range<f32>,
+    alpha_per_cell: f32,
 ) -> f32 {
-    1.0 - slide_up(position, gradient)
+    1.0 - slide_up(position, gradient, alpha_per_cell)
 }
 
 fn slide_right(
     position: Position,
     gradient: Range<f32>,
+    alpha_per_cell: f32,
 ) -> f32 {
     match position.x as f32 {
-        x if gradient.contains(&x) => (x - gradient.start) / (gradient.end - gradient.start),
+        x if gradient.contains(&x) => alpha_per_cell * (x - gradient.start),
         x if x >= gradient.end     => 1.0,
         _                          => 0.0,
     }
@@ -86,6 +83,7 @@ fn slide_right(
 fn slide_left(
     position: Position,
     gradient: Range<f32>,
+    alpha_per_cell: f32,
 ) -> f32 {
-    1.0 - slide_right(position, gradient)
+    1.0 - slide_right(position, gradient, alpha_per_cell)
 }
