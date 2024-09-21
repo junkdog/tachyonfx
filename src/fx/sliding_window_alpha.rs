@@ -48,24 +48,24 @@ fn gradient(progress: f32, coordinate: u16, area_len: u16, gradient_len: u16) ->
     start..end
 }
 
-fn slide_up(
-    position: Position,
-    gradient: Range<f32>,
-    alpha_per_cell: f32,
-) -> f32 {
-    match position.y as f32 {
-        y if gradient.contains(&y) => 1.0 - (alpha_per_cell * (y - gradient.start)),
-        y if y < gradient.start    => 1.0,
-        _                          => 0.0,
-    }
-}
-
 fn slide_down(
     position: Position,
     gradient: Range<f32>,
     alpha_per_cell: f32,
 ) -> f32 {
-    1.0 - slide_up(position, gradient, alpha_per_cell)
+    match position.y as f32 {
+        y if y < gradient.start => 0.0,
+        y if y > gradient.end   => 1.0,
+        y                       => alpha_per_cell * (y - gradient.start),
+    }
+}
+
+fn slide_up(
+    position: Position,
+    gradient: Range<f32>,
+    alpha_per_cell: f32,
+) -> f32 {
+    1.0 - slide_down(position, gradient, alpha_per_cell)
 }
 
 fn slide_right(
@@ -74,9 +74,9 @@ fn slide_right(
     alpha_per_cell: f32,
 ) -> f32 {
     match position.x as f32 {
-        x if gradient.contains(&x) => alpha_per_cell * (x - gradient.start),
-        x if x >= gradient.end     => 1.0,
-        _                          => 0.0,
+        x if x < gradient.start => 0.0,
+        x if x > gradient.end   => 1.0,
+        x                       => alpha_per_cell * (x - gradient.start),
     }
 }
 

@@ -67,7 +67,7 @@ impl Shader for SlideCell {
 
         let mut axis_jitter = DirectionalVariance::from(area, direction, self.randomness_extent);
 
-        let mut update_cell = |cell: &mut Cell, pos: Position| {
+        let update_cell = |cell: &mut Cell, pos: Position| {
             match window_alpha.alpha(pos) {
                 0.0 => {},
                 1.0 => {
