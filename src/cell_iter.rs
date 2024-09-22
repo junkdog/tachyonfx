@@ -15,7 +15,12 @@ impl<'a> CellIterator<'a> {
         area: Rect,
         filter: Option<CellFilter>,
     ) -> Self {
-        Self { current: 0, area, buf, filter }
+        Self {
+            current: 0,
+            area: area.intersection(buf.area),
+            buf,
+            filter
+        }
     }
 
     fn cell_mut(&mut self) -> Option<(Position, &mut Cell)> {

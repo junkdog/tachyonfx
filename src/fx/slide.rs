@@ -83,10 +83,11 @@ impl Shader for SlideCell {
             }
         };
 
+        let safe_area = area.intersection(buf.area);
         if self.randomness_extent == 0 || [Direction::LeftToRight, Direction::RightToLeft].contains(&direction) {
-            for y in area.y..area.y + area.height {
+            for y in area.y..area.y + safe_area.height {
                 let row_variance = axis_jitter.next();
-                for x in area.x..area.x + area.width {
+                for x in area.x..area.x + safe_area.width {
                     let pos = Position { x, y };
                     let cell = buf.cell_mut(pos).unwrap();
                     update_cell(cell, offset(pos, row_variance));
@@ -97,8 +98,8 @@ impl Shader for SlideCell {
                 .map(|_| axis_jitter.next().1)
                 .collect::<Vec<i16>>();
 
-            for y in area.y..area.y + area.height {
-                for x in area.x..area.x + area.width {
+            for y in area.y..area.y + safe_area.height {
+                for x in area.x..area.x + safe_area.width {
                     let pos = Position { x, y };
                     let col_variance = (0, col_variances[(x - area.x) as usize]);
                     let cell = buf.cell_mut(pos).unwrap();

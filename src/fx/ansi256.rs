@@ -25,9 +25,10 @@ impl Shader for Ansi256 {
     ) -> Option<Duration> {
         let mut fg_mapper = ColorMapper::default();
         let mut bg_mapper = ColorMapper::default();
-        
-        for y in area.top()..area.bottom() {
-            for x in area.left()..area.right() {
+
+        let safe_area = area.intersection(buf.area);
+        for y in area.top()..safe_area.bottom() {
+            for x in area.left()..safe_area.right() {
                 let cell = buf.cell_mut(Position::new(x, y))?;
                 let fg = fg_mapper.map(cell.fg, 0.0, |c| c.as_indexed_color());
                 let bg = bg_mapper.map(cell.bg, 0.0, |c| c.as_indexed_color());
