@@ -12,6 +12,10 @@ to be `Send`, which may impose additional constraints on custom shader implement
 
 ### Fixed
 - `EffectTimer::alpha` now correctly returns 0.0 for reversed timers with zero duration.
+- `CellIterator` now uses the intersection of the given area and the buffer's area, preventing panics from
+  out-of-bounds access.
+- `fx::sweep_in`, `fx::sweep_out`, `fx::slide_in`, `fx::slide_out`: now uses a "safe area" calculated as the
+  intersection of the effect area and buffer area, preventing out-of-bounds access.
 
 ## tachyonfx 0.6.0 - 2024-09-07
 
