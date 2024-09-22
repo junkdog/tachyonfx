@@ -1,4 +1,4 @@
-use bon::builder;
+use bon::{builder, Builder};
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Position, Rect};
 use ratatui::style::Color;
@@ -8,8 +8,7 @@ use crate::fx::{Direction, DirectionalVariance};
 use crate::{CellFilter, CellIterator, Duration, EffectTimer, Shader};
 
 /// A shader that applies a directional sliding effect to terminal cells.
-#[derive(Clone)]
-#[builder]
+#[derive(Builder, Clone)]
 pub struct SlideCell {
     /// The color behind the sliding cell.
     color_behind_cell: Color,

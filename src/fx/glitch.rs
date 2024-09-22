@@ -1,4 +1,4 @@
-use bon::builder;
+use bon::{builder, Builder};
 use std::fmt::Debug;
 use std::ops::Range;
 
@@ -17,8 +17,7 @@ pub enum GlitchType { // fixme: make non-public again
 }
 
 /// A glitch effect that can be applied to a cell.
-#[derive(Clone, Debug)]
-#[builder]
+#[derive(Builder, Clone, Debug)]
 pub struct GlitchCell {
     cell_idx: usize,
     glitch_remaining_ms: u32,
@@ -27,8 +26,7 @@ pub struct GlitchCell {
 }
 
 /// applies a glitch effect to random parts of the screen.
-#[derive(Clone)]
-#[builder]
+#[derive(Builder, Clone)]
 pub struct Glitch {
     cell_glitch_ratio: f32,
     action_start_delay_ms: Range<u32>,

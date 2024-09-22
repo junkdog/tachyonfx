@@ -1,4 +1,4 @@
-use bon::builder;
+use bon::{builder, Builder};
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 
@@ -7,8 +7,7 @@ use crate::shader::Shader;
 use crate::CellFilter;
 use crate::{CellIterator, ColorMapper, HslConvertable, Interpolatable};
 
-#[derive(Clone, Default)]
-#[builder]
+#[derive(Builder, Clone, Default)]
 pub struct HslShift {
     #[builder(into)]
     timer: EffectTimer,

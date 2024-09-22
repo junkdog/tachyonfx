@@ -14,7 +14,7 @@ authors = ["Adrian Papari <junkdog@angelhill.net>"]
 exclude = ["images/*.gif", ".*"]
 
 [dependencies]
-bon = "2.1.0"
+bon = "2.3.0"
 colorsys = "0.6.7"
 ratatui = "0.28.1"
 simple-easing = "1.0.1"
