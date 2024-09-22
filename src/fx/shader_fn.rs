@@ -1,4 +1,4 @@
-use bon::{bon, builder};
+use bon::{bon, builder, Builder};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
@@ -6,8 +6,7 @@ use crate::{ref_count, CellFilter, CellIterator, Duration, EffectTimer, RefCount
 use crate::fx::invoke_fn;
 use crate::ThreadSafetyMarker;
 
-#[derive(Clone)]
-#[builder]
+#[derive(Builder, Clone)]
 pub struct ShaderFn<S: Clone> {
     state: S,
     original_state: Option<S>,

@@ -1,4 +1,4 @@
-use bon::builder;
+use bon::{builder, Builder};
 use ratatui::layout::Rect;
 use ratatui::prelude::Color;
 
@@ -7,8 +7,7 @@ use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::{CellFilter, CellIterator, Interpolatable};
 
-#[derive(Clone)]
-#[builder]
+#[derive(Builder, Clone)]
 pub struct FadeColors {
     fg: Option<Color>,
     bg: Option<Color>,
