@@ -28,13 +28,19 @@ fn main() -> io::Result<()> {
         .into_effect();
 
     // Or you can use the provided effect combinators.
-    let mut effect = fx::ping_pong(fx::sweep_in(
-        FxDirection::LeftToRight,
-        15,
-        5,
-        Color::DarkGray,
-        EffectTimer::from_ms(2000, Interpolation::QuadOut),
-    ));
+    let mut effect = fx::sequence(&[
+        // first we "sweep in" the text from the left, before reversing the effect
+        fx::ping_pong(fx::sweep_in(
+            FxDirection::LeftToRight,
+            10,
+            0,
+            Color::DarkGray,
+            EffectTimer::from_ms(2000, Interpolation::QuadIn),
+        )),
+        // then we coalesce the text back to its original state
+        // (note that EffectTimers can be constructed from a tuple of duration and interpolation)
+        fx::coalesce((800, Interpolation::SineOut))
+    ]);
 
     loop {
         // Render the glitch effect after 10 seconds.
