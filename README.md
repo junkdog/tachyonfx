@@ -16,7 +16,7 @@ transformations, animations, and complex effect combinations.
 Add tachyonfx to your `Cargo.toml`:
 
 ```toml
-tachyonfx = "0.7.0"
+tachyonfx = "0.8.0"
 ```
 
 ### Features
@@ -106,6 +106,11 @@ prolong_start(duration, fx::fade_from(Dark0, Dark0, (320, QuadOut)),
 ```
 
 ## Examples
+
+### Example: `minimal`
+```
+cargo run --release --example=minimal 
+```
 
 ### Example: `tweens`
 ![tweens](images/example-tweens.png)

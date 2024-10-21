@@ -1,6 +1,11 @@
 # Changelog
 
-## tachyonfx 0.8.0-dev
+## tachyonfx 0.8.0 - 2024-10-21
+This is just a tiny release in order to be compatible with the latest `ratatui` version.
+
+### Added
+- new `minimal` example demonstrating how to get started with tachyonfx. Thanks to @orhunt for the contribution!
+
 ### Changed
 - `Color::to_rgb`: updated rgb values of standard terminal colors to be more conformant.
 
