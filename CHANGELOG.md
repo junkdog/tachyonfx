@@ -7,6 +7,9 @@
 ### Breaking
 - `ratatui` updated to 0.29.0. This is also the minimum version required for tachyonfx.
 
+### Fixed
+- `fx::repeat`: visibility of `RepeatMode` is now public.
+
 ## tachyonfx 0.7.0 - 2024-09-22
 
 ### Added

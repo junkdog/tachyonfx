@@ -6,6 +6,7 @@ pub use glitch::Glitch;
 use ping_pong::PingPong;
 use prolong::{Prolong, ProlongPosition};
 pub use shader_fn::*;
+pub use repeat::RepeatMode;
 use slide::SlideCell;
 pub use direction::*;
 use crate::{CellIterator, Duration, RefCount, ThreadSafetyMarker};
@@ -194,7 +195,7 @@ pub fn term256_colors() -> Effect {
 }
 
 /// Repeat the effect indefinitely or for a specified number of times or duration.
-pub fn repeat(effect: Effect, mode: repeat::RepeatMode) -> Effect {
+pub fn repeat(effect: Effect, mode: RepeatMode) -> Effect {
     Repeat::new(effect, mode).into_effect()
 }
 
