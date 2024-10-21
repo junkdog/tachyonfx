@@ -3,7 +3,7 @@ use ratatui::layout::{Position, Rect};
 use crate::CellFilter;
 
 pub struct CellIterator<'a> {
-    current: u16,
+    current: u32,
     area: Rect,
     buf: &'a mut Buffer,
     filter: Option<CellFilter>,
@@ -24,8 +24,8 @@ impl<'a> CellIterator<'a> {
     }
 
     fn cell_mut(&mut self) -> Option<(Position, &mut Cell)> {
-        let x = self.current % self.area.width;
-        let y = self.current / self.area.width;
+        let x = self.current as u16 % self.area.width;
+        let y = self.current as u16 / self.area.width;
 
         let pos = Position::new(self.area.x + x, self.area.y + y);
         let cell = self.buf.cell_mut(pos)?;

@@ -171,9 +171,9 @@ impl Interpolatable<Color> for Color {
         let (h, s, v) = self.to_hsl();
         let (h2, s2, v2) = target.to_hsl();
         Color::from_hsl(
-            h.lerp(&h2, alpha) as f64,
-            s.lerp(&s2, alpha) as f64,
-            v.lerp(&v2, alpha) as f64,
+            h.lerp(&h2, alpha),
+            s.lerp(&s2, alpha),
+            v.lerp(&v2, alpha),
         )
     }
 }

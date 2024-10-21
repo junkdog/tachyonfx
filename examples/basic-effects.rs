@@ -21,7 +21,7 @@ use tachyonfx::{fx::{
     sequence,
     Direction,
     Glitch,
-}, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect, Shader, SimpleRng};
+}, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, HslConvertable, Interpolation, IntoEffect, Shader, SimpleRng};
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
 
@@ -224,13 +224,13 @@ impl EffectsRepository {
 
         // fx from lambdas
         let custom_color_cycle = fx::effect_fn(Instant::now(), slow, |state, _ctx, cell_iter| {
-            let cycle: f64 = (state.elapsed().as_millis() % 3600) as f64;
+            let cycle: f32 = (state.elapsed().as_millis() % 3600) as f32;
 
             cell_iter
                 .filter(|(_, cell)| cell.symbol() != " ")
                 .enumerate()
                 .for_each(|(i, (_pos, cell))| {
-                    let hue = (2.0 * i as f64 + cycle * 0.2) % 360.0;
+                    let hue = (2.0 * i as f32 + cycle * 0.2) % 360.0;
                     let color = Color::from_hsl(hue, 100.0, 50.0);
                     cell.set_fg(color);
                 });

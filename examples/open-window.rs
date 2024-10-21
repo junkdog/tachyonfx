@@ -14,7 +14,7 @@ use ratatui::{text, Frame};
 
 use tachyonfx::fx::{never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration, Direction};
 use tachyonfx::CellFilter::{AllOf, Inner, Not, Outer};
-use tachyonfx::{fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, Shader};
+use tachyonfx::{fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, HslConvertable, Interpolation, Shader};
 use CellFilter::Text;
 use Interpolation::*;
 

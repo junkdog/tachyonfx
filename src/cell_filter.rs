@@ -184,10 +184,10 @@ mod tests {
     #[test]
     fn test_cell_filter_to_string() {
         let filter = CellFilter::FgColor(Color::Red);
-        assert_eq!(filter.to_string(), "fg(#ff0000)");
+        assert_eq!(filter.to_string(), "fg(#800000)");
 
         let filter = CellFilter::BgColor(Color::Green);
-        assert_eq!(filter.to_string(), "bg(#00ff00)");
+        assert_eq!(filter.to_string(), "bg(#008000)");
 
         let filter = CellFilter::Inner(Margin::new(1, 1));
         assert_eq!(filter.to_string(), "inner(1:1)");
@@ -202,22 +202,22 @@ mod tests {
             CellFilter::FgColor(Color::Red),
             CellFilter::BgColor(Color::Green),
         ]);
-        assert_eq!(filter.to_string(), "all_of(fg(#ff0000), bg(#00ff00))");
+        assert_eq!(filter.to_string(), "all_of(fg(#800000), bg(#008000))");
 
         let filter = CellFilter::AnyOf(vec![
             CellFilter::FgColor(Color::Red),
             CellFilter::BgColor(Color::Green),
         ]);
-        assert_eq!(filter.to_string(), "any_of(fg(#ff0000), bg(#00ff00))");
+        assert_eq!(filter.to_string(), "any_of(fg(#800000), bg(#008000))");
 
         let filter = CellFilter::NoneOf(vec![
             CellFilter::FgColor(Color::Red),
             CellFilter::BgColor(Color::Green),
         ]);
-        assert_eq!(filter.to_string(), "none_of(fg(#ff0000), bg(#00ff00))");
+        assert_eq!(filter.to_string(), "none_of(fg(#800000), bg(#008000))");
 
         let filter = CellFilter::Not(Box::new(CellFilter::FgColor(Color::Red)));
-        assert_eq!(filter.to_string(), "!fg(#ff0000)");
+        assert_eq!(filter.to_string(), "!fg(#800000)");
 
         let filter = CellFilter::Layout(Layout::horizontal(&[]), 0);
         assert_eq!(filter.to_string(), "layout(0)");

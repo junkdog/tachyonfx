@@ -94,16 +94,16 @@ mod direction;
 /// ```no_run
 /// use std::time::Instant;
 /// use ratatui::style::Color;
-/// use tachyonfx::fx;
+/// use tachyonfx::{fx, HslConvertable};
 ///
 /// fx::never_complete(fx::effect_fn(Instant::now(), 0, |state, _ctx, cell_iter| {
-///     let cycle: f64 = (state.elapsed().as_millis() % 3600) as f64;
+///     let cycle: f32 = (state.elapsed().as_millis() % 3600) as f32;
 ///
 ///     cell_iter
 ///         .filter(|(_, cell)| cell.symbol() != " ")
 ///         .enumerate()
 ///         .for_each(|(i, (_pos, cell))| {
-///             let hue = (2.0 * i as f64 + cycle * 0.2) % 360.0;
+///             let hue = (2.0 * i as f32 + cycle * 0.2) % 360.0;
 ///             let color = Color::from_hsl(hue, 100.0, 50.0);
 ///             cell.set_fg(color);
 ///         });
@@ -790,6 +790,8 @@ pub (crate) use invoke_fn;
 #[cfg(test)]
 mod tests {
     use ratatui::prelude::Color;
+    use crate::fx::offscreen_buffer::OffscreenBuffer;
+    use crate::fx::translate::Translate;
     use super::*;
     use crate::Shader;
 
@@ -887,42 +889,34 @@ mod tests {
             );
         });
     }
-}
 
-// just to track the size of the shader structs somewhere
-mod size_assertions {
-    use crate::fx::offscreen_buffer::OffscreenBuffer;
-    use crate::fx::translate::Translate;
-    use super::*;
+    #[test]
+    fn assert_sizes() {
+        let verify_size = |actual: usize, expected: usize| {
+            assert_eq!(actual, expected);
+        };
 
-    macro_rules! verify_size {
-        ($a:ty, $b:expr) => {
-            const _: () = {
-                assert!(size_of::<$a>() == $b);
-            };
-        }
+        verify_size(size_of::<EffectTimer>(),      12);
+        verify_size(size_of::<Ansi256>(),          10);
+        verify_size(size_of::<ConsumeTick>(),       1);
+        verify_size(size_of::<Dissolve>(),         80);
+        verify_size(size_of::<FadeColors>(),       80);
+        verify_size(size_of::<Glitch>(),          112);
+        verify_size(size_of::<HslShift>(),        104);
+        verify_size(size_of::<NeverComplete>(),    16);
+        verify_size(size_of::<OffscreenBuffer>(),  24);
+        verify_size(size_of::<ParallelEffect>(),   24);
+        verify_size(size_of::<PingPong>(),         72);
+        verify_size(size_of::<Prolong>(),          32);
+        verify_size(size_of::<Repeat>(),           32);
+        verify_size(size_of::<ResizeArea>(),       56);
+        verify_size(size_of::<SequentialEffect>(), 32);
+        verify_size(size_of::<ShaderFn<()>>(),    112);
+        verify_size(size_of::<Sleep>(),            12);
+        verify_size(size_of::<SlideCell>(),        80);
+        verify_size(size_of::<SweepIn>(),          80);
+        verify_size(size_of::<TemporaryEffect>(),  32);
+        verify_size(size_of::<Translate>(),        72);
+        verify_size(size_of::<TranslateBuffer>(),  32);
     }
-
-    verify_size!(EffectTimer,      12);
-    verify_size!(Ansi256,          10);
-    verify_size!(ConsumeTick,       1);
-    verify_size!(Dissolve,         72);
-    verify_size!(FadeColors,       72);
-    verify_size!(Glitch,          104);
-    verify_size!(HslShift,         96);
-    verify_size!(NeverComplete,    16);
-    verify_size!(OffscreenBuffer,  24);
-    verify_size!(ParallelEffect,   24);
-    verify_size!(PingPong,         64);
-    verify_size!(Prolong,          32);
-    verify_size!(Repeat,           32);
-    verify_size!(ResizeArea,       56);
-    verify_size!(SequentialEffect, 32);
-    verify_size!(ShaderFn<()>,    104);
-    verify_size!(Sleep,            12);
-    verify_size!(SlideCell,        72);
-    verify_size!(SweepIn,          72);
-    verify_size!(TemporaryEffect,  32);
-    verify_size!(Translate,        72);
-    verify_size!(TranslateBuffer,  32);
 }

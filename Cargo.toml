@@ -16,7 +16,7 @@ exclude = ["images/*.gif", ".*"]
 [dependencies]
 bon = "2.3.0"
 colorsys = "0.6.7"
-ratatui = "0.28.1"
+ratatui = "0.29.0"
 simple-easing = "1.0.1"
 
 [dev-dependencies]

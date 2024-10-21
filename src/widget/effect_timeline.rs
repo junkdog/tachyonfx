@@ -492,7 +492,7 @@ impl Widget for EffectTimeline {
 
 fn as_background_area_line(bar: &str, base_color: Color) -> Line<'static> {
     let (h, s, l) = base_color.to_hsl();
-    let color = Color::from_hsl(h as f64, s as f64 * 0.4, l as f64 * 0.4);
+    let color = Color::from_hsl(h, s * 0.4, l * 0.4);
     let first = bar.chars().next().unwrap_or(' ').to_string();
     let last = bar.chars().last().unwrap_or(' ').to_string();
 

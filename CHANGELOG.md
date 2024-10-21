@@ -4,6 +4,9 @@
 ### Changed
 - `Color::to_rgb`: updated rgb values of standard terminal colors to be more conformant.
 
+### Breaking
+- `ratatui` updated to 0.29.0. This is also the minimum version required for tachyonfx.
+
 ## tachyonfx 0.7.0 - 2024-09-22
 
 ### Added
