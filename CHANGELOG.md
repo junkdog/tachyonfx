@@ -4,7 +4,7 @@
 This is just a tiny release in order to be compatible with the latest `ratatui` version.
 
 ### Added
-- new `minimal` example demonstrating how to get started with tachyonfx. Thanks to @orhunt for the contribution!
+- new `minimal` example demonstrating how to get started with tachyonfx. Thanks to @orhun for the contribution!
 
 ### Changed
 - `Color::to_rgb`: updated rgb values of standard terminal colors to be more conformant.
