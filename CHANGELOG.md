@@ -1,5 +1,9 @@
 # Changelog
 
+## tachyonfx 0.8.0-dev
+### Changed
+- `Color::to_rgb`: updated rgb values of standard terminal colors to be more conformant.
+
 ## tachyonfx 0.7.0 - 2024-09-22
 
 ### Added

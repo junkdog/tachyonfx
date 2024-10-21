@@ -11,6 +11,17 @@ use crate::interpolation::Interpolation;
 /// * `total` - The total duration of the effect.
 /// * `interpolation` - The interpolation method used for the effect.
 /// * `reverse` - A flag indicating whether the effect is reversed.
+///
+/// # Example
+/// ```
+/// use tachyonfx::{Duration, EffectTimer, Interpolation};
+///
+/// // timers a, b, c and d are equivalent
+/// let a = EffectTimer::new(Duration::from_millis(500), Interpolation::Linear);
+/// let b = EffectTimer::from_ms(500, Interpolation::Linear);
+/// let c: EffectTimer = 500.into();
+/// let d: EffectTimer = (500, Interpolation::Linear).into();
+/// ```
 #[derive(Clone, Copy, Default)]
 pub struct EffectTimer {
     remaining: Duration,
