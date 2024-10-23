@@ -1,5 +1,9 @@
 # Changelog
 
+### Changed
+- `blit_buffer()`: now omits copying cells where `cell.skip` is true. This behavior 
+  also carries over to `BufferRenderer::render_buffer()`.
+
 ## tachyonfx 0.8.0 - 2024-10-21
 This is just a tiny release in order to be compatible with the latest `ratatui` version.
 

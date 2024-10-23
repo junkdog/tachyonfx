@@ -63,6 +63,7 @@ impl BufferRenderer for Buffer {
 ///
 /// # Behavior
 ///
+/// - If the src cell is marked as `skip`, it will not be copied.
 /// - If the offset would place the entire source buffer outside the bounds of the
 ///   destination buffer, no copying occurs.
 /// - The function clips the source buffer as necessary to fit within the destination buffer.
@@ -95,15 +96,16 @@ pub fn blit_buffer(
 
     for y in l_clip_y..(aux_area.height - r_clip_y) {
         for x in l_clip_x..(aux_area.width - r_clip_x) {
-            if let (Some(c), Some(new_c)) = (
-                dst.cell_mut(Position::new(
-                    x + aux_area.x - l_clip_x,
-                    y + aux_area.y - l_clip_y,
-                )),
-                src.cell(Position::new(x, y)),
-            ) {
-                *c = new_c.clone();
+            let src_cell = &src[Position::new(x, y)];
+            if src_cell.skip {
+                continue;
             }
+
+            let c = &mut dst[Position::new(
+                x + aux_area.x - l_clip_x,
+                y + aux_area.y - l_clip_y,
+            )];
+            *c =  src_cell.clone();
         }
     }
 }
