@@ -6,6 +6,11 @@ use crate::color_ext::ToRgbComponents;
 use crate::{ref_count, RefCount, ThreadSafetyMarker};
 
 #[cfg(not(feature = "sendable"))]
+type CellPredFn = RefCount<dyn Fn(&Cell) -> bool>;
+#[cfg(feature = "sendable")]
+type CellPredFn = RefCount<dyn Fn(&Cell) -> bool + Send>;
+
+#[cfg(not(feature = "sendable"))]
 type PositionFnType = RefCount<dyn Fn(Position) -> bool>;
 #[cfg(feature = "sendable")]
 type PositionFnType = RefCount<dyn Fn(Position) -> bool + Send>;
@@ -38,6 +43,8 @@ pub enum CellFilter {
     Layout(layout::Layout, u16),
     /// Selects cells by predicate function
     PositionFn(PositionFnType),
+    /// Selects cells by predicate function
+    EvalCell(CellPredFn),
 }
 
 impl CellFilter {
@@ -45,6 +52,12 @@ impl CellFilter {
         where F: Fn(Position) -> bool + ThreadSafetyMarker + 'static
     {
         CellFilter::PositionFn(ref_count(f))
+    }
+
+    pub fn eval_fn<F>(f: F) -> Self
+        where F: Fn(&Cell) -> bool + ThreadSafetyMarker + 'static
+    {
+        CellFilter::EvalCell(ref_count(f))
     }
 
     pub fn to_string(&self) -> String {
@@ -77,6 +90,7 @@ impl CellFilter {
             CellFilter::Not(filter)     => format!("!{}", filter.to_string()),
             CellFilter::Layout(_, idx)  => format!("layout({})", idx),
             CellFilter::PositionFn(_)   => "position_fn".to_string(),
+            CellFilter::EvalCell(_)     => "cell_fn".to_string(),
         }
     }
 }
@@ -107,6 +121,7 @@ impl CellSelector {
             CellFilter::BgColor(_)           => area,
             CellFilter::Layout(layout, idx)  => layout.split(area)[*idx as usize],
             CellFilter::PositionFn(_)        => area,
+            CellFilter::EvalCell(_)          => area,
         }
     }
 
@@ -141,10 +156,18 @@ impl CellSelector {
             CellFilter::FgColor(_)    => self.inner_area.contains(pos),
             CellFilter::BgColor(_)    => self.inner_area.contains(pos),
             CellFilter::PositionFn(f) => apply_position_fn(f, pos),
+            CellFilter::EvalCell(_)   => self.inner_area.contains(pos),
         }
     }
 
     fn is_valid_cell(&self, cell: &Cell, mode: &CellFilter) -> bool {
+        fn apply_eval_fn(f: &CellPredFn, cell: &Cell) -> bool {
+            #[cfg(not(feature = "sendable"))]
+            return f.borrow()(cell);
+            #[cfg(feature = "sendable")]
+            f.lock().unwrap()(cell)
+        }
+
         match mode {
             CellFilter::Text => {
                 if cell.symbol().len() == 1 {
@@ -164,6 +187,8 @@ impl CellSelector {
             CellFilter::BgColor(color) => cell.bg == *color,
 
             CellFilter::Not(m) => !self.is_valid_cell(cell, m.as_ref()),
+
+            CellFilter::EvalCell(f) => apply_eval_fn(f, cell),
 
             _ => true,
         }
@@ -224,5 +249,8 @@ mod tests {
 
         let filter = CellFilter::PositionFn(ref_count(|_| true));
         assert_eq!(filter.to_string(), "position_fn");
+
+        let filter = CellFilter::EvalCell(ref_count(|_| true));
+        assert_eq!(filter.to_string(), "cell_fn");
     }
 }
