@@ -61,7 +61,8 @@ impl SimpleRng {
 
     fn gen_usize(&mut self) -> usize {
         let mut g = || self.gen() as usize;
-        g() << 32 | g()
+        let v = (g() as u64) << 32 | g() as u64;
+        v as usize
     }
 }
 
