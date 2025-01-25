@@ -136,15 +136,32 @@ pub mod duration {
         }
     }
 
+
+    #[cfg(not(feature = "web-time"))]
     impl From<std::time::Duration> for Duration {
         fn from(d: std::time::Duration) -> Self {
             Self { milliseconds: d.as_millis() as u32 }
         }
     }
 
+    #[cfg(feature = "web-time")]
+    impl From<web_time::Duration> for Duration {
+        fn from(d: web_time::Duration) -> Self {
+            Self { milliseconds: d.as_millis() as u32 }
+        }
+    }
+
+    #[cfg(not(feature = "web-time"))]
     impl From<Duration> for std::time::Duration {
         fn from(d: Duration) -> Self {
             std::time::Duration::from_millis(d.milliseconds as u64)
+        }
+    }
+
+    #[cfg(feature = "web-time")]
+    impl From<Duration> for web_time::Duration {
+        fn from(d: Duration) -> Self {
+            web_time::Duration::from_millis(d.milliseconds as u64)
         }
     }
 

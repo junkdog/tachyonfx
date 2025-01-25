@@ -1,5 +1,8 @@
 use std::ops::Range;
+#[cfg(not(feature = "web-time"))]
 use std::time::SystemTime;
+#[cfg(feature = "web-time")]
+use web_time::SystemTime;
 
 /// A simple pseudo-random number generator using the Linear Congruential Generator algorithm.
 ///
