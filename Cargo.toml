@@ -16,15 +16,17 @@ exclude = ["images/*.gif", "docs/assets/*.gif", ".*"]
 [dependencies]
 bon = "3.3.2"
 colorsys = "0.6.7"
-ratatui = "0.29.0"
+ratatui = { version = "0.29", default-features = false }
 simple-easing = "1.0.1"
 
 [dev-dependencies]
 crossterm = "0.28.1"
 
 [features]
+default = ["crossterm"]
 std-duration = []
 sendable = []
+crossterm = ["ratatui/crossterm"]
 
 [[example]]
 name = "minimal"
