@@ -1,5 +1,18 @@
 # Changelog
 
+### Added
+- New `web-time` feature flag for WebAssembly compatibility (thanks @orhun for the contribution)
+  - Adds support for using `web_time` crate instead of `std::time` when targeting WASM
+
+### Changed
+- Made crossterm backend optional via feature flags
+  - Added `crossterm` feature (enabled by default)
+  - Changed ratatui dependency to disable default features
+
+### Fixed
+- `SimpleRng::gen_usize()`: Fixed panic on 32bit architectures 
+
+
 ## tachyonfx 0.10.1 - 2024-12-08
 
 ### Documentation
