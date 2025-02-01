@@ -59,10 +59,15 @@ impl SimpleRng {
         f32::from_bits(EXPONENT | mantissa) - 1.0
     }
 
+    #[cfg(target_pointer_width = "64")]
     fn gen_usize(&mut self) -> usize {
         let mut g = || self.gen() as usize;
-        let v = (g() as u64) << 32 | g() as u64;
-        v as usize
+        g() << 32 | g()
+    }
+
+    #[cfg(target_pointer_width = "32")]
+    fn gen_usize(&mut self) -> usize {
+        self.gen() as usize
     }
 }
 
