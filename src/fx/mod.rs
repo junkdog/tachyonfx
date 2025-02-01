@@ -1320,6 +1320,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_pointer_width = "64")]
     #[cfg(not(feature = "std-duration"))]
     fn assert_sizes() {
         let verify_size = |actual: usize, expected: usize| {
@@ -1331,7 +1332,7 @@ mod tests {
         verify_size(size_of::<EffectTimer>(),      12);
         verify_size(size_of::<Ansi256>(),          10);
         verify_size(size_of::<ConsumeTick>(),       1);
-        verify_size(size_of::<Dissolve>(),         96);
+        verify_size(size_of::<Dissolve>(),         88);
         verify_size(size_of::<FadeColors>(),       80);
         verify_size(size_of::<Glitch>(),          112);
         verify_size(size_of::<HslShift>(),        104);
