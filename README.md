@@ -142,6 +142,8 @@ prolong_start(duration, fx::fade_from(Dark0, Dark0, (320, QuadOut)),
   safely transferred across thread boundaries. Note that enabling this feature requires all `Shader` implementations
   to be `Send`, which may impose additional constraints on custom shader implementations.
 - `std-duration`:  Uses `std::time::Duration` instead of a custom 32-bit duration type.
+- `web-time`: Enables WebAssembly compatibility by providing alternative time handling implementations. This allows
+  tachyonfx to be used in browser-based WebAssembly applications where `std::time` is not available.
 
 
 ## Examples
