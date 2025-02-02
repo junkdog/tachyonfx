@@ -1,5 +1,5 @@
 use ratatui::style::Color;
-use crate::{Effect, EffectTimer};
+use crate::{Duration, Effect, EffectTimer};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FxArg {
@@ -7,8 +7,9 @@ pub enum FxArg {
     String(String),
     U32(u32),
     F32(f32),
+    Duration(Duration),
     Timer(EffectTimer),
-    Fx { name: String, parameters: Box<FxArg> }
+    Fx { name: String, parameters: Box<Vec<FxArg>> }
 }
 
 pub enum ScriptError {
@@ -26,6 +27,21 @@ mod parse {
     use anpa::whitespace::skip_whitespace;
     use crate::{Duration, EffectTimer, Interpolation};
     use crate::script::elements::FxArg;
+
+    fn fx_statement<'a>() -> impl StrParser<'a, FxArg> {
+        let name = right!(
+            succeed(attempt(skip!("fx::"))),
+            item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
+        );
+
+        let parameters = middle(skip!('('), parameters(), skip!(')'));
+        tuplify!(name, parameters).map(|(name, parameters)|
+            FxArg::Fx {
+                name: name.to_string(),
+                parameters: Box::new(parameters)
+            }
+        )
+    }
 
     fn unescaped_string<'a>() -> impl StrParser<'a, String> {
         let unicode = right(skip!('u'), times(4, item_if(|c: char| c.is_ascii_hexdigit())));
@@ -46,6 +62,7 @@ mod parse {
             parse_u32().map(FxArg::U32),
             parse_f32().map(FxArg::F32),
             effect_timer().map(FxArg::Timer),
+            duration().map(FxArg::Duration),
         )
     }
 
@@ -67,11 +84,13 @@ mod parse {
         let from_u32 = parse_u32()
             .map(|v| EffectTimer::from_ms(v, Interpolation::Linear));
 
+        let into_duration = or!(duration(), parse_u32().map(Duration::from_millis));
+
         // tuple (u32, interpolation)
         let from_tuple = tuplify!(
-            right!(skip!('('), parse_u32()),
+            right!(skip!('('), into_duration),
             middle(skip!(", "), interpolation(), skip!(')')),
-        ).map(|(ms, interpolation)| EffectTimer::from_ms(ms, interpolation));
+        ).map(|(duration, interpolation)| EffectTimer::new(duration, interpolation));
 
         // EffectTimer::new(duration, interpolation)
         let from_new = right!(
@@ -152,12 +171,12 @@ mod parse {
             "SineOut"      => Some(Interpolation::SineOut),
             "SineInOut"    => Some(Interpolation::SineInOut),
             _              => None
-        });
-
-        fn comment<'a>() -> impl StrParser<'a, ()> {
-            right!(skip!("//"), until(skip!('\n')), skip_whitespace())
-        }
+        })
     }
+
+    // fn comment<'a>() -> impl StrParser<'a, ()> {
+    //     right!(skip!("//"), until(skip!('\n')), skip_whitespace())
+    // }
 
     #[cfg(test)]
     mod tests {
@@ -255,6 +274,12 @@ mod parse {
                 EffectTimer::from_ms(1337, Interpolation::Reverse)
             );
 
+            let input = "(Duration::from_millis(1337), Reverse)";
+            assert_parser_eq(
+                parse(super::effect_timer(), input),
+                EffectTimer::from_ms(1337, Interpolation::Reverse)
+            );
+
             let input = "1234";
             assert_parser_eq(
                 parse(super::effect_timer(), input),
@@ -303,6 +328,12 @@ mod parse {
                 parse(super::parameter(), input),
                 FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))
             );
+
+            let input = "Duration::from_millis(1000)";
+            assert_parser_eq(
+                parse(super::parameter(), input),
+                FxArg::Duration(Duration::from_millis(1000))
+            );
         }
 
         #[test]
@@ -316,6 +347,31 @@ mod parse {
                     FxArg::F32(3.14),
                     FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
                 ]
+            );
+        }
+
+        #[test]
+        fn parse_fx_statement() {
+            let input = "coalesce(Duration::from_millis(220))";
+            assert_parser_eq(
+                parse(super::fx_statement(), input),
+                FxArg::Fx {
+                    name: "coalesce".to_string(),
+                    parameters: Box::new(vec![
+                        FxArg::Duration(Duration::from_millis(220)),
+                    ])
+                }
+            );
+
+            let input = "fx::dissolve((Duration::from_millis(220), ElasticOut))";
+            assert_parser_eq(
+                parse(super::fx_statement(), input),
+                FxArg::Fx {
+                    name: "dissolve".to_string(),
+                    parameters: Box::new(vec![
+                        FxArg::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut)),
+                    ])
+                }
             );
         }
     }
