@@ -21,6 +21,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c6cb57a04249c6480766f7f7cef5467412af1490f8d1e243141daddada3264f"
 
 [[package]]
+name = "anpa"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3674c30f9abe40803a0755a8ea2c42cd0a4b8dc0c4b0253f8d3dfd2e3cdc6c81"
+
+[[package]]
 name = "autocfg"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -529,6 +535,7 @@ dependencies = [
 name = "tachyonfx"
 version = "0.10.1"
 dependencies = [
+ "anpa",
  "bon",
  "colorsys",
  "crossterm",
