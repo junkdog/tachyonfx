@@ -1,5 +1,5 @@
 use ratatui::style::Color;
-use crate::{Duration, Effect, EffectTimer};
+use crate::{CellFilter, Duration, Effect, EffectTimer};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FxArg {
@@ -9,7 +9,8 @@ pub enum FxArg {
     F32(f32),
     Duration(Duration),
     Timer(EffectTimer),
-    Fx { name: String, parameters: Box<Vec<FxArg>> }
+    ArrayRef(Vec<FxArg>),
+    Fx { name: String, parameters: Vec<FxArg> }
 }
 
 pub enum ScriptError {
@@ -25,7 +26,7 @@ mod parse {
     use anpa::{defer_parser, greedy_or, left, or, right, skip, take, tuplify, until};
     use anpa::number::float;
     use anpa::whitespace::skip_whitespace;
-    use crate::{Duration, EffectTimer, Interpolation};
+    use crate::{Duration, EffectTimer, Interpolation, Motion};
     use crate::script::elements::FxArg;
 
     fn fx_statement<'a>() -> impl StrParser<'a, FxArg> {
@@ -34,11 +35,11 @@ mod parse {
             item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
         );
 
-        let parameters = middle(skip!('('), parameters(), skip!(')'));
+        let parameters = middle(skip!('('), arguments(), skip!(')'));
         tuplify!(name, parameters).map(|(name, parameters)|
             FxArg::Fx {
                 name: name.to_string(),
-                parameters: Box::new(parameters)
+                parameters
             }
         )
     }
@@ -54,24 +55,34 @@ mod parse {
             .map(|s: String| s.replace("\\\"", "\""))
     }
 
-    fn parameter<'a>() -> impl StrParser<'a, FxArg> {
-        // parse_f32 must come after parse_u32 due to how float() is implemented,
-        // as such we use greedy_or to ensure that parse_u32 isn't chosen over parse_f32.
+    fn array_ref<'a>() -> impl StrParser<'a, FxArg> {
+        middle(
+            skip!("&["),
+                many_to_vec(argument(), true, separator(skip!(", "), false)),
+            skip!(']')
+        ).map(FxArg::ArrayRef)
+    }
 
+    fn argument<'a>() -> impl StrParser<'a, FxArg> {
+        // must defer to avoid recursive opaqueness
         defer_parser! {
+            // `parse_f32` must come after `parse_u32` due to how float() is
+            // implemented, as such we use greedy_or to ensure that `parse_u32`
+            // isn't chosen over `parse_f32`.
             greedy_or!(
                 unescaped_string().map(FxArg::String),
                 parse_u32().map(FxArg::U32),
                 parse_f32().map(FxArg::F32),
                 effect_timer().map(FxArg::Timer),
                 duration().map(FxArg::Duration),
+                array_ref(), // e.g. &[fx1, fx2, fx3]
                 fx_statement(),
             )
         }
     }
 
-    fn parameters<'a>() -> impl StrParser<'a, Vec<FxArg>> {
-        many_to_vec(parameter(), true, separator(skip!(", "), false))
+    fn arguments<'a>() -> impl StrParser<'a, Vec<FxArg>> {
+        many_to_vec(argument(), true, separator(skip!(", "), false))
     }
 
     fn parse_u32<'a>() -> impl StrParser<'a, u32> {
@@ -137,6 +148,19 @@ mod parse {
         or!(from_millis, from_secs)
     }
 
+    fn motion<'a>() -> impl StrParser<'a, Motion> {
+        right!(
+            succeed(attempt(skip!("Motion::"))),
+            item_while(|c: char| c.is_ascii_alphabetic()),
+        ).map_if(|s: &str| match s {
+            "DownToUp"    => Some(Motion::DownToUp),
+            "UpToDown"    => Some(Motion::UpToDown),
+            "LeftToRight" => Some(Motion::LeftToRight),
+            "RightToLeft" => Some(Motion::RightToLeft),
+            _             => None,
+        })
+    }
+
     fn interpolation<'a>() -> impl StrParser<'a, Interpolation> {
         right!(
             succeed(attempt(skip!("Interpolation::"))),
@@ -185,7 +209,7 @@ mod parse {
     #[cfg(test)]
     mod tests {
         use anpa::core::{parse, AnpaResult, StrParser};
-        use crate::{Duration, EffectTimer, Interpolation};
+        use crate::{Duration, EffectTimer, Interpolation, Motion};
         use crate::script::elements::FxArg;
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
@@ -194,6 +218,33 @@ mod parse {
         ) {
             assert_eq!(result.state, "", "Expected parser to consume the entire input");
             assert_eq!(result.result, Some(expected));
+        }
+
+        #[test]
+        fn test_motion() {
+            let input = "Motion::DownToUp";
+            assert_parser_eq(
+                parse(super::motion(), input),
+                Motion::DownToUp
+            );
+
+            let input = "UpToDown";
+            assert_parser_eq(
+                parse(super::motion(), input),
+                Motion::UpToDown
+            );
+
+            let input = "LeftToRight";
+            assert_parser_eq(
+                parse(super::motion(), input),
+                Motion::LeftToRight
+            );
+
+            let input = "RightToLeft";
+            assert_parser_eq(
+                parse(super::motion(), input),
+                Motion::RightToLeft
+            );
         }
 
         #[test]
@@ -250,6 +301,20 @@ mod parse {
                     expected
                 );
             });
+        }
+
+        #[test]
+        fn parse_array_ref() {
+            let input = "&[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
+            assert_parser_eq(
+                parse(super::array_ref(), input),
+                FxArg::ArrayRef(vec![
+                    FxArg::String("Hello, World!".to_string()),
+                    FxArg::U32(1337),
+                    FxArg::F32(3.14),
+                    FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
+                ])
+            );
         }
 
         #[test]
@@ -311,31 +376,31 @@ mod parse {
         fn parse_parameter() {
             let input = "\"Hello, World!\"";
             assert_parser_eq(
-                parse(super::parameter(), input),
+                parse(super::argument(), input),
                 FxArg::String("Hello, World!".to_string())
             );
 
             let input = "1337";
             assert_parser_eq(
-                parse(super::parameter(), input),
+                parse(super::argument(), input),
                 FxArg::U32(1337)
             );
 
             let input = "3.14";
             assert_parser_eq(
-                parse(super::parameter(), input),
+                parse(super::argument(), input),
                 FxArg::F32(3.14)
             );
 
             let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
             assert_parser_eq(
-                parse(super::parameter(), input),
+                parse(super::argument(), input),
                 FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))
             );
 
             let input = "Duration::from_millis(1000)";
             assert_parser_eq(
-                parse(super::parameter(), input),
+                parse(super::argument(), input),
                 FxArg::Duration(Duration::from_millis(1000))
             );
         }
@@ -344,7 +409,7 @@ mod parse {
         fn parse_parameters() {
             let input = "\"Hello, World!\", 1337, 3.14, (1000, SineIn)";
             assert_parser_eq(
-                parse(super::parameters(), input),
+                parse(super::arguments(), input),
                 vec![
                     FxArg::String("Hello, World!".to_string()),
                     FxArg::U32(1337),
@@ -361,9 +426,9 @@ mod parse {
                 parse(super::fx_statement(), input),
                 FxArg::Fx {
                     name: "coalesce".to_string(),
-                    parameters: Box::new(vec![
+                    parameters: vec![
                         FxArg::Duration(Duration::from_millis(220)),
-                    ])
+                    ]
                 }
             );
 
@@ -372,9 +437,9 @@ mod parse {
                 parse(super::fx_statement(), input),
                 FxArg::Fx {
                     name: "dissolve".to_string(),
-                    parameters: Box::new(vec![
+                    parameters: vec![
                         FxArg::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut)),
-                    ])
+                    ]
                 }
             );
 
@@ -383,16 +448,18 @@ mod parse {
                 parse(super::fx_statement(), input),
                 FxArg::Fx {
                     name: "ping_pong".to_string(),
-                    parameters: Box::new(vec![
+                    parameters: vec![
                         FxArg::Fx {
                             name: "coalesce".to_string(),
-                            parameters: Box::new(vec![
+                            parameters: vec![
                                 FxArg::Timer(EffectTimer::from_ms(500, Interpolation::CircOut)),
-                            ])
+                            ]
                         }
-                    ])
+                    ]
                 }
             );
+
+
         }
     }
 }
