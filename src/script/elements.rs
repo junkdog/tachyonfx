@@ -22,7 +22,7 @@ mod parse {
     use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
     use anpa::core::{ParserExt, StrParser};
     use anpa::parsers::{item_if, item_while, skip, take, until};
-    use anpa::{greedy_or, left, or, right, skip, take, tuplify, until};
+    use anpa::{defer_parser, greedy_or, left, or, right, skip, take, tuplify, until};
     use anpa::number::float;
     use anpa::whitespace::skip_whitespace;
     use crate::{Duration, EffectTimer, Interpolation};
@@ -57,13 +57,17 @@ mod parse {
     fn parameter<'a>() -> impl StrParser<'a, FxArg> {
         // parse_f32 must come after parse_u32 due to how float() is implemented,
         // as such we use greedy_or to ensure that parse_u32 isn't chosen over parse_f32.
-        greedy_or!(
-            unescaped_string().map(FxArg::String),
-            parse_u32().map(FxArg::U32),
-            parse_f32().map(FxArg::F32),
-            effect_timer().map(FxArg::Timer),
-            duration().map(FxArg::Duration),
-        )
+
+        defer_parser! {
+            greedy_or!(
+                unescaped_string().map(FxArg::String),
+                parse_u32().map(FxArg::U32),
+                parse_f32().map(FxArg::F32),
+                effect_timer().map(FxArg::Timer),
+                duration().map(FxArg::Duration),
+                fx_statement(),
+            )
+        }
     }
 
     fn parameters<'a>() -> impl StrParser<'a, Vec<FxArg>> {
@@ -370,6 +374,22 @@ mod parse {
                     name: "dissolve".to_string(),
                     parameters: Box::new(vec![
                         FxArg::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut)),
+                    ])
+                }
+            );
+
+            let input = "fx::ping_pong(fx::coalesce((500, CircOut)))";
+            assert_parser_eq(
+                parse(super::fx_statement(), input),
+                FxArg::Fx {
+                    name: "ping_pong".to_string(),
+                    parameters: Box::new(vec![
+                        FxArg::Fx {
+                            name: "coalesce".to_string(),
+                            parameters: Box::new(vec![
+                                FxArg::Timer(EffectTimer::from_ms(500, Interpolation::CircOut)),
+                            ])
+                        }
                     ])
                 }
             );
