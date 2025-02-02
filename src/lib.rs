@@ -24,6 +24,9 @@ mod simple_rng;
 mod duration;
 mod features;
 
+#[cfg(feature = "scripting")]
+mod script;
+
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
 pub use color_mapper::ColorMapper;
