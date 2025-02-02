@@ -1,38 +1,75 @@
 use ratatui::style::Color;
 use crate::{Effect, EffectTimer};
 
-pub enum Element {
+#[derive(Clone, Debug, PartialEq)]
+pub enum FxArg {
     Color(Color),
+    String(String),
     U32(u32),
     F32(f32),
     Timer(EffectTimer),
-    Fx { name: String, parameters: Box<Element> }
+    Fx { name: String, parameters: Box<FxArg> }
 }
 
-pub enum ParseError {
+pub enum ScriptError {
     InvalidElement,
     InvalidFxParameters,
     InvalidFxName(String),
 }
 
 mod parse {
-    use anpa::combinators::{attempt, many, middle, no_separator, succeed};
+    use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
     use anpa::core::{ParserExt, StrParser};
     use anpa::parsers::{item_if, item_while, skip, take, until};
-    use anpa::{left, or, right, skip, take, tuplify, until};
+    use anpa::{greedy_or, left, or, right, skip, take, tuplify, until};
+    use anpa::number::float;
+    use anpa::whitespace::skip_whitespace;
     use crate::{Duration, EffectTimer, Interpolation};
+    use crate::script::elements::FxArg;
+
+    fn unescaped_string<'a>() -> impl StrParser<'a, String> {
+        let unicode = right(skip!('u'), times(4, item_if(|c: char| c.is_ascii_hexdigit())));
+        let escaped = right(skip!('\\'), or_diff(unicode, item_if(|c: char| "\"\\/bfnrt".contains(c))));
+        let valid_char = item_if(|c: char| c != '"' && c != '\\' && !c.is_control());
+        let not_end = or_diff(valid_char, escaped);
+
+        middle(skip!('"'), many(not_end, true, no_separator()), skip!('"'))
+            .map(|s: &str| s.to_string())
+            .map(|s: String| s.replace("\\\"", "\""))
+    }
+
+    fn parameter<'a>() -> impl StrParser<'a, FxArg> {
+        // parse_f32 must come after parse_u32 due to how float() is implemented,
+        // as such we use greedy_or to ensure that parse_u32 isn't chosen over parse_f32.
+        greedy_or!(
+            unescaped_string().map(FxArg::String),
+            parse_u32().map(FxArg::U32),
+            parse_f32().map(FxArg::F32),
+            effect_timer().map(FxArg::Timer),
+        )
+    }
+
+    fn parameters<'a>() -> impl StrParser<'a, Vec<FxArg>> {
+        many_to_vec(parameter(), true, separator(skip!(", "), false))
+    }
+
+    fn parse_u32<'a>() -> impl StrParser<'a, u32> {
+        many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
+            .map(|s: &str| s.parse().unwrap())
+    }
+
+    fn parse_f32<'a>() -> impl StrParser<'a, f32> {
+        float()
+    }
 
     fn effect_timer<'a>() -> impl StrParser<'a, EffectTimer> {
-        let parse_u32 = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
-            .map(|s: &str| s.parse().unwrap());
-
         // raw int (linear)
-        let from_u32 = parse_u32
+        let from_u32 = parse_u32()
             .map(|v| EffectTimer::from_ms(v, Interpolation::Linear));
 
         // tuple (u32, interpolation)
         let from_tuple = tuplify!(
-            right!(skip!('('), parse_u32),
+            right!(skip!('('), parse_u32()),
             middle(skip!(", "), interpolation(), skip!(')')),
         ).map(|(ms, interpolation)| EffectTimer::from_ms(ms, interpolation));
 
@@ -47,7 +84,7 @@ mod parse {
 
         // EffectTimer::from_ms(u32, Interpolation)
         let from_ms = tuplify!(
-            right!(skip!("EffectTimer::from_ms("), parse_u32),
+            right!(skip!("EffectTimer::from_ms("), parse_u32()),
             middle(skip!(", "), interpolation(), skip!(')')),
         ).map(|(ms, interpolation)| EffectTimer::from_ms(ms, interpolation));
 
@@ -63,9 +100,9 @@ mod parse {
         // ctor from_millis
         let from_millis = middle(
             skip!("Duration::from_millis("),
-            item_while(|c| c != ')' && c != ' '),
+            parse_u32(),
             skip!(')'),
-        ).map(|s: &str| Duration::from_millis(s.parse().unwrap()));
+        ).map(|ms| Duration::from_millis(ms));
 
         // ctor from_secs_f32
         let from_secs = middle(
@@ -115,13 +152,18 @@ mod parse {
             "SineOut"      => Some(Interpolation::SineOut),
             "SineInOut"    => Some(Interpolation::SineInOut),
             _              => None
-        })
+        });
+
+        fn comment<'a>() -> impl StrParser<'a, ()> {
+            right!(skip!("//"), until(skip!('\n')), skip_whitespace())
+        }
     }
 
     #[cfg(test)]
     mod tests {
         use anpa::core::{parse, AnpaResult, StrParser};
         use crate::{Duration, EffectTimer, Interpolation};
+        use crate::script::elements::FxArg;
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
             result: AnpaResult<&str, T>,
@@ -188,7 +230,7 @@ mod parse {
         }
 
         #[test]
-        fn test_effect_timer() {
+        fn parse_effect_timer() {
             let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
             assert_parser_eq(
                 parse(super::effect_timer(), input),
@@ -219,12 +261,69 @@ mod parse {
                 EffectTimer::from_ms(1234, Interpolation::Linear)
             );
         }
+
+        #[test]
+        fn parse_string() {
+            let input = "\"Hello, World!\"";
+            assert_parser_eq(
+                parse(super::unescaped_string(), input),
+                "Hello, World!".to_string()
+            );
+
+            // let input = r#""Hello, \"World!\"""#;
+            let input = "\"Hello, \\\"World!\\\"\"";
+            assert_parser_eq(
+                parse(super::unescaped_string(), input),
+                "Hello, \"World!\"".to_string()
+            );
+        }
+
+        #[test]
+        fn parse_parameter() {
+            let input = "\"Hello, World!\"";
+            assert_parser_eq(
+                parse(super::parameter(), input),
+                FxArg::String("Hello, World!".to_string())
+            );
+
+            let input = "1337";
+            assert_parser_eq(
+                parse(super::parameter(), input),
+                FxArg::U32(1337)
+            );
+
+            let input = "3.14";
+            assert_parser_eq(
+                parse(super::parameter(), input),
+                FxArg::F32(3.14)
+            );
+
+            let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
+            assert_parser_eq(
+                parse(super::parameter(), input),
+                FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))
+            );
+        }
+
+        #[test]
+        fn parse_parameters() {
+            let input = "\"Hello, World!\", 1337, 3.14, (1000, SineIn)";
+            assert_parser_eq(
+                parse(super::parameters(), input),
+                vec![
+                    FxArg::String("Hello, World!".to_string()),
+                    FxArg::U32(1337),
+                    FxArg::F32(3.14),
+                    FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
+                ]
+            );
+        }
     }
 }
 
 pub fn load_script(
     source: &str,
-) -> Result<Effect, ParseError> {
+) -> Result<Effect, ScriptError> {
     unimplemented!()
 }
 
