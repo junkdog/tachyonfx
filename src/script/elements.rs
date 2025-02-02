@@ -84,7 +84,7 @@ mod parse {
         let from_u32 = parse_u32()
             .map(|v| EffectTimer::from_ms(v, Interpolation::Linear));
 
-        let into_duration = or!(duration(), parse_u32().map(Duration::from_millis));
+        let into_duration = or!(duration(), parse_u32().map(|ms| Duration::from_millis(ms as _)));
 
         // tuple (u32, interpolation)
         let from_tuple = tuplify!(
@@ -121,7 +121,7 @@ mod parse {
             skip!("Duration::from_millis("),
             parse_u32(),
             skip!(')'),
-        ).map(|ms| Duration::from_millis(ms));
+        ).map(|ms| Duration::from_millis(ms as _));
 
         // ctor from_secs_f32
         let from_secs = middle(
