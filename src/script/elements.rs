@@ -44,20 +44,6 @@ mod parse {
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use crate::script::elements::FxArg;
 
-    fn trim_pre<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
-        right!(
-            skip_whitespace(),
-            skip!(prefix),
-        )
-    }
-
-    fn trim_post<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
-        right!(
-            skip!(prefix),
-            skip_whitespace(),
-        )
-    }
-
     fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
         right!(
             skip_whitespace(),
@@ -72,11 +58,7 @@ mod parse {
             item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
         );
 
-        let parameters = middle(
-            trim_post("("),
-            arguments(),
-            trim(")")
-        );
+        let parameters = middle(trim("("), arguments(), trim(")"));
 
         tuplify!(name, parameters).map(|(name, parameters)|
             FxArg::Fx {
@@ -145,22 +127,23 @@ mod parse {
 
         // tuple: (u32, interpolation)
         let from_tuple = tuplify!(
-            right!(trim_post("("), into_duration),
+            right!(trim("("), into_duration),
             middle(trim(","), interpolation(), trim(")")),
         ).map(|(duration, interpolation)| EffectTimer::new(duration, interpolation));
 
         // ctor: EffectTimer::new(duration, interpolation)
-        let from_new = right!(
-            skip!("EffectTimer::new"),
+        let from_new = middle(
+            trim("EffectTimer::new("),
             tuplify!(
-                right!(trim_post("("), duration()),
-                middle(trim(","), interpolation(), trim(")")),
+                duration(),
+                right!(trim(","), interpolation()),
             ),
+            trim(")")
         ).map(|(duration, interpolation)| EffectTimer::new(duration, interpolation));
 
         // from ms: EffectTimer::from_ms(u32, Interpolation)
         let from_ms = tuplify!(
-            right!(trim_post("EffectTimer::from_ms("), parse_u32()),
+            right!(trim("EffectTimer::from_ms("), parse_u32()),
             middle(trim(","), interpolation(), trim(")")),
         ).map(|(ms, interpolation)| EffectTimer::from_ms(ms, interpolation));
 
@@ -175,17 +158,17 @@ mod parse {
     fn duration<'a>() -> impl StrParser<'a, Duration> {
         // ctor from_millis
         let from_millis = middle(
-            trim_post("Duration::from_millis("),
+            trim("Duration::from_millis("),
             parse_u32(),
             trim(")"),
         ).map(|ms| Duration::from_millis(ms as _));
 
         // ctor from_secs_f32
         let from_secs = middle(
-            trim_post("Duration::from_secs_f32("),
-            item_while(|c| c != ')' && c != ' '),
+            trim("Duration::from_secs_f32("),
+            float(),
             trim(")"),
-        ).map(|s: &str| Duration::from_secs_f32(s.parse().unwrap()));
+        ).map(|seconds| Duration::from_secs_f32(seconds));
 
         or!(from_millis, from_secs)
     }
