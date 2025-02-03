@@ -1,3 +1,5 @@
+use std::any::Any;
+use std::collections::BTreeMap;
 use ratatui::style::Color;
 use crate::{CellFilter, Duration, Effect, EffectTimer};
 
@@ -5,7 +7,7 @@ use crate::{CellFilter, Duration, Effect, EffectTimer};
 pub enum FxArg {
     Color(Color),
     String(String),
-    U32(u32),
+    U32(u32), // can also repr EffectTimer and Duration
     F32(f32),
     Duration(Duration),
     Timer(EffectTimer),
@@ -19,15 +21,50 @@ pub enum ScriptError {
     InvalidFxName(String),
 }
 
+
+pub struct ScriptDeserializer {
+    pub name: &'static str,
+    pub args: Vec<FxArg>,
+}
+
+pub struct ScriptContext {
+    bound_variables: BTreeMap<&'static str, Box<dyn Any>>,
+    deserializers: Vec<ScriptDeserializer>,
+}
+
 mod parse {
     use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
-    use anpa::core::{ParserExt, StrParser};
+    use anpa::core::{Parser, ParserExt, StrParser};
     use anpa::parsers::{item_if, item_while, skip, take, until};
     use anpa::{defer_parser, greedy_or, left, or, right, skip, take, tuplify, until};
     use anpa::number::float;
+    use anpa::prefix::Prefix;
+    use anpa::slicelike::SliceLike;
     use anpa::whitespace::skip_whitespace;
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use crate::script::elements::FxArg;
+
+    fn trim_pre<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
+        right!(
+            skip_whitespace(),
+            skip!(prefix),
+        )
+    }
+
+    fn trim_post<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
+        right!(
+            skip!(prefix),
+            skip_whitespace(),
+        )
+    }
+
+    fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
+        right!(
+            skip_whitespace(),
+            skip!(prefix),
+            skip_whitespace()
+        )
+    }
 
     fn fx_statement<'a>() -> impl StrParser<'a, FxArg> {
         let name = right!(
@@ -35,7 +72,12 @@ mod parse {
             item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
         );
 
-        let parameters = middle(skip!('('), arguments(), skip!(')'));
+        let parameters = middle(
+            trim_post("("),
+            arguments(),
+            trim(")")
+        );
+
         tuplify!(name, parameters).map(|(name, parameters)|
             FxArg::Fx {
                 name: name.to_string(),
@@ -57,9 +99,9 @@ mod parse {
 
     fn array_ref<'a>() -> impl StrParser<'a, FxArg> {
         middle(
-            skip!("&["),
-                many_to_vec(argument(), true, separator(skip!(", "), false)),
-            skip!(']')
+            trim("&["),
+            many_to_vec(argument(), true, separator(trim(","), false)),
+            trim("]")
         ).map(FxArg::ArrayRef)
     }
 
@@ -82,7 +124,7 @@ mod parse {
     }
 
     fn arguments<'a>() -> impl StrParser<'a, Vec<FxArg>> {
-        many_to_vec(argument(), true, separator(skip!(", "), false))
+        many_to_vec(argument(), true, separator(trim(","), false))
     }
 
     fn parse_u32<'a>() -> impl StrParser<'a, u32> {
@@ -95,31 +137,31 @@ mod parse {
     }
 
     fn effect_timer<'a>() -> impl StrParser<'a, EffectTimer> {
-        // raw int (linear)
+        // raw int: ms with linear interpolation
         let from_u32 = parse_u32()
             .map(|v| EffectTimer::from_ms(v, Interpolation::Linear));
 
         let into_duration = or!(duration(), parse_u32().map(|ms| Duration::from_millis(ms as _)));
 
-        // tuple (u32, interpolation)
+        // tuple: (u32, interpolation)
         let from_tuple = tuplify!(
-            right!(skip!('('), into_duration),
-            middle(skip!(", "), interpolation(), skip!(')')),
+            right!(trim_post("("), into_duration),
+            middle(trim(","), interpolation(), trim(")")),
         ).map(|(duration, interpolation)| EffectTimer::new(duration, interpolation));
 
-        // EffectTimer::new(duration, interpolation)
+        // ctor: EffectTimer::new(duration, interpolation)
         let from_new = right!(
             skip!("EffectTimer::new"),
             tuplify!(
-                right!(skip!('('), duration()),
-                middle(skip!(", "), interpolation(), skip!(')')),
+                right!(trim_post("("), duration()),
+                middle(trim(","), interpolation(), trim(")")),
             ),
         ).map(|(duration, interpolation)| EffectTimer::new(duration, interpolation));
 
-        // EffectTimer::from_ms(u32, Interpolation)
+        // from ms: EffectTimer::from_ms(u32, Interpolation)
         let from_ms = tuplify!(
-            right!(skip!("EffectTimer::from_ms("), parse_u32()),
-            middle(skip!(", "), interpolation(), skip!(')')),
+            right!(trim_post("EffectTimer::from_ms("), parse_u32()),
+            middle(trim(","), interpolation(), trim(")")),
         ).map(|(ms, interpolation)| EffectTimer::from_ms(ms, interpolation));
 
         or!(
@@ -133,16 +175,16 @@ mod parse {
     fn duration<'a>() -> impl StrParser<'a, Duration> {
         // ctor from_millis
         let from_millis = middle(
-            skip!("Duration::from_millis("),
+            trim_post("Duration::from_millis("),
             parse_u32(),
-            skip!(')'),
+            trim(")"),
         ).map(|ms| Duration::from_millis(ms as _));
 
         // ctor from_secs_f32
         let from_secs = middle(
-            skip!("Duration::from_secs_f32("),
+            trim_post("Duration::from_secs_f32("),
             item_while(|c| c != ')' && c != ' '),
-            skip!(')'),
+            trim(")"),
         ).map(|s: &str| Duration::from_secs_f32(s.parse().unwrap()));
 
         or!(from_millis, from_secs)
@@ -221,6 +263,15 @@ mod parse {
         }
 
         #[test]
+        fn skip_trim() {
+            let input = "  Hello  ";
+            assert_parser_eq(
+                parse(super::trim("Hello"), input),
+                ()
+            );
+        }
+
+        #[test]
         fn test_motion() {
             let input = "Motion::DownToUp";
             assert_parser_eq(
@@ -259,6 +310,14 @@ mod parse {
             assert_parser_eq(
                 parse(super::duration(), input),
                 Duration::from_secs_f32(0.5)
+            );
+
+            let input = r#"Duration::from_millis(
+                               321
+                           )"#;
+            assert_parser_eq(
+                parse(super::duration(), input),
+                Duration::from_millis(321)
             );
         }
 
