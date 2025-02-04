@@ -41,7 +41,7 @@ mod parse {
     use anpa::prefix::Prefix;
     use anpa::slicelike::SliceLike;
     use anpa::whitespace::skip_whitespace;
-    use ratatui::layout::Margin;
+    use ratatui::layout::{Margin, Rect};
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use crate::script::elements::FxArg;
 
@@ -161,6 +161,32 @@ mod parse {
         )
     }
 
+    fn rect<'a>() -> impl StrParser<'a, Rect> {
+        let new = middle(
+            trim("Rect::new("),
+            tuplify!(
+                parse_u16(),
+                right!(trim(","), parse_u16()),
+                right!(trim(","), parse_u16()),
+                right!(trim(","), parse_u16()),
+            ),
+            trim(")")
+        ).map(|(x, y, w, h)| Rect::new(x, y, w, h));
+
+        let raw = middle(
+            right!(trim("Rect"), trim("{")),
+            tuplify!(
+                middle(trim("x:"), parse_u16(), trim(",")),
+                middle(trim("y:"), parse_u16(), trim(",")),
+                middle(trim("width:"), parse_u16(), trim(",")),
+                right!(trim("height:"), parse_u16()),
+            ),
+            trim("}")
+        ).map(|(x, y, w, h)| Rect::new(x, y, w, h));
+
+        or!(new, raw)
+    }
+
     fn margin<'a>() -> impl StrParser<'a, Margin> {
         // ctor: Margin::new(u32, u32)
         let new = middle(
@@ -264,7 +290,7 @@ mod parse {
     #[cfg(test)]
     mod tests {
         use anpa::core::{parse, AnpaResult, StrParser};
-        use ratatui::layout::Margin;
+        use ratatui::layout::{Margin, Rect};
         use crate::{Duration, EffectTimer, Interpolation, Motion};
         use crate::script::elements::FxArg;
 
@@ -300,6 +326,26 @@ mod parse {
             assert_parser_eq(
                 parse(super::margin(), input),
                 Margin::new(10, 20)
+            );
+        }
+
+        #[test]
+        fn test_rect() {
+            let input = "Rect::new(10, 20, 30, 40)";
+            assert_parser_eq(
+                parse(super::rect(), input),
+                Rect::new(10, 20, 30, 40)
+            );
+
+            let input = r#"Rect {
+                x: 10,
+                y: 20,
+                width: 30,
+                height: 40
+            }"#;
+            assert_parser_eq(
+                parse(super::rect(), input),
+                Rect::new(10, 20, 30, 40)
             );
         }
 
