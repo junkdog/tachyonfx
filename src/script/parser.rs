@@ -22,16 +22,6 @@ pub enum ScriptError {
 }
 
 
-pub struct ScriptDeserializer {
-    pub name: &'static str,
-    pub args: Vec<FxArg>,
-}
-
-pub struct ScriptContext {
-    bound_variables: BTreeMap<&'static str, Box<dyn Any>>,
-    deserializers: Vec<ScriptDeserializer>,
-}
-
 mod parse {
     use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
     use anpa::core::{Parser, ParserExt, StrParser};
@@ -43,7 +33,7 @@ mod parse {
     use anpa::whitespace::skip_whitespace;
     use ratatui::layout::{Margin, Rect};
     use crate::{Duration, EffectTimer, Interpolation, Motion};
-    use crate::script::elements::FxArg;
+    use crate::script::parser::FxArg;
 
     fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
         right!(
@@ -292,7 +282,7 @@ mod parse {
         use anpa::core::{parse, AnpaResult, StrParser};
         use ratatui::layout::{Margin, Rect};
         use crate::{Duration, EffectTimer, Interpolation, Motion};
-        use crate::script::elements::FxArg;
+        use crate::script::parser::FxArg;
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
             result: AnpaResult<&str, T>,
