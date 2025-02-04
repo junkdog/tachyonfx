@@ -41,6 +41,7 @@ mod parse {
     use anpa::prefix::Prefix;
     use anpa::slicelike::SliceLike;
     use anpa::whitespace::skip_whitespace;
+    use ratatui::layout::Margin;
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use crate::script::elements::FxArg;
 
@@ -114,6 +115,11 @@ mod parse {
             .map(|s: &str| s.parse().unwrap())
     }
 
+    fn parse_u16<'a>() -> impl StrParser<'a, u16> {
+        many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
+            .map(|s: &str| s.parse().unwrap())
+    }
+
     fn parse_f32<'a>() -> impl StrParser<'a, f32> {
         float()
     }
@@ -153,6 +159,30 @@ mod parse {
             from_new,
             from_ms,
         )
+    }
+
+    fn margin<'a>() -> impl StrParser<'a, Margin> {
+        // ctor: Margin::new(u32, u32)
+        let new = middle(
+            trim("Margin::new("),
+            tuplify!(
+                parse_u16(),
+                right!(trim(","), parse_u16())
+            ),
+            trim(")")
+        ).map(|(x, y)| Margin::new(x, y));
+
+        // ctor: Margin::new(u32)
+        let construct = middle(
+            right!(trim("Margin"), trim("{")),
+            tuplify!(
+                middle(trim("horizontal:"), parse_u16(), trim(",")),
+                right!(trim("vertical:"), parse_u16()),
+            ),
+            trim("}")
+        ).map(|(horizontal, vertical)| Margin { horizontal, vertical });
+
+        or!(new, construct)
     }
 
     fn duration<'a>() -> impl StrParser<'a, Duration> {
@@ -234,6 +264,7 @@ mod parse {
     #[cfg(test)]
     mod tests {
         use anpa::core::{parse, AnpaResult, StrParser};
+        use ratatui::layout::Margin;
         use crate::{Duration, EffectTimer, Interpolation, Motion};
         use crate::script::elements::FxArg;
 
@@ -251,6 +282,24 @@ mod parse {
             assert_parser_eq(
                 parse(super::trim("Hello"), input),
                 ()
+            );
+        }
+
+        #[test]
+        fn test_margin() {
+            let input = "Margin::new(10, 20)";
+            assert_parser_eq(
+                parse(super::margin(), input),
+                Margin::new(10, 20)
+            );
+
+            let input = r#"Margin {
+                horizontal: 10,
+                vertical: 20
+            }"#;
+            assert_parser_eq(
+                parse(super::margin(), input),
+                Margin::new(10, 20)
             );
         }
 
@@ -500,8 +549,6 @@ mod parse {
                     ]
                 }
             );
-
-
         }
     }
 }
