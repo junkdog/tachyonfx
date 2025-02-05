@@ -29,7 +29,7 @@ pub struct ScriptEnv {
 }
 
 impl<'a> InputArgs<'a> {
-    fn new(
+    pub(super) fn new(
         args: VecDeque<FxArg>,
         vars: &'a BTreeMap<&'static str, Box<dyn Any>>
     ) -> Self {
@@ -203,56 +203,56 @@ impl ScriptContext {
 
 fn register_default_deserializers(ctx: ScriptContext) -> ScriptContext {
     ctx.register("consume_tick", |args| {
-       Some(consume_tick())
+       consume_tick().into()
     }).register("ping_pong", |args| {
-        Some(ping_pong(args.effect()?))
+        ping_pong(args.effect()?).into()
     }).register("repeating", |args| {
-        Some(repeating(args.effect()?))
+        repeating(args.effect()?).into()
     }).register("dissovle", |args| {
-        Some(dissolve(args.effect_timer()?))
+        dissolve(args.effect_timer()?).into()
     }).register("dissolve_to", |args| {
-        Some(dissolve_to(
+        dissolve_to(
             args.style()?,
             args.effect_timer()?
-        ))
+        ).into()
     }).register("fade_from", |args| {
-        Some(fade_from(
+        fade_from(
             args.color()?,
             args.color()?,
             args.effect_timer()?
-        ))
+        ).into()
     }).register("sweep_out", |args| {
-        Some(sweep_out(
+        sweep_out(
             args.motion()?,
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
             args.effect_timer()?
-        ))
+        ).into()
     }).register("sweep_in", |args| {
-        Some(sweep_in(
+        sweep_in(
             args.motion()?,
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
             args.effect_timer()?
-        ))
+        ).into()
     }).register("slide_in", |args| {
-        Some(slide_in(
+        slide_in(
             args.motion()?,
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
             args.effect_timer()?
-        ))
+        ).into()
     }).register("slide_out", |args| {
-        Some(slide_in(
+        slide_in(
             args.motion()?,
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
             args.effect_timer()?
-        ))
+        ).into()
     })
 }
 

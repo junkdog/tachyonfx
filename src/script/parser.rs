@@ -38,6 +38,7 @@ mod parse {
     use anpa::whitespace::skip_whitespace;
     use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
     use ratatui::layout::{Margin, Rect};
+    use ratatui::style::Color;
 
     fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
         right!(
@@ -97,6 +98,7 @@ mod parse {
                 motion().map(FxArg::Motion),
                 rect().map(FxArg::Rect),
                 margin().map(FxArg::Margin),
+                color().map(FxArg::Color),
                 array_ref(), // e.g. &[fx1, fx2, fx3]
                 fx_statement(),
             )
@@ -108,8 +110,21 @@ mod parse {
     }
 
     fn parse_u32<'a>() -> impl StrParser<'a, u32> {
-        many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
-            .map(|s: &str| s.parse().unwrap())
+        let plain = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
+            .map(|s: &str| s.parse().unwrap());
+
+        let hexadecimal = right!(
+            skip!("0x"),
+            item_while(|c: char| c.is_ascii_hexdigit())
+        ).map_if(|s: &str| {
+            match s.len() {
+                6 => u32::from_str_radix(s, 16).ok(),  // rrggbb
+                8 => u32::from_str_radix(s, 16).ok(),  // aarrggbb
+                _ => None
+            }
+        });
+
+        or!(hexadecimal, plain)
     }
 
     fn parse_u16<'a>() -> impl StrParser<'a, u16> {
@@ -239,6 +254,14 @@ mod parse {
         })
     }
 
+    fn color<'a>() -> impl StrParser<'a, Color> {
+        middle(
+            trim("Color::from_u32("),
+            parse_u32(),
+            trim(")")
+        ).map(Color::from_u32)
+    }
+
     fn interpolation<'a>() -> impl StrParser<'a, Interpolation> {
         right!(
             succeed(attempt(skip!("Interpolation::"))),
@@ -286,10 +309,13 @@ mod parse {
 
     #[cfg(test)]
     mod tests {
+        use std::collections::BTreeMap;
         use crate::script::parser::FxArg;
         use crate::{Duration, EffectTimer, Interpolation, Motion};
         use anpa::core::{parse, AnpaResult};
         use ratatui::layout::{Margin, Rect};
+        use ratatui::style::Color;
+        use crate::script::script::InputArgs;
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
             result: AnpaResult<&str, T>,
@@ -305,6 +331,15 @@ mod parse {
             assert_parser_eq(
                 parse(super::trim("Hello"), input),
                 ()
+            );
+        }
+
+        #[test]
+        fn test_color() {
+            let input = "Color::from_u32(0x1d2021)";
+            assert_parser_eq(
+                parse(super::color(), input),
+                Color::from_u32(0x1d2021)
             );
         }
 
@@ -507,6 +542,21 @@ mod parse {
         }
 
         #[test]
+        fn test_parse_u32() {
+            let input = "1337";
+            assert_parser_eq(
+                parse(super::parse_u32(), input),
+                1337
+            );
+
+            let input = "0x1d2021";
+            assert_parser_eq(
+                parse(super::parse_u32(), input),
+                0x1d2021
+            );
+        }
+
+        #[test]
         fn parse_parameter() {
             let input = "\"Hello, World!\"";
             assert_parser_eq(
@@ -592,6 +642,33 @@ mod parse {
                     ]
                 }
             );
+        }
+
+        #[test]
+        fn test_parse_and_deserialize() {
+            let input = r#"fx::sweep_in(
+                Motion::LeftToRight,
+                10,
+                0,
+                Color::from_u32(0x1d2021),
+                (1000, QuadOut)
+            )"#;
+
+            let parsed = parse(super::fx_statement(), input).result.unwrap();
+            let env = BTreeMap::new();
+            let mut args = InputArgs::new(
+                match parsed {
+                    FxArg::Fx { parameters, .. } => parameters.into(),
+                    _ => panic!("Expected Fx variant")
+                },
+                &env
+            );
+
+            assert_eq!(args.motion(), Some(Motion::LeftToRight));
+            assert_eq!(args.read_u16(), Some(10));
+            assert_eq!(args.read_u16(), Some(0));
+            assert_eq!(args.color(), Some(Color::from_u32(0x1d2021)));
+            assert_eq!(args.effect_timer(), Some(EffectTimer::from_ms(1000, Interpolation::QuadOut)));
         }
     }
 }
