@@ -8,9 +8,9 @@ use crate::fx::{consume_tick, dissolve, dissolve_to, fade_from, ping_pong, repea
 use crate::script::parser::{FxArg};
 
 
-struct Deserializer {
+struct EffectCompiler {
     name: &'static str,
-    deserialize: Box<dyn Fn(&mut InputArgs) -> Option<Effect>>,
+    compiler: Box<dyn Fn(&mut InputArgs) -> Option<Effect>>,
 }
 
 pub struct InputArgs<'a> {
@@ -21,7 +21,7 @@ pub struct InputArgs<'a> {
 
 #[derive(Default)]
 pub struct ScriptContext {
-    deserializers: Vec<Deserializer>,
+    deserializers: Vec<EffectCompiler>,
 }
 
 pub struct ScriptEnv {
@@ -146,14 +146,14 @@ impl ScriptEnv {
     }
 }
 
-impl Deserializer {
+impl EffectCompiler {
     pub(crate) fn new(
         name: &'static str,
-        deserialize: impl Fn(&mut InputArgs) -> Option<Effect> + 'static
+        compiler: impl Fn(&mut InputArgs) -> Option<Effect> + 'static
     ) -> Self {
         Self {
             name,
-            deserialize: Box::new(deserialize),
+            compiler: Box::new(compiler),
         }
     }
 }
@@ -171,7 +171,7 @@ impl ScriptContext {
         unimplemented!("parse input")
     }
 
-    fn deserialize(
+    fn compile(
         &self,
         env: &mut ScriptEnv,
         input: FxArg
@@ -182,7 +182,7 @@ impl ScriptContext {
                 .find(|d| d.name == name)
                 .and_then(|d| {
                     let mut args = InputArgs::new(parameters.into(), &env.bound_variables);
-                    let effect = (d.deserialize)(&mut args);
+                    let effect = (d.compiler)(&mut args);
                     debug_assert!(args.args.is_empty(), "unused arguments: {:?}", args.args);
                     effect
                 }),
@@ -193,15 +193,15 @@ impl ScriptContext {
     pub fn register(
         self,
         name: &'static str,
-        deserialize: impl Fn(&mut InputArgs) -> Option<Effect> + 'static
+        compiler: impl Fn(&mut InputArgs) -> Option<Effect> + 'static
     ) -> Self {
         let mut this = self;
-        this.deserializers.push(Deserializer::new(name, deserialize));
+        this.deserializers.push(EffectCompiler::new(name, compiler));
         this
     }
 }
 
-fn register_default_deserializers(ctx: ScriptContext) -> ScriptContext {
+fn register_default_compilers(ctx: ScriptContext) -> ScriptContext {
     ctx.register("consume_tick", |args| {
        consume_tick().into()
     }).register("ping_pong", |args| {
