@@ -1,16 +1,20 @@
+use crate::{Duration, Effect, EffectTimer, Motion};
+use ratatui::layout::{Margin, Rect};
+use ratatui::style::{Color, Style};
 use std::any::Any;
-use std::collections::BTreeMap;
-use ratatui::style::Color;
-use crate::{CellFilter, Duration, Effect, EffectTimer};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FxArg {
     Color(Color),
+    Style(Style),
     String(String),
     U32(u32), // can also repr EffectTimer and Duration
     F32(f32),
     Duration(Duration),
     Timer(EffectTimer),
+    Motion(Motion),
+    Rect(Rect),
+    Margin(Margin),
     ArrayRef(Vec<FxArg>),
     Fx { name: String, parameters: Vec<FxArg> }
 }
@@ -23,17 +27,17 @@ pub enum ScriptError {
 
 
 mod parse {
+    use crate::script::parser::FxArg;
+    use crate::{Duration, EffectTimer, Interpolation, Motion};
     use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
     use anpa::core::{Parser, ParserExt, StrParser};
-    use anpa::parsers::{item_if, item_while, skip, take, until};
-    use anpa::{defer_parser, greedy_or, left, or, right, skip, take, tuplify, until};
     use anpa::number::float;
+    use anpa::parsers::{item_if, item_while};
     use anpa::prefix::Prefix;
     use anpa::slicelike::SliceLike;
     use anpa::whitespace::skip_whitespace;
+    use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
     use ratatui::layout::{Margin, Rect};
-    use crate::{Duration, EffectTimer, Interpolation, Motion};
-    use crate::script::parser::FxArg;
 
     fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
         right!(
@@ -90,6 +94,9 @@ mod parse {
                 parse_f32().map(FxArg::F32),
                 effect_timer().map(FxArg::Timer),
                 duration().map(FxArg::Duration),
+                motion().map(FxArg::Motion),
+                rect().map(FxArg::Rect),
+                margin().map(FxArg::Margin),
                 array_ref(), // e.g. &[fx1, fx2, fx3]
                 fx_statement(),
             )
@@ -279,10 +286,10 @@ mod parse {
 
     #[cfg(test)]
     mod tests {
-        use anpa::core::{parse, AnpaResult, StrParser};
-        use ratatui::layout::{Margin, Rect};
-        use crate::{Duration, EffectTimer, Interpolation, Motion};
         use crate::script::parser::FxArg;
+        use crate::{Duration, EffectTimer, Interpolation, Motion};
+        use anpa::core::{parse, AnpaResult};
+        use ratatui::layout::{Margin, Rect};
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
             result: AnpaResult<&str, T>,
