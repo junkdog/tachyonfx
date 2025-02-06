@@ -2,6 +2,7 @@ use crate::{Duration, Effect, EffectTimer, Motion};
 use ratatui::layout::{Margin, Rect};
 use ratatui::style::{Color, Style};
 use std::any::Any;
+use anpa::core::parse;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
@@ -26,7 +27,7 @@ pub enum ScriptError {
 }
 
 
-mod parse {
+mod parser {
     use crate::script::parser::Expr;
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
@@ -48,7 +49,7 @@ mod parse {
         )
     }
 
-    fn fx_statement<'a>() -> impl StrParser<'a, Expr> {
+    pub(super) fn fx_statement<'a>() -> impl StrParser<'a, Expr> {
         let name = right!(
             succeed(attempt(skip!("fx::"))),
             item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
@@ -315,7 +316,7 @@ mod parse {
         use anpa::core::{parse, AnpaResult};
         use ratatui::layout::{Margin, Rect};
         use ratatui::style::Color;
-        use crate::script::script::InputArgs;
+        use crate::script::args::InputArgs;
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
             result: AnpaResult<&str, T>,
@@ -673,9 +674,10 @@ mod parse {
     }
 }
 
-pub fn load_script(
-    source: &str,
-) -> Result<Effect, ScriptError> {
-    unimplemented!()
+pub(super) fn parse_expr(
+    input: &str,
+) -> Option<Expr> {
+    parse(parser::fx_statement(), input)
+        .result
 }
 
