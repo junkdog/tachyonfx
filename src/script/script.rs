@@ -1,22 +1,17 @@
-use std::any::Any;
-use std::cell::RefCell;
-use std::collections::{BTreeMap, VecDeque};
+use crate::fx::{consume_tick, dissolve, ping_pong, repeating};
+use crate::script::parser::Expr;
+use crate::{Duration, Effect, EffectTimer, Motion};
 use ratatui::layout::{Margin, Rect};
 use ratatui::style::{Color, Style};
-use crate::{Duration, Effect, EffectTimer, Motion};
-use crate::fx::{consume_tick, dissolve, dissolve_to, fade_from, ping_pong, repeating, slide_in, sweep_in, sweep_out};
-use crate::script::parser::{FxArg};
-
+use std::any::Any;
+use std::collections::{BTreeMap, VecDeque};
+use crate::script::args::InputArgs;
 
 struct EffectCompiler {
     name: &'static str,
     compiler: Box<dyn Fn(&mut InputArgs) -> Option<Effect>>,
 }
 
-pub struct InputArgs<'a> {
-    args: VecDeque<FxArg>,
-    vars: &'a BTreeMap<&'static str, Box<dyn Any>>,
-}
 
 
 #[derive(Default)]
@@ -26,105 +21,6 @@ pub struct ScriptContext {
 
 pub struct ScriptEnv {
     bound_variables: BTreeMap<&'static str, Box<dyn Any>>,
-}
-
-impl<'a> InputArgs<'a> {
-    pub(super) fn new(
-        args: VecDeque<FxArg>,
-        vars: &'a BTreeMap<&'static str, Box<dyn Any>>
-    ) -> Self {
-        Self { args, vars }
-    }
-
-    pub fn duration(&mut self) -> Option<Duration> {
-        match self.next()? {
-            FxArg::Duration(d) => Some(d),
-            FxArg::U32(ms)     => Some(Duration::from_millis(ms as _)),
-            _                  => None,
-        }
-    }
-
-    pub fn effect_timer(&mut self) -> Option<EffectTimer> {
-        match self.next()? {
-            FxArg::Timer(t) => Some(t),
-            FxArg::U32(ms)  => Some(ms.into()),
-            _               => None,
-        }
-    }
-
-    pub fn read_u16(&mut self) -> Option<u16> {
-        self.read_u32().map(|u| u as _)
-    }
-
-    pub fn read_u32(&mut self) -> Option<u32> {
-        match self.next()? {
-            FxArg::U32(u) => Some(u),
-            _             => None,
-        }
-    }
-
-    pub fn read_f32(&mut self) -> Option<f32> {
-        match self.next()? {
-            FxArg::F32(f) => Some(f),
-            _             => None,
-        }
-    }
-
-    pub fn string(&mut self) -> Option<String> {
-        match self.next()? {
-            FxArg::String(s) => Some(s),
-            _                => None,
-        }
-    }
-
-    pub fn effect(&mut self) -> Option<Effect> {
-        match self.next()? {
-            FxArg::Fx { name, parameters } => {
-                // todo: recursive deserialization?
-                None
-            },
-            _ => None,
-        }
-    }
-
-    pub fn color(&mut self) -> Option<Color> {
-        match self.next()? {
-            FxArg::Color(c) => Some(c),
-            _               => None,
-        }
-    }
-
-    pub fn style(&mut self) -> Option<Style> {
-        match self.next()? {
-            FxArg::Style(s) => Some(s),
-            _               => None,
-        }
-    }
-
-    pub fn motion(&mut self) -> Option<Motion> {
-        match self.next()? {
-            FxArg::Motion(m) => Some(m),
-            _                => None,
-        }
-    }
-
-    pub fn margin(&mut self) -> Option<Margin> {
-        match self.next()? {
-            FxArg::Margin(m) => Some(m),
-            _                => None,
-        }
-    }
-
-    pub fn rect(&mut self) -> Option<Rect> {
-        match self.next()? {
-            FxArg::Rect(r) => Some(r),
-            _              => None,
-        }
-    }
-
-    fn next(&mut self) -> Option<FxArg> {
-        self.args.pop_front()
-    }
 }
 
 
@@ -174,16 +70,16 @@ impl ScriptContext {
     fn compile(
         &self,
         env: &mut ScriptEnv,
-        input: FxArg
+        input: Expr
     ) -> Option<Effect> {
         match input {
-            FxArg::Fx { name, parameters } => self.deserializers
+            Expr::Fx { name, parameters } => self.deserializers
                 .iter()
                 .find(|d| d.name == name)
                 .and_then(|d| {
                     let mut args = InputArgs::new(parameters.into(), &env.bound_variables);
                     let effect = (d.compiler)(&mut args);
-                    debug_assert!(args.args.is_empty(), "unused arguments: {:?}", args.args);
+                    debug_assert!(args.args().is_empty(), "unused arguments: {:?}", args.args());
                     effect
                 }),
             _ => None
@@ -201,66 +97,85 @@ impl ScriptContext {
     }
 }
 
-fn register_default_compilers(ctx: ScriptContext) -> ScriptContext {
-    ctx.register("consume_tick", |args| {
-       consume_tick().into()
-    }).register("ping_pong", |args| {
-        ping_pong(args.effect()?).into()
-    }).register("repeating", |args| {
-        repeating(args.effect()?).into()
-    }).register("dissovle", |args| {
-        dissolve(args.effect_timer()?).into()
-    }).register("dissolve_to", |args| {
-        dissolve_to(
+fn register_default_compilers(context: ScriptContext) -> ScriptContext {
+    context
+        .register("consume_tick", |args| consume_tick().into())
+        .register("ping_pong",    |args| ping_pong(args.effect()?).into())
+        .register("repeating",    |args| repeating(args.effect()?).into())
+        .register("dissolve",     |args| dissolve(args.effect_timer()?).into())
+        .register("dissolve_to",  compilers::dissolve_to)
+        .register("fade_from",    compilers::fade_from)
+        .register("sweep_out",    compilers::sweep_out)
+        .register("sweep_in",     compilers::sweep_in)
+        .register("slide_in",     compilers::slide_in)
+        .register("slide_out",    compilers::slide_out)
+}
+
+mod compilers {
+    use crate::script::script::InputArgs;
+    use crate::{fx, Effect};
+
+    pub(super) fn dissolve_to(args: &mut InputArgs) -> Option<Effect> {
+        fx::dissolve_to(
             args.style()?,
             args.effect_timer()?
         ).into()
-    }).register("fade_from", |args| {
-        fade_from(
+    }
+
+    pub(super) fn fade_from(args: &mut InputArgs) -> Option<Effect> {
+        fx::fade_from(
             args.color()?,
             args.color()?,
             args.effect_timer()?
         ).into()
-    }).register("sweep_out", |args| {
-        sweep_out(
+    }
+
+    pub(super) fn sweep_out(args: &mut InputArgs) -> Option<Effect> {
+        fx::sweep_out(
             args.motion()?,
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
             args.effect_timer()?
         ).into()
-    }).register("sweep_in", |args| {
-        sweep_in(
+    }
+
+    pub(super) fn sweep_in(args: &mut InputArgs) -> Option<Effect> {
+        fx::sweep_in(
             args.motion()?,
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
             args.effect_timer()?
         ).into()
-    }).register("slide_in", |args| {
-        slide_in(
+    }
+
+    pub(super) fn slide_in(args: &mut InputArgs) -> Option<Effect> {
+        fx::slide_in(
             args.motion()?,
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
             args.effect_timer()?
         ).into()
-    }).register("slide_out", |args| {
-        slide_in(
+    }
+
+    pub(super) fn slide_out(args: &mut InputArgs) -> Option<Effect> {
+        fx::slide_out(
             args.motion()?,
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
             args.effect_timer()?
         ).into()
-    })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::VecDeque;
     use crate::Interpolation;
+    use std::collections::VecDeque;
 
     fn empty_env() -> BTreeMap<&'static str, Box<dyn Any>> {
         BTreeMap::new()
@@ -271,8 +186,8 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::Duration(Duration::from_millis(500)),
-                FxArg::U32(1000),
+                Expr::Duration(Duration::from_millis(500)),
+                Expr::U32(1000),
             ].into(),
             &binding
         );
@@ -287,8 +202,8 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::Timer(EffectTimer::from_ms(500, Interpolation::Linear)),
-                FxArg::U32(1000),
+                Expr::Timer(EffectTimer::from_ms(500, Interpolation::Linear)),
+                Expr::U32(1000),
             ].into(),
             &binding
         );
@@ -303,8 +218,8 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::U32(42),
-                FxArg::F32(3.14),
+                Expr::U32(42),
+                Expr::F32(3.14),
             ].into(),
             &binding
         );
@@ -319,9 +234,9 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::String("hello".to_string()),
-                FxArg::U32(42), // Wrong type
-                FxArg::String("world".to_string()),
+                Expr::String("hello".to_string()),
+                Expr::U32(42), // Wrong type
+                Expr::String("world".to_string()),
             ].into(),
             &binding
         );
@@ -336,8 +251,8 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::Color(Color::Red),
-                FxArg::Color(Color::Blue),
+                Expr::Color(Color::Red),
+                Expr::Color(Color::Blue),
             ].into(),
             &binding
         );
@@ -353,7 +268,7 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::Style(style),
+                Expr::Style(style),
             ].into(),
             &binding
         );
@@ -367,8 +282,8 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::Motion(Motion::LeftToRight),
-                FxArg::Motion(Motion::UpToDown),
+                Expr::Motion(Motion::LeftToRight),
+                Expr::Motion(Motion::UpToDown),
             ].into(),
             &binding
         );
@@ -384,7 +299,7 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::Margin(margin),
+                Expr::Margin(margin),
             ].into(),
             &binding
         );
@@ -399,7 +314,7 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::Rect(rect),
+                Expr::Rect(rect),
             ].into(),
             &binding
         );
@@ -413,9 +328,9 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::Fx {
+                Expr::Fx {
                     name: "test".to_string(),
-                    parameters: vec![FxArg::U32(500)]
+                    parameters: vec![Expr::U32(500)]
                 },
             ].into(),
             &binding
@@ -430,10 +345,10 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::U32(500),
-                FxArg::Motion(Motion::LeftToRight),
-                FxArg::Color(Color::Blue),
-                FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::Linear)),
+                Expr::U32(500),
+                Expr::Motion(Motion::LeftToRight),
+                Expr::Color(Color::Blue),
+                Expr::Timer(EffectTimer::from_ms(1000, Interpolation::Linear)),
             ].into(),
             &binding
         );
@@ -450,8 +365,8 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
-                FxArg::U32(65535), // Max u16
-                FxArg::U32(65536), // Too large for u16
+                Expr::U32(65535), // Max u16
+                Expr::U32(65536), // Too large for u16
             ].into(),
             &binding
         );

@@ -4,7 +4,7 @@ use ratatui::style::{Color, Style};
 use std::any::Any;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum FxArg {
+pub enum Expr {
     Color(Color),
     Style(Style),
     String(String),
@@ -15,8 +15,8 @@ pub enum FxArg {
     Motion(Motion),
     Rect(Rect),
     Margin(Margin),
-    ArrayRef(Vec<FxArg>),
-    Fx { name: String, parameters: Vec<FxArg> }
+    ArrayRef(Vec<Expr>),
+    Fx { name: String, parameters: Vec<Expr> }
 }
 
 pub enum ScriptError {
@@ -27,7 +27,7 @@ pub enum ScriptError {
 
 
 mod parse {
-    use crate::script::parser::FxArg;
+    use crate::script::parser::Expr;
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
     use anpa::core::{Parser, ParserExt, StrParser};
@@ -48,7 +48,7 @@ mod parse {
         )
     }
 
-    fn fx_statement<'a>() -> impl StrParser<'a, FxArg> {
+    fn fx_statement<'a>() -> impl StrParser<'a, Expr> {
         let name = right!(
             succeed(attempt(skip!("fx::"))),
             item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
@@ -57,7 +57,7 @@ mod parse {
         let parameters = middle(trim("("), arguments(), trim(")"));
 
         tuplify!(name, parameters).map(|(name, parameters)|
-            FxArg::Fx {
+            Expr::Fx {
                 name: name.to_string(),
                 parameters
             }
@@ -75,37 +75,37 @@ mod parse {
             .map(|s: String| s.replace("\\\"", "\""))
     }
 
-    fn array_ref<'a>() -> impl StrParser<'a, FxArg> {
+    fn array_ref<'a>() -> impl StrParser<'a, Expr> {
         middle(
             trim("&["),
             many_to_vec(argument(), true, separator(trim(","), false)),
             trim("]")
-        ).map(FxArg::ArrayRef)
+        ).map(Expr::ArrayRef)
     }
 
-    fn argument<'a>() -> impl StrParser<'a, FxArg> {
+    fn argument<'a>() -> impl StrParser<'a, Expr> {
         // must defer to avoid recursive opaqueness
         defer_parser! {
             // `parse_f32` must come after `parse_u32` due to how float() is
             // implemented, as such we use greedy_or to ensure that `parse_u32`
             // isn't chosen over `parse_f32`.
             greedy_or!(
-                unescaped_string().map(FxArg::String),
-                parse_u32().map(FxArg::U32),
-                parse_f32().map(FxArg::F32),
-                effect_timer().map(FxArg::Timer),
-                duration().map(FxArg::Duration),
-                motion().map(FxArg::Motion),
-                rect().map(FxArg::Rect),
-                margin().map(FxArg::Margin),
-                color().map(FxArg::Color),
+                unescaped_string().map(Expr::String),
+                parse_u32().map(Expr::U32),
+                parse_f32().map(Expr::F32),
+                effect_timer().map(Expr::Timer),
+                duration().map(Expr::Duration),
+                motion().map(Expr::Motion),
+                rect().map(Expr::Rect),
+                margin().map(Expr::Margin),
+                color().map(Expr::Color),
                 array_ref(), // e.g. &[fx1, fx2, fx3]
                 fx_statement(),
             )
         }
     }
 
-    fn arguments<'a>() -> impl StrParser<'a, Vec<FxArg>> {
+    fn arguments<'a>() -> impl StrParser<'a, Vec<Expr>> {
         many_to_vec(argument(), true, separator(trim(","), false))
     }
 
@@ -310,7 +310,7 @@ mod parse {
     #[cfg(test)]
     mod tests {
         use std::collections::BTreeMap;
-        use crate::script::parser::FxArg;
+        use crate::script::parser::Expr;
         use crate::{Duration, EffectTimer, Interpolation, Motion};
         use anpa::core::{parse, AnpaResult};
         use ratatui::layout::{Margin, Rect};
@@ -477,11 +477,11 @@ mod parse {
             let input = "&[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
             assert_parser_eq(
                 parse(super::array_ref(), input),
-                FxArg::ArrayRef(vec![
-                    FxArg::String("Hello, World!".to_string()),
-                    FxArg::U32(1337),
-                    FxArg::F32(3.14),
-                    FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
+                Expr::ArrayRef(vec![
+                    Expr::String("Hello, World!".to_string()),
+                    Expr::U32(1337),
+                    Expr::F32(3.14),
+                    Expr::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
                 ])
             );
         }
@@ -561,31 +561,31 @@ mod parse {
             let input = "\"Hello, World!\"";
             assert_parser_eq(
                 parse(super::argument(), input),
-                FxArg::String("Hello, World!".to_string())
+                Expr::String("Hello, World!".to_string())
             );
 
             let input = "1337";
             assert_parser_eq(
                 parse(super::argument(), input),
-                FxArg::U32(1337)
+                Expr::U32(1337)
             );
 
             let input = "3.14";
             assert_parser_eq(
                 parse(super::argument(), input),
-                FxArg::F32(3.14)
+                Expr::F32(3.14)
             );
 
             let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
             assert_parser_eq(
                 parse(super::argument(), input),
-                FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))
+                Expr::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))
             );
 
             let input = "Duration::from_millis(1000)";
             assert_parser_eq(
                 parse(super::argument(), input),
-                FxArg::Duration(Duration::from_millis(1000))
+                Expr::Duration(Duration::from_millis(1000))
             );
         }
 
@@ -595,10 +595,10 @@ mod parse {
             assert_parser_eq(
                 parse(super::arguments(), input),
                 vec![
-                    FxArg::String("Hello, World!".to_string()),
-                    FxArg::U32(1337),
-                    FxArg::F32(3.14),
-                    FxArg::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
+                    Expr::String("Hello, World!".to_string()),
+                    Expr::U32(1337),
+                    Expr::F32(3.14),
+                    Expr::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
                 ]
             );
         }
@@ -608,10 +608,10 @@ mod parse {
             let input = "coalesce(Duration::from_millis(220))";
             assert_parser_eq(
                 parse(super::fx_statement(), input),
-                FxArg::Fx {
+                Expr::Fx {
                     name: "coalesce".to_string(),
                     parameters: vec![
-                        FxArg::Duration(Duration::from_millis(220)),
+                        Expr::Duration(Duration::from_millis(220)),
                     ]
                 }
             );
@@ -619,10 +619,10 @@ mod parse {
             let input = "fx::dissolve((Duration::from_millis(220), ElasticOut))";
             assert_parser_eq(
                 parse(super::fx_statement(), input),
-                FxArg::Fx {
+                Expr::Fx {
                     name: "dissolve".to_string(),
                     parameters: vec![
-                        FxArg::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut)),
+                        Expr::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut)),
                     ]
                 }
             );
@@ -630,13 +630,13 @@ mod parse {
             let input = "fx::ping_pong(fx::coalesce((500, CircOut)))";
             assert_parser_eq(
                 parse(super::fx_statement(), input),
-                FxArg::Fx {
+                Expr::Fx {
                     name: "ping_pong".to_string(),
                     parameters: vec![
-                        FxArg::Fx {
+                        Expr::Fx {
                             name: "coalesce".to_string(),
                             parameters: vec![
-                                FxArg::Timer(EffectTimer::from_ms(500, Interpolation::CircOut)),
+                                Expr::Timer(EffectTimer::from_ms(500, Interpolation::CircOut)),
                             ]
                         }
                     ]
@@ -658,7 +658,7 @@ mod parse {
             let env = BTreeMap::new();
             let mut args = InputArgs::new(
                 match parsed {
-                    FxArg::Fx { parameters, .. } => parameters.into(),
+                    Expr::Fx { parameters, .. } => parameters.into(),
                     _ => panic!("Expected Fx variant")
                 },
                 &env
