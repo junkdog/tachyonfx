@@ -3,17 +3,18 @@ use std::collections::{BTreeMap, VecDeque};
 use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use crate::{Duration, Effect, EffectTimer, Motion};
+use crate::script::env::ScriptEnv;
 use crate::script::parser::Expr;
 
 pub struct InputArgs<'a> {
     args: VecDeque<Expr>,
-    vars: &'a BTreeMap<&'static str, Box<dyn Any>>,
+    vars: &'a ScriptEnv,
 }
 
 impl<'a> InputArgs<'a> {
     pub(super) fn new(
         args: VecDeque<Expr>,
-        vars: &'a BTreeMap<&'static str, Box<dyn Any>>
+        vars: &'a ScriptEnv
     ) -> Self {
         Self { args, vars }
     }
@@ -26,15 +27,17 @@ impl<'a> InputArgs<'a> {
         match self.next()? {
             Expr::Duration(d) => Some(d),
             Expr::U32(ms)     => Some(Duration::from_millis(ms as _)),
+            Expr::Var(name)   => self.vars.get(name).cloned(),
             _                 => None,
         }
     }
 
     pub fn effect_timer(&mut self) -> Option<EffectTimer> {
         match self.next()? {
-            Expr::Timer(t) => Some(t),
-            Expr::U32(ms)  => Some(ms.into()),
-            _              => None,
+            Expr::Timer(t)  => Some(t),
+            Expr::U32(ms)   => Some(ms.into()),
+            Expr::Var(name) => self.vars.get(name).cloned(),
+            _               => None,
         }
     }
 
@@ -44,21 +47,24 @@ impl<'a> InputArgs<'a> {
 
     pub fn read_u32(&mut self) -> Option<u32> {
         match self.next()? {
-            Expr::U32(u) => Some(u),
-            _            => None,
+            Expr::U32(u)    => Some(u),
+            Expr::Var(name) => self.vars.get(name).cloned(),
+            _               => None,
         }
     }
 
     pub fn read_f32(&mut self) -> Option<f32> {
         match self.next()? {
-            Expr::F32(f) => Some(f),
-            _            => None,
+            Expr::F32(f)    => Some(f),
+            Expr::Var(name) => self.vars.get(name).cloned(),
+            _               => None,
         }
     }
 
     pub fn string(&mut self) -> Option<String> {
         match self.next()? {
             Expr::String(s) => Some(s),
+            Expr::Var(name) => self.vars.get(name).cloned(),
             _               => None,
         }
     }
@@ -69,27 +75,31 @@ impl<'a> InputArgs<'a> {
                 // todo: recursive deserialization?
                 None
             },
+            Expr::Var(name) => self.vars.get(name).cloned(),
             _ => None,
         }
     }
 
     pub fn color(&mut self) -> Option<Color> {
         match self.next()? {
-            Expr::Color(c) => Some(c),
-            _              => None,
+            Expr::Color(c)  => Some(c),
+            Expr::Var(name) => self.vars.get(name).cloned(),
+            _               => None,
         }
     }
 
     pub fn style(&mut self) -> Option<Style> {
         match self.next()? {
-            Expr::Style(s) => Some(s),
-            _              => None,
+            Expr::Style(s)  => Some(s),
+            Expr::Var(name) => self.vars.get(name).cloned(),
+            _               => None,
         }
     }
 
     pub fn motion(&mut self) -> Option<Motion> {
         match self.next()? {
             Expr::Motion(m) => Some(m),
+            Expr::Var(name) => self.vars.get(name).cloned(),
             _               => None,
         }
     }
@@ -97,14 +107,16 @@ impl<'a> InputArgs<'a> {
     pub fn margin(&mut self) -> Option<Margin> {
         match self.next()? {
             Expr::Margin(m) => Some(m),
+            Expr::Var(name) => self.vars.get(name).cloned(),
             _               => None,
         }
     }
 
     pub fn rect(&mut self) -> Option<Rect> {
         match self.next()? {
-            Expr::Rect(r) => Some(r),
-            _             => None,
+            Expr::Rect(r)   => Some(r),
+            Expr::Var(name) => self.vars.get(name).cloned(),
+            _               => None,
         }
     }
 
@@ -115,16 +127,16 @@ impl<'a> InputArgs<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
     use std::collections::{BTreeMap, VecDeque};
     use ratatui::layout::{Margin, Rect};
     use ratatui::prelude::{Color, Style};
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use crate::script::args::InputArgs;
+    use crate::script::env::ScriptEnv;
     use crate::script::parser::Expr;
 
-    fn empty_env() -> BTreeMap<&'static str, Box<dyn Any>> {
-        BTreeMap::new()
+    fn empty_env() -> ScriptEnv {
+        ScriptEnv::new()
     }
 
     #[test]

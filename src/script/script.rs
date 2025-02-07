@@ -1,11 +1,9 @@
 use crate::fx::{consume_tick, dissolve, ping_pong, repeating};
-use crate::script::parser::{parse_expr, Expr};
-use crate::{Duration, Effect, EffectTimer, Motion};
-use ratatui::layout::{Margin, Rect};
-use ratatui::style::{Color, Style};
-use std::any::Any;
-use std::collections::{BTreeMap, VecDeque};
 use crate::script::args::InputArgs;
+use crate::script::env::ScriptEnv;
+use crate::script::parser::{parse_expr, Expr};
+use crate::{Effect, EffectTimer};
+use std::any::Any;
 
 struct EffectCompiler {
     name: &'static str,
@@ -18,28 +16,7 @@ pub struct ScriptContext {
     compilers: Vec<EffectCompiler>,
 }
 
-pub struct ScriptEnv {
-    bound_variables: BTreeMap<&'static str, Box<dyn Any>>,
-}
 
-
-impl ScriptEnv {
-    pub(crate) fn new() -> Self {
-        Self {
-            bound_variables: BTreeMap::new(),
-        }
-    }
-
-    pub fn bind_variable<T: 'static>(self, name: &'static str, value: T) -> Self {
-        let mut this = self;
-        this.bound_variables.insert(name, Box::new(value));
-        this
-    }
-
-    pub fn get_variable<T: 'static>(&self, name: &'static str) -> Option<&T> {
-        self.bound_variables.get(name).and_then(|v| v.downcast_ref())
-    }
-}
 
 impl EffectCompiler {
     pub(crate) fn new(
@@ -79,7 +56,7 @@ impl ScriptContext {
                 .iter()
                 .find(|d| d.name == name)
                 .and_then(|d| {
-                    let mut args = InputArgs::new(parameters.into(), &env.bound_variables);
+                    let mut args = InputArgs::new(parameters.into(), &env);
                     let effect = (d.compiler)(&mut args);
                     debug_assert!(args.args().is_empty(), "unused arguments: {:?}", args.args());
                     effect
@@ -175,9 +152,10 @@ mod compilers {
 
 #[cfg(test)]
 mod tests {
-    use crate::Interpolation::QuadOut;
-    use crate::Shader;
+    use ratatui::style::Color;
     use super::*;
+    use crate::Interpolation::QuadOut;
+    use crate::{Motion, Shader};
 
     #[test]
     fn happy_path_no_bound_vars() {
@@ -192,8 +170,32 @@ mod tests {
         let ctx = ScriptContext::new();
         let effect = ctx.execute(&mut ScriptEnv::new(), input)
             .expect("effect to be compiled");
-        
+
         assert_eq!(effect.name(), "sweep_in");
         assert_eq!(effect.timer(), Some(EffectTimer::from_ms(1000, QuadOut)));
+    }
+
+    #[test]
+    fn happy_path_with_bound_vars() {
+        let mut env = ScriptEnv::new()
+            .bind("motion", Motion::LeftToRight)
+            .bind("c", Color::from_u32(0x1d2021));
+
+        let input = r#"fx::sweep_in(
+                motion,
+                10,
+                0,
+                c,
+                (1000, QuadOut)
+            )"#;
+
+
+        let ctx = ScriptContext::new();
+        let effect = ctx.execute(&mut env, input)
+            .expect("effect to be compiled");
+
+        assert_eq!(effect.name(), "sweep_in");
+        assert_eq!(effect.timer(), Some(EffectTimer::from_ms(1000, QuadOut)));
+        println!("{:?}", effect);
     }
 }

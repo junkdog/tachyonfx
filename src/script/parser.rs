@@ -17,15 +17,9 @@ pub enum Expr {
     Rect(Rect),
     Margin(Margin),
     ArrayRef(Vec<Expr>),
+    Var(String),
     Fx { name: String, parameters: Vec<Expr> }
 }
-
-pub enum ScriptError {
-    InvalidElement,
-    InvalidFxParameters,
-    InvalidFxName(String),
-}
-
 
 mod parser {
     use crate::script::parser::Expr;
@@ -84,6 +78,10 @@ mod parser {
         ).map(Expr::ArrayRef)
     }
 
+    fn var<'a>() -> impl StrParser<'a, &'a str> {
+        item_while(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_'))
+    }
+
     fn argument<'a>() -> impl StrParser<'a, Expr> {
         // must defer to avoid recursive opaqueness
         defer_parser! {
@@ -102,6 +100,7 @@ mod parser {
                 color().map(Expr::Color),
                 array_ref(), // e.g. &[fx1, fx2, fx3]
                 fx_statement(),
+                var().map(|v| Expr::Var(v.to_string()))
             )
         }
     }
@@ -317,6 +316,7 @@ mod parser {
         use ratatui::layout::{Margin, Rect};
         use ratatui::style::Color;
         use crate::script::args::InputArgs;
+        use crate::script::env::ScriptEnv;
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
             result: AnpaResult<&str, T>,
@@ -471,6 +471,15 @@ mod parser {
                     expected
                 );
             });
+        }
+
+        #[test]
+        fn parse_var() {
+            let input = "my_var";
+            assert_parser_eq(
+                parse(super::var(), input),
+                "my_var"
+            );
         }
 
         #[test]
@@ -656,7 +665,7 @@ mod parser {
             )"#;
 
             let parsed = parse(super::fx_statement(), input).result.unwrap();
-            let env = BTreeMap::new();
+            let env = ScriptEnv::new();
             let mut args = InputArgs::new(
                 match parsed {
                     Expr::Fx { parameters, .. } => parameters.into(),
