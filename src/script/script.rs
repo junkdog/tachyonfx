@@ -87,6 +87,7 @@ impl ScriptContext {
     }
 }
 
+// fixme: remaining repeat(..)
 fn register_default_compilers(context: ScriptContext) -> ScriptContext {
     context
         .register("coalesce",       compilers::coalesce)

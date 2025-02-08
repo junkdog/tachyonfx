@@ -1,6 +1,5 @@
 use std::any::{type_name, Any};
 use std::collections::BTreeMap;
-use crate::script::args::type_name_of;
 use crate::script::ScriptError;
 
 pub struct ScriptEnv {
