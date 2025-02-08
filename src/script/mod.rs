@@ -49,10 +49,9 @@ pub enum ScriptError {
         to: &'static str,
     },
 
-    #[error("Argument '{name}' at position {position} is not of expected type {expected}")]
+    #[error("Argument at position {position} is not of expected type {expected}")]
     WrongArgumentType {
         position: usize,
-        name: String,
         expected: &'static str,
     },
 }

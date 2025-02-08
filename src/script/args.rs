@@ -5,21 +5,24 @@ use ratatui::prelude::{Color, Style};
 use crate::{Duration, Effect, EffectTimer, Motion};
 use crate::script::env::ScriptEnv;
 use crate::script::parser::Expr;
+use crate::script::script::ScriptContext;
 use crate::script::ScriptError;
 
 pub struct InputArgs<'a> {
     args: VecDeque<Expr>,
     vars: &'a ScriptEnv,
+    context: &'a ScriptContext,
     initial_arg_count: usize,
 }
 
 impl<'a> InputArgs<'a> {
     pub(super) fn new(
         args: VecDeque<Expr>,
+        context: &'a ScriptContext,
         vars: &'a ScriptEnv
     ) -> Self {
         let initial_arg_count = args.len();
-        Self { args, vars, initial_arg_count }
+        Self { args, vars, context, initial_arg_count }
     }
 
     pub(super) fn args(&self) -> &VecDeque<Expr> {
@@ -80,10 +83,10 @@ impl<'a> InputArgs<'a> {
     pub fn effect(&mut self) -> Result<Effect, ScriptError> {
         match self.next("effect")? {
             Expr::Fx { name, parameters } => {
-                panic!("Not implemented")
+                self.context.compile(&self.vars, Expr::Fx{ name, parameters })
             },
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _ => self.wrong_type_error("effect"),
+            _               => self.wrong_type_error("effect"),
         }
     }
 
@@ -142,8 +145,7 @@ impl<'a> InputArgs<'a> {
 
     fn wrong_type_error<T>(&self, expected: &'static str) -> Result<T, ScriptError>  {
         Err(ScriptError::WrongArgumentType {
-            position: self.initial_arg_count - self.args.len(),
-            name: expected.to_string(),
+            position: self.initial_arg_count - self.args.len() - 1,
             expected,
         })
     }
@@ -177,6 +179,7 @@ mod tests {
     use crate::script::args::InputArgs;
     use crate::script::env::ScriptEnv;
     use crate::script::parser::Expr;
+    use crate::script::script::ScriptContext;
     use crate::script::ScriptError;
 
     fn empty_env() -> ScriptEnv {
@@ -186,11 +189,13 @@ mod tests {
     #[test]
     fn test_duration_parsing() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Duration(Duration::from_millis(500)),
                 Expr::U32(1000),
             ].into(),
+            &context,
             &binding
         );
 
@@ -205,11 +210,13 @@ mod tests {
     #[test]
     fn test_effect_timer_parsing() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Timer(EffectTimer::from_ms(500, Interpolation::Linear)),
                 Expr::U32(1000),
             ].into(),
+            &context,
             &binding
         );
 
@@ -224,11 +231,13 @@ mod tests {
     #[test]
     fn test_numeric_parsing() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(42),
                 Expr::F32(3.14),
             ].into(),
+            &context,
             &binding
         );
 
@@ -243,19 +252,20 @@ mod tests {
     #[test]
     fn test_string_parsing() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::String("hello".to_string()),
                 Expr::U32(42), // Wrong type
                 Expr::String("world".to_string()),
             ].into(),
+            &context,
             &binding
         );
 
         assert_eq!(args.string(), Ok("hello".to_string()));
         assert_eq!(args.string(), Err(ScriptError::WrongArgumentType {
-            position: 2,
-            name: "string".to_string(),
+            position: 1,
             expected: "string",
         }));
         assert_eq!(args.string(), Ok("world".to_string()));
@@ -264,11 +274,13 @@ mod tests {
     #[test]
     fn test_color_parsing() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Color(Color::Red),
                 Expr::Color(Color::Blue),
             ].into(),
+            &context,
             &binding
         );
 
@@ -282,12 +294,14 @@ mod tests {
 
     #[test]
     fn test_style_parsing() {
+        let context = ScriptContext::new();
         let style = Style::default().fg(Color::Red);
         let binding = empty_env();
         let mut args = InputArgs::new(
             vec![
                 Expr::Style(style),
             ].into(),
+            &context,
             &binding
         );
 
@@ -301,11 +315,13 @@ mod tests {
     #[test]
     fn test_motion_parsing() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Motion(Motion::LeftToRight),
                 Expr::Motion(Motion::UpToDown),
             ].into(),
+            &context,
             &binding
         );
 
@@ -321,10 +337,12 @@ mod tests {
     fn test_margin_parsing() {
         let margin = Margin::new(10, 20);
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Margin(margin),
             ].into(),
+            &context,
             &binding
         );
 
@@ -339,10 +357,12 @@ mod tests {
     fn test_rect_parsing() {
         let rect = Rect::new(0, 0, 100, 100);
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Rect(rect),
             ].into(),
+            &context,
             &binding
         );
 
@@ -356,6 +376,7 @@ mod tests {
     #[test]
     fn test_effect_parsing() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Fx {
@@ -363,6 +384,7 @@ mod tests {
                     parameters: vec![Expr::U32(500)]
                 },
             ].into(),
+            &context,
             &binding
         );
 
@@ -370,9 +392,8 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.expect_err("expected error"),
-            ScriptError::MissingArgument {
-                position: 1,
-                name: "effect",
+            ScriptError::UnknownEffect {
+                name: "test".to_string(),
             }
         );
     }
@@ -380,6 +401,7 @@ mod tests {
     #[test]
     fn test_mixed_arguments() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(500),
@@ -387,6 +409,7 @@ mod tests {
                 Expr::Color(Color::Blue),
                 Expr::Timer(EffectTimer::from_ms(1000, Interpolation::Linear)),
             ].into(),
+            &context,
             &binding
         );
 
@@ -403,11 +426,13 @@ mod tests {
     #[test]
     fn test_u16_conversion() {
         let binding = empty_env();
+        let context = ScriptContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(65535), // Max u16
                 Expr::U32(65536), // Too large for u16
             ].into(),
+            &context,
             &binding
         );
 
@@ -422,7 +447,8 @@ mod tests {
     #[test]
     fn test_empty_args() {
         let binding = empty_env();
-        let mut args = InputArgs::new(VecDeque::new(), &binding);
+        let context = ScriptContext::new();
+        let mut args = InputArgs::new(VecDeque::new(), &context, &binding);
 
         let missing = |idx, name| Err(ScriptError::MissingArgument {
             position: idx,

@@ -41,13 +41,12 @@ impl ScriptContext {
         env: ScriptEnv,
         input: &str,
     ) -> Result<Effect, ScriptError> {
-        let mut env = env;
         parse_expr(input)
             .ok_or(ScriptError::ParseError(input.to_string()))
-            .and_then(|expr| self.compile(&mut env, expr))
+            .and_then(|expr| self.compile(&env, expr))
     }
 
-    fn compile(
+    pub(super) fn compile(
         &self,
         env: &ScriptEnv,
         input: Expr
@@ -58,15 +57,16 @@ impl ScriptContext {
                 .find(|d| d.name == name)
                 .ok_or(ScriptError::UnknownEffect { name })
                 .and_then(|d| {
-                    let mut args = InputArgs::new(parameters.into(), &env);
+                    let mut args = InputArgs::new(parameters.into(), &self, &env);
                     let effect = (d.compiler)(&mut args);
-                    if args.args().is_empty() {
-                        effect
-                    } else {
-                        Err(ScriptError::TooManyArguments {
+
+                    match () {
+                        _ if effect.is_err() => effect,
+                        _ if !args.args().is_empty() => Err(ScriptError::TooManyArguments {
                             expected: args.original_arg_count() - args.args().len(),
                             actual: args.original_arg_count(),
-                        })
+                        }),
+                        _ => effect,
                     }
                 }),
             _ => Err(ScriptError::InvalidExpression {
@@ -209,6 +209,41 @@ mod tests {
         assert_eq!(effect.name(), "sweep_in");
         assert_eq!(effect.timer(), Some(EffectTimer::from_ms(1000, QuadOut)));
         println!("{:?}", effect);
+    }
+
+    #[test]
+    fn error_unknown_effect() {
+        let input = r#"fx::nonexistent()"#;
+        let ctx = ScriptContext::new();
+        let err = ctx.execute(ScriptEnv::new(), input).unwrap_err();
+        assert!(matches!(err, ScriptError::UnknownEffect { .. }));
+    }
+
+    #[test]
+    fn error_invalid_argument() {
+        let input = r#"fx::sweep_in("wrong", 10, 0, Color::from_u32(0x1d2021), 1000)"#;
+        let ctx = ScriptContext::new();
+        let err = ctx.execute(ScriptEnv::new(), input).unwrap_err();
+        assert!(matches!(err, ScriptError::WrongArgumentType {
+            position: 0,
+            expected: "motion"
+        }), "{:?}", err);
+    }
+
+    #[test]
+    fn too_many_arguments() {
+        let input = r#"fx::sweep_in(
+                Motion::LeftToRight,
+                10,
+                0,
+                Color::from_u32(0x1d2021),
+                (1000, QuadOut),
+                "extra"
+            )"#;
+
+        let ctx = ScriptContext::new();
+        let err = ctx.execute(ScriptEnv::new(), input).unwrap_err();
+        assert!(matches!(err, ScriptError::TooManyArguments { .. }), "{:?}", err);
     }
 }
 

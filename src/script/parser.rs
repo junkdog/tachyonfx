@@ -317,6 +317,7 @@ mod parser {
         use ratatui::style::Color;
         use crate::script::args::InputArgs;
         use crate::script::env::ScriptEnv;
+        use crate::script::script::ScriptContext;
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
             result: AnpaResult<&str, T>,
@@ -666,11 +667,13 @@ mod parser {
 
             let parsed = parse(super::fx_statement(), input).result.unwrap();
             let env = ScriptEnv::new();
+            let context = ScriptContext::new();
             let mut args = InputArgs::new(
                 match parsed {
                     Expr::Fx { parameters, .. } => parameters.into(),
                     _ => panic!("Expected Fx variant")
                 },
+                &context,
                 &env
             );
 
