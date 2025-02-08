@@ -1,5 +1,7 @@
-use std::any::Any;
+use std::any::{type_name, Any};
 use std::collections::BTreeMap;
+use crate::script::args::type_name_of;
+use crate::script::ScriptError;
 
 pub struct ScriptEnv {
     bound_variables: BTreeMap<String, Box<dyn Any>>,
@@ -23,13 +25,20 @@ impl ScriptEnv {
         this
     }
 
-    pub fn get<K, T>(&self, name: K) -> Option<&T>
+    pub(super) fn get<K, T>(&self, name: K) -> Result<&T, ScriptError>
     where
         K: AsRef<str>,
         T: 'static,
     {
-        self.bound_variables
-            .get(name.as_ref())
-            .and_then(|v| v.downcast_ref())
+        match self.bound_variables.get(name.as_ref()) {
+            Some(v) => Ok(v),
+            None => Err(ScriptError::UnknownArgument {
+                name: name.as_ref().to_string(),
+            }),
+        }.and_then(|v| v.downcast_ref().ok_or_else(|| ScriptError::NoSuchVariable {
+            position: 0, // todo: resolve position
+            name: name.as_ref().to_string(),
+            expected: type_name::<T>(),
+        }))
     }
 }

@@ -674,11 +674,11 @@ mod parser {
                 &env
             );
 
-            assert_eq!(args.motion(), Some(Motion::LeftToRight));
-            assert_eq!(args.read_u16(), Some(10));
-            assert_eq!(args.read_u16(), Some(0));
-            assert_eq!(args.color(), Some(Color::from_u32(0x1d2021)));
-            assert_eq!(args.effect_timer(), Some(EffectTimer::from_ms(1000, Interpolation::QuadOut)));
+            assert_eq!(args.motion(),   Ok(Motion::LeftToRight));
+            assert_eq!(args.read_u16(), Ok(10));
+            assert_eq!(args.read_u16(), Ok(0));
+            assert_eq!(args.color(),    Ok(Color::from_u32(0x1d2021)));
+            assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::QuadOut)));
         }
     }
 }

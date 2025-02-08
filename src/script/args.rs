@@ -5,10 +5,12 @@ use ratatui::prelude::{Color, Style};
 use crate::{Duration, Effect, EffectTimer, Motion};
 use crate::script::env::ScriptEnv;
 use crate::script::parser::Expr;
+use crate::script::ScriptError;
 
 pub struct InputArgs<'a> {
     args: VecDeque<Expr>,
     vars: &'a ScriptEnv,
+    initial_arg_count: usize,
 }
 
 impl<'a> InputArgs<'a> {
@@ -16,112 +18,153 @@ impl<'a> InputArgs<'a> {
         args: VecDeque<Expr>,
         vars: &'a ScriptEnv
     ) -> Self {
-        Self { args, vars }
+        let initial_arg_count = args.len();
+        Self { args, vars, initial_arg_count }
     }
 
     pub(super) fn args(&self) -> &VecDeque<Expr> {
         &self.args
     }
 
-    pub fn duration(&mut self) -> Option<Duration> {
-        match self.next()? {
-            Expr::Duration(d) => Some(d),
-            Expr::U32(ms)     => Some(Duration::from_millis(ms as _)),
+    pub fn duration(&mut self) -> Result<Duration, ScriptError> {
+        match self.next("duration")? {
+            Expr::Duration(d) => Ok(d),
+            Expr::U32(ms)     => Ok(Duration::from_millis(ms as _)),
             Expr::Var(name)   => self.vars.get(name).cloned(),
-            _                 => None,
+            _                 => self.wrong_type_error("duration"),
         }
     }
 
-    pub fn effect_timer(&mut self) -> Option<EffectTimer> {
-        match self.next()? {
-            Expr::Timer(t)  => Some(t),
-            Expr::U32(ms)   => Some(ms.into()),
+    pub fn effect_timer(&mut self) -> Result<EffectTimer, ScriptError> {
+        match self.next("timer")? {
+            Expr::Timer(t)  => Ok(t),
+            Expr::U32(ms)   => Ok(ms.into()),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("timer"),
         }
     }
 
-    pub fn read_u16(&mut self) -> Option<u16> {
-        self.read_u32().map(|u| u as _)
+    pub fn read_u16(&mut self) -> Result<u16, ScriptError> {
+        u16::try_from(self.read_u32()?)
+            .map_err(|_| ScriptError::CastOverflow {
+                position: self.initial_arg_count - self.args.len() - 1, // -1 for the current argument
+                from: "u32",
+                to: "u16",
+            })
     }
 
-    pub fn read_u32(&mut self) -> Option<u32> {
-        match self.next()? {
-            Expr::U32(u)    => Some(u),
+    pub fn read_u32(&mut self) -> Result<u32, ScriptError> {
+        match self.next("u32")? {
+            Expr::U32(u)    => Ok(u),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("u32"),
         }
     }
 
-    pub fn read_f32(&mut self) -> Option<f32> {
-        match self.next()? {
-            Expr::F32(f)    => Some(f),
+    pub fn read_f32(&mut self) -> Result<f32, ScriptError> {
+        match self.next("f32")? {
+            Expr::F32(f)    => Ok(f),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("f32"),
         }
     }
 
-    pub fn string(&mut self) -> Option<String> {
-        match self.next()? {
-            Expr::String(s) => Some(s),
+    pub fn string(&mut self) -> Result<String, ScriptError> {
+        match self.next("string")? {
+            Expr::String(s) => Ok(s),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("string"),
         }
     }
 
-    pub fn effect(&mut self) -> Option<Effect> {
-        match self.next()? {
+    pub fn effect(&mut self) -> Result<Effect, ScriptError> {
+        match self.next("effect")? {
             Expr::Fx { name, parameters } => {
-                // todo: recursive deserialization?
-                None
+                panic!("Not implemented")
             },
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _ => None,
+            _ => self.wrong_type_error("effect"),
         }
     }
 
-    pub fn color(&mut self) -> Option<Color> {
-        match self.next()? {
-            Expr::Color(c)  => Some(c),
+    pub fn color(&mut self) -> Result<Color, ScriptError> {
+        match self.next("color")? {
+            Expr::Color(c)  => Ok(c),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("color"),
         }
     }
 
-    pub fn style(&mut self) -> Option<Style> {
-        match self.next()? {
-            Expr::Style(s)  => Some(s),
+    pub fn style(&mut self) -> Result<Style, ScriptError> {
+        match self.next("style")? {
+            Expr::Style(s)  => Ok(s),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("style"),
         }
     }
 
-    pub fn motion(&mut self) -> Option<Motion> {
-        match self.next()? {
-            Expr::Motion(m) => Some(m),
+    pub fn motion(&mut self) -> Result<Motion, ScriptError> {
+        match self.next("motion")? {
+            Expr::Motion(m) => Ok(m),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("motion"),
         }
     }
 
-    pub fn margin(&mut self) -> Option<Margin> {
-        match self.next()? {
-            Expr::Margin(m) => Some(m),
+    pub fn margin(&mut self) -> Result<Margin, ScriptError> {
+        match self.next("margin")? {
+            Expr::Margin(m) => Ok(m),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("margin"),
         }
     }
 
-    pub fn rect(&mut self) -> Option<Rect> {
-        match self.next()? {
-            Expr::Rect(r)   => Some(r),
+    pub fn rect(&mut self) -> Result<Rect, ScriptError> {
+        match self.next("rect")? {
+            Expr::Rect(r)   => Ok(r),
             Expr::Var(name) => self.vars.get(name).cloned(),
-            _               => None,
+            _               => self.wrong_type_error("rect"),
         }
     }
 
-    fn next(&mut self) -> Option<Expr> {
+    pub(super) fn original_arg_count(&self) -> usize {
+        self.initial_arg_count
+    }
+
+    fn next(&mut self, type_name: &'static str) -> Result<Expr, ScriptError> {
         self.args.pop_front()
+            .ok_or(ScriptError::MissingArgument {
+                position: self.initial_arg_count - self.args.len(),
+                name: type_name,
+            })
+    }
+
+
+    fn wrong_type_error<T>(&self, expected: &'static str) -> Result<T, ScriptError>  {
+        Err(ScriptError::WrongArgumentType {
+            position: self.initial_arg_count - self.args.len(),
+            name: expected.to_string(),
+            expected,
+        })
+    }
+}
+
+// Helper function to get type names for error messages
+pub(super) fn type_name_of(expr: &Expr) -> &'static str {
+    match expr {
+        Expr::Duration(_) => "duration",
+        Expr::Timer(_)    => "timer",
+        Expr::U32(_)      => "u32",
+        Expr::F32(_)      => "f32",
+        Expr::String(_)   => "string",
+        Expr::Color(_)    => "color",
+        Expr::Style(_)    => "style",
+        Expr::Motion(_)   => "motion",
+        Expr::Margin(_)   => "margin",
+        Expr::Rect(_)     => "rect",
+        Expr::ArrayRef(_) => "array",
+        Expr::Var(_)      => "variable",
+        Expr::Fx { .. }   => "effect",
     }
 }
 
@@ -134,6 +177,7 @@ mod tests {
     use crate::script::args::InputArgs;
     use crate::script::env::ScriptEnv;
     use crate::script::parser::Expr;
+    use crate::script::ScriptError;
 
     fn empty_env() -> ScriptEnv {
         ScriptEnv::new()
@@ -150,9 +194,12 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.duration(), Some(Duration::from_millis(500)));
-        assert_eq!(args.duration(), Some(Duration::from_millis(1000)));
-        assert_eq!(args.duration(), None);
+        assert_eq!(args.duration(), Ok(Duration::from_millis(500)));
+        assert_eq!(args.duration(), Ok(Duration::from_millis(1000)));
+        assert_eq!(args.duration(), Err(ScriptError::MissingArgument {
+            position: 2,
+            name: "duration",
+        }));
     }
 
     #[test]
@@ -166,9 +213,12 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.effect_timer(), Some(EffectTimer::from_ms(500, Interpolation::Linear)));
-        assert_eq!(args.effect_timer(), Some(EffectTimer::from_ms(1000, Interpolation::Linear)));
-        assert_eq!(args.effect_timer(), None);
+        assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(500, Interpolation::Linear)));
+        assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::Linear)));
+        assert_eq!(args.effect_timer(), Err(ScriptError::MissingArgument {
+            position: 2,
+            name: "timer",
+        }));
     }
 
     #[test]
@@ -182,9 +232,12 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.read_u32(), Some(42));
-        assert_eq!(args.read_f32(), Some(3.14));
-        assert_eq!(args.read_u32(), None);
+        assert_eq!(args.read_u32(), Ok(42));
+        assert_eq!(args.read_f32(), Ok(3.14));
+        assert_eq!(args.read_u32(), Err(ScriptError::MissingArgument {
+            position: 2,
+            name: "u32",
+        }));
     }
 
     #[test]
@@ -199,9 +252,13 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.string(), Some("hello".to_string()));
-        assert_eq!(args.string(), None); // U32 should be skipped
-        assert_eq!(args.string(), Some("world".to_string()));
+        assert_eq!(args.string(), Ok("hello".to_string()));
+        assert_eq!(args.string(), Err(ScriptError::WrongArgumentType {
+            position: 2,
+            name: "string".to_string(),
+            expected: "string",
+        }));
+        assert_eq!(args.string(), Ok("world".to_string()));
     }
 
     #[test]
@@ -215,9 +272,12 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.color(), Some(Color::Red));
-        assert_eq!(args.color(), Some(Color::Blue));
-        assert_eq!(args.color(), None);
+        assert_eq!(args.color(), Ok(Color::Red));
+        assert_eq!(args.color(), Ok(Color::Blue));
+        assert_eq!(args.color(), Err(ScriptError::MissingArgument {
+            position: 2,
+            name: "color",
+        }));
     }
 
     #[test]
@@ -231,8 +291,11 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.style(), Some(style));
-        assert_eq!(args.style(), None);
+        assert_eq!(args.style(), Ok(style));
+        assert_eq!(args.style(), Err(ScriptError::MissingArgument {
+            position: 1,
+            name: "style",
+        }));
     }
 
     #[test]
@@ -246,9 +309,12 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.motion(), Some(Motion::LeftToRight));
-        assert_eq!(args.motion(), Some(Motion::UpToDown));
-        assert_eq!(args.motion(), None);
+        assert_eq!(args.motion(), Ok(Motion::LeftToRight));
+        assert_eq!(args.motion(), Ok(Motion::UpToDown));
+        assert_eq!(args.motion(), Err(ScriptError::MissingArgument {
+            position: 2,
+            name: "motion",
+        }));
     }
 
     #[test]
@@ -262,8 +328,11 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.margin(), Some(margin));
-        assert_eq!(args.margin(), None);
+        assert_eq!(args.margin(), Ok(margin));
+        assert_eq!(args.margin(), Err(ScriptError::MissingArgument {
+            position: 1,
+            name: "margin",
+        }));
     }
 
     #[test]
@@ -277,8 +346,11 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.rect(), Some(rect));
-        assert_eq!(args.rect(), None);
+        assert_eq!(args.rect(), Ok(rect));
+        assert_eq!(args.rect(), Err(ScriptError::MissingArgument {
+            position: 1,
+            name: "rect",
+        }));
     }
 
     #[test]
@@ -294,8 +366,15 @@ mod tests {
             &binding
         );
 
-        // Currently returns None as noted in the TODO
-        assert!(args.effect().is_none());
+        let result = args.effect();
+        assert!(result.is_err());
+        assert_eq!(
+            result.expect_err("expected error"),
+            ScriptError::MissingArgument {
+                position: 1,
+                name: "effect",
+            }
+        );
     }
 
     #[test]
@@ -311,11 +390,14 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.read_u32(), Some(500));
-        assert_eq!(args.motion(), Some(Motion::LeftToRight));
-        assert_eq!(args.color(), Some(Color::Blue));
-        assert_eq!(args.effect_timer(), Some(EffectTimer::from_ms(1000, Interpolation::Linear)));
-        assert_eq!(args.read_u32(), None);
+        assert_eq!(args.read_u32(), Ok(500));
+        assert_eq!(args.motion(), Ok(Motion::LeftToRight));
+        assert_eq!(args.color(), Ok(Color::Blue));
+        assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::Linear)));
+        assert_eq!(args.read_u32(), Err(ScriptError::MissingArgument {
+            position: 4,
+            name: "u32",
+        }));
     }
 
     #[test]
@@ -329,8 +411,12 @@ mod tests {
             &binding
         );
 
-        assert_eq!(args.read_u16(), Some(65535));
-        assert_eq!(args.read_u16(), Some(0)); // Truncated
+        assert_eq!(args.read_u16(), Ok(65535));
+        assert_eq!(args.read_u16(), Err(ScriptError::CastOverflow {
+            position: 1,
+            from: "u32",
+            to: "u16",
+        })); // Truncated
     }
 
     #[test]
@@ -338,15 +424,11 @@ mod tests {
         let binding = empty_env();
         let mut args = InputArgs::new(VecDeque::new(), &binding);
 
-        assert_eq!(args.duration(), None);
-        assert_eq!(args.effect_timer(), None);
-        assert_eq!(args.read_u32(), None);
-        assert_eq!(args.read_f32(), None);
-        assert_eq!(args.string(), None);
-        assert_eq!(args.color(), None);
-        assert_eq!(args.style(), None);
-        assert_eq!(args.motion(), None);
-        assert_eq!(args.margin(), None);
-        assert_eq!(args.rect(), None);
+        let missing = |idx, name| Err(ScriptError::MissingArgument {
+            position: idx,
+            name,
+        });
+
+        assert_eq!(args.duration(), missing(0, "duration"));
     }
 }

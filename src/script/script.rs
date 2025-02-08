@@ -1,13 +1,14 @@
 use crate::fx::{consume_tick, dissolve, ping_pong, repeating};
-use crate::script::args::InputArgs;
+use crate::script::args::{type_name_of, InputArgs};
 use crate::script::env::ScriptEnv;
 use crate::script::parser::{parse_expr, Expr};
 use crate::{Effect, EffectTimer};
 use std::any::Any;
+use crate::script::ScriptError;
 
 struct EffectCompiler {
     name: &'static str,
-    compiler: Box<dyn Fn(&mut InputArgs) -> Option<Effect>>,
+    compiler: Box<dyn Fn(&mut InputArgs) -> Result<Effect, ScriptError>>,
 }
 
 
@@ -16,12 +17,10 @@ pub struct ScriptContext {
     compilers: Vec<EffectCompiler>,
 }
 
-
-
 impl EffectCompiler {
     pub(crate) fn new(
         name: &'static str,
-        compiler: impl Fn(&mut InputArgs) -> Option<Effect> + 'static
+        compiler: impl Fn(&mut InputArgs) -> Result<Effect, ScriptError> + 'static
     ) -> Self {
         Self {
             name,
@@ -39,36 +38,48 @@ impl ScriptContext {
 
     pub fn execute(
         &self,
-        env: &mut ScriptEnv,
+        env: ScriptEnv,
         input: &str,
-    ) -> Option<Effect> {
+    ) -> Result<Effect, ScriptError> {
+        let mut env = env;
         parse_expr(input)
-            .and_then(|expr| self.compile(env, expr))
+            .ok_or(ScriptError::ParseError(input.to_string()))
+            .and_then(|expr| self.compile(&mut env, expr))
     }
 
     fn compile(
         &self,
-        env: &mut ScriptEnv,
+        env: &ScriptEnv,
         input: Expr
-    ) -> Option<Effect> {
+    ) -> Result<Effect, ScriptError> {
         match input {
             Expr::Fx { name, parameters } => self.compilers
                 .iter()
                 .find(|d| d.name == name)
+                .ok_or(ScriptError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = InputArgs::new(parameters.into(), &env);
                     let effect = (d.compiler)(&mut args);
-                    debug_assert!(args.args().is_empty(), "unused arguments: {:?}", args.args());
-                    effect
+                    if args.args().is_empty() {
+                        effect
+                    } else {
+                        Err(ScriptError::TooManyArguments {
+                            expected: args.original_arg_count() - args.args().len(),
+                            actual: args.original_arg_count(),
+                        })
+                    }
                 }),
-            _ => None
+            _ => Err(ScriptError::InvalidExpression {
+                expected: "effect",
+                actual: type_name_of(&input),
+            }),
         }
     }
 
     pub fn register(
         self,
         name: &'static str,
-        compiler: impl Fn(&mut InputArgs) -> Option<Effect> + 'static
+        compiler: impl Fn(&mut InputArgs) -> Result<Effect, ScriptError> + 'static
     ) -> Self {
         let mut this = self;
         this.compilers.push(EffectCompiler::new(name, compiler));
@@ -93,15 +104,16 @@ fn register_default_compilers(context: ScriptContext) -> ScriptContext {
 mod compilers {
     use crate::script::script::InputArgs;
     use crate::{fx, Effect};
+    use crate::script::ScriptError;
 
-    pub(super) fn dissolve_to(args: &mut InputArgs) -> Option<Effect> {
+    pub(super) fn dissolve_to(args: &mut InputArgs) -> Result<Effect, ScriptError> {
         fx::dissolve_to(
             args.style()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_from(args: &mut InputArgs) -> Option<Effect> {
+    pub(super) fn fade_from(args: &mut InputArgs) -> Result<Effect, ScriptError> {
         fx::fade_from(
             args.color()?,
             args.color()?,
@@ -109,7 +121,7 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn sweep_out(args: &mut InputArgs) -> Option<Effect> {
+    pub(super) fn sweep_out(args: &mut InputArgs) -> Result<Effect, ScriptError> {
         fx::sweep_out(
             args.motion()?,
             args.read_u16()?,
@@ -119,7 +131,7 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn sweep_in(args: &mut InputArgs) -> Option<Effect> {
+    pub(super) fn sweep_in(args: &mut InputArgs) -> Result<Effect, ScriptError> {
         fx::sweep_in(
             args.motion()?,
             args.read_u16()?,
@@ -129,7 +141,7 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn slide_in(args: &mut InputArgs) -> Option<Effect> {
+    pub(super) fn slide_in(args: &mut InputArgs) -> Result<Effect, ScriptError> {
         fx::slide_in(
             args.motion()?,
             args.read_u16()?,
@@ -139,7 +151,7 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn slide_out(args: &mut InputArgs) -> Option<Effect> {
+    pub(super) fn slide_out(args: &mut InputArgs) -> Result<Effect, ScriptError> {
         fx::slide_out(
             args.motion()?,
             args.read_u16()?,
@@ -168,7 +180,7 @@ mod tests {
             )"#;
 
         let ctx = ScriptContext::new();
-        let effect = ctx.execute(&mut ScriptEnv::new(), input)
+        let effect = ctx.execute(ScriptEnv::new(), input)
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "sweep_in");
@@ -177,7 +189,7 @@ mod tests {
 
     #[test]
     fn happy_path_with_bound_vars() {
-        let mut env = ScriptEnv::new()
+        let env = ScriptEnv::new()
             .bind("motion", Motion::LeftToRight)
             .bind("c", Color::from_u32(0x1d2021));
 
@@ -191,11 +203,17 @@ mod tests {
 
 
         let ctx = ScriptContext::new();
-        let effect = ctx.execute(&mut env, input)
+        let effect = ctx.execute(env, input)
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "sweep_in");
         assert_eq!(effect.timer(), Some(EffectTimer::from_ms(1000, QuadOut)));
         println!("{:?}", effect);
+    }
+}
+
+impl From<Effect> for Result<Effect, ScriptError> {
+    fn from(effect: Effect) -> Self {
+        Ok(effect)
     }
 }
