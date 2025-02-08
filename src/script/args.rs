@@ -82,11 +82,9 @@ impl<'a> InputArgs<'a> {
 
     pub fn effect(&mut self) -> Result<Effect, ScriptError> {
         match self.next("effect")? {
-            Expr::Fx { name, arguments } => {
-                self.context.compile(&self.vars, Expr::Fx { name, arguments })
-            },
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("effect"),
+            Expr::Fx { name, arguments } => self.compile_effect(name, arguments),
+            Expr::Var(name)              => self.bound_var(name),
+            _                            => self.wrong_type_error("effect"),
         }
     }
 
@@ -134,7 +132,15 @@ impl<'a> InputArgs<'a> {
         self.initial_arg_count
     }
 
-    fn bound_var<T: Clone + 'static>(&mut self, name: String) -> Result<T, ScriptError> {
+
+    fn compile_effect(&self,
+        name: String,
+        arguments: Vec<Expr>,
+    ) -> Result<Effect, ScriptError> {
+        self.context.compile(&self.vars, Expr::Fx { name, arguments })
+    }
+
+    fn bound_var<T: Clone + 'static>(&self, name: String) -> Result<T, ScriptError> {
         self.vars.get(name).cloned()
     }
 
