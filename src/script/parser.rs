@@ -5,7 +5,7 @@ use std::any::Any;
 use anpa::core::parse;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Expr {
+pub(super) enum Expr {
     Color(Color),
     Style(Style),
     String(String),
@@ -18,7 +18,14 @@ pub enum Expr {
     Margin(Margin),
     ArrayRef(Vec<Expr>),
     Var(String),
-    Fx { name: String, parameters: Vec<Expr> }
+    Fx { name: String, arguments: Vec<Expr> }
+}
+
+pub(super) fn parse_expr(
+    input: &str,
+) -> Option<Expr> {
+    parse(parser::fx_statement(), input)
+        .result
 }
 
 mod parser {
@@ -49,12 +56,12 @@ mod parser {
             item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
         );
 
-        let parameters = middle(trim("("), arguments(), trim(")"));
+        let args = middle(trim("("), arguments(), trim(")"));
 
-        tuplify!(name, parameters).map(|(name, parameters)|
+        tuplify!(name, args).map(|(name, arguments)|
             Expr::Fx {
                 name: name.to_string(),
-                parameters
+                arguments
             }
         )
     }
@@ -309,7 +316,6 @@ mod parser {
 
     #[cfg(test)]
     mod tests {
-        use std::collections::BTreeMap;
         use crate::script::parser::Expr;
         use crate::{Duration, EffectTimer, Interpolation, Motion};
         use anpa::core::{parse, AnpaResult};
@@ -621,7 +627,7 @@ mod parser {
                 parse(super::fx_statement(), input),
                 Expr::Fx {
                     name: "coalesce".to_string(),
-                    parameters: vec![
+                    arguments: vec![
                         Expr::Duration(Duration::from_millis(220)),
                     ]
                 }
@@ -632,7 +638,7 @@ mod parser {
                 parse(super::fx_statement(), input),
                 Expr::Fx {
                     name: "dissolve".to_string(),
-                    parameters: vec![
+                    arguments: vec![
                         Expr::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut)),
                     ]
                 }
@@ -643,10 +649,10 @@ mod parser {
                 parse(super::fx_statement(), input),
                 Expr::Fx {
                     name: "ping_pong".to_string(),
-                    parameters: vec![
+                    arguments: vec![
                         Expr::Fx {
                             name: "coalesce".to_string(),
-                            parameters: vec![
+                            arguments: vec![
                                 Expr::Timer(EffectTimer::from_ms(500, Interpolation::CircOut)),
                             ]
                         }
@@ -670,7 +676,7 @@ mod parser {
             let context = ScriptContext::new();
             let mut args = InputArgs::new(
                 match parsed {
-                    Expr::Fx { parameters, .. } => parameters.into(),
+                    Expr::Fx { arguments: parameters, .. } => parameters.into(),
                     _ => panic!("Expected Fx variant")
                 },
                 &context,
@@ -685,11 +691,3 @@ mod parser {
         }
     }
 }
-
-pub(super) fn parse_expr(
-    input: &str,
-) -> Option<Expr> {
-    parse(parser::fx_statement(), input)
-        .result
-}
-

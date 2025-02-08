@@ -18,7 +18,7 @@ pub struct ScriptContext {
 }
 
 impl EffectCompiler {
-    pub(crate) fn new(
+    fn new(
         name: &'static str,
         compiler: impl Fn(&mut InputArgs) -> Result<Effect, ScriptError> + 'static
     ) -> Self {
@@ -36,13 +36,23 @@ impl ScriptContext {
         })
     }
 
+    pub fn register(
+        self,
+        name: &'static str,
+        compiler: impl Fn(&mut InputArgs) -> Result<Effect, ScriptError> + 'static
+    ) -> Self {
+        let mut this = self;
+        this.compilers.push(EffectCompiler::new(name, compiler));
+        this
+    }
+
     pub fn execute(
         &self,
         env: ScriptEnv,
         input: &str,
     ) -> Result<Effect, ScriptError> {
         parse_expr(input)
-            .ok_or(ScriptError::ParseError(input.to_string()))
+            .ok_or_else(|| ScriptError::ParseError(input.to_string()))
             .and_then(|expr| self.compile(&env, expr))
     }
 
@@ -52,7 +62,7 @@ impl ScriptContext {
         input: Expr
     ) -> Result<Effect, ScriptError> {
         match input {
-            Expr::Fx { name, parameters } => self.compilers
+            Expr::Fx { name, arguments: parameters } => self.compilers
                 .iter()
                 .find(|d| d.name == name)
                 .ok_or(ScriptError::UnknownEffect { name })
@@ -74,16 +84,6 @@ impl ScriptContext {
                 actual: type_name_of(&input),
             }),
         }
-    }
-
-    pub fn register(
-        self,
-        name: &'static str,
-        compiler: impl Fn(&mut InputArgs) -> Result<Effect, ScriptError> + 'static
-    ) -> Self {
-        let mut this = self;
-        this.compilers.push(EffectCompiler::new(name, compiler));
-        this
     }
 }
 

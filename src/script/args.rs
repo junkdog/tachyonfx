@@ -33,7 +33,7 @@ impl<'a> InputArgs<'a> {
         match self.next("duration")? {
             Expr::Duration(d) => Ok(d),
             Expr::U32(ms)     => Ok(Duration::from_millis(ms as _)),
-            Expr::Var(name)   => self.vars.get(name).cloned(),
+            Expr::Var(name)   => self.bound_var(name),
             _                 => self.wrong_type_error("duration"),
         }
     }
@@ -42,7 +42,7 @@ impl<'a> InputArgs<'a> {
         match self.next("timer")? {
             Expr::Timer(t)  => Ok(t),
             Expr::U32(ms)   => Ok(ms.into()),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("timer"),
         }
     }
@@ -59,7 +59,7 @@ impl<'a> InputArgs<'a> {
     pub fn read_u32(&mut self) -> Result<u32, ScriptError> {
         match self.next("u32")? {
             Expr::U32(u)    => Ok(u),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("u32"),
         }
     }
@@ -67,7 +67,7 @@ impl<'a> InputArgs<'a> {
     pub fn read_f32(&mut self) -> Result<f32, ScriptError> {
         match self.next("f32")? {
             Expr::F32(f)    => Ok(f),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("f32"),
         }
     }
@@ -75,17 +75,17 @@ impl<'a> InputArgs<'a> {
     pub fn string(&mut self) -> Result<String, ScriptError> {
         match self.next("string")? {
             Expr::String(s) => Ok(s),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("string"),
         }
     }
 
     pub fn effect(&mut self) -> Result<Effect, ScriptError> {
         match self.next("effect")? {
-            Expr::Fx { name, parameters } => {
-                self.context.compile(&self.vars, Expr::Fx{ name, parameters })
+            Expr::Fx { name, arguments } => {
+                self.context.compile(&self.vars, Expr::Fx { name, arguments })
             },
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("effect"),
         }
     }
@@ -93,7 +93,7 @@ impl<'a> InputArgs<'a> {
     pub fn color(&mut self) -> Result<Color, ScriptError> {
         match self.next("color")? {
             Expr::Color(c)  => Ok(c),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("color"),
         }
     }
@@ -101,7 +101,7 @@ impl<'a> InputArgs<'a> {
     pub fn style(&mut self) -> Result<Style, ScriptError> {
         match self.next("style")? {
             Expr::Style(s)  => Ok(s),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("style"),
         }
     }
@@ -109,7 +109,7 @@ impl<'a> InputArgs<'a> {
     pub fn motion(&mut self) -> Result<Motion, ScriptError> {
         match self.next("motion")? {
             Expr::Motion(m) => Ok(m),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("motion"),
         }
     }
@@ -117,7 +117,7 @@ impl<'a> InputArgs<'a> {
     pub fn margin(&mut self) -> Result<Margin, ScriptError> {
         match self.next("margin")? {
             Expr::Margin(m) => Ok(m),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("margin"),
         }
     }
@@ -125,13 +125,17 @@ impl<'a> InputArgs<'a> {
     pub fn rect(&mut self) -> Result<Rect, ScriptError> {
         match self.next("rect")? {
             Expr::Rect(r)   => Ok(r),
-            Expr::Var(name) => self.vars.get(name).cloned(),
+            Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("rect"),
         }
     }
 
     pub(super) fn original_arg_count(&self) -> usize {
         self.initial_arg_count
+    }
+
+    fn bound_var<T: Clone + 'static>(&mut self, name: String) -> Result<T, ScriptError> {
+        self.vars.get(name).cloned()
     }
 
     fn next(&mut self, type_name: &'static str) -> Result<Expr, ScriptError> {
@@ -381,7 +385,7 @@ mod tests {
             vec![
                 Expr::Fx {
                     name: "test".to_string(),
-                    parameters: vec![Expr::U32(500)]
+                    arguments: vec![Expr::U32(500)]
                 },
             ].into(),
             &context,
