@@ -440,6 +440,18 @@ mod tests {
     }
 
     #[test]
+    fn test_sleep_compiler() {
+        let context = ScriptContext::new();
+        let exprs = vec![
+            Expr::Timer(EffectTimer::from_ms(500, Linear))
+        ];
+        let env = ScriptEnv::new();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
+        let effect = compilers::sleep(&mut args).unwrap();
+        assert_eq!(effect.name(), "sleep");
+    }
+
+    #[test]
     fn test_sweep_in_compiler() {
         let context = ScriptContext::new();
         let exprs = vec![
