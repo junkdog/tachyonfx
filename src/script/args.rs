@@ -1,12 +1,12 @@
-use std::any::Any;
-use std::collections::{BTreeMap, VecDeque};
-use ratatui::layout::{Margin, Rect};
-use ratatui::prelude::{Color, Style};
-use crate::{Duration, Effect, EffectTimer, Motion};
 use crate::script::env::ScriptEnv;
 use crate::script::parser::Expr;
 use crate::script::script::ScriptContext;
 use crate::script::ScriptError;
+use crate::{Duration, Effect, EffectTimer, Motion};
+use ratatui::layout::{Margin, Rect};
+use ratatui::prelude::{Color, Style};
+use std::any::Any;
+use std::collections::VecDeque;
 
 pub struct InputArgs<'a> {
     args: VecDeque<Expr>,
@@ -182,15 +182,15 @@ pub(super) fn type_name_of(expr: &Expr) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeMap, VecDeque};
-    use ratatui::layout::{Margin, Rect};
-    use ratatui::prelude::{Color, Style};
-    use crate::{Duration, EffectTimer, Interpolation, Motion};
     use crate::script::args::InputArgs;
     use crate::script::env::ScriptEnv;
     use crate::script::parser::Expr;
     use crate::script::script::ScriptContext;
     use crate::script::ScriptError;
+    use crate::{Duration, EffectTimer, Interpolation, Motion};
+    use ratatui::layout::{Margin, Rect};
+    use ratatui::prelude::{Color, Style};
+    use std::collections::VecDeque;
 
     fn empty_env() -> ScriptEnv {
         ScriptEnv::new()

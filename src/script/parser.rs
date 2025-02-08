@@ -1,8 +1,8 @@
-use crate::{Duration, Effect, EffectTimer, Motion};
+use crate::{Duration, EffectTimer, Motion};
+use anpa::core::parse;
 use ratatui::layout::{Margin, Rect};
 use ratatui::style::{Color, Style};
 use std::any::Any;
-use anpa::core::parse;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum Expr {
@@ -316,14 +316,14 @@ mod parser {
 
     #[cfg(test)]
     mod tests {
+        use crate::script::args::InputArgs;
+        use crate::script::env::ScriptEnv;
         use crate::script::parser::Expr;
+        use crate::script::script::ScriptContext;
         use crate::{Duration, EffectTimer, Interpolation, Motion};
         use anpa::core::{parse, AnpaResult};
         use ratatui::layout::{Margin, Rect};
         use ratatui::style::Color;
-        use crate::script::args::InputArgs;
-        use crate::script::env::ScriptEnv;
-        use crate::script::script::ScriptContext;
 
         fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
             result: AnpaResult<&str, T>,

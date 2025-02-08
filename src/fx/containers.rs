@@ -106,7 +106,7 @@ impl Shader for ParallelEffect {
 
 impl Shader for SequentialEffect {
     fn name(&self) -> &'static str {
-        "sequential"
+        "sequence"
     }
 
     fn process(

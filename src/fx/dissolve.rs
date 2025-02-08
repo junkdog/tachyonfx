@@ -39,7 +39,11 @@ impl Dissolve {
 
 impl Shader for Dissolve {
     fn name(&self) -> &'static str {
-        if self.timer.is_reversed() { "coalesce" } else { "dissolve" }
+        let reversed = self.timer.is_reversed();
+        match self.dissolved_style {
+            Some(_) => if reversed { "coalesce_from" } else { "dissolve_to" },
+            None => if reversed { "coalesce" } else { "dissolve" },
+        }
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
