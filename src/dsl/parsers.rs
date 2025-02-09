@@ -1,11 +1,8 @@
 use anpa::core::parse;
-use std::any::Any;
 use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
-use anpa::core::{Parser, ParserExt, StrParser};
+use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
-use anpa::prefix::Prefix;
-use anpa::slicelike::SliceLike;
 use anpa::whitespace::skip_whitespace;
 use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
 use ratatui::layout::{Margin, Rect};
@@ -222,7 +219,7 @@ fn duration<'a>() -> impl StrParser<'a, Duration> {
         trim("Duration::from_secs_f32("),
         float(),
         trim(")"),
-    ).map(|seconds| Duration::from_secs_f32(seconds));
+    ).map(Duration::from_secs_f32);
 
     or!(from_millis, from_secs)
 }
@@ -293,7 +290,7 @@ fn interpolation<'a>() -> impl StrParser<'a, Interpolation> {
 mod tests {
     use crate::dsl::arguments::InputArgs;
     use crate::dsl::environment::DslEnv;
-    use crate::dsl::dsl::DslContext;
+    use crate::dsl::dsl::EffectDsl;
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult};
     use ratatui::layout::{Margin, Rect};
@@ -648,7 +645,7 @@ mod tests {
 
         let parsed = parse(super::fx_statement(), input).result.unwrap();
         let env = DslEnv::new();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             match parsed {
                 Expr::Fx { arguments: parameters, .. } => parameters.into(),

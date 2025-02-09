@@ -1,24 +1,23 @@
 use crate::dsl::environment::DslEnv;
-use crate::dsl::dsl::DslContext;
+use crate::dsl::dsl::EffectDsl;
 use crate::dsl::DslError;
 use crate::{Duration, Effect, EffectTimer, Motion};
 use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Style};
-use std::any::Any;
 use std::collections::VecDeque;
 use crate::dsl::expressions::Expr;
 
 pub struct InputArgs<'a> {
     args: VecDeque<Expr>,
     vars: &'a DslEnv,
-    context: &'a DslContext,
+    context: &'a EffectDsl,
     initial_arg_count: usize,
 }
 
 impl<'a> InputArgs<'a> {
     pub(super) fn new(
         args: VecDeque<Expr>,
-        context: &'a DslContext,
+        context: &'a EffectDsl,
         vars: &'a DslEnv
     ) -> Self {
         let initial_arg_count = args.len();
@@ -137,7 +136,7 @@ impl<'a> InputArgs<'a> {
         name: String,
         arguments: Vec<Expr>,
     ) -> Result<Effect, DslError> {
-        self.context.compile(&self.vars, Expr::Fx { name, arguments })
+        self.context.eval(self.vars, Expr::Fx { name, arguments })
     }
 
     fn bound_var<T: Clone + 'static>(&self, name: String) -> Result<T, DslError> {
@@ -165,7 +164,7 @@ impl<'a> InputArgs<'a> {
 mod tests {
     use crate::dsl::arguments::InputArgs;
     use crate::dsl::environment::DslEnv;
-    use crate::dsl::dsl::DslContext;
+    use crate::dsl::dsl::EffectDsl;
     use crate::dsl::DslError;
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use ratatui::layout::{Margin, Rect};
@@ -180,7 +179,7 @@ mod tests {
     #[test]
     fn test_duration_parsing() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Duration(Duration::from_millis(500)),
@@ -201,7 +200,7 @@ mod tests {
     #[test]
     fn test_effect_timer_parsing() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Timer(EffectTimer::from_ms(500, Interpolation::Linear)),
@@ -222,7 +221,7 @@ mod tests {
     #[test]
     fn test_numeric_parsing() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(42),
@@ -243,7 +242,7 @@ mod tests {
     #[test]
     fn test_string_parsing() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::String("hello".to_string()),
@@ -265,7 +264,7 @@ mod tests {
     #[test]
     fn test_color_parsing() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Color(Color::Red),
@@ -285,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_style_parsing() {
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let style = Style::default().fg(Color::Red);
         let binding = empty_env();
         let mut args = InputArgs::new(
@@ -306,7 +305,7 @@ mod tests {
     #[test]
     fn test_motion_parsing() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Motion(Motion::LeftToRight),
@@ -328,7 +327,7 @@ mod tests {
     fn test_margin_parsing() {
         let margin = Margin::new(10, 20);
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Margin(margin),
@@ -348,7 +347,7 @@ mod tests {
     fn test_rect_parsing() {
         let rect = Rect::new(0, 0, 100, 100);
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Rect(rect),
@@ -367,7 +366,7 @@ mod tests {
     #[test]
     fn test_effect_parsing() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Fx {
@@ -392,7 +391,7 @@ mod tests {
     #[test]
     fn test_mixed_arguments() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(500),
@@ -417,7 +416,7 @@ mod tests {
     #[test]
     fn test_u16_conversion() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(65535), // Max u16
@@ -438,7 +437,7 @@ mod tests {
     #[test]
     fn test_empty_args() {
         let binding = empty_env();
-        let context = DslContext::new();
+        let context = EffectDsl::new();
         let mut args = InputArgs::new(VecDeque::new(), &context, &binding);
 
         let missing = |idx, name| Err(DslError::MissingArgument {

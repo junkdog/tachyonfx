@@ -2,8 +2,7 @@ use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::dsl::arguments::InputArgs;
 use crate::dsl::environment::DslEnv;
 use crate::dsl::DslError;
-use crate::{Effect, EffectTimer};
-use std::any::Any;
+use crate::Effect;
 use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
 
@@ -14,7 +13,7 @@ struct Interpreter {
 
 
 
-pub struct DslContext {
+pub struct EffectDsl {
     compilers: Vec<Interpreter>,
 }
 
@@ -30,9 +29,9 @@ impl Interpreter {
     }
 }
 
-impl DslContext {
+impl EffectDsl {
     pub fn new() -> Self {
-        register_default_compilers(Self {
+        register_default_interpreters(Self {
             compilers: Vec::new(),
         })
     }
@@ -47,17 +46,14 @@ impl DslContext {
         this
     }
 
-    pub fn execute(
-        &self,
-        env: DslEnv,
-        input: &str,
-    ) -> Result<Effect, DslError> {
-        parse_expr(input)
-            .ok_or_else(|| DslError::ParseError(input.to_string()))
-            .and_then(|expr| self.compile(&env, expr))
+    pub fn interpreter(&self) -> DslInterpreter {
+        DslInterpreter {
+            dsl: self,
+            environment: DslEnv::new(),
+        }
     }
 
-    pub(super) fn compile(
+    pub(super) fn eval(
         &self,
         env: &DslEnv,
         input: Expr
@@ -68,7 +64,7 @@ impl DslContext {
                 .find(|d| d.name == name)
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
-                    let mut args = InputArgs::new(parameters.into(), &self, &env);
+                    let mut args = InputArgs::new(parameters.into(), self, env);
                     let effect = (d.eval)(&mut args);
 
                     match () {
@@ -88,36 +84,64 @@ impl DslContext {
     }
 }
 
+pub struct DslInterpreter<'ctx> {
+    dsl: &'ctx EffectDsl,
+    environment: DslEnv,
+}
+
+impl DslInterpreter<'_> {
+    pub fn bind<K, T>(mut self, name: K, value: T) -> Self
+    where
+        K: Into<String>,
+        T: 'static,
+    {
+        self.environment = self.environment.bind(name, value);
+        self
+    }
+
+    pub fn eval(self, input: &str) -> Result<Effect, DslError> {
+        parse_expr(input)
+            .ok_or_else(|| DslError::ParseError(input.to_string()))
+            .and_then(|expr| self.dsl.eval(&self.environment, expr))
+    }
+}
+
 // fixme: remaining repeat(..)
-fn register_default_compilers(context: DslContext) -> DslContext {
-    context
-        .register("coalesce",       compilers::coalesce)
-        .register("coalesce_from",  compilers::coalesce_from)
-        .register("consume_tick",   |args| consume_tick().into())
-        .register("delay",          compilers::delay)
+fn register_default_interpreters(effect_dsl: EffectDsl) -> EffectDsl {
+    effect_dsl
+        .register("coalesce",       interpreters::coalesce)
+        .register("coalesce_from",  interpreters::coalesce_from)
+        .register("consume_tick",   |_args| consume_tick().into())
+        .register("delay",          interpreters::delay)
         .register("dissolve",       |args| dissolve(args.effect_timer()?).into())
-        .register("dissolve_to",    compilers::dissolve_to)
-        .register("fade_from",      compilers::fade_from)
-        .register("fade_from_fg",   compilers::fade_from_fg)
-        .register("fade_to",        compilers::fade_to)
-        .register("fade_to_fg",     compilers::fade_to_fg)
+        .register("dissolve_to",    interpreters::dissolve_to)
+        .register("fade_from",      interpreters::fade_from)
+        .register("fade_from_fg",   interpreters::fade_from_fg)
+        .register("fade_to",        interpreters::fade_to)
+        .register("fade_to_fg",     interpreters::fade_to_fg)
         .register("never_complete", |args| never_complete(args.effect()?).into())
         .register("ping_pong",      |args| ping_pong(args.effect()?).into())
-        .register("prolong_end",    compilers::prolong_end)
-        .register("prolong_start",  compilers::prolong_start)
+        .register("prolong_end",    interpreters::prolong_end)
+        .register("prolong_start",  interpreters::prolong_start)
         .register("repeating",      |args| repeating(args.effect()?).into())
-        .register("slide_in",       compilers::slide_in)
-        .register("slide_out",      compilers::slide_out)
-        .register("sweep_in",       compilers::sweep_in)
-        .register("sweep_out",      compilers::sweep_out)
-        .register("with_duration",  compilers::with_duration)
+        .register("slide_in",       interpreters::slide_in)
+        .register("slide_out",      interpreters::slide_out)
+        .register("sweep_in",       interpreters::sweep_in)
+        .register("sweep_out",      interpreters::sweep_out)
+        .register("with_duration",  interpreters::with_duration)
         .register(
             "timed_never_complete",
-            compilers::timed_never_complete
+            interpreters::timed_never_complete
         )
 }
 
-mod compilers {
+impl From<Effect> for Result<Effect, DslError> {
+    fn from(effect: Effect) -> Self {
+        Ok(effect)
+    }
+}
+
+mod interpreters {
     use crate::dsl::dsl::InputArgs;
     use crate::dsl::DslError;
     use crate::{fx, Effect};
@@ -238,18 +262,12 @@ mod compilers {
     }
 }
 
-impl From<Effect> for Result<Effect, DslError> {
-    fn from(effect: Effect) -> Self {
-        Ok(effect)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
     use super::*;
     use crate::Interpolation::QuadOut;
-    use crate::{Duration, Interpolation, Motion, Shader};
+    use crate::{Duration, EffectTimer, Interpolation, Motion, Shader};
     use ratatui::style::{Color, Style};
     use Interpolation::Linear;
 
@@ -263,8 +281,8 @@ mod tests {
                 (1000, QuadOut)
             )"#;
 
-        let ctx = DslContext::new();
-        let effect = ctx.execute(DslEnv::new(), input)
+        let ctx = EffectDsl::new();
+        let effect = ctx.interpreter().eval(input)
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "sweep_in");
@@ -273,10 +291,6 @@ mod tests {
 
     #[test]
     fn happy_path_with_bound_vars() {
-        let env = DslEnv::new()
-            .bind("motion", Motion::LeftToRight)
-            .bind("c", Color::from_u32(0x1d2021));
-
         let input = r#"fx::sweep_in(
                 motion,
                 10,
@@ -286,8 +300,11 @@ mod tests {
             )"#;
 
 
-        let ctx = DslContext::new();
-        let effect = ctx.execute(env, input)
+        let ctx = EffectDsl::new();
+        let effect = ctx.interpreter()
+            .bind("motion", Motion::LeftToRight)
+            .bind("c", Color::from_u32(0x1d2021))
+            .eval(input)
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "sweep_in");
@@ -298,16 +315,16 @@ mod tests {
     #[test]
     fn error_unknown_effect() {
         let input = r#"fx::nonexistent()"#;
-        let ctx = DslContext::new();
-        let err = ctx.execute(DslEnv::new(), input).unwrap_err();
+        let ctx = EffectDsl::new();
+        let err = ctx.interpreter().eval(input).unwrap_err();
         assert!(matches!(err, DslError::UnknownEffect { .. }));
     }
 
     #[test]
     fn error_invalid_argument() {
         let input = r#"fx::sweep_in("wrong", 10, 0, Color::from_u32(0x1d2021), 1000)"#;
-        let ctx = DslContext::new();
-        let err = ctx.execute(DslEnv::new(), input).unwrap_err();
+        let ctx = EffectDsl::new();
+        let err = ctx.interpreter().eval(input).unwrap_err();
         assert!(matches!(err, DslError::WrongArgumentType {
             position: 0,
             expected: "motion"
@@ -325,109 +342,109 @@ mod tests {
                 "extra"
             )"#;
 
-        let ctx = DslContext::new();
-        let err = ctx.execute(DslEnv::new(), input).unwrap_err();
+        let ctx = EffectDsl::new();
+        let err = ctx.interpreter().eval(input).unwrap_err();
         assert!(matches!(err, DslError::TooManyArguments { .. }), "{:?}", err);
     }
 
     #[test]
     fn test_coalesce_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let env = DslEnv::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::coalesce(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::coalesce(&mut args).unwrap();
         assert_eq!(effect.name(), "coalesce");
         assert_eq!(effect.timer(), Some(EffectTimer::from_ms(500, Linear).reversed()));
     }
 
     #[test]
     fn test_coalesce_from_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let style = Style::default().fg(Color::Red);
         let exprs = vec![
             Expr::Style(style),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::coalesce_from(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::coalesce_from(&mut args).unwrap();
         assert_eq!(effect.name(), "coalesce_from");
     }
 
     #[test]
     fn test_fade_to_fg_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Color(Color::Red),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::fade_to_fg(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::fade_to_fg(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_to");
     }
 
     #[test]
     fn test_fade_from_fg_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Color(Color::Red),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::fade_from_fg(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::fade_from_fg(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_from");
     }
 
     #[test]
     fn test_fade_to_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Color(Color::Red),
             Expr::Color(Color::Blue),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::fade_to(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::fade_to(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_to");
     }
 
     #[test]
     fn test_dissolve_to_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let style = Style::default().fg(Color::Red);
         let exprs = vec![
             Expr::Style(style),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::dissolve_to(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::dissolve_to(&mut args).unwrap();
         assert_eq!(effect.name(), "dissolve_to");
     }
 
     #[test]
     fn test_fade_from_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Color(Color::Red),
             Expr::Color(Color::Blue),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::fade_from(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::fade_from(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_from");
     }
 
     #[test]
     fn test_sweep_out_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Motion(Motion::LeftToRight),
             Expr::U32(10),
@@ -436,26 +453,26 @@ mod tests {
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::sweep_out(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::sweep_out(&mut args).unwrap();
         assert_eq!(effect.name(), "sweep_out");
     }
 
     #[test]
     fn test_sleep_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::sleep(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::sleep(&mut args).unwrap();
         assert_eq!(effect.name(), "sleep");
     }
 
     #[test]
     fn test_sweep_in_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Motion(Motion::LeftToRight),
             Expr::U32(10),
@@ -464,14 +481,14 @@ mod tests {
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::sweep_in(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::sweep_in(&mut args).unwrap();
         assert_eq!(effect.name(), "sweep_in");
     }
 
     #[test]
     fn test_slide_in_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Motion(Motion::LeftToRight),
             Expr::U32(10),
@@ -480,14 +497,14 @@ mod tests {
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::slide_in(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::slide_in(&mut args).unwrap();
         assert_eq!(effect.name(), "slide_in");
     }
 
     #[test]
     fn test_slide_out_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Motion(Motion::LeftToRight),
             Expr::U32(10),
@@ -496,14 +513,14 @@ mod tests {
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::slide_out(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::slide_out(&mut args).unwrap();
         assert_eq!(effect.name(), "slide_out");
     }
 
     #[test]
     fn test_with_duration_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Duration(Duration::from_millis(1000)),
             Expr::Fx {
@@ -512,14 +529,14 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::with_duration(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::with_duration(&mut args).unwrap();
         assert_eq!(effect.name(), "with_duration");
     }
 
     #[test]
     fn test_timed_never_complete_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Duration(Duration::from_millis(1000)),
             Expr::Fx {
@@ -528,14 +545,14 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::timed_never_complete(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::timed_never_complete(&mut args).unwrap();
         assert_eq!(effect.name(), "with_duration");
     }
 
     #[test]
     fn test_delay_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear)),
             Expr::Fx {
@@ -544,14 +561,14 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::delay(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::delay(&mut args).unwrap();
         assert_eq!(effect.name(), "sequence");
     }
 
     #[test]
     fn test_prolong_start_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear)),
             Expr::Fx {
@@ -560,14 +577,14 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::prolong_start(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::prolong_start(&mut args).unwrap();
         assert_eq!(effect.name(), "prolong_start");
     }
 
     #[test]
     fn test_prolong_end_compiler() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear)),
             Expr::Fx {
@@ -576,30 +593,30 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        let effect = compilers::prolong_end(&mut args).unwrap();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::prolong_end(&mut args).unwrap();
         assert_eq!(effect.name(), "prolong_end");
     }
 
     // Error cases
     #[test]
     fn test_compiler_missing_arguments() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        assert!(compilers::fade_to_fg(&mut args).is_err());
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        assert!(interpreters::fade_to_fg(&mut args).is_err());
     }
 
     #[test]
     fn test_compiler_wrong_argument_type() {
-        let context = DslContext::new();
+        let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::String("wrong".to_string()),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
-        assert!(compilers::fade_to_fg(&mut args).is_err());
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        assert!(interpreters::fade_to_fg(&mut args).is_err());
     }
 }
