@@ -468,6 +468,7 @@ fn interpolation<'a>() -> impl StrParser<'a, Expr> {
 
 #[cfg(test)]
 mod tests {
+    use std::f32::consts::E;
     use crate::dsl::environment::DslEnv;
     use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult};
@@ -475,6 +476,16 @@ mod tests {
     use ratatui::style::Color;
     use crate::dsl::expressions::{Expr, FnCall, Value};
     use crate::fx::RepeatMode;
+
+
+    fn assert_expr_eq(
+        result: AnpaResult<&str, Expr>,
+        expected: Expr
+    ) {
+        assert_eq!(result.state, "", "Expected parser to consume the entire input");
+        assert!(result.result.is_some());
+        assert_eq!(result.result.unwrap(), expected);
+    }
 
     fn assert_parser_eq(
         result: AnpaResult<&str, Expr>,
@@ -486,13 +497,13 @@ mod tests {
 
     fn assert_cell_filter_eq(
         input: &str,
-        expected: CellFilter,
+        expected: Expr,
     ) {
         let filter = parse(super::cell_filter(), input)
             .result
             .expect("Failed to parse cell filter");
 
-        assert_eq!(filter.to_string(), expected.to_string());
+        assert_eq!(filter, expected);
     }
 
     #[test]
@@ -506,27 +517,30 @@ mod tests {
     #[test]
     fn test_color() {
         let input = "Color::from_u32(0x1d2021)";
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::color(), input),
-            Value::Color(Color::from_u32(0x1d2021))
+            call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x1d2021))])
         );
     }
 
     #[test]
     fn test_margin() {
         let input = "Margin::new(10, 20)";
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::margin(), input),
-            Value::Margin(Margin::new(10, 20))
+            call_expr(FnCall::MarginNew, &[literal(Value::U16(10)), literal(Value::U16(20))])
         );
 
         let input = r#"Margin {
             horizontal: 10,
             vertical: 20
         }"#;
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::margin(), input),
-            Value::Margin(Margin::new(10, 20))
+            call_expr(FnCall::MarginStruct, &[
+                literal(Value::U16(10)),
+                literal(Value::U16(20))
+            ])
         );
     }
 
@@ -539,25 +553,27 @@ mod tests {
         );
 
         let input = "RepeatMode::Times(10)";
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::repeat_mode(), input),
-            Value::RepeatMode(RepeatMode::Times(10))
+            call_expr(FnCall::RepeatModeTimes, &[literal(Value::U32(10))])
         );
 
         let input = "RepeatMode::Duration(Duration::from_millis(1000))";
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::repeat_mode(), input),
-            Value::RepeatMode(RepeatMode::Duration(Duration::from_millis(1000)))
+            call_expr(FnCall::RepeatModeDuration, &[
+                call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))])
+            ])
         );
     }
 
     #[test]
     fn test_basic_filters() {
         // Test All filter
-        assert_cell_filter_eq("All", CellFilter::All);
+        assert_cell_filter_eq("All", literal(Value::CellFilter(CellFilter::All)));
 
         // Test Text filter
-        assert_cell_filter_eq("Text", CellFilter::Text);
+        assert_cell_filter_eq("Text", literal(Value::CellFilter(CellFilter::Text)));
     }
 
     #[test]
@@ -565,13 +581,19 @@ mod tests {
         // Test FgColor
         assert_cell_filter_eq(
             "FgColor(Color::from_u32(0xFF0000))",
-            CellFilter::FgColor(Color::Rgb(255, 0, 0))
+            Expr::CellFilter {
+                filter_type: "FgColor",
+                arguments: vec![call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0xFF0000))])]
+            }
         );
 
         // Test BgColor
         assert_cell_filter_eq(
             "BgColor(Color::from_u32(0x00FF00))",
-            CellFilter::BgColor(Color::Rgb(0, 255, 0))
+            Expr::CellFilter {
+                filter_type: "BgColor",
+                arguments: vec![call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x00FF00))])]
+            }
         );
     }
 
@@ -580,26 +602,39 @@ mod tests {
         // Test Inner margin
         assert_cell_filter_eq(
             "Inner(Margin::new(1, 2))",
-            CellFilter::Inner(Margin::new(1, 2))
+            Expr::CellFilter {
+                filter_type: "Inner",
+                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(2))])]
+            }
         );
 
         // Test Outer margin
         assert_cell_filter_eq(
             "Outer(Margin::new(3, 4))",
-            CellFilter::Outer(Margin::new(3, 4))
+            Expr::CellFilter {
+                filter_type: "Outer",
+                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(3)), literal(Value::U16(4))])]
+            }
         );
     }
 
     #[test]
     fn test_layout_filter() {
-        let layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Min(0)]);
-
-        assert_cell_filter_eq(
-            "Layout(Layout::vertical([Length(1), Min(0)]), 1)",
-            CellFilter::Layout(layout, 1)
-        );
+        todo!("Layout filter is not yet implemented");
+        // let layout = Layout::default()
+        //     .direction(Direction::Vertical)
+        //     .constraints([Constraint::Length(1), Constraint::Min(0)]);
+        //
+        // assert_cell_filter_eq(
+        //     "Layout(Layout::vertical([Length(1), Min(0)]), 1)",
+        //     Expr::CellFilter {
+        //         filter_type: "Layout",
+        //         arguments: vec![
+        //             Expr::Literal(Value::Layout(layout)),
+        //             Expr::Literal(Value::U16(1))
+        //         ]
+        //     }
+        // );
     }
 
     #[test]
@@ -607,28 +642,46 @@ mod tests {
         // Test AllOf
         assert_cell_filter_eq(
             "AllOf(vec![Text, Inner(Margin::new(1, 1))])",
-            CellFilter::AllOf(vec![
-                CellFilter::Text,
-                CellFilter::Inner(Margin::new(1, 1))
-            ])
+            Expr::CellFilter {
+                filter_type: "AllOf",
+                arguments: vec![
+                    Expr::Literal(Value::CellFilter(CellFilter::Text)),
+                    Expr::CellFilter {
+                        filter_type: "Inner",
+                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(1))])]
+                    }
+                ]
+            }
         );
 
         // Test AnyOf
         assert_cell_filter_eq(
             "AnyOf(vec![Text, Outer(Margin::new(1, 1))])",
-            CellFilter::AnyOf(vec![
-                CellFilter::Text,
-                CellFilter::Outer(Margin::new(1, 1))
-            ])
+            Expr::CellFilter {
+                filter_type: "AnyOf",
+                arguments: vec![
+                    literal(Value::CellFilter(CellFilter::Text)),
+                    Expr::CellFilter {
+                        filter_type: "Outer",
+                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(1))])]
+                    }
+                ]
+            }
         );
 
         // Test NoneOf
         assert_cell_filter_eq(
             "NoneOf(vec![Text, Inner(Margin::new(1, 1))])",
-            CellFilter::NoneOf(vec![
-                CellFilter::Text,
-                CellFilter::Inner(Margin::new(1, 1))
-            ])
+            Expr::CellFilter {
+                filter_type: "NoneOf",
+                arguments: vec![
+                    literal(Value::CellFilter(CellFilter::Text)),
+                    Expr::CellFilter {
+                        filter_type: "Inner",
+                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(1))])]
+                    }
+                ]
+            }
         );
     }
 
@@ -636,7 +689,10 @@ mod tests {
     fn test_not_filter() {
         assert_cell_filter_eq(
             "CellFilter::Not(Box::new(CellFilter::Text))",
-            CellFilter::Not(Box::new(CellFilter::Text))
+            Expr::CellFilter {
+                filter_type: "Not",
+                arguments: vec![Expr::Literal(Value::CellFilter(CellFilter::Text))]
+            }
         );
     }
 
@@ -650,22 +706,42 @@ mod tests {
                     Outer(Margin::new(2, 2))
                 ])
             ])",
-            CellFilter::AllOf(vec![
-                CellFilter::Not(Box::new(CellFilter::Text)),
-                CellFilter::AnyOf(vec![
-                    CellFilter::Inner(Margin::new(1, 1)),
-                    CellFilter::Outer(Margin::new(2, 2))
-                ])
-            ])
+            Expr::CellFilter {
+                filter_type: "AllOf",
+                arguments: vec![
+                    Expr::CellFilter {
+                        filter_type: "Not",
+                        arguments: vec![Expr::Literal(Value::CellFilter(CellFilter::Text))]
+                    },
+                    Expr::CellFilter {
+                        filter_type: "AnyOf",
+                        arguments: vec![
+                            Expr::CellFilter {
+                                filter_type: "Inner",
+                                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(1))])]
+                            },
+                            Expr::CellFilter {
+                                filter_type: "Outer",
+                                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(2)), literal(Value::U16(2))])]
+                            }
+                        ]
+                    }
+                ]
+            }
         );
     }
 
     #[test]
     fn test_rect() {
         let input = "Rect::new(10, 20, 30, 40)";
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::rect(), input),
-            Value::Rect(Rect::new(10, 20, 30, 40))
+            call_expr(FnCall::RectNew, &[
+                literal(Value::U16(10)),
+                literal(Value::U16(20)),
+                literal(Value::U16(30)),
+                literal(Value::U16(40))
+            ])
         );
 
         let input = r#"Rect {
@@ -674,9 +750,14 @@ mod tests {
             width: 30,
             height: 40
         }"#;
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::rect(), input),
-            Value::Rect(Rect::new(10, 20, 30, 40))
+            call_expr(FnCall::RectStruct, &[
+                literal(Value::U16(10)),
+                literal(Value::U16(20)),
+                literal(Value::U16(30)),
+                literal(Value::U16(40))
+            ])
         );
     }
 
@@ -775,19 +856,22 @@ mod tests {
         assert_eq!(result, Some(Expr::Var("my_var".to_string())));
     }
 
-    // #[test]
-    // fn parse_array_ref() {
-    //     let input = "&[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
-    //     assert_parser_eq(
-    //         parse(super::array_ref(), input),
-    //         Expr::ArrayRef(vec![
-    //             Expr::String("Hello, World!".to_string()),
-    //             Expr::U32(1337),
-    //             Expr::F32(3.14),
-    //             Expr::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
-    //         ])
-    //     );
-    // }
+    #[test]
+    fn parse_array_ref() {
+        let input = "&[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
+        let result = parse(super::array_ref(), input);
+        let expected = Expr::ArrayRef(vec![
+            Expr::Literal(Value::String("Hello, World!".to_string())),
+            Expr::Literal(Value::U32(1337)),
+            Expr::Literal(Value::F32(3.14)),
+            call_expr(FnCall::EffectTimerNew, &[
+                call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]),
+                literal(Value::Interpolation(Interpolation::SineIn))
+            ])
+        ]);
+
+        assert_expr_eq(result, expected);
+    }
 
     fn call_expr(function: FnCall, args: &[Expr]) -> Expr {
         Expr::Call { function, args: args.into() }
@@ -900,15 +984,18 @@ mod tests {
         );
 
         let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::argument(), input),
-            Value::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))
+            call_expr(FnCall::EffectTimerFromMs, &[
+                literal(Value::U32(1000)),
+                literal(Value::Interpolation(Interpolation::Linear))
+            ])
         );
 
         let input = "Duration::from_millis(1000)";
-        assert_parser_eq(
+        assert_expr_eq(
             parse(super::argument(), input),
-            Value::Duration(Duration::from_millis(1000))
+            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))])
         );
     }
 
@@ -921,7 +1008,10 @@ mod tests {
                 Expr::Literal(Value::String("Hello, World!".to_string())),
                 Expr::Literal(Value::U32(1337)),
                 Expr::Literal(Value::F32(3.14)),
-                Expr::Literal(Value::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn)))
+                call_expr(FnCall::EffectTimerNew, &[
+                    call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]),
+                    literal(Value::Interpolation(Interpolation::SineIn))
+                ])
             ])
         );
     }
@@ -942,9 +1032,11 @@ mod tests {
         let expected = Expr::Fx {
             name: "dissolve".to_string(),
             arguments: vec![
-                Expr::Literal(Value::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut))),
-            ]
-        };
+                call_expr(FnCall::EffectTimerNew, &[
+                    call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(220))]),
+                    Expr::Literal(Value::Interpolation(Interpolation::ElasticOut))
+                ])
+            ]};
         assert_eq!(result, Some(expected));
 
         let input = "fx::ping_pong(fx::coalesce((500, CircOut)))";
@@ -955,7 +1047,10 @@ mod tests {
                 Expr::Fx {
                     name: "coalesce".to_string(),
                     arguments: vec![
-                        Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Interpolation::CircOut))),
+                        call_expr(FnCall::EffectTimerNew, &[
+                            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(500))]),
+                            Expr::Literal(Value::Interpolation(Interpolation::CircOut))
+                        ])
                     ]
                 }
             ]

@@ -1,5 +1,6 @@
 use std::any::{type_name, Any};
 use std::collections::BTreeMap;
+use std::fmt;
 use crate::dsl::DslError;
 
 pub(super) struct DslEnv {
@@ -39,5 +40,13 @@ impl DslEnv {
             name: name.as_ref().to_string(),
             expected: type_name::<T>(),
         }))
+    }
+}
+
+impl fmt::Debug for DslEnv {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DslEnv")
+            .field("bound_variables", &self.bound_variables)
+            .finish()
     }
 }
