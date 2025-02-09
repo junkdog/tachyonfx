@@ -6,6 +6,7 @@ use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
 use crate::dsl::expressions::Expr;
+use crate::fx::RepeatMode;
 
 pub struct InputArgs<'a> {
     args: VecDeque<Expr>,
@@ -108,6 +109,14 @@ impl<'a> InputArgs<'a> {
             Expr::Motion(m) => Ok(m),
             Expr::Var(name) => self.bound_var(name),
             _               => self.wrong_type_error("motion"),
+        }
+    }
+
+    pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
+        match self.next("repeat_mode")? {
+            Expr::RepeatMode(m) => Ok(m),
+            Expr::Var(name)     => self.bound_var(name),
+            _                   => self.wrong_type_error("repeat_mode"),
         }
     }
 

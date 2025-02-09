@@ -7,8 +7,12 @@ use anpa::whitespace::skip_whitespace;
 use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
 use ratatui::layout::{Margin, Rect};
 use ratatui::style::Color;
-use crate::{Duration, EffectTimer, Interpolation, Motion};
+use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
 use crate::dsl::expressions::Expr;
+use crate::fx::RepeatMode;
+
+// fixme: parsers should always return Expr instead of concrete types,
+// so that we can handle errors more and support variables
 
 pub(super) fn parse_expr(
     input: &str,
@@ -65,6 +69,76 @@ fn var<'a>() -> impl StrParser<'a, &'a str> {
     item_while(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_'))
 }
 
+fn cell_filter<'a>() -> impl StrParser<'a, CellFilter> {
+    // cell id filter
+    let cf = |s| right!(
+        skip_whitespace(),
+        succeed(attempt(skip!("CellFilter::"))),
+        skip!(s)
+    );
+
+    // Basic filters
+    let all = cf("All").map(|_| CellFilter::All);
+    let text = cf("Text").map(|_| CellFilter::Text);
+
+    // Color filters
+    let fg_color = middle(cf("FgColor("), color(), trim(")"))
+        .map(CellFilter::FgColor);
+    let bg_color = middle(cf("BgColor("), color(), trim(")"))
+        .map(CellFilter::BgColor);
+
+    // Margin-based filters
+    let inner = middle(cf("Inner("), margin(), trim(")"))
+        .map(CellFilter::Inner);
+    let outer = middle(cf("Outer("), margin(), trim(")"))
+        .map(CellFilter::Outer);
+
+    // Layout filter
+    // let layout = tuplify!(
+    //     right!(trim("Layout("), parse_layout()),
+    //     right!(trim(","), parse_u16(), trim(")")),
+    // ).map(|(layout, idx)| CellFilter::Layout(layout, idx));
+
+    // Compound filters
+    let all_of = middle(
+        cf("AllOf(vec!["),
+        many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
+        trim("])")
+    ).map(CellFilter::AllOf);
+
+    let any_of = middle(
+        cf("AnyOf(vec!["),
+        many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
+        trim("])")
+    ).map(CellFilter::AnyOf);
+
+    let none_of = middle(
+        cf("NoneOf(vec!["),
+        many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
+        trim("])")
+    ).map(CellFilter::NoneOf);
+
+    let not = middle(
+        cf("Not(Box::new("),
+        defer_parser!(cell_filter()),
+        trim("))")
+    ).map(|filter| CellFilter::Not(Box::new(filter)));
+
+    or!(
+        fg_color,
+        bg_color,
+        inner,
+        outer,
+        // layout,
+        all_of,
+        any_of,
+        none_of,
+        not,
+        all,
+        text,
+    )
+}
+
 fn argument<'a>() -> impl StrParser<'a, Expr> {
     // must defer to avoid recursive opaqueness
     defer_parser! {
@@ -81,6 +155,7 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
             rect().map(Expr::Rect),
             margin().map(Expr::Margin),
             color().map(Expr::Color),
+            repeat_mode().map(Expr::RepeatMode), // used by fx::repeat
             array_ref(), // e.g. &[fx1, fx2, fx3]
             fx_statement(),
             var().map(|v| Expr::Var(v.to_string()))
@@ -117,6 +192,25 @@ fn parse_u16<'a>() -> impl StrParser<'a, u16> {
 
 fn parse_f32<'a>() -> impl StrParser<'a, f32> {
     float()
+}
+
+fn repeat_mode<'a>() -> impl StrParser<'a, RepeatMode> {
+    let forever = skip!("RepeatMode::Forever")
+        .map(|_| RepeatMode::Forever);
+
+    let times = middle(
+        trim("RepeatMode::Times("),
+        parse_u32(),
+        trim(")")
+    ).map(RepeatMode::Times);
+
+    let duration = middle(
+        trim("RepeatMode::Duration("),
+        duration(),
+        trim(")")
+    ).map(RepeatMode::Duration);
+
+    or!(forever, times, duration)
 }
 
 fn effect_timer<'a>() -> impl StrParser<'a, EffectTimer> {
@@ -291,11 +385,12 @@ mod tests {
     use crate::dsl::arguments::InputArgs;
     use crate::dsl::environment::DslEnv;
     use crate::dsl::dsl::EffectDsl;
-    use crate::{Duration, EffectTimer, Interpolation, Motion};
+    use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult};
-    use ratatui::layout::{Margin, Rect};
+    use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
     use ratatui::style::Color;
     use crate::dsl::expressions::Expr;
+    use crate::fx::RepeatMode;
 
     fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
         result: AnpaResult<&str, T>,
@@ -303,6 +398,17 @@ mod tests {
     ) {
         assert_eq!(result.state, "", "Expected parser to consume the entire input");
         assert_eq!(result.result, Some(expected));
+    }
+
+    fn assert_cell_filter_eq(
+        input: &str,
+        expected: CellFilter,
+    ) {
+        let filter = parse(super::cell_filter(), input)
+            .result
+            .expect("Failed to parse cell filter");
+
+        assert_eq!(filter.to_string(), expected.to_string());
     }
 
     #[test]
@@ -338,6 +444,136 @@ mod tests {
         assert_parser_eq(
             parse(super::margin(), input),
             Margin::new(10, 20)
+        );
+    }
+
+    #[test]
+    fn repeat_modes() {
+        let input = "RepeatMode::Forever";
+        assert_parser_eq(
+            parse(super::repeat_mode(), input),
+            RepeatMode::Forever
+        );
+
+        let input = "RepeatMode::Times(10)";
+        assert_parser_eq(
+            parse(super::repeat_mode(), input),
+            RepeatMode::Times(10)
+        );
+
+        let input = "RepeatMode::Duration(Duration::from_millis(1000))";
+        assert_parser_eq(
+            parse(super::repeat_mode(), input),
+            RepeatMode::Duration(Duration::from_millis(1000))
+        );
+    }
+
+    #[test]
+    fn test_basic_filters() {
+        // Test All filter
+        assert_cell_filter_eq("All", CellFilter::All);
+
+        // Test Text filter
+        assert_cell_filter_eq("Text", CellFilter::Text);
+    }
+
+    #[test]
+    fn test_color_filters() {
+        // Test FgColor
+        assert_cell_filter_eq(
+            "FgColor(Color::from_u32(0xFF0000))",
+            CellFilter::FgColor(Color::Rgb(255, 0, 0))
+        );
+
+        // Test BgColor
+        assert_cell_filter_eq(
+            "BgColor(Color::from_u32(0x00FF00))",
+            CellFilter::BgColor(Color::Rgb(0, 255, 0))
+        );
+    }
+
+    #[test]
+    fn test_margin_filters() {
+        // Test Inner margin
+        assert_cell_filter_eq(
+            "Inner(Margin::new(1, 2))",
+            CellFilter::Inner(Margin::new(1, 2))
+        );
+
+        // Test Outer margin
+        assert_cell_filter_eq(
+            "Outer(Margin::new(3, 4))",
+            CellFilter::Outer(Margin::new(3, 4))
+        );
+    }
+
+    #[test]
+    fn test_layout_filter() {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Min(0)]);
+
+        assert_cell_filter_eq(
+            "Layout(Layout::vertical([Length(1), Min(0)]), 1)",
+            CellFilter::Layout(layout, 1)
+        );
+    }
+
+    #[test]
+    fn test_compound_filters() {
+        // Test AllOf
+        assert_cell_filter_eq(
+            "AllOf(vec![Text, Inner(Margin::new(1, 1))])",
+            CellFilter::AllOf(vec![
+                CellFilter::Text,
+                CellFilter::Inner(Margin::new(1, 1))
+            ])
+        );
+
+        // Test AnyOf
+        assert_cell_filter_eq(
+            "AnyOf(vec![Text, Outer(Margin::new(1, 1))])",
+            CellFilter::AnyOf(vec![
+                CellFilter::Text,
+                CellFilter::Outer(Margin::new(1, 1))
+            ])
+        );
+
+        // Test NoneOf
+        assert_cell_filter_eq(
+            "NoneOf(vec![Text, Inner(Margin::new(1, 1))])",
+            CellFilter::NoneOf(vec![
+                CellFilter::Text,
+                CellFilter::Inner(Margin::new(1, 1))
+            ])
+        );
+    }
+
+    #[test]
+    fn test_not_filter() {
+        assert_cell_filter_eq(
+            "CellFilter::Not(Box::new(CellFilter::Text))",
+            CellFilter::Not(Box::new(CellFilter::Text))
+        );
+    }
+
+    #[test]
+    fn test_nested_filters() {
+        assert_cell_filter_eq(
+            "AllOf(vec![
+                Not(Box::new(Text)),
+                AnyOf(vec![
+                    Inner(Margin::new(1, 1)),
+                    Outer(Margin::new(2, 2))
+                ])
+            ])",
+            CellFilter::AllOf(vec![
+                CellFilter::Not(Box::new(CellFilter::Text)),
+                CellFilter::AnyOf(vec![
+                    CellFilter::Inner(Margin::new(1, 1)),
+                    CellFilter::Outer(Margin::new(2, 2))
+                ])
+            ])
         );
     }
 

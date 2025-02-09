@@ -124,7 +124,7 @@ impl Shader for Repeat {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RepeatMode {
     Forever,
     Times(u32),
