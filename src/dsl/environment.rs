@@ -1,14 +1,14 @@
 use std::any::{type_name, Any};
 use std::collections::BTreeMap;
-use crate::dsl::ScriptError;
+use crate::dsl::DslError;
 
-pub struct ScriptEnv {
+pub(super) struct DslEnv {
     bound_variables: BTreeMap<String, Box<dyn Any>>,
 }
 
 
-impl ScriptEnv {
-    pub(crate) fn new() -> Self {
+impl DslEnv {
+    pub(super) fn new() -> Self {
         Self {
             bound_variables: BTreeMap::new(),
         }
@@ -24,17 +24,17 @@ impl ScriptEnv {
         this
     }
 
-    pub(super) fn get<K, T>(&self, name: K) -> Result<&T, ScriptError>
+    pub(super) fn get<K, T>(&self, name: K) -> Result<&T, DslError>
     where
         K: AsRef<str>,
         T: 'static,
     {
         match self.bound_variables.get(name.as_ref()) {
             Some(v) => Ok(v),
-            None => Err(ScriptError::UnknownArgument {
+            None => Err(DslError::UnknownArgument {
                 name: name.as_ref().to_string(),
             }),
-        }.and_then(|v| v.downcast_ref().ok_or_else(|| ScriptError::NoSuchVariable {
+        }.and_then(|v| v.downcast_ref().ok_or_else(|| DslError::NoSuchVariable {
             position: 0, // todo: resolve position
             name: name.as_ref().to_string(),
             expected: type_name::<T>(),

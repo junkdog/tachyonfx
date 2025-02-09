@@ -1,6 +1,6 @@
-use crate::dsl::env::ScriptEnv;
-use crate::dsl::script::ScriptContext;
-use crate::dsl::ScriptError;
+use crate::dsl::environment::DslEnv;
+use crate::dsl::dsl::DslContext;
+use crate::dsl::DslError;
 use crate::{Duration, Effect, EffectTimer, Motion};
 use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Style};
@@ -10,16 +10,16 @@ use crate::dsl::expressions::Expr;
 
 pub struct InputArgs<'a> {
     args: VecDeque<Expr>,
-    vars: &'a ScriptEnv,
-    context: &'a ScriptContext,
+    vars: &'a DslEnv,
+    context: &'a DslContext,
     initial_arg_count: usize,
 }
 
 impl<'a> InputArgs<'a> {
     pub(super) fn new(
         args: VecDeque<Expr>,
-        context: &'a ScriptContext,
-        vars: &'a ScriptEnv
+        context: &'a DslContext,
+        vars: &'a DslEnv
     ) -> Self {
         let initial_arg_count = args.len();
         Self { args, vars, context, initial_arg_count }
@@ -29,7 +29,7 @@ impl<'a> InputArgs<'a> {
         &self.args
     }
 
-    pub fn duration(&mut self) -> Result<Duration, ScriptError> {
+    pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
             Expr::Duration(d) => Ok(d),
             Expr::U32(ms)     => Ok(Duration::from_millis(ms as _)),
@@ -38,7 +38,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn effect_timer(&mut self) -> Result<EffectTimer, ScriptError> {
+    pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
             Expr::Timer(t)  => Ok(t),
             Expr::U32(ms)   => Ok(ms.into()),
@@ -47,16 +47,16 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn read_u16(&mut self) -> Result<u16, ScriptError> {
+    pub fn read_u16(&mut self) -> Result<u16, DslError> {
         u16::try_from(self.read_u32()?)
-            .map_err(|_| ScriptError::CastOverflow {
+            .map_err(|_| DslError::CastOverflow {
                 position: self.initial_arg_count - self.args.len() - 1, // -1 for the current argument
                 from: "u32",
                 to: "u16",
             })
     }
 
-    pub fn read_u32(&mut self) -> Result<u32, ScriptError> {
+    pub fn read_u32(&mut self) -> Result<u32, DslError> {
         match self.next("u32")? {
             Expr::U32(u)    => Ok(u),
             Expr::Var(name) => self.bound_var(name),
@@ -64,7 +64,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn read_f32(&mut self) -> Result<f32, ScriptError> {
+    pub fn read_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
             Expr::F32(f)    => Ok(f),
             Expr::Var(name) => self.bound_var(name),
@@ -72,7 +72,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn string(&mut self) -> Result<String, ScriptError> {
+    pub fn string(&mut self) -> Result<String, DslError> {
         match self.next("string")? {
             Expr::String(s) => Ok(s),
             Expr::Var(name) => self.bound_var(name),
@@ -80,7 +80,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn effect(&mut self) -> Result<Effect, ScriptError> {
+    pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
             Expr::Fx { name, arguments } => self.compile_effect(name, arguments),
             Expr::Var(name)              => self.bound_var(name),
@@ -88,7 +88,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn color(&mut self) -> Result<Color, ScriptError> {
+    pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
             Expr::Color(c)  => Ok(c),
             Expr::Var(name) => self.bound_var(name),
@@ -96,7 +96,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn style(&mut self) -> Result<Style, ScriptError> {
+    pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
             Expr::Style(s)  => Ok(s),
             Expr::Var(name) => self.bound_var(name),
@@ -104,7 +104,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn motion(&mut self) -> Result<Motion, ScriptError> {
+    pub fn motion(&mut self) -> Result<Motion, DslError> {
         match self.next("motion")? {
             Expr::Motion(m) => Ok(m),
             Expr::Var(name) => self.bound_var(name),
@@ -112,7 +112,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn margin(&mut self) -> Result<Margin, ScriptError> {
+    pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
             Expr::Margin(m) => Ok(m),
             Expr::Var(name) => self.bound_var(name),
@@ -120,7 +120,7 @@ impl<'a> InputArgs<'a> {
         }
     }
 
-    pub fn rect(&mut self) -> Result<Rect, ScriptError> {
+    pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
             Expr::Rect(r)   => Ok(r),
             Expr::Var(name) => self.bound_var(name),
@@ -136,70 +136,51 @@ impl<'a> InputArgs<'a> {
     fn compile_effect(&self,
         name: String,
         arguments: Vec<Expr>,
-    ) -> Result<Effect, ScriptError> {
+    ) -> Result<Effect, DslError> {
         self.context.compile(&self.vars, Expr::Fx { name, arguments })
     }
 
-    fn bound_var<T: Clone + 'static>(&self, name: String) -> Result<T, ScriptError> {
+    fn bound_var<T: Clone + 'static>(&self, name: String) -> Result<T, DslError> {
         self.vars.get(name).cloned()
     }
 
-    fn next(&mut self, type_name: &'static str) -> Result<Expr, ScriptError> {
+    fn next(&mut self, type_name: &'static str) -> Result<Expr, DslError> {
         self.args.pop_front()
-            .ok_or(ScriptError::MissingArgument {
+            .ok_or(DslError::MissingArgument {
                 position: self.initial_arg_count - self.args.len(),
                 name: type_name,
             })
     }
 
 
-    fn wrong_type_error<T>(&self, expected: &'static str) -> Result<T, ScriptError>  {
-        Err(ScriptError::WrongArgumentType {
+    fn wrong_type_error<T>(&self, expected: &'static str) -> Result<T, DslError>  {
+        Err(DslError::WrongArgumentType {
             position: self.initial_arg_count - self.args.len() - 1,
             expected,
         })
     }
 }
 
-// Helper function to get type names for error messages
-pub(super) fn type_name_of(expr: &Expr) -> &'static str {
-    match expr {
-        Expr::Duration(_) => "duration",
-        Expr::Timer(_)    => "timer",
-        Expr::U32(_)      => "u32",
-        Expr::F32(_)      => "f32",
-        Expr::String(_)   => "string",
-        Expr::Color(_)    => "color",
-        Expr::Style(_)    => "style",
-        Expr::Motion(_)   => "motion",
-        Expr::Margin(_)   => "margin",
-        Expr::Rect(_)     => "rect",
-        Expr::ArrayRef(_) => "array",
-        Expr::Var(_)      => "variable",
-        Expr::Fx { .. }   => "effect",
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::dsl::args::InputArgs;
-    use crate::dsl::env::ScriptEnv;
-    use crate::dsl::script::ScriptContext;
-    use crate::dsl::ScriptError;
+    use crate::dsl::arguments::InputArgs;
+    use crate::dsl::environment::DslEnv;
+    use crate::dsl::dsl::DslContext;
+    use crate::dsl::DslError;
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use ratatui::layout::{Margin, Rect};
     use ratatui::prelude::{Color, Style};
     use std::collections::VecDeque;
     use crate::dsl::expressions::Expr;
 
-    fn empty_env() -> ScriptEnv {
-        ScriptEnv::new()
+    fn empty_env() -> DslEnv {
+        DslEnv::new()
     }
 
     #[test]
     fn test_duration_parsing() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Duration(Duration::from_millis(500)),
@@ -211,7 +192,7 @@ mod tests {
 
         assert_eq!(args.duration(), Ok(Duration::from_millis(500)));
         assert_eq!(args.duration(), Ok(Duration::from_millis(1000)));
-        assert_eq!(args.duration(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.duration(), Err(DslError::MissingArgument {
             position: 2,
             name: "duration",
         }));
@@ -220,7 +201,7 @@ mod tests {
     #[test]
     fn test_effect_timer_parsing() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Timer(EffectTimer::from_ms(500, Interpolation::Linear)),
@@ -232,7 +213,7 @@ mod tests {
 
         assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(500, Interpolation::Linear)));
         assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::Linear)));
-        assert_eq!(args.effect_timer(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.effect_timer(), Err(DslError::MissingArgument {
             position: 2,
             name: "timer",
         }));
@@ -241,7 +222,7 @@ mod tests {
     #[test]
     fn test_numeric_parsing() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(42),
@@ -253,7 +234,7 @@ mod tests {
 
         assert_eq!(args.read_u32(), Ok(42));
         assert_eq!(args.read_f32(), Ok(3.14));
-        assert_eq!(args.read_u32(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.read_u32(), Err(DslError::MissingArgument {
             position: 2,
             name: "u32",
         }));
@@ -262,7 +243,7 @@ mod tests {
     #[test]
     fn test_string_parsing() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::String("hello".to_string()),
@@ -274,7 +255,7 @@ mod tests {
         );
 
         assert_eq!(args.string(), Ok("hello".to_string()));
-        assert_eq!(args.string(), Err(ScriptError::WrongArgumentType {
+        assert_eq!(args.string(), Err(DslError::WrongArgumentType {
             position: 1,
             expected: "string",
         }));
@@ -284,7 +265,7 @@ mod tests {
     #[test]
     fn test_color_parsing() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Color(Color::Red),
@@ -296,7 +277,7 @@ mod tests {
 
         assert_eq!(args.color(), Ok(Color::Red));
         assert_eq!(args.color(), Ok(Color::Blue));
-        assert_eq!(args.color(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.color(), Err(DslError::MissingArgument {
             position: 2,
             name: "color",
         }));
@@ -304,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_style_parsing() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let style = Style::default().fg(Color::Red);
         let binding = empty_env();
         let mut args = InputArgs::new(
@@ -316,7 +297,7 @@ mod tests {
         );
 
         assert_eq!(args.style(), Ok(style));
-        assert_eq!(args.style(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.style(), Err(DslError::MissingArgument {
             position: 1,
             name: "style",
         }));
@@ -325,7 +306,7 @@ mod tests {
     #[test]
     fn test_motion_parsing() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Motion(Motion::LeftToRight),
@@ -337,7 +318,7 @@ mod tests {
 
         assert_eq!(args.motion(), Ok(Motion::LeftToRight));
         assert_eq!(args.motion(), Ok(Motion::UpToDown));
-        assert_eq!(args.motion(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.motion(), Err(DslError::MissingArgument {
             position: 2,
             name: "motion",
         }));
@@ -347,7 +328,7 @@ mod tests {
     fn test_margin_parsing() {
         let margin = Margin::new(10, 20);
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Margin(margin),
@@ -357,7 +338,7 @@ mod tests {
         );
 
         assert_eq!(args.margin(), Ok(margin));
-        assert_eq!(args.margin(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.margin(), Err(DslError::MissingArgument {
             position: 1,
             name: "margin",
         }));
@@ -367,7 +348,7 @@ mod tests {
     fn test_rect_parsing() {
         let rect = Rect::new(0, 0, 100, 100);
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Rect(rect),
@@ -377,7 +358,7 @@ mod tests {
         );
 
         assert_eq!(args.rect(), Ok(rect));
-        assert_eq!(args.rect(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.rect(), Err(DslError::MissingArgument {
             position: 1,
             name: "rect",
         }));
@@ -386,7 +367,7 @@ mod tests {
     #[test]
     fn test_effect_parsing() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::Fx {
@@ -402,7 +383,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.expect_err("expected error"),
-            ScriptError::UnknownEffect {
+            DslError::UnknownEffect {
                 name: "test".to_string(),
             }
         );
@@ -411,7 +392,7 @@ mod tests {
     #[test]
     fn test_mixed_arguments() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(500),
@@ -427,7 +408,7 @@ mod tests {
         assert_eq!(args.motion(), Ok(Motion::LeftToRight));
         assert_eq!(args.color(), Ok(Color::Blue));
         assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::Linear)));
-        assert_eq!(args.read_u32(), Err(ScriptError::MissingArgument {
+        assert_eq!(args.read_u32(), Err(DslError::MissingArgument {
             position: 4,
             name: "u32",
         }));
@@ -436,7 +417,7 @@ mod tests {
     #[test]
     fn test_u16_conversion() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             vec![
                 Expr::U32(65535), // Max u16
@@ -447,7 +428,7 @@ mod tests {
         );
 
         assert_eq!(args.read_u16(), Ok(65535));
-        assert_eq!(args.read_u16(), Err(ScriptError::CastOverflow {
+        assert_eq!(args.read_u16(), Err(DslError::CastOverflow {
             position: 1,
             from: "u32",
             to: "u16",
@@ -457,10 +438,10 @@ mod tests {
     #[test]
     fn test_empty_args() {
         let binding = empty_env();
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(VecDeque::new(), &context, &binding);
 
-        let missing = |idx, name| Err(ScriptError::MissingArgument {
+        let missing = |idx, name| Err(DslError::MissingArgument {
             position: idx,
             name,
         });

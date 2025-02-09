@@ -289,15 +289,11 @@ fn interpolation<'a>() -> impl StrParser<'a, Interpolation> {
     })
 }
 
-// fn comment<'a>() -> impl StrParser<'a, ()> {
-//     right!(skip!("//"), until(skip!('\n')), skip_whitespace())
-// }
-
 #[cfg(test)]
 mod tests {
-    use crate::dsl::args::InputArgs;
-    use crate::dsl::env::ScriptEnv;
-    use crate::dsl::script::ScriptContext;
+    use crate::dsl::arguments::InputArgs;
+    use crate::dsl::environment::DslEnv;
+    use crate::dsl::dsl::DslContext;
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult};
     use ratatui::layout::{Margin, Rect};
@@ -651,8 +647,8 @@ mod tests {
         )"#;
 
         let parsed = parse(super::fx_statement(), input).result.unwrap();
-        let env = ScriptEnv::new();
-        let context = ScriptContext::new();
+        let env = DslEnv::new();
+        let context = DslContext::new();
         let mut args = InputArgs::new(
             match parsed {
                 Expr::Fx { arguments: parameters, .. } => parameters.into(),

@@ -1,36 +1,36 @@
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
-use crate::dsl::args::{type_name_of, InputArgs};
-use crate::dsl::env::ScriptEnv;
-use crate::dsl::ScriptError;
+use crate::dsl::arguments::InputArgs;
+use crate::dsl::environment::DslEnv;
+use crate::dsl::DslError;
 use crate::{Effect, EffectTimer};
 use std::any::Any;
 use crate::dsl::expressions::Expr;
-use crate::dsl::parser::parse_expr;
+use crate::dsl::parsers::parse_expr;
 
-struct EffectCompiler {
+struct Interpreter {
     name: &'static str,
-    compiler: Box<dyn Fn(&mut InputArgs) -> Result<Effect, ScriptError>>,
+    eval: Box<dyn Fn(&mut InputArgs) -> Result<Effect, DslError>>,
 }
 
 
 
-pub struct ScriptContext {
-    compilers: Vec<EffectCompiler>,
+pub struct DslContext {
+    compilers: Vec<Interpreter>,
 }
 
-impl EffectCompiler {
+impl Interpreter {
     fn new(
         name: &'static str,
-        compiler: impl Fn(&mut InputArgs) -> Result<Effect, ScriptError> + 'static
+        eval: impl Fn(&mut InputArgs) -> Result<Effect, DslError> + 'static
     ) -> Self {
         Self {
             name,
-            compiler: Box::new(compiler),
+            eval: Box::new(eval),
         }
     }
 }
 
-impl ScriptContext {
+impl DslContext {
     pub fn new() -> Self {
         register_default_compilers(Self {
             compilers: Vec::new(),
@@ -40,56 +40,56 @@ impl ScriptContext {
     pub fn register(
         self,
         name: &'static str,
-        compiler: impl Fn(&mut InputArgs) -> Result<Effect, ScriptError> + 'static
+        compiler: impl Fn(&mut InputArgs) -> Result<Effect, DslError> + 'static
     ) -> Self {
         let mut this = self;
-        this.compilers.push(EffectCompiler::new(name, compiler));
+        this.compilers.push(Interpreter::new(name, compiler));
         this
     }
 
     pub fn execute(
         &self,
-        env: ScriptEnv,
+        env: DslEnv,
         input: &str,
-    ) -> Result<Effect, ScriptError> {
+    ) -> Result<Effect, DslError> {
         parse_expr(input)
-            .ok_or_else(|| ScriptError::ParseError(input.to_string()))
+            .ok_or_else(|| DslError::ParseError(input.to_string()))
             .and_then(|expr| self.compile(&env, expr))
     }
 
     pub(super) fn compile(
         &self,
-        env: &ScriptEnv,
+        env: &DslEnv,
         input: Expr
-    ) -> Result<Effect, ScriptError> {
+    ) -> Result<Effect, DslError> {
         match input {
             Expr::Fx { name, arguments: parameters } => self.compilers
                 .iter()
                 .find(|d| d.name == name)
-                .ok_or(ScriptError::UnknownEffect { name })
+                .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = InputArgs::new(parameters.into(), &self, &env);
-                    let effect = (d.compiler)(&mut args);
+                    let effect = (d.eval)(&mut args);
 
                     match () {
                         _ if effect.is_err() => effect,
-                        _ if !args.args().is_empty() => Err(ScriptError::TooManyArguments {
+                        _ if !args.args().is_empty() => Err(DslError::TooManyArguments {
                             expected: args.original_arg_count() - args.args().len(),
                             actual: args.original_arg_count(),
                         }),
                         _ => effect,
                     }
                 }),
-            _ => Err(ScriptError::InvalidExpression {
+            _ => Err(DslError::InvalidExpression {
                 expected: "effect",
-                actual: type_name_of(&input),
+                actual: input.type_name(),
             }),
         }
     }
 }
 
 // fixme: remaining repeat(..)
-fn register_default_compilers(context: ScriptContext) -> ScriptContext {
+fn register_default_compilers(context: DslContext) -> DslContext {
     context
         .register("coalesce",       compilers::coalesce)
         .register("coalesce_from",  compilers::coalesce_from)
@@ -118,36 +118,36 @@ fn register_default_compilers(context: ScriptContext) -> ScriptContext {
 }
 
 mod compilers {
-    use crate::dsl::script::InputArgs;
-    use crate::dsl::ScriptError;
+    use crate::dsl::dsl::InputArgs;
+    use crate::dsl::DslError;
     use crate::{fx, Effect};
 
-    pub(super) fn coalesce(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn coalesce(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::coalesce(args.effect_timer()?).into()
     }
 
-    pub(super) fn coalesce_from(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn coalesce_from(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::coalesce_from(
             args.style()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_to_fg(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn fade_to_fg(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::fade_to_fg(
             args.color()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_from_fg(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn fade_from_fg(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::fade_from_fg(
             args.color()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_to(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn fade_to(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::fade_to(
             args.color()?,
             args.color()?,
@@ -155,14 +155,14 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn dissolve_to(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn dissolve_to(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::dissolve_to(
             args.style()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_from(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn fade_from(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::fade_from(
             args.color()?,
             args.color()?,
@@ -170,7 +170,7 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn sweep_out(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn sweep_out(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::sweep_out(
             args.motion()?,
             args.read_u16()?,
@@ -180,23 +180,23 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn sleep(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn sleep(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::sleep(args.effect_timer()?).into()
     }
 
-    pub(super) fn delay(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn delay(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::delay(args.effect_timer()?, args.effect()?).into()
     }
 
-    pub(super) fn prolong_start(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn prolong_start(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::prolong_start(args.effect_timer()?, args.effect()?).into()
     }
 
-    pub(super) fn prolong_end(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn prolong_end(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::prolong_end(args.effect_timer()?, args.effect()?).into()
     }
 
-    pub(super) fn sweep_in(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn sweep_in(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::sweep_in(
             args.motion()?,
             args.read_u16()?,
@@ -206,7 +206,7 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn slide_in(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn slide_in(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::slide_in(
             args.motion()?,
             args.read_u16()?,
@@ -216,7 +216,7 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn slide_out(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn slide_out(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::slide_out(
             args.motion()?,
             args.read_u16()?,
@@ -226,19 +226,19 @@ mod compilers {
         ).into()
     }
 
-    pub(super) fn with_duration(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn with_duration(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::with_duration(
             args.duration()?,
             args.effect()?
         ).into()
     }
 
-    pub(super) fn timed_never_complete(args: &mut InputArgs) -> Result<Effect, ScriptError> {
+    pub(super) fn timed_never_complete(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::timed_never_complete(args.duration()?, args.effect()?).into()
     }
 }
 
-impl From<Effect> for Result<Effect, ScriptError> {
+impl From<Effect> for Result<Effect, DslError> {
     fn from(effect: Effect) -> Self {
         Ok(effect)
     }
@@ -263,8 +263,8 @@ mod tests {
                 (1000, QuadOut)
             )"#;
 
-        let ctx = ScriptContext::new();
-        let effect = ctx.execute(ScriptEnv::new(), input)
+        let ctx = DslContext::new();
+        let effect = ctx.execute(DslEnv::new(), input)
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "sweep_in");
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn happy_path_with_bound_vars() {
-        let env = ScriptEnv::new()
+        let env = DslEnv::new()
             .bind("motion", Motion::LeftToRight)
             .bind("c", Color::from_u32(0x1d2021));
 
@@ -286,7 +286,7 @@ mod tests {
             )"#;
 
 
-        let ctx = ScriptContext::new();
+        let ctx = DslContext::new();
         let effect = ctx.execute(env, input)
             .expect("effect to be compiled");
 
@@ -298,17 +298,17 @@ mod tests {
     #[test]
     fn error_unknown_effect() {
         let input = r#"fx::nonexistent()"#;
-        let ctx = ScriptContext::new();
-        let err = ctx.execute(ScriptEnv::new(), input).unwrap_err();
-        assert!(matches!(err, ScriptError::UnknownEffect { .. }));
+        let ctx = DslContext::new();
+        let err = ctx.execute(DslEnv::new(), input).unwrap_err();
+        assert!(matches!(err, DslError::UnknownEffect { .. }));
     }
 
     #[test]
     fn error_invalid_argument() {
         let input = r#"fx::sweep_in("wrong", 10, 0, Color::from_u32(0x1d2021), 1000)"#;
-        let ctx = ScriptContext::new();
-        let err = ctx.execute(ScriptEnv::new(), input).unwrap_err();
-        assert!(matches!(err, ScriptError::WrongArgumentType {
+        let ctx = DslContext::new();
+        let err = ctx.execute(DslEnv::new(), input).unwrap_err();
+        assert!(matches!(err, DslError::WrongArgumentType {
             position: 0,
             expected: "motion"
         }), "{:?}", err);
@@ -325,15 +325,15 @@ mod tests {
                 "extra"
             )"#;
 
-        let ctx = ScriptContext::new();
-        let err = ctx.execute(ScriptEnv::new(), input).unwrap_err();
-        assert!(matches!(err, ScriptError::TooManyArguments { .. }), "{:?}", err);
+        let ctx = DslContext::new();
+        let err = ctx.execute(DslEnv::new(), input).unwrap_err();
+        assert!(matches!(err, DslError::TooManyArguments { .. }), "{:?}", err);
     }
 
     #[test]
     fn test_coalesce_compiler() {
-        let context = ScriptContext::new();
-        let env = ScriptEnv::new();
+        let context = DslContext::new();
+        let env = DslEnv::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
@@ -345,13 +345,13 @@ mod tests {
 
     #[test]
     fn test_coalesce_from_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let style = Style::default().fg(Color::Red);
         let exprs = vec![
             Expr::Style(style),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::coalesce_from(&mut args).unwrap();
         assert_eq!(effect.name(), "coalesce_from");
@@ -359,12 +359,12 @@ mod tests {
 
     #[test]
     fn test_fade_to_fg_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Color(Color::Red),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::fade_to_fg(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_to");
@@ -372,12 +372,12 @@ mod tests {
 
     #[test]
     fn test_fade_from_fg_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Color(Color::Red),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::fade_from_fg(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_from");
@@ -385,13 +385,13 @@ mod tests {
 
     #[test]
     fn test_fade_to_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Color(Color::Red),
             Expr::Color(Color::Blue),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::fade_to(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_to");
@@ -399,13 +399,13 @@ mod tests {
 
     #[test]
     fn test_dissolve_to_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let style = Style::default().fg(Color::Red);
         let exprs = vec![
             Expr::Style(style),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::dissolve_to(&mut args).unwrap();
         assert_eq!(effect.name(), "dissolve_to");
@@ -413,13 +413,13 @@ mod tests {
 
     #[test]
     fn test_fade_from_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Color(Color::Red),
             Expr::Color(Color::Blue),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::fade_from(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_from");
@@ -427,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_sweep_out_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Motion(Motion::LeftToRight),
             Expr::U32(10),
@@ -435,7 +435,7 @@ mod tests {
             Expr::Color(Color::Red),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::sweep_out(&mut args).unwrap();
         assert_eq!(effect.name(), "sweep_out");
@@ -443,11 +443,11 @@ mod tests {
 
     #[test]
     fn test_sleep_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::sleep(&mut args).unwrap();
         assert_eq!(effect.name(), "sleep");
@@ -455,7 +455,7 @@ mod tests {
 
     #[test]
     fn test_sweep_in_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Motion(Motion::LeftToRight),
             Expr::U32(10),
@@ -463,7 +463,7 @@ mod tests {
             Expr::Color(Color::Red),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::sweep_in(&mut args).unwrap();
         assert_eq!(effect.name(), "sweep_in");
@@ -471,7 +471,7 @@ mod tests {
 
     #[test]
     fn test_slide_in_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Motion(Motion::LeftToRight),
             Expr::U32(10),
@@ -479,7 +479,7 @@ mod tests {
             Expr::Color(Color::Red),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::slide_in(&mut args).unwrap();
         assert_eq!(effect.name(), "slide_in");
@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_slide_out_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Motion(Motion::LeftToRight),
             Expr::U32(10),
@@ -495,7 +495,7 @@ mod tests {
             Expr::Color(Color::Red),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::slide_out(&mut args).unwrap();
         assert_eq!(effect.name(), "slide_out");
@@ -503,7 +503,7 @@ mod tests {
 
     #[test]
     fn test_with_duration_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Duration(Duration::from_millis(1000)),
             Expr::Fx {
@@ -511,7 +511,7 @@ mod tests {
                 arguments: vec![Expr::Timer(EffectTimer::from_ms(500, Linear))]
             }
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::with_duration(&mut args).unwrap();
         assert_eq!(effect.name(), "with_duration");
@@ -519,7 +519,7 @@ mod tests {
 
     #[test]
     fn test_timed_never_complete_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Duration(Duration::from_millis(1000)),
             Expr::Fx {
@@ -527,7 +527,7 @@ mod tests {
                 arguments: vec![Expr::Timer(EffectTimer::from_ms(500, Linear))]
             }
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::timed_never_complete(&mut args).unwrap();
         assert_eq!(effect.name(), "with_duration");
@@ -535,7 +535,7 @@ mod tests {
 
     #[test]
     fn test_delay_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear)),
             Expr::Fx {
@@ -543,7 +543,7 @@ mod tests {
                 arguments: vec![Expr::Timer(EffectTimer::from_ms(500, Linear))]
             }
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::delay(&mut args).unwrap();
         assert_eq!(effect.name(), "sequence");
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_prolong_start_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear)),
             Expr::Fx {
@@ -559,7 +559,7 @@ mod tests {
                 arguments: vec![Expr::Timer(EffectTimer::from_ms(500, Linear))]
             }
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::prolong_start(&mut args).unwrap();
         assert_eq!(effect.name(), "prolong_start");
@@ -567,7 +567,7 @@ mod tests {
 
     #[test]
     fn test_prolong_end_compiler() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::Timer(EffectTimer::from_ms(500, Linear)),
             Expr::Fx {
@@ -575,7 +575,7 @@ mod tests {
                 arguments: vec![Expr::Timer(EffectTimer::from_ms(500, Linear))]
             }
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         let effect = compilers::prolong_end(&mut args).unwrap();
         assert_eq!(effect.name(), "prolong_end");
@@ -584,21 +584,21 @@ mod tests {
     // Error cases
     #[test]
     fn test_compiler_missing_arguments() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         assert!(compilers::fade_to_fg(&mut args).is_err());
     }
 
     #[test]
     fn test_compiler_wrong_argument_type() {
-        let context = ScriptContext::new();
+        let context = DslContext::new();
         let exprs = vec![
             Expr::String("wrong".to_string()),
             Expr::Timer(EffectTimer::from_ms(500, Linear))
         ];
-        let env = ScriptEnv::new();
+        let env = DslEnv::new();
         let mut args = InputArgs::new(VecDeque::from(exprs), &context, &env);
         assert!(compilers::fade_to_fg(&mut args).is_err());
     }

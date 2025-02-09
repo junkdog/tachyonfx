@@ -1,11 +1,11 @@
-mod parser;
-mod script;
-mod args;
-mod env;
+mod parsers;
+mod dsl;
+mod arguments;
+mod environment;
 mod expressions;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
-pub enum ScriptError {
+pub enum DslError {
     #[error("Failed to parse dsl: {0}")]
     ParseError(String),
 
