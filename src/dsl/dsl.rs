@@ -108,7 +108,6 @@ impl DslInterpreter<'_> {
     }
 }
 
-// fixme: remaining repeat(..)
 fn register_default_interpreters(effect_dsl: EffectDsl) -> EffectDsl {
     effect_dsl
         .register("coalesce",       interpreters::coalesce)
@@ -125,6 +124,7 @@ fn register_default_interpreters(effect_dsl: EffectDsl) -> EffectDsl {
         .register("ping_pong",      |args| ping_pong(args.effect()?).into())
         .register("prolong_end",    interpreters::prolong_end)
         .register("prolong_start",  interpreters::prolong_start)
+        .register("repeat",         interpreters::repeat)
         .register("repeating",      |args| repeating(args.effect()?).into())
         .register("slide_in",       interpreters::slide_in)
         .register("slide_out",      interpreters::slide_out)
@@ -221,6 +221,10 @@ mod interpreters {
     pub(super) fn prolong_end(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::prolong_end(args.effect_timer()?, args.effect()?).into()
     }
+    
+    pub(super) fn repeat(args: &mut InputArgs) -> Result<Effect, DslError> {
+        fx::repeat(args.effect()?, args.repeat_mode()?).into()
+    }
 
     pub(super) fn sweep_in(args: &mut InputArgs) -> Result<Effect, DslError> {
         fx::sweep_in(
@@ -277,10 +281,12 @@ mod tests {
     use std::collections::VecDeque;
     use super::*;
     use crate::Interpolation::QuadOut;
-    use crate::{Duration, EffectTimer, Interpolation, Motion, Shader};
+    use crate::{fx, Duration, EffectTimer, Interpolation, Motion, Shader};
     use ratatui::style::{Color, Style};
     use Interpolation::Linear;
+    use crate::dsl::dsl::interpreters::sweep_in;
     use crate::dsl::expressions::Value;
+    use crate::fx::RepeatMode;
 
     #[test]
     fn happy_path_no_bound_vars() {
@@ -302,6 +308,14 @@ mod tests {
 
     #[test]
     fn happy_path_with_bound_vars() {
+        let expected = fx::sweep_in(
+            Motion::LeftToRight,
+            10,
+            0,
+            Color::from_u32(0x1d2021),
+            EffectTimer::from_ms(1000, QuadOut)
+        );
+
         let input = r#"fx::sweep_in(
                 motion,
                 10,
@@ -311,16 +325,16 @@ mod tests {
             )"#;
 
 
-        let ctx = EffectDsl::new();
-        let effect = ctx.interpreter()
+        let dsl = EffectDsl::new();
+        let effect = dsl.interpreter()
             .bind("motion", Motion::LeftToRight)
             .bind("c", Color::from_u32(0x1d2021))
             .eval(input)
             .expect("effect to be compiled");
 
+
         assert_eq!(effect.name(), "sweep_in");
-        assert_eq!(effect.timer(), Some(EffectTimer::from_ms(1000, QuadOut)));
-        println!("{:?}", effect);
+        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
     }
 
     #[test]
@@ -359,7 +373,7 @@ mod tests {
     }
 
     #[test]
-    fn test_coalesce_compiler() {
+    fn test_coalesce_interpreter() {
         let dsl = EffectDsl::new();
         let env = DslEnv::new();
         let exprs = vec![
@@ -372,7 +386,7 @@ mod tests {
     }
 
     #[test]
-    fn test_coalesce_from_compiler() {
+    fn test_coalesce_from_interpreter() {
         let dsl = EffectDsl::new();
         let style = Style::default().fg(Color::Red);
         let exprs = vec![
@@ -386,7 +400,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fade_to_fg_compiler() {
+    fn test_fade_to_fg_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Color(Color::Red)),
@@ -399,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fade_from_fg_compiler() {
+    fn test_fade_from_fg_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Color(Color::Red)),
@@ -412,7 +426,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fade_to_compiler() {
+    fn test_fade_to_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Color(Color::Red)),
@@ -426,7 +440,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dissolve_to_compiler() {
+    fn test_dissolve_to_interpreter() {
         let dsl = EffectDsl::new();
         let style = Style::default().fg(Color::Red);
         let exprs = vec![
@@ -440,7 +454,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fade_from_compiler() {
+    fn test_fade_from_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Color(Color::Red)),
@@ -454,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sweep_out_compiler() {
+    fn test_sweep_out_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Motion(Motion::LeftToRight)),
@@ -470,7 +484,23 @@ mod tests {
     }
 
     #[test]
-    fn test_sleep_compiler() {
+    fn test_repeat_interpreter() {
+        let dsl = EffectDsl::new();
+        let exprs = vec![
+            Expr::Fx {
+                name: "dissolve".to_string(),
+                arguments: vec![Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))]
+            },
+            Expr::Literal(Value::RepeatMode(RepeatMode::Times(3)))
+        ];
+        let env = DslEnv::new();
+        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let effect = interpreters::repeat(&mut args).unwrap();
+        assert_eq!(effect.name(), "repeat");
+    }
+
+    #[test]
+    fn test_sleep_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
@@ -480,9 +510,9 @@ mod tests {
         let effect = interpreters::sleep(&mut args).unwrap();
         assert_eq!(effect.name(), "sleep");
     }
-
+    
     #[test]
-    fn test_sweep_in_compiler() {
+    fn test_sweep_in_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Motion(Motion::LeftToRight)),
@@ -498,7 +528,7 @@ mod tests {
     }
 
     #[test]
-    fn test_slide_in_compiler() {
+    fn test_slide_in_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Motion(Motion::LeftToRight)),
@@ -514,7 +544,7 @@ mod tests {
     }
 
     #[test]
-    fn test_slide_out_compiler() {
+    fn test_slide_out_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Motion(Motion::LeftToRight)),
@@ -530,7 +560,7 @@ mod tests {
     }
 
     #[test]
-    fn test_with_duration_compiler() {
+    fn test_with_duration_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Duration(Duration::from_millis(1000))),
@@ -546,7 +576,7 @@ mod tests {
     }
 
     #[test]
-    fn test_timed_never_complete_compiler() {
+    fn test_timed_never_complete_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Duration(Duration::from_millis(1000))),
@@ -562,7 +592,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delay_compiler() {
+    fn test_delay_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear))),
@@ -578,7 +608,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prolong_start_compiler() {
+    fn test_prolong_start_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear))),
@@ -594,7 +624,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prolong_end_compiler() {
+    fn test_prolong_end_interpreter() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear))),
@@ -611,7 +641,7 @@ mod tests {
 
     // Error cases
     #[test]
-    fn test_compiler_missing_arguments() {
+    fn test_interpreter_missing_arguments() {
         let dsl = EffectDsl::new();
         let exprs = vec![];
         let env = DslEnv::new();
@@ -620,7 +650,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compiler_wrong_argument_type() {
+    fn test_interpreter_wrong_argument_type() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::String("wrong".to_string())),
