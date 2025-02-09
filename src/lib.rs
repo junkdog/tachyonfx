@@ -25,7 +25,7 @@ mod duration;
 mod features;
 
 #[cfg(feature = "scripting")]
-mod script;
+mod dsl;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;

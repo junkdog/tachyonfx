@@ -1,10 +1,11 @@
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
-use crate::script::args::{type_name_of, InputArgs};
-use crate::script::env::ScriptEnv;
-use crate::script::parser::{parse_expr, Expr};
-use crate::script::ScriptError;
+use crate::dsl::args::{type_name_of, InputArgs};
+use crate::dsl::env::ScriptEnv;
+use crate::dsl::ScriptError;
 use crate::{Effect, EffectTimer};
 use std::any::Any;
+use crate::dsl::expressions::Expr;
+use crate::dsl::parser::parse_expr;
 
 struct EffectCompiler {
     name: &'static str,
@@ -117,8 +118,8 @@ fn register_default_compilers(context: ScriptContext) -> ScriptContext {
 }
 
 mod compilers {
-    use crate::script::script::InputArgs;
-    use crate::script::ScriptError;
+    use crate::dsl::script::InputArgs;
+    use crate::dsl::ScriptError;
     use crate::{fx, Effect};
 
     pub(super) fn coalesce(args: &mut InputArgs) -> Result<Effect, ScriptError> {

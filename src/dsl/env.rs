@@ -1,6 +1,6 @@
 use std::any::{type_name, Any};
 use std::collections::BTreeMap;
-use crate::script::ScriptError;
+use crate::dsl::ScriptError;
 
 pub struct ScriptEnv {
     bound_variables: BTreeMap<String, Box<dyn Any>>,

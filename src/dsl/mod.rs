@@ -2,10 +2,11 @@ mod parser;
 mod script;
 mod args;
 mod env;
+mod expressions;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum ScriptError {
-    #[error("Failed to parse script: {0}")]
+    #[error("Failed to parse dsl: {0}")]
     ParseError(String),
 
     #[error("Compiler not found for effect '{name}'")]
