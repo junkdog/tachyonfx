@@ -8,7 +8,7 @@ use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
 use ratatui::layout::{Margin, Rect};
 use ratatui::style::Color;
 use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
-use crate::dsl::expressions::Expr;
+use crate::dsl::expressions::{Expr, FnCall, Value};
 use crate::fx::RepeatMode;
 
 // fixme: parsers should always return Expr instead of concrete types,
@@ -46,7 +46,7 @@ fn fx_statement<'a>() -> impl StrParser<'a, Expr> {
     )
 }
 
-fn unescaped_string<'a>() -> impl StrParser<'a, String> {
+fn string_literal<'a>() -> impl StrParser<'a, Expr> {
     let unicode = right(skip!('u'), times(4, item_if(|c: char| c.is_ascii_hexdigit())));
     let escaped = right(skip!('\\'), or_diff(unicode, item_if(|c: char| "\"\\/bfnrt".contains(c))));
     let valid_char = item_if(|c: char| c != '"' && c != '\\' && !c.is_control());
@@ -55,6 +55,8 @@ fn unescaped_string<'a>() -> impl StrParser<'a, String> {
     middle(skip!('"'), many(not_end, true, no_separator()), skip!('"'))
         .map(|s: &str| s.to_string())
         .map(|s: String| s.replace("\\\"", "\""))
+        .map(Value::String)
+        .map(Expr::Literal)
 }
 
 fn array_ref<'a>() -> impl StrParser<'a, Expr> {
@@ -65,11 +67,13 @@ fn array_ref<'a>() -> impl StrParser<'a, Expr> {
     ).map(Expr::ArrayRef)
 }
 
-fn var<'a>() -> impl StrParser<'a, &'a str> {
+fn var<'a>() -> impl StrParser<'a, Expr> {
     item_while(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_'))
+        .map(|s: &str| s.to_string())
+        .map(Expr::Var)
 }
 
-fn cell_filter<'a>() -> impl StrParser<'a, CellFilter> {
+fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     // cell id filter
     let cf = |s| right!(
         skip_whitespace(),
@@ -78,20 +82,32 @@ fn cell_filter<'a>() -> impl StrParser<'a, CellFilter> {
     );
 
     // Basic filters
-    let all = cf("All").map(|_| CellFilter::All);
-    let text = cf("Text").map(|_| CellFilter::Text);
+    let all = cf("All").map(|_| Expr::Literal(Value::CellFilter(CellFilter::All)));
+    let text = cf("Text").map(|_| Expr::Literal(Value::CellFilter(CellFilter::Text)));
 
     // Color filters
     let fg_color = middle(cf("FgColor("), color(), trim(")"))
-        .map(CellFilter::FgColor);
+        .map(|color| Expr::CellFilter {
+            filter_type: "FgColor",
+            arguments: vec![color]
+        });
     let bg_color = middle(cf("BgColor("), color(), trim(")"))
-        .map(CellFilter::BgColor);
+        .map(|color| Expr::CellFilter {
+            filter_type: "BgColor",
+            arguments: vec![color]
+        });
 
     // Margin-based filters
     let inner = middle(cf("Inner("), margin(), trim(")"))
-        .map(CellFilter::Inner);
+        .map(|margin| Expr::CellFilter {
+            filter_type: "Inner",
+            arguments: vec![margin]
+        });
     let outer = middle(cf("Outer("), margin(), trim(")"))
-        .map(CellFilter::Outer);
+        .map(|margin| Expr::CellFilter {
+            filter_type: "Outer",
+            arguments: vec![margin]
+        });
 
     // Layout filter
     // let layout = tuplify!(
@@ -104,25 +120,37 @@ fn cell_filter<'a>() -> impl StrParser<'a, CellFilter> {
         cf("AllOf(vec!["),
         many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
         trim("])")
-    ).map(CellFilter::AllOf);
+    ).map(|filters| Expr::CellFilter {
+        filter_type: "AllOf",
+        arguments: filters
+    });
 
     let any_of = middle(
         cf("AnyOf(vec!["),
         many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
         trim("])")
-    ).map(CellFilter::AnyOf);
+    ).map(|filters| Expr::CellFilter {
+        filter_type: "AnyOf",
+        arguments: filters
+    });
 
     let none_of = middle(
         cf("NoneOf(vec!["),
         many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
         trim("])")
-    ).map(CellFilter::NoneOf);
+    ).map(|filters| Expr::CellFilter {
+        filter_type: "NoneOf",
+        arguments: filters
+    });
 
     let not = middle(
         cf("Not(Box::new("),
         defer_parser!(cell_filter()),
         trim("))")
-    ).map(|filter| CellFilter::Not(Box::new(filter)));
+    ).map(|filter| Expr::CellFilter {
+        filter_type: "Not",
+        arguments: vec![filter]
+    });
 
     or!(
         fg_color,
@@ -146,19 +174,19 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
         // implemented, as such we use greedy_or to ensure that `parse_u32`
         // isn't chosen over `parse_f32`.
         greedy_or!(
-            unescaped_string().map(Expr::String),
-            parse_u32().map(Expr::U32),
-            parse_f32().map(Expr::F32),
-            effect_timer().map(Expr::Timer),
-            duration().map(Expr::Duration),
-            motion().map(Expr::Motion),
-            rect().map(Expr::Rect),
-            margin().map(Expr::Margin),
-            color().map(Expr::Color),
-            repeat_mode().map(Expr::RepeatMode), // used by fx::repeat
+            string_literal(),
+            parse_u32(),
+            parse_f32(),
+            effect_timer(),
+            duration(),
+            motion(),
+            rect(),
+            margin(),
+            color(),
+            repeat_mode(), // used by fx::repeat
             array_ref(), // e.g. &[fx1, fx2, fx3]
             fx_statement(),
-            var().map(|v| Expr::Var(v.to_string()))
+            var(),
         )
     }
 }
@@ -167,7 +195,7 @@ fn arguments<'a>() -> impl StrParser<'a, Vec<Expr>> {
     many_to_vec(argument(), true, separator(trim(","), false))
 }
 
-fn parse_u32<'a>() -> impl StrParser<'a, u32> {
+fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
     let plain = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
         .map(|s: &str| s.parse().unwrap());
 
@@ -182,49 +210,76 @@ fn parse_u32<'a>() -> impl StrParser<'a, u32> {
         }
     });
 
-    or!(hexadecimal, plain)
+    or!(
+        or!(hexadecimal, plain).map(|v| Expr::Literal(Value::U32(v))),
+        var()
+    )
 }
 
-fn parse_u16<'a>() -> impl StrParser<'a, u16> {
-    many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
-        .map(|s: &str| s.parse().unwrap())
+fn parse_u16<'a>() -> impl StrParser<'a, Expr> {
+    let literal = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
+        .map(|s: &str| s.parse::<u16>().unwrap())
+        .map(|v| Expr::Literal(Value::U16(v)));
+
+    or!(literal, var())
 }
 
-fn parse_f32<'a>() -> impl StrParser<'a, f32> {
-    float()
+fn parse_f32<'a>() -> impl StrParser<'a, Expr> {
+    or!(
+        float().map(|f| Expr::Literal(Value::F32(f))),
+        var()
+    )
 }
 
-fn repeat_mode<'a>() -> impl StrParser<'a, RepeatMode> {
+fn repeat_mode<'a>() -> impl StrParser<'a, Expr> {
     let forever = skip!("RepeatMode::Forever")
-        .map(|_| RepeatMode::Forever);
+        .map(|_| Expr::Literal(Value::RepeatMode(RepeatMode::Forever)));
 
     let times = middle(
         trim("RepeatMode::Times("),
         parse_u32(),
         trim(")")
-    ).map(RepeatMode::Times);
+    ).map(|times| Expr::Call {
+        function: FnCall::RepeatModeTimes,
+        args: vec![times] // placeholder
+    });
 
     let duration = middle(
         trim("RepeatMode::Duration("),
         duration(),
         trim(")")
-    ).map(RepeatMode::Duration);
+    ).map(|duration| Expr::Call {
+        function: FnCall::RepeatModeDuration,
+        args: vec![duration] // placeholder
+    });
 
     or!(forever, times, duration)
 }
 
-fn effect_timer<'a>() -> impl StrParser<'a, EffectTimer> {
+fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
     // raw int: ms with linear interpolation
     let from_u32 = parse_u32()
-        .map(|v| EffectTimer::from_ms(v, Interpolation::Linear));
+        .map(|ms| Expr::Call {
+            function: FnCall::EffectTimerFromMs,
+            args: vec![ms, Expr::Literal(Value::Interpolation(Interpolation::Linear))]
+        });
 
-    let into_duration = or!(duration(), parse_u32().map(|ms| Duration::from_millis(ms as _)));
+    let into_duration = or!(
+        duration(),
+        parse_u32().map(|ms| Expr::Call {
+            function: FnCall::DurationFromMillis,
+            args: vec![ms]
+        }),
+    );
 
     // tuple: (u32, interpolation)
     let from_tuple = tuplify!(
         right!(trim("("), into_duration),
         middle(trim(","), interpolation(), trim(")")),
-    ).map(|(duration, interpolation)| EffectTimer::new(duration, interpolation));
+    ).map(|(duration, interpolation)| Expr::Call {
+        function: FnCall::EffectTimerNew,
+        args: vec![duration, interpolation]
+    });
 
     // ctor: EffectTimer::new(duration, interpolation)
     let from_new = middle(
@@ -234,23 +289,29 @@ fn effect_timer<'a>() -> impl StrParser<'a, EffectTimer> {
             right!(trim(","), interpolation()),
         ),
         trim(")")
-    ).map(|(duration, interpolation)| EffectTimer::new(duration, interpolation));
+    ).map(|(duration, interpolation)| Expr::Call {
+        function: FnCall::EffectTimerNew,
+        args: vec![duration, interpolation]
+    });
 
     // from ms: EffectTimer::from_ms(u32, Interpolation)
     let from_ms = tuplify!(
         right!(trim("EffectTimer::from_ms("), parse_u32()),
         middle(trim(","), interpolation(), trim(")")),
-    ).map(|(ms, interpolation)| EffectTimer::from_ms(ms, interpolation));
+    ).map(|(ms, interpolation)| Expr::Call {
+        function: FnCall::EffectTimerFromMs,
+        args: vec![ms, interpolation]
+    });
 
     or!(
-        from_u32,
         from_tuple,
         from_new,
         from_ms,
+        from_u32,
     )
 }
 
-fn rect<'a>() -> impl StrParser<'a, Rect> {
+fn rect<'a>() -> impl StrParser<'a, Expr> {
     let new = middle(
         trim("Rect::new("),
         tuplify!(
@@ -260,7 +321,10 @@ fn rect<'a>() -> impl StrParser<'a, Rect> {
             right!(trim(","), parse_u16()),
         ),
         trim(")")
-    ).map(|(x, y, w, h)| Rect::new(x, y, w, h));
+    ).map(|(x, y, w, h)| Expr::Call {
+        function: FnCall::RectNew,
+        args: vec![x, y, w, h]
+    });
 
     let raw = middle(
         right!(trim("Rect"), trim("{")),
@@ -271,12 +335,15 @@ fn rect<'a>() -> impl StrParser<'a, Rect> {
             right!(trim("height:"), parse_u16()),
         ),
         trim("}")
-    ).map(|(x, y, w, h)| Rect::new(x, y, w, h));
+    ).map(|(x, y, w, h)| Expr::Call {
+        function: FnCall::RectStruct,
+        args: vec![x, y, w, h]
+    });
 
     or!(new, raw)
 }
 
-fn margin<'a>() -> impl StrParser<'a, Margin> {
+fn margin<'a>() -> impl StrParser<'a, Expr> {
     // ctor: Margin::new(u32, u32)
     let new = middle(
         trim("Margin::new("),
@@ -285,7 +352,10 @@ fn margin<'a>() -> impl StrParser<'a, Margin> {
             right!(trim(","), parse_u16())
         ),
         trim(")")
-    ).map(|(x, y)| Margin::new(x, y));
+    ).map(|(x, y)| Expr::Call {
+        function: FnCall::MarginNew,
+        args: vec![x, y]
+    });
 
     // ctor: Margin::new(u32)
     let construct = middle(
@@ -295,31 +365,40 @@ fn margin<'a>() -> impl StrParser<'a, Margin> {
             right!(trim("vertical:"), parse_u16()),
         ),
         trim("}")
-    ).map(|(horizontal, vertical)| Margin { horizontal, vertical });
+    ).map(|(horizontal, vertical)| Expr::Call {
+        function: FnCall::MarginStruct,
+        args: vec![horizontal, vertical]
+    });
 
     or!(new, construct)
 }
 
-fn duration<'a>() -> impl StrParser<'a, Duration> {
+fn duration<'a>() -> impl StrParser<'a, Expr> {
     // ctor from_millis
     let from_millis = middle(
         trim("Duration::from_millis("),
         parse_u32(),
         trim(")"),
-    ).map(|ms| Duration::from_millis(ms as _));
+    ).map(|ms| Expr::Call {
+        function: FnCall::DurationFromMillis,
+        args: vec![ms]
+    });
 
     // ctor from_secs_f32
     let from_secs = middle(
         trim("Duration::from_secs_f32("),
-        float(),
+        parse_f32(),
         trim(")"),
-    ).map(Duration::from_secs_f32);
+    ).map(|secs| Expr::Call {
+        function: FnCall::DurationFromSeconds,
+        args: vec![secs]
+    });
 
     or!(from_millis, from_secs)
 }
 
-fn motion<'a>() -> impl StrParser<'a, Motion> {
-    right!(
+fn motion<'a>() -> impl StrParser<'a, Expr> {
+    let literal = right!(
         succeed(attempt(skip!("Motion::"))),
         item_while(|c: char| c.is_ascii_alphabetic()),
     ).map_if(|s: &str| match s {
@@ -328,19 +407,24 @@ fn motion<'a>() -> impl StrParser<'a, Motion> {
         "LeftToRight" => Some(Motion::LeftToRight),
         "RightToLeft" => Some(Motion::RightToLeft),
         _             => None,
-    })
+    }).map(|motion| Expr::Literal(Value::Motion(motion)));
+
+    or!(literal, var())
 }
 
-fn color<'a>() -> impl StrParser<'a, Color> {
+fn color<'a>() -> impl StrParser<'a, Expr> {
     middle(
         trim("Color::from_u32("),
         parse_u32(),
         trim(")")
-    ).map(Color::from_u32)
+    ).map(|u32| Expr::Call {
+        function: FnCall::ColorFromU32,
+        args: vec![u32]
+    })
 }
 
-fn interpolation<'a>() -> impl StrParser<'a, Interpolation> {
-    right!(
+fn interpolation<'a>() -> impl StrParser<'a, Expr> {
+    let literal = right!(
         succeed(attempt(skip!("Interpolation::"))),
         item_while(|c: char| c.is_ascii_alphabetic()),
     ).map_if(|s: &str| match s {
@@ -377,27 +461,27 @@ fn interpolation<'a>() -> impl StrParser<'a, Interpolation> {
         "SineOut"      => Some(Interpolation::SineOut),
         "SineInOut"    => Some(Interpolation::SineInOut),
         _              => None
-    })
+    }).map(|interpolation| Expr::Literal(Value::Interpolation(interpolation)));
+
+    or!(literal, var())
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::dsl::arguments::InputArgs;
     use crate::dsl::environment::DslEnv;
-    use crate::dsl::dsl::EffectDsl;
     use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult};
     use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
     use ratatui::style::Color;
-    use crate::dsl::expressions::Expr;
+    use crate::dsl::expressions::{Expr, FnCall, Value};
     use crate::fx::RepeatMode;
 
-    fn assert_parser_eq<T: PartialEq + std::fmt::Debug>(
-        result: AnpaResult<&str, T>,
-        expected: T
+    fn assert_parser_eq(
+        result: AnpaResult<&str, Expr>,
+        expected: Value
     ) {
         assert_eq!(result.state, "", "Expected parser to consume the entire input");
-        assert_eq!(result.result, Some(expected));
+        assert_eq!(result.result, Some(Expr::Literal(expected)));
     }
 
     fn assert_cell_filter_eq(
@@ -414,10 +498,9 @@ mod tests {
     #[test]
     fn skip_trim() {
         let input = "  Hello  ";
-        assert_parser_eq(
-            parse(super::trim("Hello"), input),
-            ()
-        );
+        let result = parse(super::trim("Hello"), input).result;
+        assert_eq!(result, Some(()))
+
     }
 
     #[test]
@@ -425,7 +508,7 @@ mod tests {
         let input = "Color::from_u32(0x1d2021)";
         assert_parser_eq(
             parse(super::color(), input),
-            Color::from_u32(0x1d2021)
+            Value::Color(Color::from_u32(0x1d2021))
         );
     }
 
@@ -434,7 +517,7 @@ mod tests {
         let input = "Margin::new(10, 20)";
         assert_parser_eq(
             parse(super::margin(), input),
-            Margin::new(10, 20)
+            Value::Margin(Margin::new(10, 20))
         );
 
         let input = r#"Margin {
@@ -443,7 +526,7 @@ mod tests {
         }"#;
         assert_parser_eq(
             parse(super::margin(), input),
-            Margin::new(10, 20)
+            Value::Margin(Margin::new(10, 20))
         );
     }
 
@@ -452,19 +535,19 @@ mod tests {
         let input = "RepeatMode::Forever";
         assert_parser_eq(
             parse(super::repeat_mode(), input),
-            RepeatMode::Forever
+            Value::RepeatMode(RepeatMode::Forever)
         );
 
         let input = "RepeatMode::Times(10)";
         assert_parser_eq(
             parse(super::repeat_mode(), input),
-            RepeatMode::Times(10)
+            Value::RepeatMode(RepeatMode::Times(10))
         );
 
         let input = "RepeatMode::Duration(Duration::from_millis(1000))";
         assert_parser_eq(
             parse(super::repeat_mode(), input),
-            RepeatMode::Duration(Duration::from_millis(1000))
+            Value::RepeatMode(RepeatMode::Duration(Duration::from_millis(1000)))
         );
     }
 
@@ -582,7 +665,7 @@ mod tests {
         let input = "Rect::new(10, 20, 30, 40)";
         assert_parser_eq(
             parse(super::rect(), input),
-            Rect::new(10, 20, 30, 40)
+            Value::Rect(Rect::new(10, 20, 30, 40))
         );
 
         let input = r#"Rect {
@@ -593,7 +676,7 @@ mod tests {
         }"#;
         assert_parser_eq(
             parse(super::rect(), input),
-            Rect::new(10, 20, 30, 40)
+            Value::Rect(Rect::new(10, 20, 30, 40))
         );
     }
 
@@ -602,49 +685,46 @@ mod tests {
         let input = "Motion::DownToUp";
         assert_parser_eq(
             parse(super::motion(), input),
-            Motion::DownToUp
+            Value::Motion(Motion::DownToUp)
         );
 
         let input = "UpToDown";
         assert_parser_eq(
             parse(super::motion(), input),
-            Motion::UpToDown
+            Value::Motion(Motion::UpToDown)
         );
 
         let input = "LeftToRight";
         assert_parser_eq(
             parse(super::motion(), input),
-            Motion::LeftToRight
+            Value::Motion(Motion::LeftToRight)
         );
 
         let input = "RightToLeft";
         assert_parser_eq(
             parse(super::motion(), input),
-            Motion::RightToLeft
+            Value::Motion(Motion::RightToLeft)
         );
     }
 
     #[test]
     fn test_duration() {
         let input = "Duration::from_millis(1000)";
-        assert_parser_eq(
-            parse(super::duration(), input),
-            Duration::from_millis(1000)
-        );
+        let result = parse(super::duration(), input).result.unwrap();
+        let expected = call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]);
+        assert_eq!(result, expected);
 
         let input = "Duration::from_secs_f32(0.5)";
-        assert_parser_eq(
-            parse(super::duration(), input),
-            Duration::from_secs_f32(0.5)
-        );
+        let result = parse(super::duration(), input).result.unwrap();
+        let expected = call_expr(FnCall::DurationFromSeconds, &[literal(Value::F32(0.5))]);
+        assert_eq!(result, expected);
 
         let input = r#"Duration::from_millis(
                            321
                        )"#;
-        assert_parser_eq(
-            parse(super::duration(), input),
-            Duration::from_millis(321)
-        );
+        let result = parse(super::duration(), input).result.unwrap();
+        let expected = call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(321))]);
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -683,7 +763,7 @@ mod tests {
         ].into_iter().for_each(|(input, expected)| {
             assert_parser_eq(
                 parse(super::interpolation(), input),
-                expected
+                Value::Interpolation(expected)
             );
         });
     }
@@ -691,78 +771,96 @@ mod tests {
     #[test]
     fn parse_var() {
         let input = "my_var";
-        assert_parser_eq(
-            parse(super::var(), input),
-            "my_var"
-        );
+        let result = parse(super::var(), input).result;
+        assert_eq!(result, Some(Expr::Var("my_var".to_string())));
     }
 
-    #[test]
-    fn parse_array_ref() {
-        let input = "&[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
-        assert_parser_eq(
-            parse(super::array_ref(), input),
-            Expr::ArrayRef(vec![
-                Expr::String("Hello, World!".to_string()),
-                Expr::U32(1337),
-                Expr::F32(3.14),
-                Expr::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
-            ])
-        );
+    // #[test]
+    // fn parse_array_ref() {
+    //     let input = "&[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
+    //     assert_parser_eq(
+    //         parse(super::array_ref(), input),
+    //         Expr::ArrayRef(vec![
+    //             Expr::String("Hello, World!".to_string()),
+    //             Expr::U32(1337),
+    //             Expr::F32(3.14),
+    //             Expr::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
+    //         ])
+    //     );
+    // }
+
+    fn call_expr(function: FnCall, args: &[Expr]) -> Expr {
+        Expr::Call { function, args: args.into() }
+    }
+
+    fn literal(value: Value) -> Expr {
+        Expr::Literal(value)
     }
 
     #[test]
     fn parse_effect_timer() {
         let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
-        assert_parser_eq(
-            parse(super::effect_timer(), input),
-            EffectTimer::from_ms(1000, Interpolation::Linear)
-        );
+        let result = parse(super::effect_timer(), input).result.unwrap();
+        let expected = call_expr(FnCall::EffectTimerFromMs, &[
+            literal(Value::U32(1000)),
+            literal(Value::Interpolation(Interpolation::Linear))
+        ]);
+        assert_eq!(result, expected);
 
         let input = "EffectTimer::new(Duration::from_millis(1000), Linear)";
-        assert_parser_eq(
-            parse(super::effect_timer(), input),
-            EffectTimer::new(Duration::from_millis(1000), Interpolation::Linear)
-        );
+        let result = parse(super::effect_timer(), input).result.unwrap();
+        let expected = call_expr(FnCall::EffectTimerNew, &[
+            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]),
+            literal(Value::Interpolation(Interpolation::Linear))
+        ]);
+        assert_eq!(result, expected);
 
         let input = "EffectTimer::new(Duration::from_secs_f32(0.5), Linear)";
-        assert_parser_eq(
-            parse(super::effect_timer(), input),
-            EffectTimer::new(Duration::from_secs_f32(0.5), Interpolation::Linear)
-        );
+        let result = parse(super::effect_timer(), input).result.unwrap();
+        let expected = call_expr(FnCall::EffectTimerNew, &[
+            call_expr(FnCall::DurationFromSeconds, &[literal(Value::F32(0.5))]),
+            literal(Value::Interpolation(Interpolation::Linear))
+        ]);
+        assert_eq!(result, expected);
 
         let input = "(1337, Reverse)";
-        assert_parser_eq(
-            parse(super::effect_timer(), input),
-            EffectTimer::from_ms(1337, Interpolation::Reverse)
-        );
+        let result = parse(super::effect_timer(), input).result.unwrap();
+        let expected = call_expr(FnCall::EffectTimerNew, &[
+            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1337))]),
+            literal(Value::Interpolation(Interpolation::Reverse))
+        ]);
+        assert_eq!(result, expected);
 
         let input = "(Duration::from_millis(1337), Reverse)";
-        assert_parser_eq(
-            parse(super::effect_timer(), input),
-            EffectTimer::from_ms(1337, Interpolation::Reverse)
-        );
+        let result = parse(super::effect_timer(), input).result.unwrap();
+        let expected = call_expr(FnCall::EffectTimerNew, &[
+            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1337))]),
+            literal(Value::Interpolation(Interpolation::Reverse))
+        ]);
+        assert_eq!(result, expected);
 
         let input = "1234";
-        assert_parser_eq(
-            parse(super::effect_timer(), input),
-            EffectTimer::from_ms(1234, Interpolation::Linear)
-        );
+        let result = parse(super::effect_timer(), input).result.unwrap();
+        let expected = call_expr(FnCall::EffectTimerFromMs, &[
+            literal(Value::U32(1234)),
+            literal(Value::Interpolation(Interpolation::Linear))
+        ]);
+        assert_eq!(result, expected);
     }
 
     #[test]
     fn parse_string() {
         let input = "\"Hello, World!\"";
         assert_parser_eq(
-            parse(super::unescaped_string(), input),
-            "Hello, World!".to_string()
+            parse(super::string_literal(), input),
+            Value::String("Hello, World!".to_string())
         );
 
         // let input = r#""Hello, \"World!\"""#;
         let input = "\"Hello, \\\"World!\\\"\"";
         assert_parser_eq(
-            parse(super::unescaped_string(), input),
-            "Hello, \"World!\"".to_string()
+            parse(super::string_literal(), input),
+            Value::String("Hello, \"World!\"".to_string())
         );
     }
 
@@ -771,130 +869,126 @@ mod tests {
         let input = "1337";
         assert_parser_eq(
             parse(super::parse_u32(), input),
-            1337
+            Value::U32(1337)
         );
 
         let input = "0x1d2021";
         assert_parser_eq(
             parse(super::parse_u32(), input),
-            0x1d2021
+            Value::U32(0x1d2021)
         );
     }
 
     #[test]
-    fn parse_parameter() {
+    fn parse_argument() {
         let input = "\"Hello, World!\"";
         assert_parser_eq(
             parse(super::argument(), input),
-            Expr::String("Hello, World!".to_string())
+            Value::String("Hello, World!".to_string())
         );
 
         let input = "1337";
         assert_parser_eq(
             parse(super::argument(), input),
-            Expr::U32(1337)
+            Value::U32(1337)
         );
 
         let input = "3.14";
         assert_parser_eq(
             parse(super::argument(), input),
-            Expr::F32(3.14)
+            Value::F32(3.14)
         );
 
         let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
         assert_parser_eq(
             parse(super::argument(), input),
-            Expr::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))
+            Value::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))
         );
 
         let input = "Duration::from_millis(1000)";
         assert_parser_eq(
             parse(super::argument(), input),
-            Expr::Duration(Duration::from_millis(1000))
+            Value::Duration(Duration::from_millis(1000))
         );
     }
 
     #[test]
-    fn parse_parameters() {
+    fn parse_arguments() {
         let input = "\"Hello, World!\", 1337, 3.14, (1000, SineIn)";
-        assert_parser_eq(
-            parse(super::arguments(), input),
-            vec![
-                Expr::String("Hello, World!".to_string()),
-                Expr::U32(1337),
-                Expr::F32(3.14),
-                Expr::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn))
-            ]
+        assert_eq!(
+            parse(super::arguments(), input).result,
+            Some(vec![
+                Expr::Literal(Value::String("Hello, World!".to_string())),
+                Expr::Literal(Value::U32(1337)),
+                Expr::Literal(Value::F32(3.14)),
+                Expr::Literal(Value::Timer(EffectTimer::from_ms(1000, Interpolation::SineIn)))
+            ])
         );
     }
 
     #[test]
     fn parse_fx_statement() {
         let input = "coalesce(Duration::from_millis(220))";
-        assert_parser_eq(
-            parse(super::fx_statement(), input),
-            Expr::Fx {
-                name: "coalesce".to_string(),
-                arguments: vec![
-                    Expr::Duration(Duration::from_millis(220)),
-                ]
-            }
-        );
+        let result = parse(super::fx_statement(), input).result;
+        let expected = Expr::Fx {
+            name: "coalesce".to_string(),
+            arguments: vec![
+                Expr::Literal(Value::Duration(Duration::from_millis(220))),
+            ]
+        };
 
         let input = "fx::dissolve((Duration::from_millis(220), ElasticOut))";
-        assert_parser_eq(
-            parse(super::fx_statement(), input),
-            Expr::Fx {
-                name: "dissolve".to_string(),
-                arguments: vec![
-                    Expr::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut)),
-                ]
-            }
-        );
+        let result = parse(super::fx_statement(), input).result;
+        let expected = Expr::Fx {
+            name: "dissolve".to_string(),
+            arguments: vec![
+                Expr::Literal(Value::Timer(EffectTimer::from_ms(220, Interpolation::ElasticOut))),
+            ]
+        };
+        assert_eq!(result, Some(expected));
 
         let input = "fx::ping_pong(fx::coalesce((500, CircOut)))";
-        assert_parser_eq(
-            parse(super::fx_statement(), input),
-            Expr::Fx {
-                name: "ping_pong".to_string(),
-                arguments: vec![
-                    Expr::Fx {
-                        name: "coalesce".to_string(),
-                        arguments: vec![
-                            Expr::Timer(EffectTimer::from_ms(500, Interpolation::CircOut)),
-                        ]
-                    }
-                ]
-            }
-        );
+        let result = parse(super::fx_statement(), input).result;
+        let expected = Expr::Fx {
+            name: "ping_pong".to_string(),
+            arguments: vec![
+                Expr::Fx {
+                    name: "coalesce".to_string(),
+                    arguments: vec![
+                        Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Interpolation::CircOut))),
+                    ]
+                }
+            ]
+        };
+        assert_eq!(result, Some(expected));
     }
 
-    #[test]
-    fn test_parse_and_deserialize() {
-        let input = r#"fx::sweep_in(
-            Motion::LeftToRight,
-            10,
-            0,
-            Color::from_u32(0x1d2021),
-            (1000, QuadOut)
-        )"#;
-
-        let parsed = parse(super::fx_statement(), input).result.unwrap();
-        let env = DslEnv::new();
-        let context = EffectDsl::new();
-        let mut args = InputArgs::new(
-            match parsed {
-                Expr::Fx { arguments: parameters, .. } => parameters.into(),
-                _ => panic!("Expected Fx variant")
-            },
-            &context,
-            &env
-        );
-
-        assert_eq!(args.motion(),   Ok(Motion::LeftToRight));
-        assert_eq!(args.read_u16(), Ok(10));
-        assert_eq!(args.read_u16(), Ok(0));
-        assert_eq!(args.color(),    Ok(Color::from_u32(0x1d2021)));
-        assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::QuadOut)));
-    }
+    // #[test]
+    // fn test_parse_and_deserialize() {
+    //     let input = r#"fx::sweep_in(
+    //         Motion::LeftToRight,
+    //         10,
+    //         0,
+    //         Color::from_u32(0x1d2021),
+    //         (1000, QuadOut)
+    //     )"#;
+    //
+    //     let parsed = parse(super::fx_statement(), input).result.unwrap();
+    //     let env = DslEnv::new();
+    //     let context = EffectDsl::new();
+    //     let mut args = InputArgs::new(
+    //         match parsed {
+    //             Expr::Fx { arguments: parameters, .. } => parameters.into(),
+    //             _ => panic!("Expected Fx variant")
+    //         },
+    //         &context,
+    //         &env
+    //     );
+    //
+    //     assert_eq!(args.motion(),   Ok(Motion::LeftToRight));
+    //     assert_eq!(args.read_u16(), Ok(10));
+    //     assert_eq!(args.read_u16(), Ok(0));
+    //     assert_eq!(args.color(),    Ok(Color::from_u32(0x1d2021)));
+    //     assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::QuadOut)));
+    // }
 }

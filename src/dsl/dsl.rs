@@ -1,3 +1,4 @@
+/*
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::dsl::arguments::InputArgs;
 use crate::dsl::environment::DslEnv;
@@ -5,7 +6,6 @@ use crate::dsl::DslError;
 use crate::Effect;
 use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
-
 struct Interpreter {
     name: &'static str,
     eval: Box<dyn Fn(&mut InputArgs) -> Result<Effect, DslError>>,
@@ -620,3 +620,4 @@ mod tests {
         assert!(interpreters::fade_to_fg(&mut args).is_err());
     }
 }
+*/

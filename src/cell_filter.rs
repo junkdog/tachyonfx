@@ -287,6 +287,27 @@ impl fmt::Debug for CellFilter {
     }
 }
 
+impl PartialEq for CellFilter {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (CellFilter::All, CellFilter::All) => true,
+            (CellFilter::FgColor(c1), CellFilter::FgColor(c2)) => c1 == c2,
+            (CellFilter::BgColor(c1), CellFilter::BgColor(c2)) => c1 == c2,
+            (CellFilter::Inner(m1), CellFilter::Inner(m2)) => m1 == m2,
+            (CellFilter::Outer(m1), CellFilter::Outer(m2)) => m1 == m2,
+            (CellFilter::Text, CellFilter::Text) => true,
+            (CellFilter::AllOf(f1), CellFilter::AllOf(f2)) => f1 == f2,
+            (CellFilter::AnyOf(f1), CellFilter::AnyOf(f2)) => f1 == f2,
+            (CellFilter::NoneOf(f1), CellFilter::NoneOf(f2)) => f1 == f2,
+            (CellFilter::Not(f1), CellFilter::Not(f2)) => f1 == f2,
+            (CellFilter::Layout(l1, i1), CellFilter::Layout(l2, i2)) => l1 == l2 && i1 == i2,
+            (CellFilter::PositionFn(_), CellFilter::PositionFn(_)) => true,
+            (CellFilter::EvalCell(_), CellFilter::EvalCell(_)) => true,
+            _ => false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use layout::Layout;

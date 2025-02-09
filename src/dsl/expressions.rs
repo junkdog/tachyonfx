@@ -1,24 +1,59 @@
+use std::cell::Cell;
+use std::fmt;
+use std::fmt::Formatter;
 use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Style};
-use crate::{Duration, EffectTimer, Motion};
+use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
 use crate::fx::RepeatMode;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum Expr {
+    Literal(Value),
+    Var(String),
+    ArrayRef(Vec<Expr>),
+    CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
+    Call {
+        function: FnCall,  // e.g. ["Duration", "from_millis"]
+        args: Vec<Expr>
+    },
+    Fx {
+        name: String,
+        arguments: Vec<Expr>
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum FnCall {
+    ColorFromU32,
+    DurationFromMillis,
+    DurationFromSeconds,
+    EffectTimerNew,
+    EffectTimerFromMs,
+    EffectTimerFromSeconds,
+    RectNew,
+    RectStruct,
+    MarginNew,
+    MarginStruct,
+    RepeatModeDuration,
+    RepeatModeTimes,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(super) enum Value {
+    CellFilter(CellFilter),
     Color(Color),
     Style(Style),
     String(String),
-    U32(u32), // can also repr EffectTimer and Duration
+    U16(u16),
+    U32(u32),
     F32(f32),
     Duration(Duration),
     Timer(EffectTimer),
     Motion(Motion),
     Rect(Rect),
     Margin(Margin),
-    ArrayRef(Vec<Expr>),
-    Var(String),
     RepeatMode(RepeatMode),
-    Fx { name: String, arguments: Vec<Expr> }
+    Interpolation(Interpolation),
 }
 
 impl Expr {
@@ -26,20 +61,52 @@ impl Expr {
     /// Used for error messages
     pub fn type_name(&self) -> &'static str {
         match self {
-            Expr::Color(_)      => "color",
-            Expr::Style(_)      => "style",
-            Expr::String(_)     => "string",
-            Expr::U32(_)        => "u32",
-            Expr::F32(_)        => "f32",
-            Expr::Duration(_)   => "duration",
-            Expr::Timer(_)      => "timer",
-            Expr::Motion(_)     => "motion",
-            Expr::Rect(_)       => "rect",
-            Expr::Margin(_)     => "margin",
-            Expr::ArrayRef(_)   => "array",
-            Expr::Var(_)        => "variable",
-            Expr::RepeatMode(_) => "repeat_mode",
-            Expr::Fx { .. }     => "effect",
+            Expr::Var(_)            => "variable",
+            Expr::Fx { .. }         => "effect",
+            Expr::Literal(_)        => "literal",
+            Expr::Call { .. }       => "function_call",
+            Expr::ArrayRef(_)       => "array_ref",
+            Expr::CellFilter { .. } => "cell_filter",
+        }
+    }
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expr::Literal(v) => write!(f, "{}", v),
+            Expr::Var(s) => write!(f, "{}", s),
+            Expr::ArrayRef(v) => write!(f, "{:?}", v),
+            Expr::CellFilter { filter_type, arguments } => {
+                write!(f, "{}({:?})", filter_type, arguments)
+            }
+            Expr::Call { function, args } => {
+                write!(f, "{:?}({:?})", function, args)
+            }
+            Expr::Fx { name, arguments } => {
+                write!(f, "{}({:?})", name, arguments)
+            }
+        }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::CellFilter(cf) => write!(f, "{:?}", cf),
+            Value::Color(c) => write!(f, "{:?}", c),
+            Value::Style(s) => write!(f, "{:?}", s),
+            Value::String(s) => write!(f, "{:?}", s),
+            Value::U16(u) => write!(f, "{:?}", u),
+            Value::U32(u) => write!(f, "{:?}", u),
+            Value::F32(v) => write!(f, "{:?}", v),
+            Value::Duration(d) => write!(f, "{:?}", d),
+            Value::Timer(t) => write!(f, "{:?}", t),
+            Value::Motion(m) => write!(f, "{:?}", m),
+            Value::Rect(r) => write!(f, "{:?}", r),
+            Value::Margin(m) => write!(f, "{:?}", m),
+            Value::RepeatMode(r) => write!(f, "{:?}", r),
+            Value::Interpolation(i) => write!(f, "{:?}", i),
         }
     }
 }
