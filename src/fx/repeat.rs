@@ -139,9 +139,8 @@ pub enum RepeatMode {
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
-    use crate::duration::duration::Duration;
     use crate::fx::{consume_tick, repeat, RepeatMode};
-    use crate::Shader;
+    use crate::{Duration, Shader};
 
     #[test]
     fn to_dsl() {

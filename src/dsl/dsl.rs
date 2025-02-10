@@ -258,7 +258,7 @@ impl DslInterpreter<'_> {
     ///
     /// ```
     /// use tachyonfx::dsl::EffectDsl;
-    /// 
+    ///
     /// let effect = EffectDsl::new()
     ///     .interpreter()
     ///     .eval("fx::dissolve(500)")
