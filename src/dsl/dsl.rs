@@ -1,12 +1,12 @@
-use std::fmt;
-use std::fmt::Formatter;
-use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
-use crate::dsl::DslError;
-use crate::{fx, Effect};
 use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
+use crate::dsl::DslError;
+use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
+use crate::{fx, Effect};
+use std::fmt;
+use std::fmt::Formatter;
 
 
 struct Interpreter {
@@ -296,15 +296,84 @@ impl fmt::Debug for Interpreter {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::VecDeque;
-    use super::*;
+    use crate::dsl::expressions::{Expr, Value};
+    use crate::fx::RepeatMode;
     use crate::Interpolation::QuadOut;
-    use crate::{fx, Duration, EffectTimer, Interpolation, Motion, Shader};
+    use crate::{fx, Duration, Effect, EffectTimer, Interpolation, Motion, Shader};
     use ratatui::style::{Color, Style};
+    use regex::Regex;
+    use std::collections::VecDeque;
     use Interpolation::Linear;
-    use crate::dsl::dsl::interpreters::sweep_in;
-    use crate::dsl::expressions::Value;
-    use crate::fx::{parallel, sequence, sleep, RepeatMode};
+    use crate::dsl::arguments::Arguments;
+    use crate::dsl::dsl::{interpreters, EffectDsl};
+    use crate::dsl::DslError;
+    use crate::dsl::environment::DslEnv;
+
+    fn assert_effect_roundtrip_eq(
+        effect: Effect,
+    ) {
+        let expr = effect
+            .to_dsl()
+            .expect("dsl expression from effect")
+            .to_string();
+
+        let dsl = EffectDsl::new();
+        let actual = dsl.interpreter()
+            .eval(&expr)
+            .expect("effect from evaluating dsl expression");
+
+        let regex = Regex::new("SimpleRng \\{ state: \\d+ }").unwrap();
+        let sanitized = |t| {
+            let debugged = format!("{:?}", t);
+            regex.replace_all(&debugged, "SimpleRng").to_string()
+        };
+
+        assert_eq!(
+            format!("{:?}", sanitized(actual)),
+            format!("{:?}", sanitized(effect)),
+        );
+    }
+
+    #[test]
+    fn test_interpreter_dsl_roundtrips() {
+        let color = Color::from_u32(0);
+
+        [
+            fx::coalesce((1000, Linear)),
+            fx::consume_tick(),
+            fx::delay((1000, Linear), fx::dissolve((1000, Linear))),
+            fx::dissolve((1000, Linear)),
+            fx::fade_from(color, color, (1000, Linear)),
+            fx::fade_from_fg(color, (1000, Linear)),
+            fx::fade_to(color, color, (1000, Linear)),
+            fx::fade_to_fg(color, (1000, Linear)),
+            fx::never_complete(fx::dissolve((1000, Linear))),
+            fx::ping_pong(fx::dissolve((1000, Linear))),
+            fx::prolong_end((1000, Linear), fx::dissolve((1000, Linear))),
+            fx::prolong_start((1000, Linear), fx::dissolve((1000, Linear))),
+            fx::repeat(fx::dissolve((1000, Linear)), RepeatMode::Forever),
+            fx::repeating(fx::dissolve((1000, Linear))),
+            fx::sleep((1000, Linear)),
+            fx::slide_in(Motion::LeftToRight, 10, 5, color, (1000, Linear)),
+            fx::slide_out(Motion::UpToDown, 10, 5, color, (1000, Linear)),
+            fx::sweep_in(Motion::LeftToRight, 10, 5, color, (1000, Linear)),
+            fx::sweep_out(Motion::UpToDown, 10, 5, color, (1000, Linear)),
+            fx::term256_colors(),
+            fx::timed_never_complete(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
+            fx::with_duration(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
+        ].into_iter()
+            .for_each(assert_effect_roundtrip_eq);
+    }
+
+    #[test]
+    fn test_interpreter_dsl_roundtrips_broken() {
+        [
+            // Style not yet supported
+            fx::coalesce_from(Style::default(), (1000, Linear)),
+            fx::dissolve_to(Style::default(), (1000, Linear)),
+        ].into_iter()
+            .for_each(assert_effect_roundtrip_eq);
+    }
 
     #[test]
     fn happy_path_no_bound_vars() {

@@ -1110,33 +1110,4 @@ mod tests {
         };
         assert_eq!(result, Some(expected));
     }
-
-    // #[test]
-    // fn test_parse_and_deserialize() {
-    //     let input = r#"fx::sweep_in(
-    //         Motion::LeftToRight,
-    //         10,
-    //         0,
-    //         Color::from_u32(0x1d2021),
-    //         (1000, QuadOut)
-    //     )"#;
-    //
-    //     let parsed = parse(super::fx_statement(), input).result.unwrap();
-    //     let env = DslEnv::new();
-    //     let context = EffectDsl::new();
-    //     let mut args = InputArgs::new(
-    //         match parsed {
-    //             Expr::Fx { arguments: parameters, .. } => parameters.into(),
-    //             _ => panic!("Expected Fx variant")
-    //         },
-    //         &context,
-    //         &env
-    //     );
-    //
-    //     assert_eq!(args.motion(),   Ok(Motion::LeftToRight));
-    //     assert_eq!(args.read_u16(), Ok(10));
-    //     assert_eq!(args.read_u16(), Ok(0));
-    //     assert_eq!(args.color(),    Ok(Color::from_u32(0x1d2021)));
-    //     assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::QuadOut)));
-    // }
 }

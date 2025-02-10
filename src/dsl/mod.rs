@@ -102,32 +102,6 @@ mod tests {
     use crate::fx::RepeatMode;
     use crate::Shader;
 
-    fn assert_effect_to_dsl_to_effect(
-        effect: Effect,
-    ) {
-        let expr = effect
-            .to_dsl()
-            .expect("dsl expression from effect")
-            .to_string();
-
-        let dsl = EffectDsl::new();
-        let actual = dsl.interpreter()
-            .eval(&expr)
-            .expect("effect from evaluating dsl expression");
-
-        // regex, replace SimpleRng { state: 3972560375 } with 'SimpleRng'
-        let regex = Regex::new("SimpleRng \\{ state: \\d+ }").unwrap();
-        let sanitized = |t| {
-            let debugged = format!("{:?}", t);
-            regex.replace_all(&debugged, "SimpleRng").to_string()
-        };
-
-        assert_eq!(
-            format!("{:?}", sanitized(actual)),
-            format!("{:?}", sanitized(effect)),
-        );
-    }
-
     #[test]
     fn to_dsl_format_complex_tree() {
         let expected = indoc! {
