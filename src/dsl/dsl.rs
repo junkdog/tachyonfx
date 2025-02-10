@@ -207,12 +207,32 @@ impl EffectDsl {
     }
 }
 
+/// An interpreter that can evaluate tachyonfx DSL expressions into concrete effects.
+///
+/// The interpreter maintains its own environment of bound variables that can be referenced
+/// in effect expressions. It uses its parent `EffectDsl` to compile the expressions.
+///
+/// ### See also:
+/// - [`EffectDsl::interpreter`](EffectDsl::interpreter) for creating a new interpreter
 pub struct DslInterpreter<'ctx> {
     dsl: &'ctx EffectDsl,
     environment: DslEnv,
 }
 
 impl DslInterpreter<'_> {
+
+    /// Binds a value to a name in the interpreter's environment.
+    ///
+    /// The bound value can then be referenced by name in DSL expressions.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name to bind the value to
+    /// * `value` - The value to bind
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining.
     pub fn bind<K, T>(mut self, name: K, value: T) -> Self
     where
         K: Into<String>,
@@ -222,6 +242,28 @@ impl DslInterpreter<'_> {
         self
     }
 
+    /// Evaluates a DSL expression string into a concrete effect.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The DSL expression to evaluate
+    ///
+    /// # Returns
+    ///
+    /// Returns either:
+    /// - `Ok(Effect)` if evaluation succeeds
+    /// - `Err(DslError)` if parsing or compilation fails
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tachyonfx::dsl::EffectDsl;
+    /// 
+    /// let effect = EffectDsl::new()
+    ///     .interpreter()
+    ///     .eval("fx::dissolve(500)")
+    ///     .unwrap();
+    /// ```
     pub fn eval(self, input: &str) -> Result<Effect, DslError> {
         parse_expr(input)
             .and_then(|expr| self.dsl.eval(&self.environment, expr))

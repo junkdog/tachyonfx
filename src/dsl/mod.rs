@@ -10,7 +10,7 @@ use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
 
 pub use dsl_format::DslFormat;
-pub use dsl::EffectDsl;
+pub use dsl::{EffectDsl, DslInterpreter};
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
