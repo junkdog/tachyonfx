@@ -9,14 +9,14 @@ use crate::dsl::expressions::{Expr, FnCall, Value};
 use crate::fx::RepeatMode;
 
 #[derive(Debug)]
-pub struct InputArgs<'a> {
+pub struct Arguments<'a> {
     args: VecDeque<Expr>,
     vars: &'a DslEnv,
     context: &'a EffectDsl,
     initial_arg_count: usize,
 }
 
-impl<'a> InputArgs<'a> {
+impl<'a> Arguments<'a> {
     pub(super) fn new(
         args: VecDeque<Expr>,
         context: &'a EffectDsl,
@@ -30,15 +30,19 @@ impl<'a> InputArgs<'a> {
         &self.args
     }
 
+    pub(super) fn args_count(&self) -> usize {
+        self.args.len()
+    }
+
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
             Expr::Call { function: FnCall::DurationFromMillis, args } => {
-                let mut inner_args = InputArgs::new(args.into(), self.context, self.vars);
+                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
                 let ms = inner_args.read_u32()?;
                 Ok(Duration::from_millis(ms as _))
             },
             Expr::Call { function: FnCall::DurationFromSeconds, args } => {
-                let mut inner_args = InputArgs::new(args.into(), self.context, self.vars);
+                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
                 let seconds = inner_args.read_f32()?;
                 Ok(Duration::from_secs_f32(seconds))
             },
@@ -56,13 +60,13 @@ impl<'a> InputArgs<'a> {
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
             Expr::Call { function: FnCall::EffectTimerFromMs, args } => {
-                let mut inner_args = InputArgs::new(args.into(), self.context, self.vars);
+                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
                 let ms = inner_args.read_u32()?;
                 let interpolation = inner_args.interpolation()?;
                 Ok(EffectTimer::from_ms(ms, interpolation))
             },
             Expr::Call { function: FnCall::EffectTimerNew, args } => {
-                let mut inner_args = InputArgs::new(args.into(), self.context, self.vars);
+                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
                 let duration = inner_args.duration()?;
                 let interpolation = inner_args.interpolation()?;
                 Ok(EffectTimer::new(duration, interpolation))
@@ -117,7 +121,9 @@ impl<'a> InputArgs<'a> {
 
     pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
-            Expr::Fx { name, arguments } => self.compile_effect(name, arguments),
+            Expr::Fx { name, arguments } => self.compile_effect(Expr::Fx { name, arguments }),
+            Expr::Sequence(effects)      => self.compile_effect(Expr::Sequence(effects)),
+            Expr::Parallel(effects)      => self.compile_effect(Expr::Parallel(effects)),
             Expr::Var(name)              => self.bound_var(name),
             _                            => self.wrong_type_error("effect"),
         }
@@ -126,7 +132,7 @@ impl<'a> InputArgs<'a> {
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
             Expr::Call { function: FnCall::ColorFromU32, args } => {
-                let mut inner_args = InputArgs::new(args.into(), self.context, self.vars);
+                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
                 inner_args
                     .read_u32()
                     .map(Color::from_u32)
@@ -204,12 +210,8 @@ impl<'a> InputArgs<'a> {
         self.initial_arg_count
     }
 
-
-    fn compile_effect(&self,
-        name: String,
-        arguments: Vec<Expr>,
-    ) -> Result<Effect, DslError> {
-        self.context.eval(self.vars, Expr::Fx { name, arguments })
+    fn compile_effect(&self, expr: Expr) -> Result<Effect, DslError> {
+        self.context.eval(self.vars, expr)
     }
 
     fn bound_var<T: Clone + 'static>(&self, name: String) -> Result<T, DslError> {
@@ -235,7 +237,7 @@ impl<'a> InputArgs<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::dsl::arguments::InputArgs;
+    use crate::dsl::arguments::Arguments;
     use crate::dsl::environment::DslEnv;
     use crate::dsl::dsl::EffectDsl;
     use crate::dsl::DslError;
@@ -253,7 +255,7 @@ mod tests {
     fn test_duration_parsing() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::Duration(Duration::from_millis(500))),
                 Expr::Literal(Value::U32(1000)),
@@ -274,7 +276,7 @@ mod tests {
     fn test_effect_timer_parsing() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Interpolation::Linear))),
                 Expr::Literal(Value::U32(1000)),
@@ -295,7 +297,7 @@ mod tests {
     fn test_numeric_parsing() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::U32(42)),
                 Expr::Literal(Value::F32(3.14)),
@@ -316,7 +318,7 @@ mod tests {
     fn test_string_parsing() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::String("hello".to_string())),
                 Expr::Literal(Value::U32(42)), // Wrong type
@@ -338,7 +340,7 @@ mod tests {
     fn test_color_parsing() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::Color(Color::Red)),
                 Expr::Literal(Value::Color(Color::Blue)),
@@ -360,7 +362,7 @@ mod tests {
         let context = EffectDsl::new();
         let style = Style::default().fg(Color::Red);
         let binding = empty_env();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::Style(style)),
             ].into(),
@@ -379,7 +381,7 @@ mod tests {
     fn test_motion_parsing() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::Motion(Motion::LeftToRight)),
                 Expr::Literal(Value::Motion(Motion::UpToDown)),
@@ -401,7 +403,7 @@ mod tests {
         let margin = Margin::new(10, 20);
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::Margin(margin)),
             ].into(),
@@ -421,7 +423,7 @@ mod tests {
         let rect = Rect::new(0, 0, 100, 100);
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::Rect(rect)),
             ].into(),
@@ -440,7 +442,7 @@ mod tests {
     fn test_effect_parsing() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Fx {
                     name: "test".to_string(),
@@ -465,7 +467,7 @@ mod tests {
     fn test_mixed_arguments() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::U32(500)),
                 Expr::Literal(Value::Motion(Motion::LeftToRight)),
@@ -490,7 +492,7 @@ mod tests {
     fn test_u16_conversion() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(
+        let mut args = Arguments::new(
             vec![
                 Expr::Literal(Value::U32(65535)), // Max u16
                 Expr::Literal(Value::U32(65536)), // Too large for u16
@@ -511,7 +513,7 @@ mod tests {
     fn test_empty_args() {
         let binding = empty_env();
         let context = EffectDsl::new();
-        let mut args = InputArgs::new(VecDeque::new(), &context, &binding);
+        let mut args = Arguments::new(VecDeque::new(), &context, &binding);
 
         let missing = |idx, name| Err(DslError::MissingArgument {
             position: idx,

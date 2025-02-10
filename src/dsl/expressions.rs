@@ -13,6 +13,8 @@ pub(super) enum Expr {
         function: FnCall,  // e.g. ["Duration", "from_millis"]
         args: Vec<Expr>
     },
+    Sequence(Vec<Expr>),
+    Parallel(Vec<Expr>),
     Fx {
         name: String,
         arguments: Vec<Expr>
@@ -63,6 +65,8 @@ impl Expr {
             Expr::Call { .. }       => "function_call",
             Expr::ArrayRef(_)       => "array_ref",
             Expr::CellFilter { .. } => "cell_filter",
+            Expr::Sequence(_)       => "sequence",
+            Expr::Parallel(_)       => "parallel",
         }
     }
 }

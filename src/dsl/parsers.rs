@@ -1,3 +1,4 @@
+use std::mem::take;
 use crate::dsl::expressions::{Expr, FnCall, Value};
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Interpolation, Motion};
@@ -7,12 +8,12 @@ use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
-use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
+use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
 
 pub(super) fn parse_expr(
     input: &str,
 ) -> Option<Expr> {
-    parse(effect(), input)
+    parse(or!(container_effect(), effect()), input)
         .result
 }
 
@@ -41,6 +42,28 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
     )
 }
 
+fn fx_name<'a>(s: &'static str) -> impl StrParser<'a, ()> {
+    right!(
+        succeed(attempt(skip!("fx::"))),
+        skip!(s),
+    )
+}
+
+fn container_effect<'a>() -> impl StrParser<'a, Expr> {
+    let effect_parser = or!(defer_parser!(container_effect()), effect());
+
+    let args = middle(
+        right!(trim("("), trim("&[")),
+        many_to_vec(effect_parser, true, separator(trim(","), true)),
+        right!(trim("]"), trim(")"))
+    );
+
+    or!(
+        right!(fx_name("sequence"), args).map(Expr::Sequence),
+        right!(fx_name("parallel"), args).map(Expr::Parallel)
+    )
+}
+
 fn string_literal<'a>() -> impl StrParser<'a, Expr> {
     let unicode = right(skip!('u'), times(4, item_if(|c: char| c.is_ascii_hexdigit())));
     let escaped = right(skip!('\\'), or_diff(unicode, item_if(|c: char| "\"\\/bfnrt".contains(c))));
@@ -63,7 +86,7 @@ fn array_ref<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn var<'a>() -> impl StrParser<'a, Expr> {
-    item_while(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_'))
+    many(item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')), false, no_separator())
         .map(|s: &str| s.to_string())
         .map(Expr::Var)
 }
@@ -180,6 +203,7 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
             color(),
             repeat_mode(), // used by fx::repeat
             array_ref(), // e.g. &[fx1, fx2, fx3]
+            container_effect(),
             effect(),
             var(),
         )
@@ -565,6 +589,39 @@ mod tests {
 
         // Test Text filter
         assert_cell_filter_eq("Text", literal(Value::CellFilter(CellFilter::Text)));
+    }
+
+    #[test]
+    fn test_sequence() {
+        let input = r#"fx::sequence(
+            &[fx::yolo("Hello"), fx::fubar("World")]
+        )"#;
+        assert_expr_eq(
+            parse(super::container_effect(), input),
+            Expr::Sequence(vec![
+                Expr::Fx { name: "yolo".to_string(), arguments: vec![
+                    literal(Value::String("Hello".to_string()))
+                ]},
+                Expr::Fx { name: "fubar".to_string(), arguments: vec![
+                    literal(Value::String("World".to_string()))
+                ]}
+            ])
+        );
+    }
+
+    #[test]
+    fn test_parallel() {
+        let input = r#"fx::parallel(&[
+            fx::foo(),
+            fx::bar()
+        ])"#;
+        assert_expr_eq(
+            parse(super::container_effect(), input),
+            Expr::Parallel(vec![
+                Expr::Fx { name: "foo".to_string(), arguments: vec![] },
+                Expr::Fx { name: "bar".to_string(), arguments: vec![] }
+            ])
+        );
     }
 
     #[test]

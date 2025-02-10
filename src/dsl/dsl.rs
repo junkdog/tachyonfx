@@ -1,17 +1,17 @@
 use std::fmt;
 use std::fmt::Formatter;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
-use crate::dsl::arguments::InputArgs;
+use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
 use crate::dsl::DslError;
-use crate::Effect;
+use crate::{fx, Effect};
 use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
 
 
 struct Interpreter {
     name: &'static str,
-    eval: Box<dyn Fn(&mut InputArgs) -> Result<Effect, DslError>>,
+    eval: Box<dyn Fn(&mut Arguments) -> Result<Effect, DslError>>,
 }
 
 #[derive(Debug)]
@@ -22,7 +22,7 @@ pub struct EffectDsl {
 impl Interpreter {
     fn new(
         name: &'static str,
-        eval: impl Fn(&mut InputArgs) -> Result<Effect, DslError> + 'static
+        eval: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static
     ) -> Self {
         Self {
             name,
@@ -41,7 +41,7 @@ impl EffectDsl {
     pub fn register(
         self,
         name: &'static str,
-        compiler: impl Fn(&mut InputArgs) -> Result<Effect, DslError> + 'static
+        compiler: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static
     ) -> Self {
         let mut this = self;
         this.compilers.push(Interpreter::new(name, compiler));
@@ -61,12 +61,12 @@ impl EffectDsl {
         input: Expr
     ) -> Result<Effect, DslError> {
         match input {
-            Expr::Fx { name, arguments: arguments } => self.compilers
+            Expr::Fx { name, arguments } => self.compilers
                 .iter()
                 .find(|d| d.name == name)
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
-                    let mut args = InputArgs::new(arguments.into(), self, env);
+                    let mut args = Arguments::new(arguments.into(), self, env);
                     let effect = (d.eval)(&mut args);
 
                     match () {
@@ -79,6 +79,22 @@ impl EffectDsl {
                         _ => effect,
                     }
                 }),
+            Expr::Sequence(exprs) => {
+                let mut args = Arguments::new(exprs.into(), self, env);
+                let effects = (0..args.args_count())
+                    .map(|_| args.effect())
+                    .collect::<Result<Vec<Effect>, DslError>>()?;
+
+                Ok(fx::sequence(&effects))
+            },
+            Expr::Parallel(exprs) => {
+                let mut args = Arguments::new(exprs.into(), self, env);
+                let effects = (0..args.args_count())
+                    .map(|_| args.effect())
+                    .collect::<Result<Vec<Effect>, DslError>>()?;
+
+                Ok(fx::parallel(&effects))
+            },
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
                 actual: input.type_name(),
@@ -126,6 +142,7 @@ fn register_default_interpreters(effect_dsl: EffectDsl) -> EffectDsl {
         .register("prolong_end",    interpreters::prolong_end)
         .register("prolong_start",  interpreters::prolong_start)
         .register("repeat",         interpreters::repeat)
+        .register("sleep",          interpreters::sleep)
         .register("repeating",      |args| repeating(args.effect()?).into())
         .register("slide_in",       interpreters::slide_in)
         .register("slide_out",      interpreters::slide_out)
@@ -145,36 +162,36 @@ impl From<Effect> for Result<Effect, DslError> {
 }
 
 mod interpreters {
-    use crate::dsl::dsl::InputArgs;
+    use crate::dsl::dsl::Arguments;
     use crate::dsl::DslError;
     use crate::{fx, Effect};
 
-    pub(super) fn coalesce(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn coalesce(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::coalesce(args.effect_timer()?).into()
     }
 
-    pub(super) fn coalesce_from(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn coalesce_from(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::coalesce_from(
             args.style()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_to_fg(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn fade_to_fg(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::fade_to_fg(
             args.color()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_from_fg(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn fade_from_fg(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::fade_from_fg(
             args.color()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_to(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn fade_to(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::fade_to(
             args.color()?,
             args.color()?,
@@ -182,14 +199,14 @@ mod interpreters {
         ).into()
     }
 
-    pub(super) fn dissolve_to(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn dissolve_to(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::dissolve_to(
             args.style()?,
             args.effect_timer()?
         ).into()
     }
 
-    pub(super) fn fade_from(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn fade_from(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::fade_from(
             args.color()?,
             args.color()?,
@@ -197,7 +214,7 @@ mod interpreters {
         ).into()
     }
 
-    pub(super) fn sweep_out(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn sweep_out(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::sweep_out(
             args.motion()?,
             args.read_u16()?,
@@ -207,27 +224,27 @@ mod interpreters {
         ).into()
     }
 
-    pub(super) fn sleep(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn sleep(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::sleep(args.effect_timer()?).into()
     }
 
-    pub(super) fn delay(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn delay(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::delay(args.effect_timer()?, args.effect()?).into()
     }
 
-    pub(super) fn prolong_start(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn prolong_start(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::prolong_start(args.effect_timer()?, args.effect()?).into()
     }
 
-    pub(super) fn prolong_end(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn prolong_end(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::prolong_end(args.effect_timer()?, args.effect()?).into()
     }
     
-    pub(super) fn repeat(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn repeat(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::repeat(args.effect()?, args.repeat_mode()?).into()
     }
 
-    pub(super) fn sweep_in(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn sweep_in(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::sweep_in(
             args.motion()?,
             args.read_u16()?,
@@ -237,7 +254,7 @@ mod interpreters {
         ).into()
     }
 
-    pub(super) fn slide_in(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn slide_in(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::slide_in(
             args.motion()?,
             args.read_u16()?,
@@ -247,7 +264,7 @@ mod interpreters {
         ).into()
     }
 
-    pub(super) fn slide_out(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn slide_out(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::slide_out(
             args.motion()?,
             args.read_u16()?,
@@ -257,14 +274,14 @@ mod interpreters {
         ).into()
     }
 
-    pub(super) fn with_duration(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn with_duration(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::with_duration(
             args.duration()?,
             args.effect()?
         ).into()
     }
 
-    pub(super) fn timed_never_complete(args: &mut InputArgs) -> Result<Effect, DslError> {
+    pub(super) fn timed_never_complete(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::timed_never_complete(args.duration()?, args.effect()?).into()
     }
 }
@@ -287,7 +304,7 @@ mod tests {
     use Interpolation::Linear;
     use crate::dsl::dsl::interpreters::sweep_in;
     use crate::dsl::expressions::Value;
-    use crate::fx::RepeatMode;
+    use crate::fx::{parallel, sequence, sleep, RepeatMode};
 
     #[test]
     fn happy_path_no_bound_vars() {
@@ -339,6 +356,26 @@ mod tests {
     }
 
     #[test]
+    fn sequence_and_parallel() {
+        let expected = fx::sequence(&[
+            fx::parallel(&[fx::consume_tick(), fx::consume_tick()]),
+            fx::sleep(100)
+        ]);
+
+        let input = r#"fx::sequence(&[
+            fx::parallel(&[fx::consume_tick(), fx::consume_tick()]),
+            fx::sleep(100)
+        ])"#;
+
+        let dsl = EffectDsl::new();
+        let effect = dsl.interpreter()
+            .eval(input)
+            .expect("effect to be compiled");
+
+        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
+    }
+
+    #[test]
     fn error_unknown_effect() {
         let input = r#"fx::nonexistent()"#;
         let ctx = EffectDsl::new();
@@ -380,7 +417,7 @@ mod tests {
         let exprs = vec![
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::coalesce(&mut args).unwrap();
         assert_eq!(effect.name(), "coalesce");
         assert_eq!(effect.timer(), Some(EffectTimer::from_ms(500, Linear).reversed()));
@@ -395,7 +432,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::coalesce_from(&mut args).unwrap();
         assert_eq!(effect.name(), "coalesce_from");
     }
@@ -408,7 +445,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::fade_to_fg(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_to");
     }
@@ -421,7 +458,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::fade_from_fg(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_from");
     }
@@ -435,7 +472,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::fade_to(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_to");
     }
@@ -449,7 +486,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::dissolve_to(&mut args).unwrap();
         assert_eq!(effect.name(), "dissolve_to");
     }
@@ -463,7 +500,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::fade_from(&mut args).unwrap();
         assert_eq!(effect.name(), "fade_from");
     }
@@ -479,7 +516,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::sweep_out(&mut args).unwrap();
         assert_eq!(effect.name(), "sweep_out");
     }
@@ -495,7 +532,7 @@ mod tests {
             Expr::Literal(Value::RepeatMode(RepeatMode::Times(3)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::repeat(&mut args).unwrap();
         assert_eq!(effect.name(), "repeat");
     }
@@ -507,7 +544,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::sleep(&mut args).unwrap();
         assert_eq!(effect.name(), "sleep");
     }
@@ -523,7 +560,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::sweep_in(&mut args).unwrap();
         assert_eq!(effect.name(), "sweep_in");
     }
@@ -539,7 +576,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::slide_in(&mut args).unwrap();
         assert_eq!(effect.name(), "slide_in");
     }
@@ -555,7 +592,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::slide_out(&mut args).unwrap();
         assert_eq!(effect.name(), "slide_out");
     }
@@ -571,7 +608,7 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::with_duration(&mut args).unwrap();
         assert_eq!(effect.name(), "with_duration");
     }
@@ -587,7 +624,7 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::timed_never_complete(&mut args).unwrap();
         assert_eq!(effect.name(), "with_duration");
     }
@@ -603,7 +640,7 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::delay(&mut args).unwrap();
         assert_eq!(effect.name(), "sequence");
     }
@@ -619,7 +656,7 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::prolong_start(&mut args).unwrap();
         assert_eq!(effect.name(), "prolong_start");
     }
@@ -635,7 +672,7 @@ mod tests {
             }
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         let effect = interpreters::prolong_end(&mut args).unwrap();
         assert_eq!(effect.name(), "prolong_end");
     }
@@ -646,7 +683,7 @@ mod tests {
         let dsl = EffectDsl::new();
         let exprs = vec![];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         assert!(interpreters::fade_to_fg(&mut args).is_err());
     }
 
@@ -658,7 +695,7 @@ mod tests {
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();
-        let mut args = InputArgs::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
         assert!(interpreters::fade_to_fg(&mut args).is_err());
     }
 }
