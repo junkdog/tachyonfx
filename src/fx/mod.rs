@@ -163,7 +163,7 @@ mod direction;
 ///        let color = fg_mapper.map(cell.fg, alpha, |c| c.lerp(&Color::Indexed(35), alpha));
 ///        cell.set_fg(color);
 ///    }
-/// }).with_cell_selection(CellFilter::FgColor(Color::DarkGray));
+/// }).filter(CellFilter::FgColor(Color::DarkGray));
 /// ```
 ///
 /// In this example, the custom effect function interpolates the foreground color of each
@@ -253,7 +253,7 @@ where
 ///         }
 ///         cell.set_fg(Color::Indexed(((offset + i) % 256) as u8));
 ///     }
-/// }).with_cell_selection(CellFilter::Text);
+/// }).filter(CellFilter::Text);
 /// ```
 ///
 /// This example creates an effect that runs for 1s and cycles the color of the
@@ -891,11 +891,11 @@ pub fn coalesce_from<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 /// ```no_run
 /// use ratatui::prelude::Color;
 /// use tachyonfx::*;
-/// 
+///
 /// let c = Color::from_u32(0x504945);
 /// let filter = CellFilter::FgColor(Color::from_u32(0xfabd2f));
 /// fx::fade_to_fg(c, (1000, Interpolation::CircOut))
-///     .with_cell_selection(filter);
+///     .filter(filter);
 /// ```
 ///
 /// Fade out blake by targeting the author fg color.
@@ -921,7 +921,7 @@ pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(
 /// let c = Color::from_u32(0x504945);
 /// let filter = CellFilter::Inner(Margin::new(1, 1));
 /// fx::fade_from_fg(c, (1000, Interpolation::QuadInOut))
-///     .with_cell_selection(filter);
+///     .filter(filter);
 /// ```
 /// Fade in content, excluding borders, from the bg color.
 pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(

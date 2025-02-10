@@ -1,4 +1,3 @@
-use std::mem::take;
 use crate::dsl::expressions::{Expr, FnCall, StyleMethod, Value};
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Interpolation, Motion};
@@ -8,9 +7,9 @@ use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
-use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
+use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
 use ratatui::prelude::Style;
-use ratatui::style::{Color, Modifier};
+use ratatui::style::Modifier;
 use crate::dsl::DslError;
 
 pub(super) fn parse_expr(

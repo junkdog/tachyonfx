@@ -42,7 +42,7 @@ impl Shader for ConsumeTick {
     }
 
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
-        Ok(EffectExpression::parse("fx::consume_tick()")?)
+        EffectExpression::parse("fx::consume_tick()")
     }
 }
 

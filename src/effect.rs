@@ -65,13 +65,19 @@ impl Effect {
     ///
     /// let color = Color::from_hsl(180.0, 85.0, 62.0);
     /// let shader = fx::fade_to_fg(color, (300, Interpolation::SineIn))
-    ///     .with_cell_selection(CellFilter::Text);
+    ///     .filter(CellFilter::Text);
     /// ```
-    pub fn with_cell_selection(&self, mode: CellFilter) -> Self {
+    pub fn filter(&self, mode: CellFilter) -> Self {
         let mut cloned = self.clone();
         cloned.set_cell_selection(mode);
         cloned
     }
+
+    #[deprecated(since = "0.11.0", note = "Use `filter` instead")]
+    pub fn with_cell_selection(&self, mode: CellFilter) -> Self {
+        self.filter(mode)
+    }
+
 
     /// Creates a new `Effect` with the shader's reverse flag toggled.
     ///

@@ -245,13 +245,13 @@ fn glitchy_window_fx<C: Into<Color>>(bg: C) -> Effect {
                 fx::coalesce((duration, BounceOut)),
             ]),
             fx::fade_from(Dark0, Dark0, duration * time_scale)
-        ]).with_cell_selection(border_decorations),
+        ]).filter(border_decorations),
 
         // window title and shortcuts
         sequence(&[
             with_duration(duration * time_scale, never_complete(fx::fade_to(Dark0, Dark0, 0))),
             fx::fade_from(Dark0, Dark0, (320 * time_scale, QuadOut)),
-        ]).with_cell_selection(border_text),
+        ]).filter(border_text),
 
         // content area
         sequence(&[
@@ -268,7 +268,7 @@ fn glitchy_window_fx<C: Into<Color>>(bg: C) -> Effect {
                 fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
                 fx::dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
             ]),
-        ]).with_cell_selection(Inner(margin)),
+        ]).filter(Inner(margin)),
     ]))
 }
 
@@ -292,7 +292,7 @@ fn stylized_window_fx() -> Effect {
                 ]),
                 fx::slide_in(Motion::UpToDown, 10, 0, Dark0, (900, QuadOut)),
             ]),
-        ]).with_cell_selection(content_area),
+        ]).filter(content_area),
     ]))
 }
 

@@ -61,7 +61,7 @@ impl Shader for Ansi256 {
     fn reset(&mut self) {}
 
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
-        Ok(EffectExpression::parse("fx::term256_colors()")?)
+        EffectExpression::parse("fx::term256_colors()")
     }
 }
 

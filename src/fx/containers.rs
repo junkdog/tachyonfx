@@ -206,7 +206,7 @@ fn to_dsl(name: &'static str, effects: &[Effect]) -> Result<EffectExpression, Ds
         .map(|dsl| dsl.map(|e| e.to_string()))
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(EffectExpression::parse(&format!("{name}(&[{}])", effects.join(", ")))?)
+    EffectExpression::parse(&format!("{name}(&[{}])", effects.join(", ")))
 }
 
 #[cfg(test)]

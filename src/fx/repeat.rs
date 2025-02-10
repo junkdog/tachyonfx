@@ -1,4 +1,3 @@
-use std::fmt::format;
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 use crate::{CellFilter, Duration, EffectTimer};
@@ -126,7 +125,7 @@ impl Shader for Repeat {
 
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
         let fx = self.fx.to_dsl()?;
-        Ok(EffectExpression::parse(&format!("repeat({fx}, {})", self.mode.dsl_format()))?)
+        EffectExpression::parse(&format!("repeat({fx}, {})", self.mode.dsl_format()))
     }
 }
 

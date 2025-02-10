@@ -112,7 +112,7 @@ impl Shader for Dissolve {
             EffectExpression::parse(&format!(
                 "{}({}, {})",
                 self.name(),
-                style.to_string(),
+                style,
                 self.timer.dsl_format(),
             ))
         }

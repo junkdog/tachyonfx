@@ -115,7 +115,7 @@ impl Shader for Prolong {
             "{}({}, {})",
             self.name(),
             self.timer.dsl_format(),
-            nested.to_string()
+            nested
         ))
     }
 }

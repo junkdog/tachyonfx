@@ -2,7 +2,6 @@ use ratatui::style::{Color, Modifier, Style};
 use crate::fx::RepeatMode;
 use crate::{Duration, EffectTimer, Interpolation, Motion};
 use crate::color_ext::ToRgbComponents;
-use crate::dsl::expressions::StyleMethod;
 
 pub trait DslFormat {
     fn dsl_format(&self) -> String;
