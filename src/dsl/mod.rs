@@ -104,14 +104,26 @@ mod tests {
     fn to_dsl_format_complex_tree() {
         let expected = indoc! {
             "fx::sequence(&[
-                fx::dissolve(100),
+                fx::dissolve(EffectTimer::from_ms(
+                    100,
+                    Linear
+                )),
                 fx::parallel(&[
-                    fx::dissolve(200),
-                    fx::dissolve(300),
+                    fx::dissolve(EffectTimer::from_ms(
+                        200,
+                        Linear
+                    )),
+                    fx::dissolve(EffectTimer::from_ms(
+                        300,
+                        Linear
+                    )),
                     fx::sleep(400)
                 ]),
                 fx::repeat(
-                    fx::dissolve(500),
+                    fx::dissolve(EffectTimer::from_ms(
+                        500,
+                        Linear
+                    )),
                     RepeatMode::Forever
                 )
             ])"

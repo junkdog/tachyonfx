@@ -116,7 +116,7 @@ impl Expr {
                 if arguments.is_empty() {
                     format!("{}fx::{}()", indent_str, name)
                 } else if arguments.len() == 1 {
-                    format!("{}fx::{}({})", indent_str, name, arguments[0].format(0))
+                    format!("{}fx::{}({})", indent_str, name, arguments[0].format(indent).trim())
                 } else {
                     let args = arguments.iter()
                         .map(|e| e.format(indent + 4))
