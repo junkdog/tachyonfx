@@ -3,6 +3,13 @@ mod dsl;
 mod arguments;
 mod environment;
 mod expressions;
+mod dsl_format;
+
+use std::fmt;
+use crate::dsl::expressions::Expr;
+use crate::dsl::parsers::parse_expr;
+
+pub use dsl_format::DslFormat;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
@@ -55,4 +62,137 @@ pub enum DslError {
         position: usize,
         expected: &'static str,
     },
+
+    #[error("{name} does not provide a to_dsl() implementation")]
+    EffectExpressionNotSupported {
+        name: &'static str,
+    },
+}
+
+pub struct EffectExpression {
+    expr: Expr,
+}
+
+
+impl EffectExpression {
+    pub fn parse(input: &str) -> Result<Self, DslError> {
+        let expr = parse_expr(input)
+            .ok_or_else(|| DslError::ParseError("failed to parse input".into()))?; // fixme: error message
+
+        Ok(Self { expr })
+    }
+}
+
+impl fmt::Display for EffectExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.expr.format(0))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use indoc::indoc;
+    use regex::Regex;
+    use crate::dsl::dsl::EffectDsl;
+    use crate::{fx, Effect};
+    use crate::fx::RepeatMode;
+    use crate::Shader;
+
+    fn assert_effect_to_dsl_to_effect(
+        effect: Effect,
+    ) {
+        let expr = effect
+            .to_dsl()
+            .expect("dsl expression from effect")
+            .to_string();
+
+        let dsl = EffectDsl::new();
+        let actual = dsl.interpreter()
+            .eval(&expr)
+            .expect("effect from evaluating dsl expression");
+
+        // regex, replace SimpleRng { state: 3972560375 } with 'SimpleRng'
+        let regex = Regex::new("SimpleRng \\{ state: \\d+ }").unwrap();
+        let sanitized = |t| {
+            let debugged = format!("{:?}", t);
+            regex.replace_all(&debugged, "SimpleRng").to_string()
+        };
+
+        assert_eq!(
+            format!("{:?}", sanitized(actual)),
+            format!("{:?}", sanitized(effect)),
+        );
+    }
+
+    #[test]
+    fn to_dsl_happy_path() {
+        assert_effect_to_dsl_to_effect(
+            fx::repeat(fx::dissolve(100), RepeatMode::Times(4))
+        );
+    }
+
+    #[test]
+    fn to_dsl_format_complex_tree() {
+        let expected = indoc! {
+            "fx::sequence(&[
+                fx::dissolve(100),
+                fx::parallel(&[
+                    fx::dissolve(200),
+                    fx::dissolve(300),
+                    fx::sleep(400)
+                ]),
+                fx::repeat(
+                    fx::dissolve(500),
+                    RepeatMode::Forever
+                )
+            ])"
+        };
+
+        let expr = fx::sequence(&[
+            fx::dissolve(100),
+            fx::parallel(&[
+                fx::dissolve(200),
+                fx::dissolve(300),
+                fx::sleep(400),
+            ]),
+            fx::repeat(fx::dissolve(500), RepeatMode::Forever),
+        ]).to_dsl().expect("dsl expression from effect");
+
+        assert_eq!(expr.to_string(), expected);
+    }
+
+    #[test]
+    fn to_dsl_sequence_and_parallel() {
+        let expected = indoc! {
+            "fx::sequence(&[
+                fx::dissolve(100),
+                fx::dissolve(200),
+                fx::sleep(300)
+            ])"
+        };
+
+        let expr = fx::sequence(&[
+            fx::dissolve(100),
+            fx::dissolve(200),
+            fx::sleep(300),
+        ]).to_dsl().expect("dsl expression from effect");
+
+        assert_eq!(format!("{}", expr), expected);
+
+        let expected = indoc! {
+            "fx::parallel(&[
+                fx::dissolve(100),
+                fx::dissolve(200),
+                fx::dissolve(300)
+            ])"
+        };
+
+        let expr = fx::parallel(&[
+            fx::dissolve(100),
+            fx::dissolve(200),
+            fx::dissolve(300),
+        ]).to_dsl().expect("dsl expression from effect");
+
+        assert_eq!(format!("{}", expr), expected);
+    }
 }

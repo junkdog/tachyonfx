@@ -173,11 +173,12 @@ impl<'a> Arguments<'a> {
 
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
-            Expr::Literal(v)  => match v {
-                Value::RepeatMode(m) => Ok(m),
-                _                    => self.wrong_type_error("repeat_mode"),
+            Expr::Literal(Value::RepeatMode(m))  => Ok(m),
+            Expr::Call { function: FnCall::RepeatModeTimes, args } => {
+                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let times = inner_args.read_u32()?;
+                Ok(RepeatMode::Times(times))
             },
-
             Expr::Var(name)     => self.bound_var(name),
             _                   => self.wrong_type_error("repeat_mode"),
         }

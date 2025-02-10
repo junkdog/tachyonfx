@@ -2,6 +2,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
 use crate::{CellFilter, Duration, Effect, EffectTimer, Shader};
+use crate::dsl::{DslError, EffectExpression};
 use crate::widget::EffectSpan;
 
 #[derive(Clone, Debug)]
@@ -87,5 +88,11 @@ impl Shader for PingPong {
     fn reset(&mut self) {
         // self.fx.reset();
         self.is_reversing = false;
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        EffectExpression::parse(&format!(
+            "fx::ping_pong({})", self.fx.to_dsl()?)
+        )
     }
 }

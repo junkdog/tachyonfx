@@ -5,6 +5,7 @@ use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::simple_rng::SimpleRng;
 use crate::{CellFilter, Duration};
+use crate::dsl::{DslError, EffectExpression};
 
 #[derive(Clone, Debug, Default)]
 pub struct Dissolve {
@@ -97,5 +98,17 @@ impl Shader for Dissolve {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        if self.dissolved_style.is_none() {
+            EffectExpression::parse(&format!(
+                "{}({})",
+                self.name(),
+                self.timer.duration().milliseconds,
+            ))
+        } else {
+            todo!("to/from for dissolved styles");
+        }
     }
 }

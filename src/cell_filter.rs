@@ -109,6 +109,41 @@ impl CellFilter {
             CellFilter::EvalCell(_)     => "eval_cell".to_string(),
         }
     }
+
+    pub(super) fn format(&self) -> String {
+        use std::borrow::Borrow;
+
+        fn to_hex(c: &Color) -> String {
+            let (r, g, b) = c.to_rgb();
+            format!("0x{:02x}{:02x}{:02x}", r, g, b)
+        }
+
+        fn format(filters: &[CellFilter]) -> String {
+            filters.iter()
+                .map(CellFilter::to_string)
+                .collect::<Vec<String>>()
+                .join(", ")
+        }
+
+        match self {
+            CellFilter::All             => "All".to_string(),
+            CellFilter::FgColor(color)  => format!("FgColor(Color::from_u32({}))", to_hex(color)),
+            CellFilter::BgColor(color)  => format!("BgColor(Color::from_u32({}))", to_hex(color)),
+            CellFilter::Inner(m)        => format!("Inner(Margin::new({}, {}))", m.horizontal, m.vertical),
+            CellFilter::Outer(m)        => format!("Outer(Margin::new({}, {}))", m.horizontal, m.vertical),
+            CellFilter::Text            => "text".to_string(),
+            CellFilter::AllOf(filters)  => format!("AllOf({})", format(filters)),
+            CellFilter::AnyOf(filters)  => format!("AnyOf({})", format(filters)),
+            CellFilter::NoneOf(filters) => format!("NoneOf({})", format(filters)),
+            CellFilter::Not(filter)     => {
+                let f: &CellFilter = filter.borrow();
+                format!("Not(Box::new({}))", f.format())
+            },
+            CellFilter::Layout(_, idx)  => format!("layout({})", idx),
+            CellFilter::PositionFn(_)   => "position_fn".to_string(),
+            CellFilter::EvalCell(_)     => "eval_cell".to_string(),
+        }
+    }
 }
 
 /// A predicate that evaluates cells based on their position and properties using a specified filter strategy.

@@ -1,7 +1,8 @@
+use std::fmt::format;
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 use crate::{CellFilter, Duration, EffectTimer};
-
+use crate::dsl::{DslError, DslFormat, EffectExpression};
 use crate::effect::Effect;
 use crate::widget::EffectSpan;
 use crate::shader::Shader;
@@ -121,6 +122,11 @@ impl Shader for Repeat {
     fn reset(&mut self) {
         self.fx.reset();
         self.mode = self.original_mode;
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        let fx = self.fx.to_dsl()?;
+        Ok(EffectExpression::parse(&format!("repeat({fx}, {})", self.mode.dsl_format()))?)
     }
 }
 

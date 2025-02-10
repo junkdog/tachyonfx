@@ -2,6 +2,7 @@ use ratatui::layout::Rect;
 use crate::Duration;
 
 use crate::CellFilter;
+use crate::dsl::{DslError, EffectExpression};
 use crate::effect_timer::EffectTimer;
 use crate::widget::EffectSpan;
 use crate::shader::Shader;
@@ -52,6 +53,10 @@ impl Shader for Sleep {
 
     fn reset(&mut self) {
         self.timer.reset();
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        EffectExpression::parse(&format!("fx::sleep({})", self.timer.duration().as_millis()))
     }
 }
 

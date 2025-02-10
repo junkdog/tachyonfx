@@ -5,6 +5,7 @@ use ratatui::layout::Rect;
 
 use crate::widget::EffectSpan;
 use crate::{CellFilter, Duration, ThreadSafetyMarker};
+use crate::dsl::{DslError, EffectExpression};
 use crate::EffectTimer;
 
 
@@ -197,5 +198,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         EffectSpan::new(self, offset, Vec::default())
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        todo!("yolo")
     }
 }

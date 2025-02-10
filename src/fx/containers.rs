@@ -1,6 +1,7 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Rect};
 use crate::{CellFilter, Duration, EffectTimer};
+use crate::dsl::{DslError, EffectExpression};
 use crate::effect::Effect;
 use crate::widget::EffectSpan;
 use crate::Interpolation::Linear;
@@ -102,6 +103,10 @@ impl Shader for ParallelEffect {
 
         EffectSpan::new(self, offset, children)
     }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        to_dsl(self.name(), &self.effects)
+    }
 }
 
 impl Shader for SequentialEffect {
@@ -189,5 +194,17 @@ impl Shader for SequentialEffect {
 
         EffectSpan::new(self, offset, children)
     }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        to_dsl(self.name(), &self.effects)
+    }
 }
 
+fn to_dsl(name: &'static str, effects: &[Effect]) -> Result<EffectExpression, DslError> {
+    let effects = effects.iter()
+        .map(|e| e.to_dsl())
+        .map(|dsl| dsl.map(|e| e.to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(EffectExpression::parse(&format!("{name}(&[{}])", effects.join(", ")))?)
+}

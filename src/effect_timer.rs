@@ -196,6 +196,10 @@ impl EffectTimer {
     pub fn done(&self) -> bool {
         self.remaining.is_zero()
     }
+
+    pub(super) fn interpolation(&self) -> Interpolation {
+        self.interpolation
+    }
 }
 
 impl From<u32> for EffectTimer {
