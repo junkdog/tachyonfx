@@ -100,8 +100,7 @@ impl IntoTemporaryEffect for Effect {
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
-    use crate::duration::duration::Duration;
-    use crate::{fx, Shader};
+    use crate::{fx, Duration, Shader};
 
     #[test]
     fn to_dsl() {
