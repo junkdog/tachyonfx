@@ -303,6 +303,7 @@ mod tests {
     use ratatui::style::{Color, Style};
     use regex::Regex;
     use std::collections::VecDeque;
+    use ratatui::prelude::Modifier;
     use Interpolation::Linear;
     use crate::dsl::arguments::Arguments;
     use crate::dsl::dsl::{interpreters, EffectDsl};
@@ -340,9 +341,11 @@ mod tests {
 
         [
             fx::coalesce((1000, Linear)),
+            fx::coalesce_from(Style::default(), (1000, Linear)),
             fx::consume_tick(),
             fx::delay((1000, Linear), fx::dissolve((1000, Linear))),
             fx::dissolve((1000, Linear)),
+            fx::dissolve_to(Style::default(), (1000, Linear)),
             fx::fade_from(color, color, (1000, Linear)),
             fx::fade_from_fg(color, (1000, Linear)),
             fx::fade_to(color, color, (1000, Linear)),
@@ -361,16 +364,6 @@ mod tests {
             fx::term256_colors(),
             fx::timed_never_complete(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
             fx::with_duration(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
-        ].into_iter()
-            .for_each(assert_effect_roundtrip_eq);
-    }
-
-    #[test]
-    fn test_interpreter_dsl_roundtrips_broken() {
-        [
-            // Style not yet supported
-            fx::coalesce_from(Style::default(), (1000, Linear)),
-            fx::dissolve_to(Style::default(), (1000, Linear)),
         ].into_iter()
             .for_each(assert_effect_roundtrip_eq);
     }

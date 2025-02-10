@@ -5,7 +5,7 @@ use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::simple_rng::SimpleRng;
 use crate::{CellFilter, Duration};
-use crate::dsl::{DslError, EffectExpression};
+use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 #[derive(Clone, Debug, Default)]
 pub struct Dissolve {
@@ -105,24 +105,37 @@ impl Shader for Dissolve {
             EffectExpression::parse(&format!(
                 "{}({})",
                 self.name(),
-                self.timer.duration().milliseconds,
+                self.timer.dsl_format(),
             ))
         } else {
-            todo!("to/from for dissolved styles");
+            let style = self.dissolved_style.as_ref().unwrap().dsl_format();
+            EffectExpression::parse(&format!(
+                "{}({}, {})",
+                self.name(),
+                style.to_string(),
+                self.timer.dsl_format(),
+            ))
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
     use ratatui::style::Style;
-    use crate::{fx, Shader};
+    use crate::{fx, EffectTimer, Shader};
+    use crate::Interpolation::SineOut;
 
     #[test]
     fn dsl_format_dissolve() {
         assert_eq!(
             fx::dissolve(1000).to_dsl().unwrap().to_string(),
-            "fx::dissolve(1000)"
+            indoc! {
+                "fx::dissolve(EffectTimer::from_ms(
+                     1000,
+                     Linear
+                 ))"
+            }
         );
     }
 
@@ -130,15 +143,29 @@ mod tests {
     fn dsl_format_coalesce() {
         assert_eq!(
             fx::coalesce(1000).to_dsl().unwrap().to_string(),
-            "fx::coalesce(1000)"
+            indoc! {
+                "fx::coalesce(EffectTimer::from_ms(
+                     1000,
+                     Linear
+                 ))"
+            }
         );
     }
 
     #[test]
     fn dsl_format_dissolve_to() {
+        let dissolve = fx::dissolve_to(Style::default(), EffectTimer::from_ms(100, SineOut)).to_dsl().unwrap();
         assert_eq!(
-            fx::dissolve_to(Style::default(), 1000).to_dsl().unwrap().to_string(),
-            "fx::dissolve_to(Style::default(), 1000)"
+            dissolve.to_string(),
+            indoc! {
+                "fx::dissolve_to(
+                     Style::new(),
+                     EffectTimer::from_ms(
+                         100,
+                         SineOut
+                     )
+                 )"
+            }
         );
     }
 
@@ -146,7 +173,15 @@ mod tests {
     fn dsl_format_coalesce_from() {
         assert_eq!(
             fx::coalesce_from(Style::default(), 1000).to_dsl().unwrap().to_string(),
-            "fx::coalesce_from(Style::default(), 1000)"
+            indoc! {
+                "fx::coalesce_from(
+                     Style::new(),
+                     EffectTimer::from_ms(
+                         1000,
+                         Linear
+                     )
+                 )"
+            }
         );
     }
 }

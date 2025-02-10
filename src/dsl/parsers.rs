@@ -1,5 +1,5 @@
 use std::mem::take;
-use crate::dsl::expressions::{Expr, FnCall, Value};
+use crate::dsl::expressions::{Expr, FnCall, StyleMethod, Value};
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Interpolation, Motion};
 use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
@@ -9,6 +9,8 @@ use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
 use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
+use ratatui::prelude::Style;
+use ratatui::style::{Color, Modifier};
 use crate::dsl::DslError;
 
 pub(super) fn parse_expr(
@@ -207,6 +209,7 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
             margin(),
             color(),
             repeat_mode(), // used by fx::repeat
+            style(),
             array_ref(), // e.g. &[fx1, fx2, fx3]
             container_effect(),
             effect(),
@@ -217,6 +220,61 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
 
 fn arguments<'a>() -> impl StrParser<'a, Vec<Expr>> {
     many_to_vec(argument(), true, separator(trim(","), false))
+}
+
+fn style<'a>() -> impl StrParser<'a, Expr> {
+    let constructor = or!(
+        right!(trim("Style::"), or!(
+            skip!("new()"),
+            skip!("default()")
+        ))
+    ).map(|_| Style::default());
+
+    let style_chain = many_to_vec(style_method_call(), false, separator(trim(""), true));
+
+    right!(
+        constructor,
+        or!(
+            style_chain.map(Expr::Style),
+            succeed(trim("")).map(|_| Expr::Style(vec![]))
+        )
+    )
+}
+
+fn style_method_call<'a>() -> impl StrParser<'a, StyleMethod> {
+    or!(
+        right!(
+            skip!("."),
+            middle(trim("fg("), color(), trim(")"))
+        ).map(StyleMethod::Fg),
+
+        right!(
+            skip!("."),
+            middle(trim("bg("), color(), trim(")"))
+        ).map(StyleMethod::Bg),
+
+        right!(
+            skip!("."),
+            middle(trim("add_modifier("), modifier(), trim(")"))
+        ).map(StyleMethod::AddModifier)
+    )
+}
+
+fn modifier<'a>() -> impl StrParser<'a, Modifier> {
+    right!(
+        trim("Modifier::"),
+        or!(
+            skip!("BOLD").map(|_| Modifier::BOLD),
+            skip!("DIM").map(|_| Modifier::DIM),
+            skip!("ITALIC").map(|_| Modifier::ITALIC),
+            skip!("UNDERLINED").map(|_| Modifier::UNDERLINED),
+            skip!("SLOW_BLINK").map(|_| Modifier::SLOW_BLINK),
+            skip!("RAPID_BLINK").map(|_| Modifier::RAPID_BLINK),
+            skip!("REVERSED").map(|_| Modifier::REVERSED),
+            skip!("HIDDEN").map(|_| Modifier::HIDDEN),
+            skip!("CROSSED_OUT").map(|_| Modifier::CROSSED_OUT)
+        )
+    )
 }
 
 fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
@@ -492,11 +550,11 @@ fn interpolation<'a>() -> impl StrParser<'a, Expr> {
 
 #[cfg(test)]
 mod tests {
-    use crate::dsl::expressions::{Expr, FnCall, Value};
+    use crate::dsl::expressions::{Expr, FnCall, StyleMethod, Value};
     use crate::fx::RepeatMode;
     use crate::{CellFilter, Duration, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult};
-
+    use ratatui::style::Modifier;
 
     fn assert_expr_eq(
         result: AnpaResult<&str, Expr>,
@@ -594,6 +652,29 @@ mod tests {
 
         // Test Text filter
         assert_cell_filter_eq("Text", literal(Value::CellFilter(CellFilter::Text)));
+    }
+
+    #[test]
+    fn test_style() {
+        let input = "Style::default()";
+        assert_expr_eq(
+            parse(super::style(), input),
+            Expr::Style(vec![])
+        );
+
+        let input = "Style::new()\
+            .fg(Color::from_u32(0x1d2021))\
+            .bg(Color::from_u32(0x1d2021))\
+            .add_modifier(Modifier::BOLD)";
+
+        assert_expr_eq(
+            parse(super::style(), input),
+            Expr::Style(vec![
+                StyleMethod::Fg(call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x1d2021))])),
+                StyleMethod::Bg(call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x1d2021))])),
+                StyleMethod::AddModifier(Modifier::BOLD),
+            ])
+        );
     }
 
     #[test]

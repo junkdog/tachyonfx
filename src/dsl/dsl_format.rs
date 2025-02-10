@@ -1,7 +1,8 @@
-use ratatui::style::Color;
+use ratatui::style::{Color, Modifier, Style};
 use crate::fx::RepeatMode;
 use crate::{Duration, EffectTimer, Interpolation, Motion};
 use crate::color_ext::ToRgbComponents;
+use crate::dsl::expressions::StyleMethod;
 
 pub trait DslFormat {
     fn dsl_format(&self) -> String;
@@ -35,6 +36,36 @@ impl DslFormat for Motion {
             Motion::UpToDown    => "Motion::UpToDown".to_string(),
             Motion::DownToUp    => "Motion::DownToUp".to_string(),
         }
+    }
+}
+
+impl DslFormat for Style {
+    fn dsl_format(&self) -> String {
+        let mut methods = String::new();
+
+        if let Some(fg) = self.fg {
+            methods.push_str(&format!(".fg({})", fg.dsl_format()));
+        }
+
+        if let Some(bg) = self.bg {
+            methods.push_str(&format!(".bg({})", bg.dsl_format()));
+        }
+
+        self.add_modifier.iter().for_each(|m| {
+            methods.push_str(&format!(".add_modifier({:?})", m));
+        });
+
+        self.sub_modifier.iter().for_each(|m| {
+            methods.push_str(&format!(".sub_modifier({:?})", m));
+        });
+
+        format!("Style::new(){}", methods)
+    }
+}
+
+impl DslFormat for Modifier {
+    fn dsl_format(&self) -> String {
+        format!("{:?}", self)
     }
 }
 

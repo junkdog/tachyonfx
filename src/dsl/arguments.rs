@@ -5,7 +5,7 @@ use crate::{Duration, Effect, EffectTimer, Interpolation, Motion};
 use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
-use crate::dsl::expressions::{Expr, FnCall, Value};
+use crate::dsl::expressions::{style_from, Expr, FnCall, Value};
 use crate::fx::RepeatMode;
 
 #[derive(Debug)]
@@ -149,25 +149,18 @@ impl<'a> Arguments<'a> {
 
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
-            Expr::Literal(v)  => match v {
-                Value::Style(s) => Ok(s),
-                _               => self.wrong_type_error("style"),
-            },
-
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("style"),
+            Expr::Literal(Value::Style(s))  => Ok(s),
+            Expr::Style(methods)            => Ok(style_from(methods)),
+            Expr::Var(name)                 => self.bound_var(name),
+            _                               => self.wrong_type_error("style"),
         }
     }
 
     pub fn motion(&mut self) -> Result<Motion, DslError> {
         match self.next("motion")? {
-            Expr::Literal(v)  => match v {
-                Value::Motion(m) => Ok(m),
-                _                => self.wrong_type_error("motion"),
-            },
-
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("motion"),
+            Expr::Literal(Value::Motion(m))  => Ok(m),
+            Expr::Var(name)                  => self.bound_var(name),
+            _                                => self.wrong_type_error("motion"),
         }
     }
 

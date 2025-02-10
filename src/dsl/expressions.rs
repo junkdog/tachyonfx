@@ -1,7 +1,7 @@
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
 use ratatui::layout::{Margin, Rect};
-use ratatui::prelude::{Color, Style};
+use ratatui::prelude::{Color, Modifier, Style};
 use crate::color_ext::ToRgbComponents;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -16,25 +16,11 @@ pub(super) enum Expr {
     },
     Sequence(Vec<Expr>),
     Parallel(Vec<Expr>),
+    Style(Vec<StyleMethod>),
     Fx {
         name: String,
         arguments: Vec<Expr>
     }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(super) enum FnCall {
-    ColorFromU32,
-    DurationFromMillis,
-    DurationFromSeconds,
-    EffectTimerNew,
-    EffectTimerFromMs,
-    RectNew,
-    RectStruct,
-    MarginNew,
-    MarginStruct,
-    RepeatModeDuration,
-    RepeatModeTimes,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -55,6 +41,47 @@ pub(super) enum Value {
     Interpolation(Interpolation),
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(super) enum FnCall {
+    ColorFromU32,
+    DurationFromMillis,
+    DurationFromSeconds,
+    EffectTimerNew,
+    EffectTimerFromMs,
+    RectNew,
+    RectStruct,
+    MarginNew,
+    MarginStruct,
+    RepeatModeDuration,
+    RepeatModeTimes,
+}
+
+// Helper enum for method types
+#[derive(Debug, Clone, PartialEq)]
+pub(super) enum StyleMethod {
+    Fg(Expr),
+    Bg(Expr),
+    AddModifier(Modifier),
+    SubModifier(Modifier),
+}
+
+pub(super) fn style_from(methods: Vec<StyleMethod>) -> Style {
+    methods.iter().fold(Style::default(), |style, method| {
+        match method {
+            StyleMethod::Fg(Expr::Literal(Value::Color(color))) => {
+                style.fg(*color)
+            },
+            StyleMethod::Bg(Expr::Literal(Value::Color(color))) => {
+                style.bg(*color)
+            },
+            StyleMethod::AddModifier(modifier) => {
+                style.add_modifier(*modifier)
+            },
+            _ => style
+        }
+    })
+}
+
 impl Expr {
     /// Returns a string representation of the expression's type
     /// Used for error messages
@@ -68,6 +95,7 @@ impl Expr {
             Expr::CellFilter { .. } => "cell_filter",
             Expr::Sequence(_)       => "sequence",
             Expr::Parallel(_)       => "parallel",
+            Expr::Style(_)          => "style",
         }
     }
 
@@ -145,6 +173,19 @@ impl Expr {
                     indent_str, inner, indent_str)
             },
             Expr::CellFilter { .. } => format!("{}// TODO: format cell filter", indent_str),
+            Expr::Style(methods) => {
+                let inner = methods.iter()
+                    .map(|m| match m {
+                        StyleMethod::Fg(expr) => format!("{}fg({})", indent_str, expr.format(indent + 4)),
+                        StyleMethod::Bg(expr) => format!("{}bg({})", indent_str, expr.format(indent + 4)),
+                        StyleMethod::AddModifier(modifier) => format!("{}add_modifier({:?})", indent_str, modifier),
+                        StyleMethod::SubModifier(modifier) => format!("{}sub_modifier({:?})", indent_str, modifier),
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n{indent_str}");
+
+                format!("{}Style::new(){}", indent_str, inner)
+            }
         }
     }
 }

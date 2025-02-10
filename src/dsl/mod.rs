@@ -96,8 +96,6 @@ impl fmt::Display for EffectExpression {
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
-    use regex::Regex;
-    use crate::dsl::dsl::EffectDsl;
     use crate::{fx, Effect};
     use crate::fx::RepeatMode;
     use crate::Shader;
