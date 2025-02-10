@@ -1,23 +1,18 @@
-use anpa::core::parse;
+use crate::dsl::expressions::{Expr, FnCall, Value};
+use crate::fx::RepeatMode;
+use crate::{CellFilter, Interpolation, Motion};
 use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
+use anpa::core::parse;
 use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
 use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
-use ratatui::layout::{Margin, Rect};
-use ratatui::style::Color;
-use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
-use crate::dsl::expressions::{Expr, FnCall, Value};
-use crate::fx::RepeatMode;
-
-// fixme: parsers should always return Expr instead of concrete types,
-// so that we can handle errors more and support variables
 
 pub(super) fn parse_expr(
     input: &str,
 ) -> Option<Expr> {
-    parse(fx_statement(), input)
+    parse(effect(), input)
         .result
 }
 
@@ -30,7 +25,7 @@ fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
     )
 }
 
-fn fx_statement<'a>() -> impl StrParser<'a, Expr> {
+fn effect<'a>() -> impl StrParser<'a, Expr> {
     let name = right!(
         succeed(attempt(skip!("fx::"))),
         item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
@@ -185,7 +180,7 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
             color(),
             repeat_mode(), // used by fx::repeat
             array_ref(), // e.g. &[fx1, fx2, fx3]
-            fx_statement(),
+            effect(),
             var(),
         )
     }
@@ -468,14 +463,10 @@ fn interpolation<'a>() -> impl StrParser<'a, Expr> {
 
 #[cfg(test)]
 mod tests {
-    use std::f32::consts::E;
-    use crate::dsl::environment::DslEnv;
-    use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
-    use anpa::core::{parse, AnpaResult};
-    use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
-    use ratatui::style::Color;
     use crate::dsl::expressions::{Expr, FnCall, Value};
     use crate::fx::RepeatMode;
+    use crate::{CellFilter, Duration, Interpolation, Motion};
+    use anpa::core::{parse, AnpaResult};
 
 
     fn assert_expr_eq(
@@ -1019,7 +1010,7 @@ mod tests {
     #[test]
     fn parse_fx_statement() {
         let input = "coalesce(Duration::from_millis(220))";
-        let result = parse(super::fx_statement(), input).result;
+        let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
             name: "coalesce".to_string(),
             arguments: vec![
@@ -1028,7 +1019,7 @@ mod tests {
         };
 
         let input = "fx::dissolve((Duration::from_millis(220), ElasticOut))";
-        let result = parse(super::fx_statement(), input).result;
+        let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
             name: "dissolve".to_string(),
             arguments: vec![
@@ -1040,7 +1031,7 @@ mod tests {
         assert_eq!(result, Some(expected));
 
         let input = "fx::ping_pong(fx::coalesce((500, CircOut)))";
-        let result = parse(super::fx_statement(), input).result;
+        let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
             name: "ping_pong".to_string(),
             arguments: vec![

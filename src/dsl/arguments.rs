@@ -67,25 +67,18 @@ impl<'a> InputArgs<'a> {
                 let interpolation = inner_args.interpolation()?;
                 Ok(EffectTimer::new(duration, interpolation))
             },
-            Expr::Literal(v)  => match v {
-                Value::Timer(t)  => Ok(t),
-                Value::U32(ms)   => Ok(ms.into()),
-                _                => self.wrong_type_error("timer"),
-            },
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("timer"),
+            Expr::Literal(Value::Timer(t)) => Ok(t),
+            Expr::Literal(Value::U32(ms))  => Ok(ms.into()),
+            Expr::Var(name)                => self.bound_var(name),
+            _                              => self.wrong_type_error("timer"),
         }
     }
 
     pub fn interpolation(&mut self) -> Result<Interpolation, DslError> {
         match self.next("interpolation")? {
-            Expr::Literal(v)  => match v {
-                Value::Interpolation(i) => Ok(i),
-                _                       => self.wrong_type_error("interpolation"),
-            },
-
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("interpolation"),
+            Expr::Literal(Value::Interpolation(i)) => Ok(i),
+            Expr::Var(name)                        => self.bound_var(name),
+            _                                      => self.wrong_type_error("interpolation"),
         }
     }
 
@@ -100,37 +93,25 @@ impl<'a> InputArgs<'a> {
 
     pub fn read_u32(&mut self) -> Result<u32, DslError> {
         match self.next("u32")? {
-            Expr::Literal(v)  => match v {
-                Value::U32(u) => Ok(u),
-                _             => self.wrong_type_error("u32"),
-            },
-
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("u32"),
+            Expr::Literal(Value::U32(u)) => Ok(u),
+            Expr::Var(name)              => self.bound_var(name),
+            _                            => self.wrong_type_error("u32"),
         }
     }
 
     pub fn read_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
-            Expr::Literal(v)  => match v {
-                Value::F32(f) => Ok(f),
-                _             => self.wrong_type_error("f32"),
-            },
-
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("f32"),
+            Expr::Literal(Value::F32(f)) => Ok(f),
+            Expr::Var(name)              => self.bound_var(name),
+            _                            => self.wrong_type_error("f32"),
         }
     }
 
     pub fn string(&mut self) -> Result<String, DslError> {
         match self.next("string")? {
-            Expr::Literal(v)  => match v {
-                Value::String(s) => Ok(s),
-                _                => self.wrong_type_error("string"),
-            },
-
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("string"),
+            Expr::Literal(Value::String(s)) => Ok(s),
+            Expr::Var(name)                 => self.bound_var(name),
+            _                               => self.wrong_type_error("string"),
         }
     }
 
