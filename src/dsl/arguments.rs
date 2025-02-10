@@ -207,6 +207,14 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    pub fn array_ref(&mut self) -> Result<Arguments<'a>, DslError> {
+        match self.next("array_ref")? {
+            Expr::ArrayRef(exprs) => Ok(exprs),
+            Expr::Var(name)       => self.bound_var(name),
+            _                     => self.wrong_type_error("array_ref"),
+        }.map(|exprs| Arguments::new(exprs.into(), self.context, self.vars))
+    }
+
     pub(super) fn original_arg_count(&self) -> usize {
         self.initial_arg_count
     }
@@ -310,6 +318,30 @@ mod tests {
         assert_eq!(args.read_u32(), Ok(42));
         assert_eq!(args.read_f32(), Ok(3.14));
         assert_eq!(args.read_u32(), Err(DslError::MissingArgument {
+            position: 2,
+            name: "u32",
+        }));
+    }
+
+    #[test]
+    fn test_array_ref_parsing() {
+        let binding = empty_env();
+        let context = EffectDsl::new();
+        let mut args = Arguments::new(
+            vec![
+                Expr::ArrayRef(vec![
+                    Expr::Literal(Value::U32(42)),
+                    Expr::Literal(Value::F32(3.14)),
+                ]),
+            ].into(),
+            &context,
+            &binding
+        );
+
+        let mut inner_args = args.array_ref().unwrap();
+        assert_eq!(inner_args.read_u32(), Ok(42));
+        assert_eq!(inner_args.read_f32(), Ok(3.14));
+        assert_eq!(inner_args.read_u32(), Err(DslError::MissingArgument {
             position: 2,
             name: "u32",
         }));
