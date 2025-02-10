@@ -14,11 +14,6 @@ struct Interpreter {
     eval: Box<dyn Fn(&mut Arguments) -> Result<Effect, DslError>>,
 }
 
-#[derive(Debug)]
-pub struct EffectDsl {
-    compilers: Vec<Interpreter>,
-}
-
 impl Interpreter {
     fn new(
         name: &'static str,
@@ -31,13 +26,98 @@ impl Interpreter {
     }
 }
 
+/// A compiler and registry for tachyonfx effect DSL expressions.
+///
+/// `EffectDsl` manages a collection of interpreters that can compile DSL expressions into
+/// concrete effect instances. It comes pre-registered with interpreters for all standard
+/// tachyonfx effects.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::dsl::EffectDsl;
+///
+/// // Create a new DSL compiler with all standard effects registered
+/// let dsl = EffectDsl::new();
+///
+/// // Use the DSL to interpret effect expressions
+/// let effect = dsl.interpreter().eval("fx::dissolve(500)").unwrap();
+/// ```
+///
+/// The DSL supports binding variable to effects:
+///
+/// ```
+/// use ratatui::prelude::Color;
+/// use tachyonfx::dsl::EffectDsl;
+/// use tachyonfx::Motion;
+///
+/// let input = r#"fx::sweep_in(motion, 10, 0, c, (1000, QuadOut))"#;
+///
+/// let dsl = EffectDsl::new();
+/// let effect = dsl.interpreter()
+///     .bind("motion", Motion::LeftToRight)
+///     .bind("c", Color::from_u32(0x1d2021))
+///     .eval(input)
+///     .unwrap();
+/// ```
+///
+/// # Extending
+///
+/// While `EffectDsl` comes with all standard effects pre-registered, you can register
+/// additional custom effect interpreters if needed:
+///
+/// ```
+/// use tachyonfx::dsl::EffectDsl;
+///
+/// let dsl = EffectDsl::new()
+///     .register("custom_effect", |args| {
+///         // Implement custom effect compilation
+///         # todo!()
+///     });
+/// ```
+#[derive(Debug)]
+pub struct EffectDsl {
+    compilers: Vec<Interpreter>,
+}
+
+
 impl EffectDsl {
+    /// Creates a new `EffectDsl` instance with all standard effect interpreters registered.
     pub fn new() -> Self {
         register_default_interpreters(Self {
             compilers: Vec::new(),
         })
     }
 
+    /// Registers a new effect compiler with the DSL.
+    ///
+    /// This method allows extending the DSL with custom effects. The compiler function
+    /// receives parsed arguments and should return a concrete `Effect` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the effect as it will appear in DSL expressions (e.g., "my_effect" for `fx::my_effect(...)`)
+    /// * `compiler` - A function that compiles DSL arguments into an `Effect`
+    ///
+    /// # Returns
+    ///
+    /// Returns self for method chaining.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tachyonfx::dsl::EffectDsl;
+    ///
+    /// let dsl = EffectDsl::new()
+    ///     .register("custom_effect", |args| {
+    ///         // Parse arguments and create an effect
+    ///         let duration = args.duration()?;
+    ///         let color = args.color()?;
+    ///
+    ///         // Return your custom effect
+    ///         # todo!()
+    ///     });
+    /// ```
     pub fn register(
         self,
         name: &'static str,
@@ -48,6 +128,30 @@ impl EffectDsl {
         this
     }
 
+    /// Creates a new DSL interpreter for evaluating effect expressions.
+    ///
+    /// The interpreter maintains its own environment of bound variables and can
+    /// evaluate DSL expressions into concrete `Effect` instances.
+    ///
+    /// # Returns
+    ///
+    /// A new `DslInterpreter` instance configured with this DSL's compilers.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tachyonfx::dsl::EffectDsl;
+    /// use ratatui::style::Color;
+    ///
+    /// let dsl = EffectDsl::new();
+    /// let interpreter = dsl.interpreter()
+    ///     .bind("bg_color", Color::Blue);
+    ///
+    /// // Use bound variables in expressions
+    /// let effect = interpreter.eval(r#"
+    ///     fx::fade_to(bg_color, (1000, Linear))
+    /// "#);
+    /// ```
     pub fn interpreter(&self) -> DslInterpreter {
         DslInterpreter {
             dsl: self,
@@ -396,14 +500,7 @@ mod tests {
             EffectTimer::from_ms(1000, QuadOut)
         );
 
-        let input = r#"fx::sweep_in(
-                motion,
-                10,
-                0,
-                c,
-                (1000, QuadOut)
-            )"#;
-
+        let input = r#"fx::sweep_in(motion, 10, 0, c, (1000, QuadOut))"#;
 
         let dsl = EffectDsl::new();
         let effect = dsl.interpreter()

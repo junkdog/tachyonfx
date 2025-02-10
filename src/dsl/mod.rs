@@ -10,6 +10,7 @@ use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
 
 pub use dsl_format::DslFormat;
+pub use dsl::EffectDsl;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
@@ -74,15 +75,56 @@ pub enum DslError {
     },
 }
 
+/// A parsed representation of a tachyonfx effect expression.
+///
+/// `EffectExpression` provides a way to parse and represent effect descriptions in string form.
+/// This allows effects to be defined using a domain-specific language (DSL) syntax and later
+/// converted into actual effect instances.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::dsl::EffectExpression;
+///
+/// // Parse a simple fade effect
+/// let expr = EffectExpression::parse("fx::fade_to(Color::from_u32(0), (500, Linear))").unwrap();
+///
+/// // Parse a more complex effect chain
+/// let expr = EffectExpression::parse(r#"
+///     fx::sequence(&[
+///         fx::fade_from(Color::Black, Color::from_u32(0), (1000, QuadOut)),
+///         fx::dissolve((500, BounceOut))
+///     ])
+/// "#);
+/// ```
+///
+/// # See Also
+///
+/// - [`Shader::to_dsl`](crate::Shader::to_dsl) for converting a shader to a DSL expression
+/// - [`DslError`](crate::DslError) for possible error types
 pub struct EffectExpression {
     expr: Expr,
 }
 
 
 impl EffectExpression {
+    /// Parses a string into an `EffectExpression`.
+    ///
+    /// This method takes a string containing a tachyonfx effect description and attempts
+    /// to parse it into a structured `EffectExpression`. The input string should follow
+    /// the tachyonfx DSL syntax.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - A string slice containing the effect expression to parse
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing either:
+    /// - `Ok(EffectExpression)` if parsing was successful
+    /// - `Err(DslError)` if the input could not be parsed
     pub fn parse(input: &str) -> Result<Self, DslError> {
         let expr = parse_expr(input)?;
-
         Ok(Self { expr })
     }
 }

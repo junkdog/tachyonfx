@@ -3,7 +3,20 @@ use crate::fx::RepeatMode;
 use crate::{Duration, EffectTimer, Interpolation, Motion};
 use crate::color_ext::ToRgbComponents;
 
+/// A trait for converting types into their DSL (Domain Specific Language) string representation.
+///
+/// This trait enables types to be formatted as valid tachyonfx DSL expressions that can be
+/// parsed back into effect definitions. It's primarily used for serializing effects and their
+/// parameters into a textual format that matches the tachyonfx DSL syntax.
 pub trait DslFormat {
+    /// Converts the type into its DSL string representation.
+    ///
+    /// # Returns
+    ///
+    /// A `String` containing the DSL representation of the type, which should be:
+    /// - Valid Rust syntax
+    /// - Parseable by the tachyonfx DSL parser
+    /// - Complete with all necessary type information
     fn dsl_format(&self) -> String;
 }
 

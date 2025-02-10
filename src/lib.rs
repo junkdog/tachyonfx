@@ -24,8 +24,8 @@ mod simple_rng;
 mod duration;
 mod features;
 
-#[cfg(feature = "scripting")]
-mod dsl;
+#[cfg(feature = "dsl")]
+pub mod dsl;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;

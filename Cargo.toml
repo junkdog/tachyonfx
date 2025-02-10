@@ -28,9 +28,9 @@ indoc = "2.0.5"
 crossterm = "0.28.1"
 
 [features]
-default = ["crossterm", "scripting"]
+default = ["crossterm", "dsl"]
 crossterm = ["ratatui/crossterm"]
-scripting = ["dep:anpa"]
+dsl = ["dep:anpa"]
 sendable = []
 std-duration = []
 web-time = ["dep:web-time"]
