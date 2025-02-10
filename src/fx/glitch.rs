@@ -5,6 +5,7 @@ use std::ops::Range;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
 use crate::{CellFilter, Duration, EffectTimer};
+use crate::dsl::{DslError, EffectExpression};
 use crate::simple_rng::{RangeSampler, SimpleRng};
 use crate::shader::Shader;
 
@@ -181,5 +182,11 @@ impl Shader for Glitch {
 
     fn reset(&mut self) {
         self.glitch_cells.clear();
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        Err(DslError::UnsupportedEffect {
+            name: self.name().to_string(),
+        })
     }
 }

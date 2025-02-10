@@ -5,6 +5,7 @@ use crate::Duration;
 use crate::color_ext::AsIndexedColor;
 use crate::color_mapper::ColorMapper;
 use crate::CellFilter;
+use crate::dsl::{DslError, EffectExpression};
 use crate::shader::Shader;
 
 #[derive(Clone, Default, Debug)]
@@ -14,7 +15,7 @@ pub struct Ansi256 {
 
 impl Shader for Ansi256 {
     fn name(&self) -> &'static str {
-        "ansi256"
+        "term256_colors"
     }
 
     fn process(
@@ -58,4 +59,21 @@ impl Shader for Ansi256 {
     fn set_cell_selection(&mut self, _strategy: CellFilter) {}
 
     fn reset(&mut self) {}
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        Ok(EffectExpression::parse("fx::term256_colors()")?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::fx;
+
+    #[test]
+    fn to_dsl() {
+        use crate::shader::Shader;
+
+        let dsl = fx::term256_colors().to_dsl().unwrap().to_string();
+        assert_eq!(dsl, "fx::term256_colors()");
+    }
 }

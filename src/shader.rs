@@ -200,7 +200,8 @@ pub trait Shader: ThreadSafetyMarker + Debug {
         EffectSpan::new(self, offset, Vec::default())
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    fn to_dsl(&self) -> Result<EffectExpression, DslError>
+    {
         todo!("yolo")
     }
 }

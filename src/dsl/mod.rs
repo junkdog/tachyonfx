@@ -67,6 +67,11 @@ pub enum DslError {
     EffectExpressionNotSupported {
         name: &'static str,
     },
+
+    #[error("{name} is not supported by the dsl")]
+    UnsupportedEffect {
+        name: String,
+    },
 }
 
 pub struct EffectExpression {
@@ -76,8 +81,7 @@ pub struct EffectExpression {
 
 impl EffectExpression {
     pub fn parse(input: &str) -> Result<Self, DslError> {
-        let expr = parse_expr(input)
-            .ok_or_else(|| DslError::ParseError("failed to parse input".into()))?; // fixme: error message
+        let expr = parse_expr(input)?;
 
         Ok(Self { expr })
     }
@@ -125,13 +129,6 @@ mod tests {
     }
 
     #[test]
-    fn to_dsl_happy_path() {
-        assert_effect_to_dsl_to_effect(
-            fx::repeat(fx::dissolve(100), RepeatMode::Times(4))
-        );
-    }
-
-    #[test]
     fn to_dsl_format_complex_tree() {
         let expected = indoc! {
             "fx::sequence(&[
@@ -159,40 +156,5 @@ mod tests {
         ]).to_dsl().expect("dsl expression from effect");
 
         assert_eq!(expr.to_string(), expected);
-    }
-
-    #[test]
-    fn to_dsl_sequence_and_parallel() {
-        let expected = indoc! {
-            "fx::sequence(&[
-                fx::dissolve(100),
-                fx::dissolve(200),
-                fx::sleep(300)
-            ])"
-        };
-
-        let expr = fx::sequence(&[
-            fx::dissolve(100),
-            fx::dissolve(200),
-            fx::sleep(300),
-        ]).to_dsl().expect("dsl expression from effect");
-
-        assert_eq!(format!("{}", expr), expected);
-
-        let expected = indoc! {
-            "fx::parallel(&[
-                fx::dissolve(100),
-                fx::dissolve(200),
-                fx::dissolve(300)
-            ])"
-        };
-
-        let expr = fx::parallel(&[
-            fx::dissolve(100),
-            fx::dissolve(200),
-            fx::dissolve(300),
-        ]).to_dsl().expect("dsl expression from effect");
-
-        assert_eq!(format!("{}", expr), expected);
     }
 }

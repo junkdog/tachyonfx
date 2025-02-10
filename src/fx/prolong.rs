@@ -1,8 +1,9 @@
+use crate::dsl::{DslError, DslFormat, EffectExpression};
+use crate::widget::EffectSpan;
+use crate::Interpolation::Linear;
+use crate::{CellFilter, Duration, Effect, EffectTimer, Shader};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::{CellFilter, Duration, Effect, EffectTimer, Shader};
-use crate::Interpolation::Linear;
-use crate::widget::EffectSpan;
 
 /// Specifies the position where the additional duration should be applied in a `Prolong` effect.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -106,5 +107,59 @@ impl Shader for Prolong {
     fn reset(&mut self) {
         self.timer.reset();
         self.inner.reset();
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        let nested = self.inner.to_dsl()?;
+        EffectExpression::parse(&format!(
+            "{}({}, {})",
+            self.name(),
+            self.timer.dsl_format(),
+            nested.to_string()
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::fx::consume_tick;
+    use crate::shader::Shader;
+    use indoc::indoc;
+    use crate::fx;
+
+    #[test]
+    fn to_dsl_prolong_start() {
+        let dsl = fx::prolong_start(100, consume_tick())
+        .to_dsl()
+        .unwrap()
+        .to_string();
+
+        assert_eq!(dsl, indoc! {
+            "fx::prolong_start(
+                 EffectTimer::from_ms(
+                     100,
+                     Linear
+                 ),
+                 fx::consume_tick()
+             )"
+        });
+    }
+
+    #[test]
+    fn to_dsl_prolong_end() {
+        let dsl = fx::prolong_end(100, consume_tick())
+        .to_dsl()
+        .unwrap()
+        .to_string();
+
+        assert_eq!(dsl, indoc! {
+            "fx::prolong_end(
+                 EffectTimer::from_ms(
+                     100,
+                     Linear
+                 ),
+                 fx::consume_tick()
+             )"
+        });
     }
 }

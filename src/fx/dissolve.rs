@@ -112,3 +112,41 @@ impl Shader for Dissolve {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ratatui::style::Style;
+    use crate::{fx, Shader};
+
+    #[test]
+    fn dsl_format_dissolve() {
+        assert_eq!(
+            fx::dissolve(1000).to_dsl().unwrap().to_string(),
+            "fx::dissolve(1000)"
+        );
+    }
+
+    #[test]
+    fn dsl_format_coalesce() {
+        assert_eq!(
+            fx::coalesce(1000).to_dsl().unwrap().to_string(),
+            "fx::coalesce(1000)"
+        );
+    }
+
+    #[test]
+    fn dsl_format_dissolve_to() {
+        assert_eq!(
+            fx::dissolve_to(Style::default(), 1000).to_dsl().unwrap().to_string(),
+            "fx::dissolve_to(Style::default(), 1000)"
+        );
+    }
+
+    #[test]
+    fn dsl_format_coalesce_from() {
+        assert_eq!(
+            fx::coalesce_from(Style::default(), 1000).to_dsl().unwrap().to_string(),
+            "fx::coalesce_from(Style::default(), 1000)"
+        );
+    }
+}

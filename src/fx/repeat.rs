@@ -136,3 +136,50 @@ pub enum RepeatMode {
     Times(u32),
     Duration(Duration),
 }
+
+#[cfg(test)]
+mod tests {
+    use indoc::indoc;
+    use crate::duration::duration::Duration;
+    use crate::fx::{consume_tick, repeat, RepeatMode};
+    use crate::Shader;
+
+    #[test]
+    fn to_dsl() {
+        let dsl = repeat(consume_tick(), RepeatMode::Forever)
+            .to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(dsl, indoc! {
+            "fx::repeat(
+                 fx::consume_tick(),
+                 RepeatMode::Forever
+             )"}
+        );
+
+        let dsl = repeat(consume_tick(), RepeatMode::Times(2))
+            .to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(dsl, indoc! {
+            "fx::repeat(
+                 fx::consume_tick(),
+                 RepeatMode::Times(2)
+             )"}
+        );
+
+        let dsl = repeat(consume_tick(), RepeatMode::Duration(Duration::from_millis(1)))
+            .to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(dsl, indoc! {
+            "fx::repeat(
+                 fx::consume_tick(),
+                 RepeatMode::Duration(Duration::from_millis(1))
+             )"}
+        );
+    }
+}

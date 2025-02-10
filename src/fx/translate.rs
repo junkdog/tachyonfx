@@ -3,6 +3,7 @@ use ratatui::prelude::Rect;
 
 use crate::bounding_box::BoundingBox;
 use crate::{CellFilter, Duration};
+use crate::dsl::{DslError, EffectExpression};
 use crate::effect::Effect;
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
@@ -114,6 +115,12 @@ impl Shader for Translate {
         if let Some(fx) = &mut self.fx {
             fx.reset();
         }
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        Err(DslError::UnsupportedEffect {
+            name: self.name().to_string(),
+        })
     }
 }
 

@@ -9,12 +9,17 @@ use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
 use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
+use crate::dsl::DslError;
 
 pub(super) fn parse_expr(
     input: &str,
-) -> Option<Expr> {
-    parse(or!(container_effect(), effect()), input)
-        .result
+) -> Result<Expr, DslError> {
+    let parsed = parse(or!(container_effect(), effect()), input);
+    if let Some(expr) = parsed.result {
+        Ok(expr)
+    } else {
+        Err(DslError::ParseError(format!("remaining input: {}", parsed.state)))
+    }
 }
 
 
@@ -29,7 +34,7 @@ fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
 fn effect<'a>() -> impl StrParser<'a, Expr> {
     let name = right!(
         succeed(attempt(skip!("fx::"))),
-        item_while(|c: char| c.is_ascii_alphabetic() || c == '_'),
+        item_while(|c: char| c.is_ascii_alphabetic() || c.is_ascii_digit() || c == '_'),
     );
 
     let args = middle(trim("("), arguments(), trim(")"));

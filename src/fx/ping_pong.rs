@@ -86,7 +86,7 @@ impl Shader for PingPong {
     }
 
     fn reset(&mut self) {
-        // self.fx.reset();
+        // self.fx.reset(); ?
         self.is_reversing = false;
     }
 

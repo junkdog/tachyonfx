@@ -4,6 +4,7 @@ use ratatui::prelude::Rect;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
 use crate::{CellFilter, Duration};
+use crate::dsl::{DslError, EffectExpression};
 use crate::effect::Effect;
 use crate::effect_timer::EffectTimer;
 use crate::widget::EffectSpan;
@@ -120,5 +121,11 @@ impl Shader for ResizeArea {
         if let Some(fx) = self.fx.as_mut() {
             fx.reset();
         }
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        Err(DslError::UnsupportedEffect {
+            name: self.name().to_string(),
+        })
     }
 }

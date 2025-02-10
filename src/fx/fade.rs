@@ -7,6 +7,8 @@ use crate::color_mapper::ColorMapper;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::{CellFilter, Duration, Interpolatable};
+use crate::color_ext::ToRgbComponents;
+use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 #[derive(Builder, Clone, Debug)]
 pub struct FadeColors {
@@ -74,5 +76,127 @@ impl Shader for FadeColors {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        let s = if self.bg.is_some() {
+            format!(
+                "{}({}, {}, {})",
+                self.name(),
+                self.fg.unwrap().dsl_format(),
+                self.bg.unwrap().dsl_format(),
+                self.timer.dsl_format(),
+            )
+        } else {
+            format!(
+                "{}_fg({}, {})",
+                self.name(),
+                self.fg.unwrap().dsl_format(),
+                self.timer.dsl_format()
+            )
+        };
+        EffectExpression::parse(&s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use indoc::indoc;
+    use ratatui::style::Color;
+    use crate::shader::Shader;
+    use crate::effect_timer::EffectTimer;
+    use crate::fx;
+    use crate::Interpolation::QuadOut;
+
+    #[test]
+    fn to_dsl_fade_to_fg() {
+        let dsl = fx::fade_to_fg(Color::from_u32(0), EffectTimer::from_ms(1000, QuadOut))
+            .to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(
+            dsl,
+            indoc! {
+                "fx::fade_to_fg(
+                     Color::from_u32(0),
+                     EffectTimer::from_ms(
+                         1000,
+                         QuadOut
+                     )
+                 )"
+            }
+        );
+    }
+
+    #[test]
+    fn to_dsl_fade_to() {
+        let dsl = fx::fade_to(
+            Color::from_u32(0),
+            Color::from_u32(0),
+            EffectTimer::from_ms(1000, QuadOut),
+        ).to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(
+            dsl,
+            indoc! {
+                "fx::fade_to(
+                     Color::from_u32(0),
+                     Color::from_u32(0),
+                     EffectTimer::from_ms(
+                         1000,
+                         QuadOut
+                     )
+                 )"
+            }
+        );
+    }
+
+    #[test]
+    fn to_dsl_fade_from_fg() {
+        let dsl = fx::fade_from_fg(Color::from_u32(0), EffectTimer::from_ms(1000, QuadOut))
+            .to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(
+            dsl,
+            indoc! {
+                "fx::fade_from_fg(
+                     Color::from_u32(0),
+                     EffectTimer::from_ms(
+                         1000,
+                         QuadOut
+                     )
+                 )"
+            }
+        );
+    }
+
+    #[test]
+    fn to_dsl_fade_from() {
+        let dsl = fx::fade_from(
+            Color::from_u32(0),
+            Color::from_u32(0),
+            EffectTimer::from_ms(1000, QuadOut),
+        ).to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(
+            dsl,
+            indoc! {
+                "fx::fade_from(
+                     Color::from_u32(0),
+                     Color::from_u32(0),
+                     EffectTimer::from_ms(
+                         1000,
+                         QuadOut
+                     )
+                 )"
+            }
+        );
     }
 }

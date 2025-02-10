@@ -1,6 +1,7 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use crate::{CellFilter, Duration, Effect, RefCount, Shader};
+use crate::dsl::{DslError, EffectExpression};
 use crate::widget::EffectSpan;
 
 #[derive(Clone, Debug)]
@@ -71,5 +72,11 @@ impl Shader for OffscreenBuffer {
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        Err(DslError::UnsupportedEffect {
+            name: self.name().to_string(),
+        })
     }
 }

@@ -11,6 +11,7 @@ use crate::interpolation::{Interpolatable, Interpolation};
 use crate::shader::Shader;
 use crate::CellFilter;
 use crate::{ColorMapper, Duration};
+use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 #[derive(Clone, Debug)]
 pub struct SweepIn {
@@ -154,11 +155,86 @@ impl Shader for SweepIn {
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
     }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        let direction = if self.timer.is_reversed() ^ self.direction.flips_timer()  {
+            self.direction.flipped()
+        } else {
+            self.direction
+        };
+
+        EffectExpression::parse(&format!(
+            "fx::{}({}, {}, {}, {}, {})",
+            self.name(),
+            direction.dsl_format(),
+            self.gradient_length,
+            self.randomness_extent,
+            self.faded_color.dsl_format(),
+            self.timer.dsl_format()
+        ))
+    }
 }
 
 fn offset(p: Position, translate: (i16, i16)) -> Position {
     Position {
         x: (p.x as i16 + translate.0).max(0) as _,
         y: (p.y as i16 + translate.1).max(0) as _,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use indoc::indoc;
+    use ratatui::prelude::Color;
+    use crate::{fx, Motion, Shader};
+
+    #[test]
+    fn to_dsl_slide_in() {
+        let dsl = fx::sweep_in(
+            Motion::LeftToRight,
+            10,
+            5,
+            Color::from_u32(0),
+            1000,
+        ).to_dsl().unwrap().to_string();
+
+
+        assert_eq!(dsl.to_string(), indoc! {
+            "fx::sweep_in(
+                 LeftToRight,
+                 10,
+                 5,
+                 Color::from_u32(0),
+                 EffectTimer::from_ms(
+                     1000,
+                     Linear
+                 )
+             )"
+        });
+    }
+
+    #[test]
+    fn to_dsl_slide_out() {
+        let dsl = fx::sweep_out(
+            Motion::UpToDown,
+            10,
+            5,
+            Color::from_u32(0),
+            1000,
+        ).to_dsl().unwrap().to_string();
+
+
+        assert_eq!(dsl.to_string(), indoc! {
+            "fx::sweep_out(
+                 UpToDown,
+                 10,
+                 5,
+                 Color::from_u32(0),
+                 EffectTimer::from_ms(
+                     1000,
+                     Linear
+                 )
+             )"
+        });
     }
 }

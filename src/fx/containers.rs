@@ -208,3 +208,39 @@ fn to_dsl(name: &'static str, effects: &[Effect]) -> Result<EffectExpression, Ds
 
     Ok(EffectExpression::parse(&format!("{name}(&[{}])", effects.join(", ")))?)
 }
+
+#[cfg(test)]
+mod tests {
+    use indoc::indoc;
+    use crate::{fx, Shader};
+
+    #[test]
+    fn parallel() {
+        let dsl = fx::parallel(&[fx::consume_tick(), fx::consume_tick()])
+            .to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(dsl, indoc! {
+            "fx::parallel(&[
+                 fx::consume_tick(),
+                 fx::consume_tick()
+             ])"
+        });
+    }
+
+    #[test]
+    fn sequence() {
+        let dsl = fx::sequence(&[fx::consume_tick(), fx::consume_tick()])
+            .to_dsl()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(dsl, indoc! {
+            "fx::sequence(&[
+                 fx::consume_tick(),
+                 fx::consume_tick()
+             ])"
+        });
+    }
+}

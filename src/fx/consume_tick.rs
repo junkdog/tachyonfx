@@ -3,6 +3,7 @@ use ratatui::layout::Rect;
 
 use crate::Duration;
 use crate::CellFilter;
+use crate::dsl::{DslError, EffectExpression};
 use crate::shader::Shader;
 
 /// consumes any remaining duration for a single tick.
@@ -38,5 +39,20 @@ impl Shader for ConsumeTick {
 
     fn reset(&mut self) {
         self.has_consumed_tick = false;
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        Ok(EffectExpression::parse("fx::consume_tick()")?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{fx, Shader};
+
+    #[test]
+    fn consume_tick() {
+        let dsl = fx::consume_tick().to_dsl().unwrap().to_string();
+        assert_eq!(dsl, "fx::consume_tick()");
     }
 }

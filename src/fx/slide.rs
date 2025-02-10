@@ -6,6 +6,7 @@ use ratatui::style::Color;
 use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
 use crate::{Motion, DirectionalVariance};
 use crate::{CellFilter, Duration, EffectTimer, Shader};
+use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 /// A shader that applies a directional sliding effect to terminal cells.
 #[derive(Builder, Clone, Debug)]
@@ -142,6 +143,24 @@ impl Shader for SlideCell {
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
     }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        let direction = if self.timer.is_reversed() ^ self.direction.flips_timer()  {
+            self.direction.flipped()
+        } else {
+            self.direction
+        };
+
+        EffectExpression::parse(&format!(
+            "fx::{}({}, {}, {}, {}, {})",
+            self.name(),
+            direction.dsl_format(),
+            self.gradient_length,
+            self.randomness_extent,
+            self.color_behind_cell.dsl_format(),
+            self.timer.dsl_format()
+        ))
+    }
 }
 
 const SHRINK_V: &[char; 9] = &['█', '▇', '▆', '▅', '▄', '▃', '▂', '▁', ' '];
@@ -152,5 +171,62 @@ fn offset(p: Position, translate: (i16, i16)) -> Position {
     Position {
         x: (p.x as i16 + translate.0).max(0) as _,
         y: (p.y as i16 + translate.1).max(0) as _,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use indoc::indoc;
+    use ratatui::prelude::Color;
+    use crate::{fx, Motion, Shader};
+
+    #[test]
+    fn to_dsl_slide_in() {
+        let dsl = fx::slide_in(
+            Motion::LeftToRight,
+            10,
+            5,
+            Color::from_u32(0),
+            1000,
+        ).to_dsl().unwrap().to_string();
+
+
+        assert_eq!(dsl.to_string(), indoc! {
+            "fx::slide_in(
+                 LeftToRight,
+                 10,
+                 5,
+                 Color::from_u32(0),
+                 EffectTimer::from_ms(
+                     1000,
+                     Linear
+                 )
+             )"
+        });
+    }
+
+    #[test]
+    fn to_dsl_slide_out() {
+        let dsl = fx::slide_out(
+            Motion::UpToDown,
+            10,
+            5,
+            Color::from_u32(0),
+            1000,
+        ).to_dsl().unwrap().to_string();
+
+
+        assert_eq!(dsl.to_string(), indoc! {
+            "fx::slide_out(
+                 UpToDown,
+                 10,
+                 5,
+                 Color::from_u32(0),
+                 EffectTimer::from_ms(
+                     1000,
+                     Linear
+                 )
+             )"
+        });
     }
 }

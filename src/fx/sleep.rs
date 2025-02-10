@@ -60,4 +60,14 @@ impl Shader for Sleep {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::{fx, Shader};
+
+    #[test]
+    fn to_dsl() {
+        let dsl = fx::sleep(1000).to_dsl().unwrap().to_string();
+        assert_eq!(dsl, "fx::sleep(1000)");
+    }
+}
 

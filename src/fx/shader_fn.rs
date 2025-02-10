@@ -5,6 +5,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
 use crate::{ref_count, CellFilter, CellIterator, Duration, EffectTimer, RefCount, Shader};
+use crate::dsl::{DslError, EffectExpression};
 use crate::fx::invoke_fn;
 use crate::ThreadSafetyMarker;
 
@@ -186,6 +187,12 @@ impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
     fn reset(&mut self) {
         self.timer.reset();
         self.state = self.original_state.as_ref().unwrap().clone();
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        Err(DslError::UnsupportedEffect {
+            name: self.name().to_string(),
+        })
     }
 }
 
