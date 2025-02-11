@@ -5,7 +5,7 @@ use crate::{Duration, Effect, EffectTimer, Interpolation, Motion};
 use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
-use crate::dsl::expressions::{style_from, Expr, FnCall, Value};
+use crate::dsl::expressions::{compile_style, Expr, FnCall, Value};
 use crate::fx::RepeatMode;
 
 #[derive(Debug)]
@@ -49,11 +49,11 @@ impl<'a> Arguments<'a> {
             Expr::Literal(v)  => match v {
                 Value::Duration(d) => Ok(d),
                 Value::U32(ms)     => Ok(Duration::from_millis(ms as _)),
-                _                  => self.wrong_type_error("duration"),
+                _                  => self.expected_type("duration"),
             },
 
             Expr::Var(name)   => self.bound_var(name),
-            _                 => self.wrong_type_error("duration"),
+            _                 => self.expected_type("duration"),
         }
     }
 
@@ -74,7 +74,7 @@ impl<'a> Arguments<'a> {
             Expr::Literal(Value::Timer(t)) => Ok(t),
             Expr::Literal(Value::U32(ms))  => Ok(ms.into()),
             Expr::Var(name)                => self.bound_var(name),
-            _                              => self.wrong_type_error("timer"),
+            _                              => self.expected_type("timer"),
         }
     }
 
@@ -82,7 +82,7 @@ impl<'a> Arguments<'a> {
         match self.next("interpolation")? {
             Expr::Literal(Value::Interpolation(i)) => Ok(i),
             Expr::Var(name)                        => self.bound_var(name),
-            _                                      => self.wrong_type_error("interpolation"),
+            _                                      => self.expected_type("interpolation"),
         }
     }
 
@@ -99,7 +99,7 @@ impl<'a> Arguments<'a> {
         match self.next("u32")? {
             Expr::Literal(Value::U32(u)) => Ok(u),
             Expr::Var(name)              => self.bound_var(name),
-            _                            => self.wrong_type_error("u32"),
+            _                            => self.expected_type("u32"),
         }
     }
 
@@ -107,7 +107,7 @@ impl<'a> Arguments<'a> {
         match self.next("f32")? {
             Expr::Literal(Value::F32(f)) => Ok(f),
             Expr::Var(name)              => self.bound_var(name),
-            _                            => self.wrong_type_error("f32"),
+            _                            => self.expected_type("f32"),
         }
     }
 
@@ -115,7 +115,7 @@ impl<'a> Arguments<'a> {
         match self.next("string")? {
             Expr::Literal(Value::String(s)) => Ok(s),
             Expr::Var(name)                 => self.bound_var(name),
-            _                               => self.wrong_type_error("string"),
+            _                               => self.expected_type("string"),
         }
     }
 
@@ -125,7 +125,7 @@ impl<'a> Arguments<'a> {
             Expr::Sequence(effects)      => self.compile_effect(Expr::Sequence(effects)),
             Expr::Parallel(effects)      => self.compile_effect(Expr::Parallel(effects)),
             Expr::Var(name)              => self.bound_var(name),
-            _                            => self.wrong_type_error("effect"),
+            _                            => self.expected_type("effect"),
         }
     }
 
@@ -139,20 +139,20 @@ impl<'a> Arguments<'a> {
             }
             Expr::Literal(v)  => match v {
                 Value::Color(c) => Ok(c),
-                _               => self.wrong_type_error("color"),
+                _               => self.expected_type("color"),
             },
 
             Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("color"),
+            _               => self.expected_type("color"),
         }
     }
 
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
             Expr::Literal(Value::Style(s))  => Ok(s),
-            Expr::Style(methods)            => Ok(style_from(methods)),
+            Expr::Style(methods)            => Ok(compile_style(methods)),
             Expr::Var(name)                 => self.bound_var(name),
-            _                               => self.wrong_type_error("style"),
+            _                               => self.expected_type("style"),
         }
     }
 
@@ -160,7 +160,7 @@ impl<'a> Arguments<'a> {
         match self.next("motion")? {
             Expr::Literal(Value::Motion(m))  => Ok(m),
             Expr::Var(name)                  => self.bound_var(name),
-            _                                => self.wrong_type_error("motion"),
+            _                                => self.expected_type("motion"),
         }
     }
 
@@ -173,30 +173,23 @@ impl<'a> Arguments<'a> {
                 Ok(RepeatMode::Times(times))
             },
             Expr::Var(name)     => self.bound_var(name),
-            _                   => self.wrong_type_error("repeat_mode"),
+            _                   => self.expected_type("repeat_mode"),
         }
     }
 
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
-            Expr::Literal(v)  => match v {
-                Value::Margin(m) => Ok(m),
-                _                => self.wrong_type_error("margin"),
-            },
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("margin"),
+            Expr::Literal(Value::Margin(m)) => Ok(m),
+            Expr::Var(name)                 => self.bound_var(name),
+            _                               => self.expected_type("margin"),
         }
     }
 
     pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
-            Expr::Literal(v)  => match v {
-                Value::Rect(r) => Ok(r),
-                _              => self.wrong_type_error("rect"),
-            },
-
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.wrong_type_error("rect"),
+            Expr::Literal(Value::Rect(r)) => Ok(r),
+            Expr::Var(name)               => self.bound_var(name),
+            _                             => self.expected_type("rect"),
         }
     }
 
@@ -204,7 +197,7 @@ impl<'a> Arguments<'a> {
         match self.next("array_ref")? {
             Expr::ArrayRef(exprs) => Ok(exprs),
             Expr::Var(name)       => self.bound_var(name),
-            _                     => self.wrong_type_error("array_ref"),
+            _                     => self.expected_type("array_ref"),
         }.map(|exprs| Arguments::new(exprs.into(), self.context, self.vars))
     }
 
@@ -213,7 +206,7 @@ impl<'a> Arguments<'a> {
     }
 
     fn compile_effect(&self, expr: Expr) -> Result<Effect, DslError> {
-        self.context.eval(self.vars, expr)
+        self.context.compile(self.vars, expr)
     }
 
     fn bound_var<T: Clone + 'static>(&self, name: String) -> Result<T, DslError> {
@@ -229,7 +222,7 @@ impl<'a> Arguments<'a> {
     }
 
 
-    fn wrong_type_error<T>(&self, expected: &'static str) -> Result<T, DslError>  {
+    fn expected_type<T>(&self, expected: &'static str) -> Result<T, DslError>  {
         Err(DslError::WrongArgumentType {
             position: self.initial_arg_count - self.args.len() - 1,
             expected,

@@ -5,12 +5,12 @@ mod environment;
 mod expressions;
 mod dsl_format;
 
-use std::fmt;
 use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
+use std::fmt;
 
+pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
-pub use dsl::{EffectDsl, DslInterpreter};
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
@@ -137,10 +137,10 @@ impl fmt::Display for EffectExpression {
 
 #[cfg(test)]
 mod tests {
-    use indoc::indoc;
-    use crate::{fx, Effect};
     use crate::fx::RepeatMode;
     use crate::Shader;
+    use crate::fx;
+    use indoc::indoc;
 
     #[test]
     fn to_dsl_format_complex_tree() {

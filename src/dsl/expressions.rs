@@ -19,7 +19,8 @@ pub(super) enum Expr {
     Style(Vec<StyleMethod>),
     Fx {
         name: String,
-        arguments: Vec<Expr>
+        arguments: Vec<Expr>,
+        // cell_filter: Option<CellFilter>,
     }
 }
 
@@ -65,18 +66,12 @@ pub(super) enum StyleMethod {
     SubModifier(Modifier),
 }
 
-pub(super) fn style_from(methods: Vec<StyleMethod>) -> Style {
-    methods.iter().fold(Style::default(), |style, method| {
+pub(super) fn compile_style(methods: Vec<StyleMethod>) -> Style {
+    methods.into_iter().fold(Style::new(), |style, method| {
         match method {
-            StyleMethod::Fg(Expr::Literal(Value::Color(color))) => {
-                style.fg(*color)
-            },
-            StyleMethod::Bg(Expr::Literal(Value::Color(color))) => {
-                style.bg(*color)
-            },
-            StyleMethod::AddModifier(modifier) => {
-                style.add_modifier(*modifier)
-            },
+            StyleMethod::Fg(Expr::Literal(Value::Color(color))) => style.fg(color),
+            StyleMethod::Bg(Expr::Literal(Value::Color(color))) => style.bg(color),
+            StyleMethod::AddModifier(modifier) => style.add_modifier(modifier),
             _ => style
         }
     })

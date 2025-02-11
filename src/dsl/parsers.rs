@@ -1159,6 +1159,7 @@ mod tests {
                 Expr::Literal(Value::Duration(Duration::from_millis(220))),
             ]
         };
+        assert_eq!(result, Some(expected));
 
         let input = "fx::dissolve((Duration::from_millis(220), ElasticOut))";
         let result = parse(super::effect(), input).result;

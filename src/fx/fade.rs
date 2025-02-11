@@ -7,7 +7,6 @@ use crate::color_mapper::ColorMapper;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::{CellFilter, Duration, Interpolatable};
-use crate::color_ext::ToRgbComponents;
 use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 #[derive(Builder, Clone, Debug)]

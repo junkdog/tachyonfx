@@ -8,28 +8,10 @@ use crate::{fx, Effect};
 use std::fmt;
 use std::fmt::Formatter;
 
-
-struct Interpreter {
-    name: &'static str,
-    eval: Box<dyn Fn(&mut Arguments) -> Result<Effect, DslError>>,
-}
-
-impl Interpreter {
-    fn new(
-        name: &'static str,
-        eval: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static
-    ) -> Self {
-        Self {
-            name,
-            eval: Box::new(eval),
-        }
-    }
-}
-
 /// A compiler and registry for tachyonfx effect DSL expressions.
 ///
-/// `EffectDsl` manages a collection of interpreters that can compile DSL expressions into
-/// concrete effect instances. It comes pre-registered with interpreters for all standard
+/// `EffectDsl` manages a collection of compilers that can compile DSL expressions into
+/// concrete effect instances. It comes pre-registered with compilers for all standard
 /// tachyonfx effects.
 ///
 /// # Examples
@@ -41,7 +23,7 @@ impl Interpreter {
 /// let dsl = EffectDsl::new();
 ///
 /// // Use the DSL to interpret effect expressions
-/// let effect = dsl.interpreter().eval("fx::dissolve(500)").unwrap();
+/// let effect = dsl.compiler().compile("fx::dissolve(500)").unwrap();
 /// ```
 ///
 /// The DSL supports binding variable to effects:
@@ -54,17 +36,17 @@ impl Interpreter {
 /// let input = r#"fx::sweep_in(motion, 10, 0, c, (1000, QuadOut))"#;
 ///
 /// let dsl = EffectDsl::new();
-/// let effect = dsl.interpreter()
+/// let effect = dsl.compiler()
 ///     .bind("motion", Motion::LeftToRight)
 ///     .bind("c", Color::from_u32(0x1d2021))
-///     .eval(input)
+///     .compile(input)
 ///     .unwrap();
 /// ```
 ///
 /// # Extending
 ///
 /// While `EffectDsl` comes with all standard effects pre-registered, you can register
-/// additional custom effect interpreters if needed:
+/// additional custom effect compilers if needed:
 ///
 /// ```
 /// use tachyonfx::dsl::EffectDsl;
@@ -77,14 +59,19 @@ impl Interpreter {
 /// ```
 #[derive(Debug)]
 pub struct EffectDsl {
-    compilers: Vec<Interpreter>,
+    compilers: Vec<EffectCompiler>,
+}
+
+struct EffectCompiler {
+    effect_name: &'static str,
+    compile: Box<dyn Fn(&mut Arguments) -> Result<Effect, DslError>>,
 }
 
 
 impl EffectDsl {
-    /// Creates a new `EffectDsl` instance with all standard effect interpreters registered.
+    /// Creates a new `EffectDsl` instance with all standard effect compilers registered.
     pub fn new() -> Self {
-        register_default_interpreters(Self {
+        register_default_compilers(Self {
             compilers: Vec::new(),
         })
     }
@@ -124,18 +111,18 @@ impl EffectDsl {
         compiler: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static
     ) -> Self {
         let mut this = self;
-        this.compilers.push(Interpreter::new(name, compiler));
+        this.compilers.push(EffectCompiler::new(name, compiler));
         this
     }
 
-    /// Creates a new DSL interpreter for evaluating effect expressions.
+    /// Creates a new DSL compiler for executing effect expressions.
     ///
-    /// The interpreter maintains its own environment of bound variables and can
-    /// evaluate DSL expressions into concrete `Effect` instances.
+    /// The compiler maintains its own environment of bound variables and can
+    /// execute DSL expressions into concrete `Effect` instances.
     ///
     /// # Returns
     ///
-    /// A new `DslInterpreter` instance configured with this DSL's compilers.
+    /// A new `DslCompiler` instance configured with this DSL's compilers.
     ///
     /// # Examples
     ///
@@ -144,22 +131,22 @@ impl EffectDsl {
     /// use ratatui::style::Color;
     ///
     /// let dsl = EffectDsl::new();
-    /// let interpreter = dsl.interpreter()
+    /// let compiler = dsl.compiler()
     ///     .bind("bg_color", Color::Blue);
     ///
     /// // Use bound variables in expressions
-    /// let effect = interpreter.eval(r#"
+    /// let effect = compiler.compile(r#"
     ///     fx::fade_to(bg_color, (1000, Linear))
     /// "#);
     /// ```
-    pub fn interpreter(&self) -> DslInterpreter {
-        DslInterpreter {
+    pub fn compiler(&self) -> DslCompiler {
+        DslCompiler {
             dsl: self,
             environment: DslEnv::new(),
         }
     }
 
-    pub(super) fn eval(
+    pub(super) fn compile(
         &self,
         env: &DslEnv,
         input: Expr
@@ -167,15 +154,15 @@ impl EffectDsl {
         match input {
             Expr::Fx { name, arguments } => self.compilers
                 .iter()
-                .find(|d| d.name == name)
+                .find(|d| d.effect_name == name)
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = Arguments::new(arguments.into(), self, env);
-                    let effect = (d.eval)(&mut args);
+                    let effect = (d.compile)(&mut args);
 
                     match () {
                         _ if effect.is_err() => effect,
-                        // todo: check on each interpreter if there are any remaining arguments
+                        // todo: check on each compiler if there are any remaining arguments
                         _ if !args.args().is_empty() => Err(DslError::TooManyArguments {
                             expected: args.original_arg_count() - args.args().len(),
                             actual: args.original_arg_count(),
@@ -207,21 +194,21 @@ impl EffectDsl {
     }
 }
 
-/// An interpreter that can evaluate tachyonfx DSL expressions into concrete effects.
+/// A compiler that can execute tachyonfx DSL expressions into concrete effects.
 ///
-/// The interpreter maintains its own environment of bound variables that can be referenced
+/// The compiler maintains its own environment of bound variables that can be referenced
 /// in effect expressions. It uses its parent `EffectDsl` to compile the expressions.
 ///
 /// ### See also:
-/// - [`EffectDsl::interpreter`](EffectDsl::interpreter) for creating a new interpreter
-pub struct DslInterpreter<'ctx> {
+/// - [`EffectDsl::compiler`](EffectDsl::compiler) for creating a new compiler
+pub struct DslCompiler<'ctx> {
     dsl: &'ctx EffectDsl,
     environment: DslEnv,
 }
 
-impl DslInterpreter<'_> {
+impl DslCompiler<'_> {
 
-    /// Binds a value to a name in the interpreter's environment.
+    /// Binds a value to a name in the compiler's environment.
     ///
     /// The bound value can then be referenced by name in DSL expressions.
     ///
@@ -242,16 +229,16 @@ impl DslInterpreter<'_> {
         self
     }
 
-    /// Evaluates a DSL expression string into a concrete effect.
+    /// Compiles a DSL expression string into a concrete effect.
     ///
     /// # Arguments
     ///
-    /// * `input` - The DSL expression to evaluate
+    /// * `input` - The DSL expression to compile
     ///
     /// # Returns
     ///
     /// Returns either:
-    /// - `Ok(Effect)` if evaluation succeeds
+    /// - `Ok(Effect)` if compilation succeeds
     /// - `Err(DslError)` if parsing or compilation fails
     ///
     /// # Examples
@@ -259,47 +246,59 @@ impl DslInterpreter<'_> {
     /// ```
     /// use tachyonfx::dsl::EffectDsl;
     ///
-    /// let effect = EffectDsl::new()
-    ///     .interpreter()
-    ///     .eval("fx::dissolve(500)")
+    /// let effect = EffectDsl::new().compiler()
+    ///     .compile("fx::dissolve(500)")
     ///     .unwrap();
     /// ```
-    pub fn eval(self, input: &str) -> Result<Effect, DslError> {
+    pub fn compile(self, input: &str) -> Result<Effect, DslError> {
         parse_expr(input)
-            .and_then(|expr| self.dsl.eval(&self.environment, expr))
+            .and_then(|expr| self.dsl.compile(&self.environment, expr))
     }
 }
 
-fn register_default_interpreters(effect_dsl: EffectDsl) -> EffectDsl {
+fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
     effect_dsl
         .register("term256_colors", |_args| fx::term256_colors().into())
-        .register("coalesce",       interpreters::coalesce)
-        .register("coalesce_from",  interpreters::coalesce_from)
+        .register("coalesce",       compilers::coalesce)
+        .register("coalesce_from",  compilers::coalesce_from)
         .register("consume_tick",   |_args| consume_tick().into())
-        .register("delay",          interpreters::delay)
+        .register("delay",          compilers::delay)
         .register("dissolve",       |args| dissolve(args.effect_timer()?).into())
-        .register("dissolve_to",    interpreters::dissolve_to)
-        .register("fade_from",      interpreters::fade_from)
-        .register("fade_from_fg",   interpreters::fade_from_fg)
-        .register("fade_to",        interpreters::fade_to)
-        .register("fade_to_fg",     interpreters::fade_to_fg)
+        .register("dissolve_to",    compilers::dissolve_to)
+        .register("fade_from",      compilers::fade_from)
+        .register("fade_from_fg",   compilers::fade_from_fg)
+        .register("fade_to",        compilers::fade_to)
+        .register("fade_to_fg",     compilers::fade_to_fg)
         .register("never_complete", |args| never_complete(args.effect()?).into())
         .register("ping_pong",      |args| ping_pong(args.effect()?).into())
-        .register("prolong_end",    interpreters::prolong_end)
-        .register("prolong_start",  interpreters::prolong_start)
-        .register("repeat",         interpreters::repeat)
-        .register("sleep",          interpreters::sleep)
+        .register("prolong_end",    compilers::prolong_end)
+        .register("prolong_start",  compilers::prolong_start)
+        .register("repeat",         compilers::repeat)
+        .register("sleep",          compilers::sleep)
         .register("repeating",      |args| repeating(args.effect()?).into())
-        .register("slide_in",       interpreters::slide_in)
-        .register("slide_out",      interpreters::slide_out)
-        .register("sweep_in",       interpreters::sweep_in)
-        .register("sweep_out",      interpreters::sweep_out)
-        .register("with_duration",  interpreters::with_duration)
+        .register("slide_in",       compilers::slide_in)
+        .register("slide_out",      compilers::slide_out)
+        .register("sweep_in",       compilers::sweep_in)
+        .register("sweep_out",      compilers::sweep_out)
+        .register("with_duration",  compilers::with_duration)
         .register(
             "timed_never_complete",
-            interpreters::timed_never_complete
+            compilers::timed_never_complete
         )
 }
+
+impl EffectCompiler {
+    fn new(
+        name: &'static str,
+        compile: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static
+    ) -> Self {
+        Self {
+            effect_name: name,
+            compile: Box::new(compile),
+        }
+    }
+}
+
 
 impl From<Effect> for Result<Effect, DslError> {
     fn from(effect: Effect) -> Self {
@@ -307,7 +306,7 @@ impl From<Effect> for Result<Effect, DslError> {
     }
 }
 
-mod interpreters {
+mod compilers {
     use crate::dsl::dsl::Arguments;
     use crate::dsl::DslError;
     use crate::{fx, Effect};
@@ -432,29 +431,28 @@ mod interpreters {
     }
 }
 
-impl fmt::Debug for Interpreter {
+impl fmt::Debug for EffectCompiler {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Interpreter")
-            .field("name", &self.name)
+        f.debug_struct("compiler")
+            .field("name", &self.effect_name)
             .finish()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::dsl::arguments::Arguments;
+    use crate::dsl::dsl::{compilers, EffectDsl};
+    use crate::dsl::environment::DslEnv;
     use crate::dsl::expressions::{Expr, Value};
+    use crate::dsl::DslError;
     use crate::fx::RepeatMode;
     use crate::Interpolation::QuadOut;
     use crate::{fx, Duration, Effect, EffectTimer, Interpolation, Motion, Shader};
     use ratatui::style::{Color, Style};
     use regex::Regex;
     use std::collections::VecDeque;
-    use ratatui::prelude::Modifier;
     use Interpolation::Linear;
-    use crate::dsl::arguments::Arguments;
-    use crate::dsl::dsl::{interpreters, EffectDsl};
-    use crate::dsl::DslError;
-    use crate::dsl::environment::DslEnv;
 
     fn assert_effect_roundtrip_eq(
         effect: Effect,
@@ -465,9 +463,9 @@ mod tests {
             .to_string();
 
         let dsl = EffectDsl::new();
-        let actual = dsl.interpreter()
-            .eval(&expr)
-            .expect("effect from evaluating dsl expression");
+        let actual = dsl.compiler()
+            .compile(&expr)
+            .expect("effect from compiled dsl expression");
 
         let regex = Regex::new("SimpleRng \\{ state: \\d+ }").unwrap();
         let sanitized = |t| {
@@ -482,7 +480,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interpreter_dsl_roundtrips() {
+    fn test_compiler_dsl_roundtrips() {
         let color = Color::from_u32(0);
 
         [
@@ -525,7 +523,7 @@ mod tests {
             )"#;
 
         let dsl = EffectDsl::new();
-        let effect = dsl.interpreter().eval(input)
+        let effect = dsl.compiler().compile(input)
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "sweep_in");
@@ -545,10 +543,10 @@ mod tests {
         let input = r#"fx::sweep_in(motion, 10, 0, c, (1000, QuadOut))"#;
 
         let dsl = EffectDsl::new();
-        let effect = dsl.interpreter()
+        let effect = dsl.compiler()
             .bind("motion", Motion::LeftToRight)
             .bind("c", Color::from_u32(0x1d2021))
-            .eval(input)
+            .compile(input)
             .expect("effect to be compiled");
 
 
@@ -560,7 +558,7 @@ mod tests {
     fn error_unknown_effect() {
         let input = r#"fx::nonexistent()"#;
         let ctx = EffectDsl::new();
-        let err = ctx.interpreter().eval(input).unwrap_err();
+        let err = ctx.compiler().compile(input).unwrap_err();
         assert!(matches!(err, DslError::UnknownEffect { .. }));
     }
 
@@ -568,7 +566,7 @@ mod tests {
     fn error_invalid_argument() {
         let input = r#"fx::sweep_in("wrong", 10, 0, Color::from_u32(0x1d2021), 1000)"#;
         let ctx = EffectDsl::new();
-        let err = ctx.interpreter().eval(input).unwrap_err();
+        let err = ctx.compiler().compile(input).unwrap_err();
         assert!(matches!(err, DslError::WrongArgumentType {
             position: 0,
             expected: "motion"
@@ -587,22 +585,22 @@ mod tests {
             )"#;
 
         let ctx = EffectDsl::new();
-        let err = ctx.interpreter().eval(input).unwrap_err();
+        let err = ctx.compiler().compile(input).unwrap_err();
         assert!(matches!(err, DslError::TooManyArguments { .. }), "{:?}", err);
     }
 
     // Error cases
     #[test]
-    fn test_interpreter_missing_arguments() {
+    fn test_compiler_missing_arguments() {
         let dsl = EffectDsl::new();
         let exprs = vec![];
         let env = DslEnv::new();
         let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
-        assert!(interpreters::fade_to_fg(&mut args).is_err());
+        assert!(compilers::fade_to_fg(&mut args).is_err());
     }
 
     #[test]
-    fn test_interpreter_wrong_argument_type() {
+    fn test_compiler_wrong_argument_type() {
         let dsl = EffectDsl::new();
         let exprs = vec![
             Expr::Literal(Value::String("wrong".to_string())),
@@ -610,6 +608,6 @@ mod tests {
         ];
         let env = DslEnv::new();
         let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
-        assert!(interpreters::fade_to_fg(&mut args).is_err());
+        assert!(compilers::fade_to_fg(&mut args).is_err());
     }
 }
