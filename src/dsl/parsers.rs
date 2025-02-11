@@ -91,6 +91,25 @@ fn array_ref<'a>() -> impl StrParser<'a, Expr> {
     ).map(Expr::ArrayRef)
 }
 
+fn array<'a>() -> impl StrParser<'a, Expr> {
+    middle(
+        trim("["),
+        many_to_vec(argument(), true, separator(trim(","), false)),
+        trim("]")
+    ).map(Expr::Array)
+}
+
+fn option<'a>() -> impl StrParser<'a, Expr> {
+    or!(
+        trim("None").map(|_| Expr::Literal(Value::None)),
+        middle(
+            trim("Some("),
+            argument(),
+            trim(")")
+        ).map(Box::new).map(Expr::OptionSome)
+    )
+}
+
 fn var<'a>() -> impl StrParser<'a, Expr> {
     many(item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')), false, no_separator())
         .map(|s: &str| s.to_string())
@@ -210,7 +229,9 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
             repeat_mode(), // used by fx::repeat
             style(),
             array_ref(), // e.g. &[fx1, fx2, fx3]
+            array(),     // e.g. [1, 2, 3]
             container_effect(),
+            option(),
             effect(),
             var(),
         )
@@ -622,6 +643,21 @@ mod tests {
     }
 
     #[test]
+    fn test_optional() {
+        let input = "None";
+        assert_expr_eq(
+            parse(super::option(), input),
+            Expr::Literal(Value::None)
+        );
+
+        let input = "Some(10)";
+        assert_expr_eq(
+            parse(super::option(), input),
+            Expr::OptionSome(Box::new(literal(Value::U32(10))))
+        );
+    }
+
+    #[test]
     fn repeat_modes() {
         let input = "RepeatMode::Forever";
         assert_parser_eq(
@@ -1006,12 +1042,21 @@ mod tests {
         assert_expr_eq(result, expected);
     }
 
-    fn call_expr(function: FnCall, args: &[Expr]) -> Expr {
-        Expr::Call { function, args: args.into() }
-    }
+    #[test]
+    fn parse_array() {
+        let input = "[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
+        let result = parse(super::array(), input);
+        let expected = Expr::Array(vec![
+            Expr::Literal(Value::String("Hello, World!".to_string())),
+            Expr::Literal(Value::U32(1337)),
+            Expr::Literal(Value::F32(3.14)),
+            call_expr(FnCall::EffectTimerNew, &[
+                call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]),
+                literal(Value::Interpolation(Interpolation::SineIn))
+            ])
+        ]);
 
-    fn literal(value: Value) -> Expr {
-        Expr::Literal(value)
+        assert_expr_eq(result, expected);
     }
 
     #[test]
@@ -1156,7 +1201,7 @@ mod tests {
         let expected = Expr::Fx {
             name: "coalesce".to_string(),
             arguments: vec![
-                Expr::Literal(Value::Duration(Duration::from_millis(220))),
+                call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(220))]),
             ]
         };
         assert_eq!(result, Some(expected));
@@ -1190,5 +1235,13 @@ mod tests {
             ]
         };
         assert_eq!(result, Some(expected));
+    }
+
+    fn call_expr(function: FnCall, args: &[Expr]) -> Expr {
+        Expr::Call { function, args: args.into() }
+    }
+
+    fn literal(value: Value) -> Expr {
+        Expr::Literal(value)
     }
 }

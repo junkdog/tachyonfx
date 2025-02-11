@@ -269,6 +269,8 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("fade_from_fg",   compilers::fade_from_fg)
         .register("fade_to",        compilers::fade_to)
         .register("fade_to_fg",     compilers::fade_to_fg)
+        .register("hsl_shift",      compilers::hsl_shift)
+        .register("hsl_shift_fg",   compilers::hsl_shift_fg)
         .register("never_complete", |args| never_complete(args.effect()?).into())
         .register("ping_pong",      |args| ping_pong(args.effect()?).into())
         .register("prolong_end",    compilers::prolong_end)
@@ -355,6 +357,41 @@ mod compilers {
         fx::fade_from(
             args.color()?,
             args.color()?,
+            args.effect_timer()?
+        ).into()
+    }
+
+    pub(super) fn hsl_shift(args: &mut Arguments) -> Result<Effect, DslError> {
+        let into_array = |data: Vec<f32>| -> Result<Option<[f32; 3]>, DslError> {
+            match data.len() {
+                0 => Ok(None),
+                3 => Ok(Some([data[0], data[1], data[2]])),
+                _ => Err(DslError::WrongArgumentType {
+                    position: 0,
+                    expected: "array of 3 floats",
+                }),
+            }
+        };
+
+        let fg: Option<[f32; 3]> = into_array(args.array(Arguments::read_f32)?)?;
+        let bg: Option<[f32; 3]> = into_array(args.array(Arguments::read_f32)?)?;
+
+        fx::hsl_shift(fg, bg, args.effect_timer()?).into()
+    }
+
+    pub(super) fn hsl_shift_fg(args: &mut Arguments) -> Result<Effect, DslError> {
+        let into_array = |data: Vec<f32>| -> Result<[f32; 3], DslError> {
+            match data.len() {
+                3 => Ok([data[0], data[1], data[2]]),
+                _ => Err(DslError::WrongArgumentType {
+                    position: 0,
+                    expected: "array of 3 floats",
+                }),
+            }
+        };
+
+        fx::hsl_shift_fg(
+            into_array(args.array(Arguments::read_f32)?)?,
             args.effect_timer()?
         ).into()
     }
@@ -494,6 +531,8 @@ mod tests {
             fx::fade_from_fg(color, (1000, Linear)),
             fx::fade_to(color, color, (1000, Linear)),
             fx::fade_to_fg(color, (1000, Linear)),
+            fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear)),
+            fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear)),
             fx::never_complete(fx::dissolve((1000, Linear))),
             fx::ping_pong(fx::dissolve((1000, Linear))),
             fx::prolong_end((1000, Linear), fx::dissolve((1000, Linear))),
@@ -552,6 +591,24 @@ mod tests {
 
         assert_eq!(effect.name(), "sweep_in");
         assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
+    }
+
+    #[test]
+    fn hsl_shift_fg_and_hsl_shift() {
+        let input =   "fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear))";
+        let expected = fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear));
+        let result = compile_effect(input);
+        assert_eq!(format!("{result:?}"), format!("{expected:?}"));
+
+        let input =   "fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear))";
+        let expected = fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear));
+        let result = compile_effect(input);
+        assert_eq!(format!("{result:?}"), format!("{expected:?}"));
+    }
+
+    fn compile_effect(input: &str) -> Effect {
+        let dsl = EffectDsl::new();
+        dsl.compiler().compile(input).unwrap()
     }
 
     #[test]

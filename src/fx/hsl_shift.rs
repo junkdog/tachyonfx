@@ -7,6 +7,7 @@ use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::{CellFilter, Duration};
 use crate::{ColorMapper, HslConvertable, Interpolatable};
+use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 #[derive(Builder, Clone, Default, Debug)]
 pub struct HslShift {
@@ -83,5 +84,50 @@ impl Shader for HslShift {
 
     fn cell_selection(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
+    }
+
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        let hsl_mod_fg = self.hsl_mod_fg
+            .map(|hsl| format!("Some([{}, {}, {}])", hsl[0], hsl[1], hsl[2]))
+            .unwrap_or("None".to_string());
+
+        let hsl_mod_bg = self.hsl_mod_bg
+            .map(|hsl| format!("Some([{}, {}, {}])", hsl[0], hsl[1], hsl[2]))
+            .unwrap_or("None".to_string());
+
+        EffectExpression::parse(&format!("{}({}, {}, {})",
+            self.name(),
+            hsl_mod_fg,
+            hsl_mod_bg,
+            self.timer.dsl_format(),
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{fx, Effect};
+    use crate::dsl::EffectDsl;
+    use crate::Interpolation::Linear;
+
+    #[test]
+    fn hsl_shift() {
+        let input =   "fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear))";
+        let expected = fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear));
+        let result = compile_effect(input);
+        assert_eq!(format!("{result:?}"), format!("{expected:?}"));
+    }
+
+    #[test]
+    fn test_hsl_shift_fg() {
+        let input =   "fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear))";
+        let expected = fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear));
+        let result = compile_effect(input);
+        assert_eq!(format!("{result:?}"), format!("{expected:?}"));
+    }
+
+    fn compile_effect(input: &str) -> Effect {
+        let dsl = EffectDsl::new();
+        dsl.compiler().compile(input).unwrap()
     }
 }

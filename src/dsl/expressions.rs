@@ -9,11 +9,13 @@ pub(super) enum Expr {
     Literal(Value),
     Var(String),
     ArrayRef(Vec<Expr>),
+    Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
     Call {
         function: FnCall,  // e.g. ["Duration", "from_millis"]
         args: Vec<Expr>
     },
+    OptionSome(Box<Expr>),
     Sequence(Vec<Expr>),
     Parallel(Vec<Expr>),
     Style(Vec<StyleMethod>),
@@ -33,6 +35,7 @@ pub(super) enum Value {
     U16(u16),
     U32(u32),
     F32(f32),
+    None,
     Duration(Duration),
     Timer(EffectTimer),
     Motion(Motion),
@@ -87,10 +90,12 @@ impl Expr {
             Expr::Literal(_)        => "literal",
             Expr::Call { .. }       => "function_call",
             Expr::ArrayRef(_)       => "array_ref",
+            Expr::Array(_)          => "array_ref",
             Expr::CellFilter { .. } => "cell_filter",
             Expr::Sequence(_)       => "sequence",
             Expr::Parallel(_)       => "parallel",
             Expr::Style(_)          => "style",
+            Expr::OptionSome(_)     => "some",
         }
     }
 
@@ -106,6 +111,13 @@ impl Expr {
                     .collect::<Vec<_>>()
                     .join(",\n");
                 format!("{}&[\n{}\n{}]", indent_str, inner, indent_str)
+            },
+            Expr::Array(exprs) => {
+                let inner = exprs.iter()
+                    .map(|e| e.format(indent + 4))
+                    .collect::<Vec<_>>()
+                    .join(",\n");
+                format!("{}[\n{}\n{}]", indent_str, inner, indent_str)
             },
             Expr::Fx { name, arguments } => {
                 if arguments.is_empty() {
@@ -181,6 +193,7 @@ impl Expr {
 
                 format!("{}Style::new(){}", indent_str, inner)
             }
+            Expr::OptionSome(v) => format!("{}Some({})", indent_str, v.format(0)),
         }
     }
 }
@@ -222,6 +235,7 @@ impl Value {
                 "RepeatMode::Forever".to_string(),
             Value::Interpolation(i) =>
                 format!("{i:?}"),
+            Value::None => "None".to_string(),
         }
     }
 }

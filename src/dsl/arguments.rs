@@ -5,6 +5,8 @@ use crate::{Duration, Effect, EffectTimer, Interpolation, Motion};
 use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
+use std::fmt;
+use std::fmt::Formatter;
 use crate::dsl::expressions::{compile_style, Expr, FnCall, Value};
 use crate::fx::RepeatMode;
 
@@ -119,6 +121,21 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    pub fn option<T: Clone + 'static>(
+        &mut self,
+        inner: impl Fn(&mut Self) -> Result<T, DslError>
+    ) -> Result<Option<T>, DslError> {
+        match self.next("option")? {
+            Expr::Literal(Value::None) => Ok(None),
+            Expr::OptionSome(expr)     => {
+                let mut args = Arguments::new(expr.into(), self.context, self.vars);
+                inner(&mut args).map(Some)
+            },
+            Expr::Var(name)            => self.bound_var(name),
+            _                          => self.expected_type("option"),
+        }
+    }
+
     pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
             Expr::Fx { name, arguments } => self.compile_effect(Expr::Fx { name, arguments }),
@@ -193,16 +210,31 @@ impl<'a> Arguments<'a> {
         }
     }
 
-    pub fn array_ref(&mut self) -> Result<Arguments<'a>, DslError> {
-        match self.next("array_ref")? {
-            Expr::ArrayRef(exprs) => Ok(exprs),
-            Expr::Var(name)       => self.bound_var(name),
-            _                     => self.expected_type("array_ref"),
-        }.map(|exprs| Arguments::new(exprs.into(), self.context, self.vars))
+
+    pub fn array<T: Clone + 'static>(
+        &mut self,
+        inner: impl Fn(&mut Self) -> Result<T, DslError>
+    ) -> Result<Vec<T>, DslError> {
+        match self.next("array")? {
+            Expr::Array(exprs)    => self.map_exprs(exprs, inner),
+            Expr::ArrayRef(exprs) => self.map_exprs(exprs, inner),
+            Expr::Var(name)       => self.bound_var(name).into(),
+            _                     => self.expected_type("array"),
+        }
     }
 
     pub(super) fn original_arg_count(&self) -> usize {
         self.initial_arg_count
+    }
+
+    fn map_exprs<T: Clone>(
+        &mut self,
+        exprs: Vec<Expr>,
+        inner: impl Fn(&mut Self) -> Result<T, DslError>
+    ) -> Result<Vec<T>, DslError> {
+        let mut args = Arguments::new(exprs.into(), self.context, self.vars);
+        (0..args.initial_arg_count)
+            .map(|_| inner(&mut args)).collect()
     }
 
     fn compile_effect(&self, expr: Expr) -> Result<Effect, DslError> {
@@ -221,12 +253,28 @@ impl<'a> Arguments<'a> {
             })
     }
 
-
     fn expected_type<T>(&self, expected: &'static str) -> Result<T, DslError>  {
         Err(DslError::WrongArgumentType {
             position: self.initial_arg_count - self.args.len() - 1,
             expected,
         })
+    }
+}
+
+impl From<Box<Expr>> for VecDeque<Expr> {
+    fn from(expr: Box<Expr>) -> Self {
+        vec![*expr].into()
+    }
+}
+
+impl fmt::Display for Arguments<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Arguments({})", self.args
+            .iter()
+            .map(|e| e.type_name())
+            .collect::<Vec<_>>()
+            .join(", ")
+        )
     }
 }
 
@@ -310,13 +358,13 @@ mod tests {
     }
 
     #[test]
-    fn test_array_ref_parsing() {
+    fn test_array_parsing() {
         let binding = empty_env();
         let context = EffectDsl::new();
         let mut args = Arguments::new(
             vec![
                 Expr::ArrayRef(vec![
-                    Expr::Literal(Value::U32(42)),
+                    Expr::Literal(Value::F32(10.0)),
                     Expr::Literal(Value::F32(3.14)),
                 ]),
             ].into(),
@@ -324,14 +372,62 @@ mod tests {
             &binding
         );
 
-        let mut inner_args = args.array_ref().unwrap();
-        assert_eq!(inner_args.read_u32(), Ok(42));
-        assert_eq!(inner_args.read_f32(), Ok(3.14));
-        assert_eq!(inner_args.read_u32(), Err(DslError::MissingArgument {
-            position: 2,
-            name: "u32",
-        }));
+        let floats = args.array(Arguments::read_f32).unwrap();
+        assert_eq!(floats, vec![10.0, 3.14]);
+
+
+        let mut args = Arguments::new(
+            vec![
+                Expr::ArrayRef(vec![
+                    Expr::Literal(Value::String("a".into())),
+                    Expr::Literal(Value::String("b".into())),
+                    Expr::Literal(Value::String("c".into())),
+                ]),
+            ].into(),
+            &context,
+            &binding
+        );
+
+        let strings = args.array(Arguments::string).unwrap();
+        assert_eq!(strings, vec!["a", "b", "c"]);
+
+        // let mut inner_args = args.array_ref().unwrap();
+        // assert_eq!(inner_args.read_u32(), Ok(42));
+        // assert_eq!(inner_args.read_f32(), Ok(3.14));
+        // assert_eq!(inner_args.read_u32(), Err(DslError::MissingArgument {
+        //     position: 2,
+        //     name: "u32",
+        // }));
     }
+
+    #[test]
+    fn test_option_parsing() {
+        let binding = empty_env();
+        let context = EffectDsl::new();
+
+        let mut args = Arguments::new(
+            vec![
+                Expr::OptionSome(Box::new(Expr::Literal(Value::U32(42)))),
+            ].into(),
+            &context,
+            &binding
+        );
+
+        let inner_arg = args.option(Arguments::read_u32).unwrap();
+        assert_eq!(inner_arg, Some(42));
+
+        let mut args = Arguments::new(
+            vec![
+                Expr::Literal(Value::None),
+            ].into(),
+            &context,
+            &binding
+        );
+
+        let inner_arg = args.option(|mut args| args.read_u32()).unwrap();
+        assert_eq!(inner_arg, None);
+    }
+
 
     #[test]
     fn test_string_parsing() {
