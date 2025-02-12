@@ -62,6 +62,7 @@ pub enum DslError {
     WrongArgumentType {
         position: usize,
         expected: &'static str,
+        actual: String,
     },
 
     #[error("{name} does not provide a to_dsl() implementation")]
@@ -72,6 +73,12 @@ pub enum DslError {
     #[error("{name} is not supported by the dsl")]
     UnsupportedEffect {
         name: String,
+    },
+
+    #[error("Array length mismatch. Expected {expected}, got {actual}")]
+    ArrayLengthMismatch {
+        expected: usize,
+        actual: usize,
     },
 }
 

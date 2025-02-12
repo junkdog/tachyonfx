@@ -362,19 +362,24 @@ mod compilers {
     }
 
     pub(super) fn hsl_shift(args: &mut Arguments) -> Result<Effect, DslError> {
-        let into_array = |data: Vec<f32>| -> Result<Option<[f32; 3]>, DslError> {
-            match data.len() {
-                0 => Ok(None),
-                3 => Ok(Some([data[0], data[1], data[2]])),
-                _ => Err(DslError::WrongArgumentType {
-                    position: 0,
-                    expected: "array of 3 floats",
-                }),
+        let into_array = |data: Option<Vec<f32>>| -> Result<Option<[f32; 3]>, DslError> {
+            if let(Some(data)) = data {
+                match data.len() {
+                    0 => Ok(None),
+                    3 => Ok(Some([data[0], data[1], data[2]])),
+                    l => Err(DslError::ArrayLengthMismatch {
+                        expected: 3,
+                        actual: l
+                    }),
+                }
+
+            } else {
+                Ok(None)
             }
         };
 
-        let fg: Option<[f32; 3]> = into_array(args.array(Arguments::read_f32)?)?;
-        let bg: Option<[f32; 3]> = into_array(args.array(Arguments::read_f32)?)?;
+        let fg: Option<[f32; 3]> = into_array(args.option(|args| args.array(Arguments::read_into_f32))?)?;
+        let bg: Option<[f32; 3]> = into_array(args.option(|args| args.array(Arguments::read_into_f32))?)?;
 
         fx::hsl_shift(fg, bg, args.effect_timer()?).into()
     }
@@ -383,15 +388,15 @@ mod compilers {
         let into_array = |data: Vec<f32>| -> Result<[f32; 3], DslError> {
             match data.len() {
                 3 => Ok([data[0], data[1], data[2]]),
-                _ => Err(DslError::WrongArgumentType {
-                    position: 0,
-                    expected: "array of 3 floats",
+                l => Err(DslError::ArrayLengthMismatch {
+                    expected: 3,
+                    actual: l
                 }),
             }
         };
 
         fx::hsl_shift_fg(
-            into_array(args.array(Arguments::read_f32)?)?,
+            into_array(args.array(Arguments::read_into_f32)?)?,
             args.effect_timer()?
         ).into()
     }
@@ -624,9 +629,11 @@ mod tests {
         let input = r#"fx::sweep_in("wrong", 10, 0, Color::from_u32(0x1d2021), 1000)"#;
         let ctx = EffectDsl::new();
         let err = ctx.compiler().compile(input).unwrap_err();
+        let actual = "string".to_string();
         assert!(matches!(err, DslError::WrongArgumentType {
             position: 0,
-            expected: "motion"
+            expected: "motion",
+            ref actual
         }), "{:?}", err);
     }
 

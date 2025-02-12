@@ -199,7 +199,7 @@ impl Expr {
 }
 
 impl Value {
-    fn format(&self) -> String {
+    pub(super) fn format(&self) -> String {
         match self {
             Value::Color(c) => {
                 let (r, g, b) = c.to_rgb();

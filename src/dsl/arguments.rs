@@ -39,36 +39,36 @@ impl<'a> Arguments<'a> {
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
             Expr::Call { function: FnCall::DurationFromMillis, args } => {
-                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let mut inner_args = self.inner_args(args);
                 let ms = inner_args.read_u32()?;
                 Ok(Duration::from_millis(ms as _))
             },
             Expr::Call { function: FnCall::DurationFromSeconds, args } => {
-                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let mut inner_args = self.inner_args(args);
                 let seconds = inner_args.read_f32()?;
                 Ok(Duration::from_secs_f32(seconds))
             },
             Expr::Literal(v)  => match v {
                 Value::Duration(d) => Ok(d),
                 Value::U32(ms)     => Ok(Duration::from_millis(ms as _)),
-                _                  => self.expected_type("duration"),
+                e                  => self.expected_type("duration", e.format()),
             },
 
             Expr::Var(name)   => self.bound_var(name),
-            _                 => self.expected_type("duration"),
+            e                 => self.expected_type_expr("duration", e),
         }
     }
 
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
             Expr::Call { function: FnCall::EffectTimerFromMs, args } => {
-                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let mut inner_args = self.inner_args(args);
                 let ms = inner_args.read_u32()?;
                 let interpolation = inner_args.interpolation()?;
                 Ok(EffectTimer::from_ms(ms, interpolation))
             },
             Expr::Call { function: FnCall::EffectTimerNew, args } => {
-                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let mut inner_args = self.inner_args(args);
                 let duration = inner_args.duration()?;
                 let interpolation = inner_args.interpolation()?;
                 Ok(EffectTimer::new(duration, interpolation))
@@ -76,15 +76,15 @@ impl<'a> Arguments<'a> {
             Expr::Literal(Value::Timer(t)) => Ok(t),
             Expr::Literal(Value::U32(ms))  => Ok(ms.into()),
             Expr::Var(name)                => self.bound_var(name),
-            _                              => self.expected_type("timer"),
+            e                              => self.expected_type_expr("timer", e),
         }
     }
 
     pub fn interpolation(&mut self) -> Result<Interpolation, DslError> {
         match self.next("interpolation")? {
             Expr::Literal(Value::Interpolation(i)) => Ok(i),
-            Expr::Var(name)                        => self.bound_var(name),
-            _                                      => self.expected_type("interpolation"),
+            Expr::Var(name)            => self.bound_var(name),
+            e                          => self.expected_type_expr("interpolation", e),
         }
     }
 
@@ -101,7 +101,16 @@ impl<'a> Arguments<'a> {
         match self.next("u32")? {
             Expr::Literal(Value::U32(u)) => Ok(u),
             Expr::Var(name)              => self.bound_var(name),
-            _                            => self.expected_type("u32"),
+            e                            => self.expected_type_expr("u32", e),
+        }
+    }
+
+    pub fn read_into_f32(&mut self) -> Result<f32, DslError> {
+        match self.next("f32")? {
+            Expr::Literal(Value::F32(f)) => Ok(f),
+            Expr::Literal(Value::U32(v)) => Ok(v as f32),
+            Expr::Var(name)              => self.bound_var(name),
+            e                            => self.expected_type_expr("f32", e),
         }
     }
 
@@ -109,7 +118,7 @@ impl<'a> Arguments<'a> {
         match self.next("f32")? {
             Expr::Literal(Value::F32(f)) => Ok(f),
             Expr::Var(name)              => self.bound_var(name),
-            _                            => self.expected_type("f32"),
+            e                            => self.expected_type_expr("f32", e),
         }
     }
 
@@ -117,7 +126,7 @@ impl<'a> Arguments<'a> {
         match self.next("string")? {
             Expr::Literal(Value::String(s)) => Ok(s),
             Expr::Var(name)                 => self.bound_var(name),
-            _                               => self.expected_type("string"),
+            e                               => self.expected_type_expr("string", e),
         }
     }
 
@@ -128,11 +137,11 @@ impl<'a> Arguments<'a> {
         match self.next("option")? {
             Expr::Literal(Value::None) => Ok(None),
             Expr::OptionSome(expr)     => {
-                let mut args = Arguments::new(expr.into(), self.context, self.vars);
+                let mut args = self.inner_args(vec![*expr]);
                 inner(&mut args).map(Some)
             },
             Expr::Var(name)            => self.bound_var(name),
-            _                          => self.expected_type("option"),
+            e                          => self.expected_type_expr("option", e),
         }
     }
 
@@ -142,25 +151,21 @@ impl<'a> Arguments<'a> {
             Expr::Sequence(effects)      => self.compile_effect(Expr::Sequence(effects)),
             Expr::Parallel(effects)      => self.compile_effect(Expr::Parallel(effects)),
             Expr::Var(name)              => self.bound_var(name),
-            _                            => self.expected_type("effect"),
+            e                            => self.expected_type_expr("effect", e),
         }
     }
 
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
             Expr::Call { function: FnCall::ColorFromU32, args } => {
-                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let mut inner_args = self.inner_args(args);
                 inner_args
                     .read_u32()
                     .map(Color::from_u32)
             }
-            Expr::Literal(v)  => match v {
-                Value::Color(c) => Ok(c),
-                _               => self.expected_type("color"),
-            },
-
-            Expr::Var(name) => self.bound_var(name),
-            _               => self.expected_type("color"),
+            Expr::Literal(Value::Color(c)) => Ok(c),
+            Expr::Var(name)                => self.bound_var(name),
+            e                              => self.expected_type("color", e.type_name().into()),
         }
     }
 
@@ -169,7 +174,7 @@ impl<'a> Arguments<'a> {
             Expr::Literal(Value::Style(s))  => Ok(s),
             Expr::Style(methods)            => Ok(compile_style(methods)),
             Expr::Var(name)                 => self.bound_var(name),
-            _                               => self.expected_type("style"),
+            e                               => self.expected_type("style", e.type_name().into()),
         }
     }
 
@@ -177,20 +182,20 @@ impl<'a> Arguments<'a> {
         match self.next("motion")? {
             Expr::Literal(Value::Motion(m))  => Ok(m),
             Expr::Var(name)                  => self.bound_var(name),
-            _                                => self.expected_type("motion"),
+            e                                => self.expected_type("motion", e.type_name().into()),
         }
     }
 
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
-            Expr::Literal(Value::RepeatMode(m))  => Ok(m),
             Expr::Call { function: FnCall::RepeatModeTimes, args } => {
-                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let mut inner_args = self.inner_args(args);
                 let times = inner_args.read_u32()?;
                 Ok(RepeatMode::Times(times))
             },
-            Expr::Var(name)     => self.bound_var(name),
-            _                   => self.expected_type("repeat_mode"),
+            Expr::Literal(Value::RepeatMode(m))  => Ok(m),
+            Expr::Var(name)                      => self.bound_var(name),
+            e                                    => self.expected_type("repeat_mode", e.type_name().into()),
         }
     }
 
@@ -198,7 +203,7 @@ impl<'a> Arguments<'a> {
         match self.next("margin")? {
             Expr::Literal(Value::Margin(m)) => Ok(m),
             Expr::Var(name)                 => self.bound_var(name),
-            _                               => self.expected_type("margin"),
+            e                               => self.expected_type_expr("margin", e),
         }
     }
 
@@ -206,7 +211,7 @@ impl<'a> Arguments<'a> {
         match self.next("rect")? {
             Expr::Literal(Value::Rect(r)) => Ok(r),
             Expr::Var(name)               => self.bound_var(name),
-            _                             => self.expected_type("rect"),
+            e                             => self.expected_type_expr("rect", e),
         }
     }
 
@@ -219,7 +224,7 @@ impl<'a> Arguments<'a> {
             Expr::Array(exprs)    => self.map_exprs(exprs, inner),
             Expr::ArrayRef(exprs) => self.map_exprs(exprs, inner),
             Expr::Var(name)       => self.bound_var(name).into(),
-            _                     => self.expected_type("array"),
+            e                     => self.expected_type_expr("array", e),
         }
     }
 
@@ -232,7 +237,7 @@ impl<'a> Arguments<'a> {
         exprs: Vec<Expr>,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
-        let mut args = Arguments::new(exprs.into(), self.context, self.vars);
+        let mut args = self.inner_args(exprs);
         (0..args.initial_arg_count)
             .map(|_| inner(&mut args)).collect()
     }
@@ -253,11 +258,28 @@ impl<'a> Arguments<'a> {
             })
     }
 
-    fn expected_type<T>(&self, expected: &'static str) -> Result<T, DslError>  {
+    fn expected_type<T>(
+        &self,
+        expected: &'static str,
+        actual: String,
+    ) -> Result<T, DslError>  {
         Err(DslError::WrongArgumentType {
             position: self.initial_arg_count - self.args.len() - 1,
             expected,
+            actual
         })
+    }
+
+    fn expected_type_expr<T>(
+        &self,
+        expected: &'static str,
+        actual: Expr,
+    ) -> Result<T, DslError>  {
+        self.expected_type(expected, actual.type_name().to_string())
+    }
+
+    fn inner_args(&mut self, exprs: Vec<Expr>) -> Self {
+        Self::new(exprs.into(), self.context, self.vars)
     }
 }
 
@@ -407,14 +429,20 @@ mod tests {
 
         let mut args = Arguments::new(
             vec![
-                Expr::OptionSome(Box::new(Expr::Literal(Value::U32(42)))),
+                Expr::OptionSome(Box::new(
+                    Expr::Array(vec![
+                        Expr::Literal(Value::U32(1)),
+                        Expr::Literal(Value::U32(2)),
+                        Expr::Literal(Value::U32(3)),
+                    ])
+                )),
             ].into(),
             &context,
             &binding
         );
 
-        let inner_arg = args.option(Arguments::read_u32).unwrap();
-        assert_eq!(inner_arg, Some(42));
+        let inner_arg = args.option(|args| args.array(Arguments::read_u32)).unwrap();
+        assert_eq!(inner_arg, Some(vec![1, 2, 3]));
 
         let mut args = Arguments::new(
             vec![
@@ -424,7 +452,7 @@ mod tests {
             &binding
         );
 
-        let inner_arg = args.option(|mut args| args.read_u32()).unwrap();
+        let inner_arg = args.option(Arguments::read_u32).unwrap();
         assert_eq!(inner_arg, None);
     }
 
@@ -447,6 +475,7 @@ mod tests {
         assert_eq!(args.string(), Err(DslError::WrongArgumentType {
             position: 1,
             expected: "string",
+            actual: "literal".to_string(), // fixme: should be u32?
         }));
         assert_eq!(args.string(), Ok("world".to_string()));
     }

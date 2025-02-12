@@ -22,7 +22,11 @@ pub struct HslShift {
 
 impl Shader for HslShift {
     fn name(&self) -> &'static str {
-        "hsl_shift"
+        // if self.hsl_mod_fg.is_some() && self.hsl_mod_bg.is_some() {
+            "hsl_shift"
+        // } else {
+        //     "hsl_shift_fg"
+        // }
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
@@ -106,8 +110,9 @@ impl Shader for HslShift {
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
     use crate::{fx, Effect};
-    use crate::dsl::EffectDsl;
+    use crate::dsl::{EffectDsl, EffectExpression};
     use crate::Interpolation::Linear;
 
     #[test]
@@ -126,8 +131,34 @@ mod tests {
         assert_eq!(format!("{result:?}"), format!("{expected:?}"));
     }
 
+    // #[test] ignored for now
+    fn test_expr_to_dsl() {
+        let input = "fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear))";
+        let result = EffectExpression::parse(input).unwrap();
+        assert_eq!(format!("{result}"), indoc! {
+            "fx::hsl_shift(
+                Some([
+                    1.0,
+                    2.0,
+                    3.0
+                ]),
+                Some([
+                    1.0,
+                    2.0,
+                    3.0
+                ]),
+                EffectTimer::new(
+                    Duration::from_millis(1000),
+                    Linear
+                )
+            )"
+        });
+    }
+
     fn compile_effect(input: &str) -> Effect {
-        let dsl = EffectDsl::new();
-        dsl.compiler().compile(input).unwrap()
+        EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .unwrap()
     }
 }
