@@ -51,8 +51,13 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
 
 // parameterizing effect with CellFilter, e.g. effect.filter(CellFilter::All)
 fn effect_cell_filter<'a>() -> impl StrParser<'a, Option<Expr>> {
-    middle(trim(".filter("), cell_filter(), trim(")"))
-        .map(Some)
+    succeed(
+        middle(
+            trim(".filter("),
+            cell_filter(),
+            trim(")")
+        )
+    )
 }
 
 fn fx_name<'a>(s: &'static str) -> impl StrParser<'a, &'a str> {
@@ -77,8 +82,8 @@ fn container_effect<'a>() -> impl StrParser<'a, Expr> {
         args,
         effect_cell_filter()
     ).map(|(name, args, cell_filter)| match name {
-        "Sequence" => Expr::Sequence { effects: args, cell_filter: cell_filter.map(Box::new) },
-        "Parallel" => Expr::Parallel { effects: args, cell_filter: cell_filter.map(Box::new) },
+        "sequence" => Expr::Sequence { effects: args, cell_filter: cell_filter.map(Box::new) },
+        "parallel" => Expr::Parallel { effects: args, cell_filter: cell_filter.map(Box::new) },
         _ => unreachable!()
     })
 }
@@ -841,10 +846,7 @@ mod tests {
             parse(super::effect(), input),
             Expr::Fx {
                 name: "yolo".to_string(),
-                cell_filter: Some(Box::new(Expr::CellFilter {
-                    filter_type: "Text",
-                    arguments: vec![]
-                })),
+                cell_filter: Some(Box::new(literal(Value::CellFilter(CellFilter::Text)))),
                 arguments: vec![literal(Value::String("Hello".to_string()))]
             }
         );

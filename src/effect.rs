@@ -50,13 +50,13 @@ impl Effect {
         cloned
     }
 
-    /// Creates a new `Effect` with the specified cell selection mode.
+    /// Creates a new `Effect` with the specified cell filter.
     ///
     /// # Arguments
-    /// * `mode` - The cell selection mode to be used for the effect.
+    /// * `mode` - The terminal cell filter to be used for the effect.
     ///
     /// # Returns
-    /// * A new `Effect` instance with the specified cell selection mode.
+    /// * A new `Effect` instance with the specified filter.
     ///
     /// # Example
     /// ```
@@ -69,7 +69,7 @@ impl Effect {
     /// ```
     pub fn filter(&self, mode: CellFilter) -> Self {
         let mut cloned = self.clone();
-        cloned.filter(mode);
+        cloned.shader.filter(mode);
         cloned
     }
 

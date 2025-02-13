@@ -121,8 +121,7 @@ impl Expr {
                 format!("{}[\n{}\n{}]", indent_str, inner, indent_str)
             },
             Expr::Fx { name, arguments, cell_filter } => {
-                todo!("fix cell_filter");
-                if arguments.is_empty() {
+                let effect = if arguments.is_empty() {
                     format!("{}fx::{}()", indent_str, name)
                 } else if arguments.len() == 1 {
                     format!("{}fx::{}({})", indent_str, name, arguments[0].format(indent).trim())
@@ -133,6 +132,13 @@ impl Expr {
                         .join(",\n");
 
                     format!("{}fx::{}(\n{}\n{})", indent_str, name, args, indent_str)
+                };
+
+                if let Some(cell_filter) = cell_filter {
+                    let cell_filter = cell_filter.format(indent + 4);
+                    format!("{}{},\n{}", effect, indent_str, cell_filter)
+                } else {
+                    effect
                 }
             },
             Expr::Call { function, args } => {
