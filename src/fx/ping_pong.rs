@@ -61,7 +61,7 @@ impl Shader for PingPong {
         self.fx.set_area(area);
     }
 
-    fn set_cell_selection(&mut self, strategy: CellFilter) {
+    fn filter(&mut self, strategy: CellFilter) {
         self.strategy = strategy;
     }
 
@@ -81,7 +81,7 @@ impl Shader for PingPong {
         EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<CellFilter> {
         Some(self.strategy.clone())
     }
 

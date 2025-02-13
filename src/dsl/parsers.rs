@@ -9,7 +9,7 @@ use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
 use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
 use ratatui::prelude::Style;
-use ratatui::style::Modifier;
+use ratatui::style::{Color, Modifier};
 use crate::dsl::DslError;
 
 pub(super) fn parse_expr(
@@ -129,12 +129,12 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     let text = cf("Text").map(|_| Expr::Literal(Value::CellFilter(CellFilter::Text)));
 
     // Color filters
-    let fg_color = middle(cf("FgColor("), color(), trim(")"))
+    let fg_color = middle(cf("FgColor("), color_ctor(), trim(")"))
         .map(|color| Expr::CellFilter {
             filter_type: "FgColor",
             arguments: vec![color]
         });
-    let bg_color = middle(cf("BgColor("), color(), trim(")"))
+    let bg_color = middle(cf("BgColor("), color_ctor(), trim(")"))
         .map(|color| Expr::CellFilter {
             filter_type: "BgColor",
             arguments: vec![color]
@@ -155,7 +155,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     // Layout filter
     // let layout = tuplify!(
     //     right!(trim("Layout("), parse_layout()),
-    //     right!(trim(","), parse_u16(), trim(")")),
+    //     right!(trim(","), parse_u32(), trim(")")),
     // ).map(|(layout, idx)| CellFilter::Layout(layout, idx));
 
     // Compound filters
@@ -226,6 +226,7 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
             rect(),
             margin(),
             color(),
+            color_ctor(),
             repeat_mode(), // used by fx::repeat
             style(),
             array_ref(), // e.g. &[fx1, fx2, fx3]
@@ -265,12 +266,12 @@ fn style_method_call<'a>() -> impl StrParser<'a, StyleMethod> {
     or!(
         right!(
             skip!("."),
-            middle(trim("fg("), color(), trim(")"))
+            middle(trim("fg("), color_ctor(), trim(")"))
         ).map(StyleMethod::Fg),
 
         right!(
             skip!("."),
-            middle(trim("bg("), color(), trim(")"))
+            middle(trim("bg("), color_ctor(), trim(")"))
         ).map(StyleMethod::Bg),
 
         right!(
@@ -316,14 +317,6 @@ fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
         or!(hexadecimal, plain).map(|v| Expr::Literal(Value::U32(v))),
         var()
     )
-}
-
-fn parse_u16<'a>() -> impl StrParser<'a, Expr> {
-    let literal = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
-        .map(|s: &str| s.parse::<u16>().unwrap())
-        .map(|v| Expr::Literal(Value::U16(v)));
-
-    or!(literal, var())
 }
 
 fn parse_f32<'a>() -> impl StrParser<'a, Expr> {
@@ -417,10 +410,10 @@ fn rect<'a>() -> impl StrParser<'a, Expr> {
     let new = middle(
         trim("Rect::new("),
         tuplify!(
-            parse_u16(),
-            right!(trim(","), parse_u16()),
-            right!(trim(","), parse_u16()),
-            right!(trim(","), parse_u16()),
+            parse_u32(),
+            right!(trim(","), parse_u32()),
+            right!(trim(","), parse_u32()),
+            right!(trim(","), parse_u32()),
         ),
         trim(")")
     ).map(|(x, y, w, h)| Expr::Call {
@@ -431,10 +424,10 @@ fn rect<'a>() -> impl StrParser<'a, Expr> {
     let raw = middle(
         right!(trim("Rect"), trim("{")),
         tuplify!(
-            middle(trim("x:"), parse_u16(), trim(",")),
-            middle(trim("y:"), parse_u16(), trim(",")),
-            middle(trim("width:"), parse_u16(), trim(",")),
-            right!(trim("height:"), parse_u16()),
+            middle(trim("x:"), parse_u32(), trim(",")),
+            middle(trim("y:"), parse_u32(), trim(",")),
+            middle(trim("width:"), parse_u32(), trim(",")),
+            right!(trim("height:"), parse_u32()),
         ),
         trim("}")
     ).map(|(x, y, w, h)| Expr::Call {
@@ -450,8 +443,8 @@ fn margin<'a>() -> impl StrParser<'a, Expr> {
     let new = middle(
         trim("Margin::new("),
         tuplify!(
-            parse_u16(),
-            right!(trim(","), parse_u16())
+            parse_u32(),
+            right!(trim(","), parse_u32())
         ),
         trim(")")
     ).map(|(x, y)| Expr::Call {
@@ -463,8 +456,8 @@ fn margin<'a>() -> impl StrParser<'a, Expr> {
     let construct = middle(
         right!(trim("Margin"), trim("{")),
         tuplify!(
-            middle(trim("horizontal:"), parse_u16(), trim(",")),
-            right!(trim("vertical:"), parse_u16()),
+            middle(trim("horizontal:"), parse_u32(), trim(",")),
+            right!(trim("vertical:"), parse_u32()),
         ),
         trim("}")
     ).map(|(horizontal, vertical)| Expr::Call {
@@ -514,7 +507,7 @@ fn motion<'a>() -> impl StrParser<'a, Expr> {
     or!(literal, var())
 }
 
-fn color<'a>() -> impl StrParser<'a, Expr> {
+fn color_ctor<'a>() -> impl StrParser<'a, Expr> {
     middle(
         trim("Color::from_u32("),
         parse_u32(),
@@ -523,6 +516,60 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
         function: FnCall::ColorFromU32,
         args: vec![u32]
     })
+}
+
+fn color<'a>() -> impl StrParser<'a, Expr> {
+    // rgb
+    let rgb = middle(
+        trim("Color::Rgb("),
+        tuplify!(
+            parse_u32(),
+            right!(trim(","), parse_u32()),
+            right!(trim(","), parse_u32()),
+        ),
+        trim(")")
+    ).map(|(r, g, b)| Expr::Call {
+        function: FnCall::ColorRgb,
+        args: vec![r, g, b]
+    });
+
+    // indexed
+    let indexed = middle(
+        trim("Color::Indexed("),
+        parse_u32(),
+        trim(")")
+    ).map(|idx| Expr::Call {
+        function: FnCall::ColorIndexed,
+        args: vec![idx]
+    });
+
+
+    // named colors
+    let literal = right!(
+        succeed(attempt(skip!("Color::"))),
+        item_while(|c: char| c.is_ascii_alphabetic()),
+    ).map_if(|s: &str| match s {
+        "Reset"        => Some(Color::Reset),
+        "Black"        => Some(Color::Black),
+        "Red"          => Some(Color::Red),
+        "Green"        => Some(Color::Green),
+        "Yellow"       => Some(Color::Yellow),
+        "Blue"         => Some(Color::Blue),
+        "Magenta"      => Some(Color::Magenta),
+        "Cyan"         => Some(Color::Cyan),
+        "Gray"         => Some(Color::Gray),
+        "DarkGray"     => Some(Color::DarkGray),
+        "LightRed"     => Some(Color::LightRed),
+        "LightGreen"   => Some(Color::LightGreen),
+        "LightYellow"  => Some(Color::LightYellow),
+        "LightBlue"    => Some(Color::LightBlue),
+        "LightMagenta" => Some(Color::LightMagenta),
+        "LightCyan"    => Some(Color::LightCyan),
+        "White"        => Some(Color::White),
+        _              => None
+    }).map(|c| Expr::Literal(Value::Color(c)));
+
+    or!(literal, rgb, indexed)
 }
 
 fn interpolation<'a>() -> impl StrParser<'a, Expr> {
@@ -574,7 +621,7 @@ mod tests {
     use crate::fx::RepeatMode;
     use crate::{CellFilter, Duration, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult};
-    use ratatui::style::Modifier;
+    use ratatui::style::{Color, Modifier};
 
     fn assert_expr_eq(
         result: AnpaResult<&str, Expr>,
@@ -613,11 +660,55 @@ mod tests {
     }
 
     #[test]
-    fn test_color() {
+    fn test_color_from_u32() {
         let input = "Color::from_u32(0x1d2021)";
         assert_expr_eq(
-            parse(super::color(), input),
+            parse(super::color_ctor(), input),
             call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x1d2021))])
+        );
+    }
+
+    #[test]
+    fn test_color_variants() {
+        [
+            Color::Black,
+            Color::Red,
+            Color::Green,
+            Color::Yellow,
+            Color::Blue,
+            Color::Magenta,
+            Color::Cyan,
+            Color::Gray,
+            Color::DarkGray,
+            Color::LightRed,
+            Color::LightGreen,
+            Color::LightYellow,
+            Color::LightBlue,
+            Color::LightMagenta,
+            Color::LightCyan,
+            Color::White,
+        ].into_iter().for_each(|color| {
+            let input = format!("Color::{}", color.to_string());
+            assert_parser_eq(
+                parse(super::color(), &input),
+                Value::Color(color)
+            );
+        });
+
+        let input = "Color::Indexed(3)";
+        assert_expr_eq(
+            parse(super::color(), input),
+            call_expr(FnCall::ColorIndexed, &[literal(Value::U32(3))])
+        );
+
+        let input = "Color::Rgb(255, 127, 64)";
+        assert_expr_eq(
+            parse(super::color(), input),
+            call_expr(FnCall::ColorRgb, &[
+                literal(Value::U32(255)),
+                literal(Value::U32(127)),
+                literal(Value::U32(64))
+            ])
         );
     }
 
@@ -626,7 +717,7 @@ mod tests {
         let input = "Margin::new(10, 20)";
         assert_expr_eq(
             parse(super::margin(), input),
-            call_expr(FnCall::MarginNew, &[literal(Value::U16(10)), literal(Value::U16(20))])
+            call_expr(FnCall::MarginNew, &[literal(Value::U32(10)), literal(Value::U32(20))])
         );
 
         let input = r#"Margin {
@@ -636,8 +727,8 @@ mod tests {
         assert_expr_eq(
             parse(super::margin(), input),
             call_expr(FnCall::MarginStruct, &[
-                literal(Value::U16(10)),
-                literal(Value::U16(20))
+                literal(Value::U32(10)),
+                literal(Value::U32(20))
             ])
         );
     }
@@ -773,7 +864,7 @@ mod tests {
             "Inner(Margin::new(1, 2))",
             Expr::CellFilter {
                 filter_type: "Inner",
-                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(2))])]
+                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(2))])]
             }
         );
 
@@ -782,7 +873,7 @@ mod tests {
             "Outer(Margin::new(3, 4))",
             Expr::CellFilter {
                 filter_type: "Outer",
-                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(3)), literal(Value::U16(4))])]
+                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(3)), literal(Value::U32(4))])]
             }
         );
     }
@@ -800,7 +891,7 @@ mod tests {
         //         filter_type: "Layout",
         //         arguments: vec![
         //             Expr::Literal(Value::Layout(layout)),
-        //             Expr::Literal(Value::U16(1))
+        //             Expr::Literal(Value::U32(1))
         //         ]
         //     }
         // );
@@ -817,7 +908,7 @@ mod tests {
                     Expr::Literal(Value::CellFilter(CellFilter::Text)),
                     Expr::CellFilter {
                         filter_type: "Inner",
-                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(1))])]
+                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(1))])]
                     }
                 ]
             }
@@ -832,7 +923,7 @@ mod tests {
                     literal(Value::CellFilter(CellFilter::Text)),
                     Expr::CellFilter {
                         filter_type: "Outer",
-                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(1))])]
+                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(1))])]
                     }
                 ]
             }
@@ -847,7 +938,7 @@ mod tests {
                     literal(Value::CellFilter(CellFilter::Text)),
                     Expr::CellFilter {
                         filter_type: "Inner",
-                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(1))])]
+                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(1))])]
                     }
                 ]
             }
@@ -887,11 +978,11 @@ mod tests {
                         arguments: vec![
                             Expr::CellFilter {
                                 filter_type: "Inner",
-                                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(1)), literal(Value::U16(1))])]
+                                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(1))])]
                             },
                             Expr::CellFilter {
                                 filter_type: "Outer",
-                                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U16(2)), literal(Value::U16(2))])]
+                                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(2)), literal(Value::U32(2))])]
                             }
                         ]
                     }
@@ -906,10 +997,10 @@ mod tests {
         assert_expr_eq(
             parse(super::rect(), input),
             call_expr(FnCall::RectNew, &[
-                literal(Value::U16(10)),
-                literal(Value::U16(20)),
-                literal(Value::U16(30)),
-                literal(Value::U16(40))
+                literal(Value::U32(10)),
+                literal(Value::U32(20)),
+                literal(Value::U32(30)),
+                literal(Value::U32(40))
             ])
         );
 
@@ -922,10 +1013,10 @@ mod tests {
         assert_expr_eq(
             parse(super::rect(), input),
             call_expr(FnCall::RectStruct, &[
-                literal(Value::U16(10)),
-                literal(Value::U16(20)),
-                literal(Value::U16(30)),
-                literal(Value::U16(40))
+                literal(Value::U32(10)),
+                literal(Value::U32(20)),
+                literal(Value::U32(30)),
+                literal(Value::U32(40))
             ])
         );
     }

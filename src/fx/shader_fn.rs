@@ -176,11 +176,11 @@ impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
         self.area = Some(area);
     }
 
-    fn set_cell_selection(&mut self, filter: CellFilter) {
+    fn filter(&mut self, filter: CellFilter) {
         self.cell_filter = Some(filter);
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<CellFilter> {
         self.cell_filter.clone()
     }
 

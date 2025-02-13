@@ -92,7 +92,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
         buf: &'a mut Buffer,
         area: Rect,
     ) -> CellIterator<'a> {
-        CellIterator::new(buf, area, self.cell_selection())
+        CellIterator::new(buf, area, self.cell_filter())
     }
 
     /// Returns true if the shader effect is done.
@@ -138,6 +138,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// let mut shader = MyShader::new();
     /// shader.set_cell_selection(CellFilter::Not(CellFilter::Text));
     /// ```
+    fn filter(&mut self, filter: CellFilter);
+
+    #[deprecated(since = "0.11.0", note = "Use `filter()` instead")]
     fn set_cell_selection(&mut self, filter: CellFilter);
 
     /// Reverses the shader effect.
@@ -184,7 +187,12 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///
     /// # Returns
     /// * An `Option` containing the shader's `CellFilter`, or `None` if not applicable.
-    fn cell_selection(&self) -> Option<CellFilter> { None }
+    fn cell_filter(&self) -> Option<CellFilter> { None }
+
+    #[deprecated(since = "0.11.0", note = "Use `cell_filter()` instead")]
+    fn cell_selection(&self) -> Option<CellFilter> {
+        self.cell_filter()
+    }
 
     /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and
     /// [fx::repeat](fx/fn.repeat.html) to reset the hosted shader effect to its initial state.

@@ -32,7 +32,6 @@ pub(super) enum Value {
     Color(Color),
     Style(Style),
     String(String),
-    U16(u16),
     U32(u32),
     F32(f32),
     None,
@@ -47,6 +46,8 @@ pub(super) enum Value {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum FnCall {
+    ColorRgb,
+    ColorIndexed,
     ColorFromU32,
     DurationFromMillis,
     DurationFromSeconds,
@@ -141,17 +142,19 @@ impl Expr {
                     .join(",\n");
 
                 let (prefix, suffix) = match function {
-                    FnCall::ColorFromU32 => ("Color::from_u32(", ")"),
-                    FnCall::DurationFromMillis => ("Duration::from_millis(", ")"),
+                    FnCall::ColorRgb            => ("Color::rgb(", ")"),
+                    FnCall::ColorIndexed        => ("Color::indexed(", ")"),
+                    FnCall::ColorFromU32        => ("Color::from_u32(", ")"),
+                    FnCall::DurationFromMillis  => ("Duration::from_millis(", ")"),
                     FnCall::DurationFromSeconds => ("Duration::from_secs(", ")"),
-                    FnCall::EffectTimerNew => ("EffectTimer::new(", ")"),
-                    FnCall::EffectTimerFromMs => ("EffectTimer::from_ms(", ")"),
-                    FnCall::RectNew => ("Rect::new(", ")"),
-                    FnCall::RectStruct => ("Rect {\n", "\n}"),
-                    FnCall::MarginNew => ("Margin::new(", ")"),
-                    FnCall::MarginStruct => ("Margin {\n", "\n}"),
-                    FnCall::RepeatModeDuration => ("RepeatMode::Duration(", ")"),
-                    FnCall::RepeatModeTimes => ("RepeatMode::Times(", ")"),
+                    FnCall::EffectTimerNew      => ("EffectTimer::new(", ")"),
+                    FnCall::EffectTimerFromMs   => ("EffectTimer::from_ms(", ")"),
+                    FnCall::RectNew             => ("Rect::new(", ")"),
+                    FnCall::RectStruct          => ("Rect {\n", "\n}"),
+                    FnCall::MarginNew           => ("Margin::new(", ")"),
+                    FnCall::MarginStruct        => ("Margin {\n", "\n}"),
+                    FnCall::RepeatModeDuration  => ("RepeatMode::Duration(", ")"),
+                    FnCall::RepeatModeTimes     => ("RepeatMode::Times(", ")"),
                 };
 
                 if args.len() <= 1 {
@@ -211,8 +214,6 @@ impl Value {
                 format!("{m:?}"),
             Value::String(s) =>
                 format!("\"{}\"", s.replace('"', "\\\"")),
-            Value::U16(n) =>
-                n.to_string(),
             Value::U32(n) =>
                 n.to_string(),
             Value::F32(f) =>

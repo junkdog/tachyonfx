@@ -88,6 +88,15 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    pub fn read_u8(&mut self) -> Result<u8, DslError> {
+        u8::try_from(self.read_u32()?)
+            .map_err(|_| DslError::CastOverflow {
+                position: self.initial_arg_count - self.args.len() - 1, // -1 for the current argument
+                from: "u32",
+                to: "u8",
+            })
+    }
+
     pub fn read_u16(&mut self) -> Result<u16, DslError> {
         u16::try_from(self.read_u32()?)
             .map_err(|_| DslError::CastOverflow {
@@ -157,6 +166,10 @@ impl<'a> Arguments<'a> {
 
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
+            Expr::Call { function: FnCall::ColorIndexed, args } => {
+                let mut inner_args = self.inner_args(args);
+                Ok(Color::Indexed(inner_args.read_u8()?))
+            },
             Expr::Call { function: FnCall::ColorFromU32, args } => {
                 let mut inner_args = self.inner_args(args);
                 inner_args

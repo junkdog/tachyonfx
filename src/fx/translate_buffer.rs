@@ -76,7 +76,7 @@ impl Shader for TranslateBuffer {
 
     }
 
-    fn set_cell_selection(&mut self, _strategy: CellFilter) {
+    fn filter(&mut self, _strategy: CellFilter) {
         // not applicable
     }
 
@@ -88,7 +88,7 @@ impl Shader for TranslateBuffer {
         Some(self.timer)
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<CellFilter> {
         None
     }
 

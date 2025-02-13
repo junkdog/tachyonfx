@@ -66,8 +66,8 @@ impl Shader for OffscreenBuffer {
         self.fx.set_area(area);
     }
 
-    fn set_cell_selection(&mut self, filter: CellFilter) {
-        self.fx.set_cell_selection(filter);
+    fn filter(&mut self, filter: CellFilter) {
+        self.fx.filter(filter);
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {

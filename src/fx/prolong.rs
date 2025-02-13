@@ -76,8 +76,8 @@ impl Shader for Prolong {
         self.inner.set_area(area);
     }
 
-    fn set_cell_selection(&mut self, strategy: CellFilter) {
-        self.inner.set_cell_selection(strategy);
+    fn filter(&mut self, strategy: CellFilter) {
+        self.inner.filter(strategy);
     }
 
     /// Returns the total duration of the prolonged effect.
@@ -92,8 +92,8 @@ impl Shader for Prolong {
         Some(EffectTimer::new(self_duration + inner_duration, Linear))
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
-        self.inner.cell_selection()
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.inner.cell_filter()
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {

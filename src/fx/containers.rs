@@ -68,8 +68,8 @@ impl Shader for ParallelEffect {
         self.effects.iter_mut().for_each(|e| e.set_area(area));
     }
 
-    fn set_cell_selection(&mut self, strategy: CellFilter) {
-        self.effects.iter_mut().for_each(|e| e.set_cell_selection(strategy.clone()));
+    fn filter(&mut self, strategy: CellFilter) {
+        self.effects.iter_mut().for_each(|e| e.filter(strategy.clone()));
     }
 
     fn reverse(&mut self) {
@@ -88,7 +88,7 @@ impl Shader for ParallelEffect {
             .map(|d| EffectTimer::new(d, Linear))
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<CellFilter> {
         None
     }
 
@@ -151,8 +151,8 @@ impl Shader for SequentialEffect {
         self.effects.iter_mut().for_each(|e| e.set_area(area));
     }
 
-    fn set_cell_selection(&mut self, strategy: CellFilter) {
-        self.effects.iter_mut().for_each(|e| e.set_cell_selection(strategy.clone()));
+    fn filter(&mut self, strategy: CellFilter) {
+        self.effects.iter_mut().for_each(|e| e.filter(strategy.clone()));
     }
 
     fn reverse(&mut self) {
@@ -175,7 +175,7 @@ impl Shader for SequentialEffect {
         }
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> { None }
+    fn cell_filter(&self) -> Option<CellFilter> { None }
 
     fn reset(&mut self) {
         self.current = 0;

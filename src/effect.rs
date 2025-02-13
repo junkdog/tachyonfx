@@ -69,7 +69,7 @@ impl Effect {
     /// ```
     pub fn filter(&self, mode: CellFilter) -> Self {
         let mut cloned = self.clone();
-        cloned.set_cell_selection(mode);
+        cloned.filter(mode);
         cloned
     }
 
@@ -127,8 +127,8 @@ impl Shader for Effect {
         self.shader.set_area(area)
     }
 
-    fn set_cell_selection(&mut self, strategy: CellFilter) {
-        self.shader.set_cell_selection(strategy)
+    fn filter(&mut self, strategy: CellFilter) {
+        self.shader.filter(strategy)
     }
 
     fn reverse(&mut self) {
@@ -143,8 +143,8 @@ impl Shader for Effect {
         self.shader.timer_mut()
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
-        self.shader.cell_selection()
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.shader.cell_filter()
     }
 
     fn reset(&mut self) {

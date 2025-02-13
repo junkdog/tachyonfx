@@ -103,7 +103,7 @@ impl EffectSpan {
         let start = offset.as_secs_f32();
         Self {
             label: effect.name().to_string(),
-            cell_filter: effect.cell_selection().unwrap_or_default(),
+            cell_filter: effect.cell_filter().unwrap_or_default(),
             area: effect.area(),
             start,
             end: start + end,

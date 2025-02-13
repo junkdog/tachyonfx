@@ -89,9 +89,9 @@ impl Shader for Translate {
         }
     }
 
-    fn set_cell_selection(&mut self, strategy: CellFilter) {
+    fn filter(&mut self, strategy: CellFilter) {
         if let Some(fx) = &mut self.fx {
-            fx.set_cell_selection(strategy)
+            fx.filter(strategy)
         }
     }
 
@@ -103,9 +103,9 @@ impl Shader for Translate {
         Some(self.timer)
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<CellFilter> {
         if let Some(fx) = self.fx.as_ref() {
-            return fx.cell_selection();
+            return fx.cell_filter();
         }
         None
     }

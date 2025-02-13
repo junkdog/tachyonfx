@@ -170,13 +170,13 @@ impl Shader for Glitch {
         self.area = Some(area)
     }
 
-    fn set_cell_selection(&mut self, strategy: CellFilter) {
+    fn filter(&mut self, strategy: CellFilter) {
         self.selection = strategy;
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<CellFilter> {
         Some(self.selection.clone())
     }
 

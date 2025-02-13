@@ -140,7 +140,7 @@ impl Shader for SweepIn {
         self.area = Some(area)
     }
 
-    fn set_cell_selection(&mut self, strategy: CellFilter) {
+    fn filter(&mut self, strategy: CellFilter) {
         self.cell_filter = strategy;
     }
 
@@ -152,7 +152,7 @@ impl Shader for SweepIn {
         Some(self.timer)
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<CellFilter> {
         Some(self.cell_filter.clone())
     }
 

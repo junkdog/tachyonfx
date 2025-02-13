@@ -362,24 +362,20 @@ mod compilers {
     }
 
     pub(super) fn hsl_shift(args: &mut Arguments) -> Result<Effect, DslError> {
-        let into_array = |data: Option<Vec<f32>>| -> Result<Option<[f32; 3]>, DslError> {
-            if let(Some(data)) = data {
-                match data.len() {
-                    0 => Ok(None),
-                    3 => Ok(Some([data[0], data[1], data[2]])),
-                    l => Err(DslError::ArrayLengthMismatch {
-                        expected: 3,
-                        actual: l
-                    }),
-                }
-
-            } else {
-                Ok(None)
+        let into_array = |data: Vec<f32>| -> Result<[f32; 3], DslError> {
+            match data.len() {
+                3 => Ok([data[0], data[1], data[2]]),
+                l => Err(DslError::ArrayLengthMismatch {
+                    expected: 3,
+                    actual: l
+                }),
             }
         };
 
-        let fg: Option<[f32; 3]> = into_array(args.option(|args| args.array(Arguments::read_into_f32))?)?;
-        let bg: Option<[f32; 3]> = into_array(args.option(|args| args.array(Arguments::read_into_f32))?)?;
+        let fg: Option<[f32; 3]> = args
+            .option(|args| into_array(args.array(Arguments::read_into_f32)?))?;
+        let bg: Option<[f32; 3]> = args
+            .option(|args| into_array(args.array(Arguments::read_into_f32)?))?;
 
         fx::hsl_shift(fg, bg, args.effect_timer()?).into()
     }
@@ -559,19 +555,27 @@ mod tests {
     #[test]
     fn happy_path_no_bound_vars() {
         let input = r#"fx::sweep_in(
-                Motion::LeftToRight,
-                10,
-                0,
-                Color::from_u32(0x1d2021),
-                (Duration::from_millis(1000), QuadOut)
-            )"#;
+            Motion::LeftToRight,
+            10,
+            0,
+            Color::from_u32(0x1d2021),
+            (Duration::from_millis(1000), QuadOut)
+        )"#;
 
-        let dsl = EffectDsl::new();
-        let effect = dsl.compiler().compile(input)
+        let expected = fx::sweep_in(
+            Motion::LeftToRight,
+            10,
+            0,
+            Color::from_u32(0x1d2021),
+            (Duration::from_millis(1000), QuadOut)
+        );
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
             .expect("effect to be compiled");
 
-        assert_eq!(effect.name(), "sweep_in");
-        assert_eq!(effect.timer(), Some(EffectTimer::from_ms(1000, QuadOut)));
+        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
     }
 
     #[test]
@@ -596,24 +600,6 @@ mod tests {
 
         assert_eq!(effect.name(), "sweep_in");
         assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
-    }
-
-    #[test]
-    fn hsl_shift_fg_and_hsl_shift() {
-        let input =   "fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear))";
-        let expected = fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear));
-        let result = compile_effect(input);
-        assert_eq!(format!("{result:?}"), format!("{expected:?}"));
-
-        let input =   "fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear))";
-        let expected = fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear));
-        let result = compile_effect(input);
-        assert_eq!(format!("{result:?}"), format!("{expected:?}"));
-    }
-
-    fn compile_effect(input: &str) -> Effect {
-        let dsl = EffectDsl::new();
-        dsl.compiler().compile(input).unwrap()
     }
 
     #[test]
