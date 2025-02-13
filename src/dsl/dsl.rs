@@ -156,7 +156,7 @@ impl EffectDsl {
             if let Some(filter) = cell_filter {
                 let mut args = Arguments::new(vec![*filter].into(), self, env);
                 let filter = match args.cell_filter() {
-                    Ok(f) => effect.filter(f),
+                    Ok(f) => effect.with_filter(f),
                     Err(e) => return Err(e),
                 };
             }

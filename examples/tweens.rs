@@ -235,13 +235,13 @@ fn chart_fx() -> Effect {
     parallel(&[
         // chart axis
         fx::sweep_in(Motion::UpToDown, 15, 0, Dark0, timer)
-            .filter(CellFilter::FgColor(Light2.into())),
+            .with_filter(CellFilter::FgColor(Light2.into())),
         // chart data
         sequence(&[
             fx::timed_never_complete(duration, fx::dissolve(0))
-                .filter(CellFilter::FgColor(OrangeBright.into())),
+                .with_filter(CellFilter::FgColor(OrangeBright.into())),
             fx::sweep_in(Motion::LeftToRight, 15, 0, Dark0, timer)
-                .filter(CellFilter::FgColor(OrangeBright.into())),
+                .with_filter(CellFilter::FgColor(OrangeBright.into())),
         ]),
     ])
 }

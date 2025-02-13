@@ -233,7 +233,7 @@ impl EffectsRepository {
                     let color = Color::from_hsl(hue, 100.0, 50.0);
                     cell.set_fg(color);
                 });
-        }).filter(CellFilter::FgColor(Light3.into()));
+        }).with_filter(CellFilter::FgColor(Light3.into()));
 
         let effects = vec![
             ("sweep in",

@@ -41,7 +41,7 @@ mod examples {
         let c = Theme::quote().bg.expect("bg color to exist");
         let filter = CellFilter::Inner(Margin::new(1, 1));
         fx::fade_from_fg(c, (1000, Interpolation::QuadInOut))
-            .filter(filter)
+            .with_filter(filter)
     }
 
     pub fn fade_to_fg() -> Effect {
@@ -49,7 +49,7 @@ mod examples {
         let c = Theme::quote().bg.expect("bg color to exist");
         let filter = CellFilter::FgColor(Theme::author().fg.unwrap());
         fx::fade_to_fg(c, (1000, Interpolation::CircOut))
-            .filter(filter)
+            .with_filter(filter)
     }
 
     pub fn fade_from() -> Effect {
@@ -198,7 +198,7 @@ mod examples {
                 }
                 cell.set_fg(Color::Indexed(((offset + i) % 256) as u8));
             }
-        }).filter(CellFilter::Text)
+        }).with_filter(CellFilter::Text)
     }
 
     #[allow(dead_code)]

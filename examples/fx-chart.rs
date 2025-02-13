@@ -206,7 +206,7 @@ mod effects {
 
         parallel(&[
             coalesce((step * 5, ExpoInOut))
-                .filter(CellFilter::Text),
+                .with_filter(CellFilter::Text),
             sweep_in(Motion::UpToDown, 1, 0, bg, step * 3),
         ]).with_area(area)
     }

@@ -10,6 +10,7 @@ use ratatui::widgets::{Block, Widget};
 use std::fs::File;
 use std::io::Write;
 use std::ops::Range;
+use std::path::Iter;
 use crate::widget::area_registry::AreaRegistry;
 use crate::widget::color_resolver::color_registry;
 
@@ -232,7 +233,7 @@ impl EffectTimeline {
 
     fn render_cell_filter_column(
         &self,
-        cell_filters: &[CellFilter],
+        cell_filters: Vec<&CellFilter>,
         area: Rect,
         buf: &mut Buffer
     ) {
@@ -466,9 +467,9 @@ impl Widget for EffectTimeline {
 
         // cell filter column
         let filters: Vec<_> = self.span.iter()
-            .map(|span| span.cell_filter.clone())
+            .map(|span| &span.cell_filter)
             .collect();
-        self.render_cell_filter_column(&filters, layout.cell_filter, buf);
+        self.render_cell_filter_column(filters, layout.cell_filter, buf);
 
         // overridden effect areas column
         let areas: Vec<_> = self.span.iter()
@@ -581,13 +582,13 @@ mod tests {
                     fx::coalesce((duration, BounceOut)),
                 ]),
                 fx::fade_from(gray, gray, duration * time_scale)
-            ]).filter(border_decorations),
+            ]).with_filter(border_decorations),
 
             // window title and shortcuts
             sequence(&[
                 with_duration(duration * time_scale, never_complete(fx::fade_to(gray, gray, 0))),
                 fx::fade_from(gray, gray, (320 * time_scale, QuadOut)),
-            ]).filter(border_text),
+            ]).with_filter(border_text),
 
             // content area
             sequence(&[
@@ -604,7 +605,7 @@ mod tests {
                     fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
                     fx::dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
                 ]),
-            ]).filter(Inner(margin)),
+            ]).with_filter(Inner(margin)),
         ]))
     }
 
@@ -638,6 +639,7 @@ mod tests {
 
     #[test]
     fn test_widget_happy_path_2() {
+        // todo!("write test for broken effect filter application");
         let layout = Layout::vertical([Constraint::Length(1), Constraint::Percentage(100)]);
         let content_area = CellFilter::Layout(layout, 1);
 
@@ -652,7 +654,7 @@ mod tests {
                     fx::fade_to(Black, Black, (500, CircInOut)),
                 ]),
                 fx::slide_in(Motion::UpToDown, 10, 0, Black, (900, QuadOut)),
-            ]).filter(content_area),
+            ]).with_filter(content_area),
         );
 
         let timeline = EffectTimeline::builder().effect(&fx).build();

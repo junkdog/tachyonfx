@@ -413,7 +413,7 @@ mod tests {
             for (_, c) in cells {
                 c.set_symbol("X");
             }
-        }).filter(filter);
+        }).with_filter(filter);
 
         let area = buf.area().clone();
         buf.render_effect(&mut fx, area, Duration::from_millis(16));

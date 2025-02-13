@@ -65,17 +65,17 @@ impl Effect {
     ///
     /// let color = Color::from_hsl(180.0, 85.0, 62.0);
     /// let shader = fx::fade_to_fg(color, (300, Interpolation::SineIn))
-    ///     .filter(CellFilter::Text);
+    ///     .with_filter(CellFilter::Text);
     /// ```
-    pub fn filter(&self, mode: CellFilter) -> Self {
+    pub fn with_filter(&self, mode: CellFilter) -> Self {
         let mut cloned = self.clone();
-        cloned.shader.filter(mode);
+        cloned.filter(mode);
         cloned
     }
 
-    #[deprecated(since = "0.11.0", note = "Use `filter` instead")]
+    #[deprecated(since = "0.11.0", note = "Use `with_filter` instead")]
     pub fn with_cell_selection(&self, mode: CellFilter) -> Self {
-        self.filter(mode)
+        self.with_filter(mode)
     }
 
 
