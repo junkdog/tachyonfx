@@ -4,7 +4,7 @@ use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
-use crate::{fx, Effect};
+use crate::{fx, CellFilter, Effect};
 use std::fmt;
 use std::fmt::Formatter;
 
@@ -151,14 +151,26 @@ impl EffectDsl {
         env: &DslEnv,
         input: Expr
     ) -> Result<Effect, DslError> {
+        let mut apply_cell_filter = |effect: Effect, cell_filter: Option<Box<Expr>>| {
+            let mut effect = effect;
+            if let Some(filter) = cell_filter {
+                let mut args = Arguments::new(vec![*filter].into(), self, env);
+                let filter = match args.cell_filter() {
+                    Ok(f) => effect.filter(f),
+                    Err(e) => return Err(e),
+                };
+            }
+            Ok(effect)
+        };
+
         match input {
-            Expr::Fx { name, arguments } => self.compilers
+            Expr::Fx { name, arguments, cell_filter } => self.compilers
                 .iter()
                 .find(|d| d.effect_name == name)
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = Arguments::new(arguments.into(), self, env);
-                    let effect = (d.compile)(&mut args);
+                    let effect = apply_cell_filter((d.compile)(&mut args)?, cell_filter);
 
                     match () {
                         _ if effect.is_err() => effect,
@@ -170,16 +182,16 @@ impl EffectDsl {
                         _ => effect,
                     }
                 }),
-            Expr::Sequence(exprs) => {
-                let mut args = Arguments::new(exprs.into(), self, env);
+            Expr::Sequence { effects, cell_filter } => {
+                let mut args = Arguments::new(effects.into(), self, env);
                 let effects = (0..args.args_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
                 Ok(fx::sequence(&effects))
             },
-            Expr::Parallel(exprs) => {
-                let mut args = Arguments::new(exprs.into(), self, env);
+            Expr::Parallel { effects, cell_filter } => {
+                let mut args = Arguments::new(effects.into(), self, env);
                 let effects = (0..args.args_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;

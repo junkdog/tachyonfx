@@ -16,13 +16,13 @@ pub(super) enum Expr {
         args: Vec<Expr>
     },
     OptionSome(Box<Expr>),
-    Sequence(Vec<Expr>),
-    Parallel(Vec<Expr>),
+    Sequence { effects: Vec<Expr>, cell_filter: Option<Box<Expr>> },
+    Parallel { effects: Vec<Expr>, cell_filter: Option<Box<Expr>> },
     Style(Vec<StyleMethod>),
     Fx {
         name: String,
         arguments: Vec<Expr>,
-        // cell_filter: Option<CellFilter>,
+        cell_filter: Option<Box<Expr>>,
     }
 }
 
@@ -93,8 +93,8 @@ impl Expr {
             Expr::ArrayRef(_)       => "array_ref",
             Expr::Array(_)          => "array_ref",
             Expr::CellFilter { .. } => "cell_filter",
-            Expr::Sequence(_)       => "sequence",
-            Expr::Parallel(_)       => "parallel",
+            Expr::Sequence { .. }   => "sequence",
+            Expr::Parallel { .. }   => "parallel",
             Expr::Style(_)          => "style",
             Expr::OptionSome(_)     => "some",
         }
@@ -120,7 +120,8 @@ impl Expr {
                     .join(",\n");
                 format!("{}[\n{}\n{}]", indent_str, inner, indent_str)
             },
-            Expr::Fx { name, arguments } => {
+            Expr::Fx { name, arguments, cell_filter } => {
+                todo!("fix cell_filter");
                 if arguments.is_empty() {
                     format!("{}fx::{}()", indent_str, name)
                 } else if arguments.len() == 1 {
@@ -166,21 +167,35 @@ impl Expr {
                         indent_str, suffix)
                 }
             },
-            Expr::Sequence(exprs) => {
-                let inner = exprs.iter()
+            Expr::Sequence { effects, cell_filter } => {
+                let inner = effects.iter()
                     .map(|e| e.format(indent + 4))
                     .collect::<Vec<_>>()
                     .join(",\n");
-                format!("{}fx::sequence(&[\n{}\n{}])",
-                    indent_str, inner, indent_str)
+
+                if let Some(cell_filter) = cell_filter {
+                    let cell_filter = cell_filter.format(indent + 4);
+                    format!("{}fx::sequence(&[\n{}\n{}],\n{})",
+                        indent_str, inner, indent_str, cell_filter)
+                } else {
+                    format!("{}fx::sequence(&[\n{}\n{}])",
+                        indent_str, inner, indent_str)
+                }
             },
-            Expr::Parallel(exprs) => {
-                let inner = exprs.iter()
+            Expr::Parallel { effects, cell_filter } => {
+                let inner = effects.iter()
                     .map(|e| e.format(indent + 4))
                     .collect::<Vec<_>>()
                     .join(",\n");
-                format!("{}fx::parallel(&[\n{}\n{}])",
-                    indent_str, inner, indent_str)
+
+                if let Some(cell_filter) = cell_filter {
+                    let cell_filter = cell_filter.format(indent + 4);
+                    format!("{}fx::parallel(&[\n{}\n{}],\n{})",
+                        indent_str, inner, indent_str, cell_filter)
+                } else {
+                    format!("{}fx::parallel(&[\n{}\n{}])",
+                        indent_str, inner, indent_str)
+                }
             },
             Expr::CellFilter { .. } => format!("{}// TODO: format cell filter", indent_str),
             Expr::Style(methods) => {

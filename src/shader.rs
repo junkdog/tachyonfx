@@ -141,7 +141,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     fn filter(&mut self, filter: CellFilter);
 
     #[deprecated(since = "0.11.0", note = "Use `filter()` instead")]
-    fn set_cell_selection(&mut self, filter: CellFilter);
+    fn set_cell_selection(&mut self, filter: CellFilter) {
+        self.filter(filter)
+    }
 
     /// Reverses the shader effect.
     fn reverse(&mut self) {

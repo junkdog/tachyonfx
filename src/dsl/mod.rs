@@ -80,6 +80,9 @@ pub enum DslError {
         expected: usize,
         actual: usize,
     },
+
+    #[error("Unknown cell filter '{name}'")]
+    UnknownCellFilter { name: String },
 }
 
 /// A parsed representation of a tachyonfx effect expression.

@@ -7,7 +7,7 @@ use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
-use anpa::{defer_parser, greedy_or, or, right, skip, tuplify};
+use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
 use ratatui::prelude::Style;
 use ratatui::style::{Color, Modifier};
 use crate::dsl::DslError;
@@ -40,34 +40,47 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
 
     let args = middle(trim("("), arguments(), trim(")"));
 
-    tuplify!(name, args).map(|(name, arguments)|
-        Expr::Fx {
+    tuplify!(name, args, effect_cell_filter())
+        .map(|(name, arguments, cell_filter)| Expr::Fx {
             name: name.to_string(),
-            arguments
+            arguments,
+            cell_filter: cell_filter.map(Box::new)
         }
     )
 }
 
-fn fx_name<'a>(s: &'static str) -> impl StrParser<'a, ()> {
+// parameterizing effect with CellFilter, e.g. effect.filter(CellFilter::All)
+fn effect_cell_filter<'a>() -> impl StrParser<'a, Option<Expr>> {
+    middle(trim(".filter("), cell_filter(), trim(")"))
+        .map(Some)
+}
+
+fn fx_name<'a>(s: &'static str) -> impl StrParser<'a, &'a str> {
     right!(
         succeed(attempt(skip!("fx::"))),
-        skip!(s),
+        take!(s),
     )
 }
 
 fn container_effect<'a>() -> impl StrParser<'a, Expr> {
     let effect_parser = or!(defer_parser!(container_effect()), effect());
 
+    let name = or!(fx_name("sequence"), fx_name("parallel"));
     let args = middle(
         right!(trim("("), trim("&[")),
         many_to_vec(effect_parser, true, separator(trim(","), true)),
         right!(trim("]"), trim(")"))
     );
 
-    or!(
-        right!(fx_name("sequence"), args).map(Expr::Sequence),
-        right!(fx_name("parallel"), args).map(Expr::Parallel)
-    )
+    tuplify!(
+        name,
+        args,
+        effect_cell_filter()
+    ).map(|(name, args, cell_filter)| match name {
+        "Sequence" => Expr::Sequence { effects: args, cell_filter: cell_filter.map(Box::new) },
+        "Parallel" => Expr::Parallel { effects: args, cell_filter: cell_filter.map(Box::new) },
+        _ => unreachable!()
+    })
 }
 
 fn string_literal<'a>() -> impl StrParser<'a, Expr> {
@@ -810,14 +823,30 @@ mod tests {
         )"#;
         assert_expr_eq(
             parse(super::container_effect(), input),
-            Expr::Sequence(vec![
-                Expr::Fx { name: "yolo".to_string(), arguments: vec![
+            Expr::Sequence { cell_filter: None, effects: vec![
+                Expr::Fx { name: "yolo".to_string(), cell_filter: None, arguments: vec![
                     literal(Value::String("Hello".to_string()))
                 ]},
-                Expr::Fx { name: "fubar".to_string(), arguments: vec![
+                Expr::Fx { name: "fubar".to_string(), cell_filter: None, arguments: vec![
                     literal(Value::String("World".to_string()))
                 ]}
-            ])
+            ]}
+        );
+    }
+
+    #[test]
+    fn effect_with_cell_filter() {
+        let input = r#"fx::yolo("Hello").filter(CellFilter::Text)"#;
+        assert_expr_eq(
+            parse(super::effect(), input),
+            Expr::Fx {
+                name: "yolo".to_string(),
+                cell_filter: Some(Box::new(Expr::CellFilter {
+                    filter_type: "Text",
+                    arguments: vec![]
+                })),
+                arguments: vec![literal(Value::String("Hello".to_string()))]
+            }
         );
     }
 
@@ -829,10 +858,10 @@ mod tests {
         ])"#;
         assert_expr_eq(
             parse(super::container_effect(), input),
-            Expr::Parallel(vec![
-                Expr::Fx { name: "foo".to_string(), arguments: vec![] },
-                Expr::Fx { name: "bar".to_string(), arguments: vec![] }
-            ])
+            Expr::Parallel{ cell_filter: None, effects: vec![
+                Expr::Fx { name: "foo".to_string(), cell_filter: None, arguments: vec![] },
+                Expr::Fx { name: "bar".to_string(), cell_filter: None, arguments: vec![] }
+            ]}
         );
     }
 
@@ -1293,7 +1322,8 @@ mod tests {
             name: "coalesce".to_string(),
             arguments: vec![
                 call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(220))]),
-            ]
+            ],
+            cell_filter: None
         };
         assert_eq!(result, Some(expected));
 
@@ -1301,6 +1331,7 @@ mod tests {
         let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
             name: "dissolve".to_string(),
+            cell_filter: None,
             arguments: vec![
                 call_expr(FnCall::EffectTimerNew, &[
                     call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(220))]),
@@ -1313,9 +1344,11 @@ mod tests {
         let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
             name: "ping_pong".to_string(),
+            cell_filter: None,
             arguments: vec![
                 Expr::Fx {
                     name: "coalesce".to_string(),
+                    cell_filter: None,
                     arguments: vec![
                         call_expr(FnCall::EffectTimerNew, &[
                             call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(500))]),

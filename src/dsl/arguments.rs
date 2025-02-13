@@ -1,8 +1,8 @@
 use crate::dsl::environment::DslEnv;
 use crate::dsl::dsl::EffectDsl;
 use crate::dsl::DslError;
-use crate::{Duration, Effect, EffectTimer, Interpolation, Motion};
-use ratatui::layout::{Margin, Rect};
+use crate::{CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
+use ratatui::layout::{Layout, Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
 use std::fmt;
@@ -77,6 +77,43 @@ impl<'a> Arguments<'a> {
             Expr::Literal(Value::U32(ms))  => Ok(ms.into()),
             Expr::Var(name)                => self.bound_var(name),
             e                              => self.expected_type_expr("timer", e),
+        }
+    }
+
+    pub fn cell_filter(&mut self) -> Result<CellFilter, DslError> {
+        match self.next("cell_filter")? {
+            Expr::CellFilter { filter_type, arguments } => {
+                let mut args = Arguments::new(arguments.into(), self.context, self.vars);
+                match filter_type {
+                    "All"        => Ok(CellFilter::All),
+                    "FgColor"    => Ok(CellFilter::FgColor(args.color()?)),
+                    "BgColor"    => Ok(CellFilter::BgColor(args.color()?)),
+                    "Inner"      => Ok(CellFilter::Inner(args.margin()?)),
+                    "Outer"      => Ok(CellFilter::Outer(args.margin()?)),
+                    "Text"       => Ok(CellFilter::Text),
+                    "AllOf"      => Ok(CellFilter::AllOf(args.array(Arguments::cell_filter)?)),
+                    "AnyOf"      => Ok(CellFilter::AnyOf(args.array(Arguments::cell_filter)?)),
+                    "NoneOf"     => Ok(CellFilter::NoneOf(args.array(Arguments::cell_filter)?)),
+                    "Not"        => Ok(CellFilter::Not(Box::new(args.cell_filter()?))),
+                    "Layout"     => Ok(CellFilter::Layout(args.layout()?, args.read_u16()?)),
+                    "PositionFn" => Ok(CellFilter::PositionFn(todo!("fn"))),
+                    "EvalCell"   => Ok(CellFilter::EvalCell(todo!("fn"))),
+                    _            => Err(DslError::UnknownCellFilter {
+                        name: filter_type.to_string(),
+                    })?,
+                }
+            }
+            Expr::Literal(Value::CellFilter(f)) => Ok(f),
+            Expr::Var(name)                     => self.bound_var(name),
+            e                                   => self.expected_type_expr("cell_filter", e),
+        }
+    }
+
+    pub fn layout(&mut self) -> Result<Layout, DslError> {
+        match self.next("layout")? {
+            // Expr::Layout(l) => Ok(l),
+            Expr::Var(name) => self.bound_var(name),
+            e               => self.expected_type_expr("layout", e),
         }
     }
 
@@ -156,11 +193,15 @@ impl<'a> Arguments<'a> {
 
     pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
-            Expr::Fx { name, arguments } => self.compile_effect(Expr::Fx { name, arguments }),
-            Expr::Sequence(effects)      => self.compile_effect(Expr::Sequence(effects)),
-            Expr::Parallel(effects)      => self.compile_effect(Expr::Parallel(effects)),
-            Expr::Var(name)              => self.bound_var(name),
-            e                            => self.expected_type_expr("effect", e),
+            Expr::Fx { name, arguments, cell_filter } =>
+                self.compile_effect(Expr::Fx { name, arguments, cell_filter }),
+            Expr::Sequence { effects, cell_filter } =>
+                self.compile_effect(Expr::Sequence { effects, cell_filter }),
+            Expr::Parallel { effects, cell_filter } =>
+                self.compile_effect(Expr::Parallel { effects, cell_filter}),
+
+            Expr::Var(name) => self.bound_var(name),
+            e               => self.expected_type_expr("effect", e),
         }
     }
 
@@ -603,7 +644,8 @@ mod tests {
             vec![
                 Expr::Fx {
                     name: "test".to_string(),
-                    arguments: vec![Expr::Literal(Value::U32(500))]
+                    arguments: vec![Expr::Literal(Value::U32(500))],
+                    cell_filter: None,
                 },
             ].into(),
             &context,
