@@ -4,7 +4,7 @@ use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
-use crate::{fx, CellFilter, Effect};
+use crate::{fx, CellFilter, Effect, Shader};
 use std::fmt;
 use std::fmt::Formatter;
 
@@ -156,8 +156,8 @@ impl EffectDsl {
             let mut effect = effect;
             if let Some(filter) = cell_filter {
                 let mut args = Arguments::new(vec![*filter].into(), self, env);
-                let filter = match args.cell_filter() {
-                    Ok(f) => effect.with_filter(f),
+                match args.cell_filter() {
+                    Ok(f) => effect.filter(f),
                     Err(e) => return Err(e),
                 };
             }
@@ -188,7 +188,6 @@ impl EffectDsl {
                 let effects = (0..args.args_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
-
 
                 Ok(apply_cell_filter(fx::sequence(&effects), cell_filter)?)
             },

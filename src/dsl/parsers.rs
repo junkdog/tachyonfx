@@ -44,7 +44,7 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
         .map(|(name, arguments, cell_filter)| Expr::Fx {
             name: name.to_string(),
             arguments,
-            cell_filter: cell_filter.map(Box::new)
+            cell_filter: cell_filter.map(Box::new),
         }
     )
 }
@@ -279,6 +279,36 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
         )
     )
 }
+
+fn fn_call<'a>(
+    fn_name: &'static str,
+) -> impl StrParser<'a, Expr> {
+    right!(
+        skip!(fn_name),
+        middle(trim("("), arguments(), trim(")"))
+    ).map(|args| Expr::FnCall {
+        name: fn_name.into(),
+        args
+    })
+}
+
+fn self_fn_call<'a>(
+    fn_name: &'static str,
+) -> impl StrParser<'a, Expr> {
+    right!(
+        skip_whitespace(),
+        skip!('.'),
+        fn_call(fn_name)
+    ).map(|call| {
+        if let Expr::FnCall { args, .. } = call {
+            Expr::SelfFnCall { name: fn_name.into(), args }
+        } else {
+            unreachable!("Expr::FnCall always produced by fn_call() parser")
+        }
+    }
+    )
+}
+
 
 fn style_method_call<'a>() -> impl StrParser<'a, StyleMethod> {
     or!(
@@ -796,6 +826,27 @@ mod tests {
 
         // Test Text filter
         assert_cell_filter_eq("Text", literal(Value::CellFilter(CellFilter::Text)));
+    }
+
+    #[test]
+    fn test_fn_call_and_self_fn_call() {
+        let input = "foo(\"bar\")";
+        assert_expr_eq(
+            parse(super::fn_call("foo"), input),
+            Expr::FnCall {
+                name: "foo".to_string(),
+                args: vec![literal(Value::String("bar".into()))]
+            }
+        );
+
+        let input = ".foo(10)";
+        assert_expr_eq(
+            parse(super::self_fn_call("foo"), input),
+            Expr::SelfFnCall {
+                name: "foo".to_string(),
+                args: vec![literal(Value::U32(10))]
+            }
+        );
     }
 
     #[test]

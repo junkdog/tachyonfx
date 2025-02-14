@@ -10,7 +10,6 @@ use ratatui::widgets::{Block, Widget};
 use std::fs::File;
 use std::io::Write;
 use std::ops::Range;
-use std::path::Iter;
 use crate::widget::area_registry::AreaRegistry;
 use crate::widget::color_resolver::color_registry;
 

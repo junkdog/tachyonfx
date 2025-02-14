@@ -11,6 +11,8 @@ pub(super) enum Expr {
     ArrayRef(Vec<Expr>),
     Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
+    SelfFnCall { name: String, args: Vec<Expr> }, // e.g. effet.with_area(area)
+    FnCall { name: String, args: Vec<Expr> }, // e.g. foo_bar(area)
     Call {
         function: FnCall,  // e.g. ["Duration", "from_millis"]
         args: Vec<Expr>
@@ -97,27 +99,28 @@ impl Expr {
             Expr::Parallel { .. }   => "parallel",
             Expr::Style(_)          => "style",
             Expr::OptionSome(_)     => "some",
+            Expr::FnCall { .. }     => "fn_call",
+            Expr::SelfFnCall { .. } => "self_fn_call",
         }
     }
 
     pub(super) fn format(&self, indent: usize) -> String {
         let indent_str = " ".repeat(indent);
 
+        let formatted_args = |args: &[Expr]| args.iter()
+            .map(|e| e.format(if args.len() == 1 { 0 } else { indent + 4 }))
+            .collect::<Vec<_>>()
+            .join(",\n");
+
         match self {
             Expr::Literal(value) => format!("{}{}", indent_str, value.format()),
             Expr::Var(name) => format!("{}{}", indent_str, name),
             Expr::ArrayRef(exprs) => {
-                let inner = exprs.iter()
-                    .map(|e| e.format(indent + 4))
-                    .collect::<Vec<_>>()
-                    .join(",\n");
+                let inner = formatted_args(exprs);
                 format!("{}&[\n{}\n{}]", indent_str, inner, indent_str)
             },
             Expr::Array(exprs) => {
-                let inner = exprs.iter()
-                    .map(|e| e.format(indent + 4))
-                    .collect::<Vec<_>>()
-                    .join(",\n");
+                let inner = formatted_args(exprs);
                 format!("{}[\n{}\n{}]", indent_str, inner, indent_str)
             },
             Expr::Fx { name, arguments, cell_filter } => {
@@ -126,10 +129,7 @@ impl Expr {
                 } else if arguments.len() == 1 {
                     format!("{}fx::{}({})", indent_str, name, arguments[0].format(indent).trim())
                 } else {
-                    let args = arguments.iter()
-                        .map(|e| e.format(indent + 4))
-                        .collect::<Vec<_>>()
-                        .join(",\n");
+                    let args = formatted_args(arguments);
 
                     format!("{}fx::{}(\n{}\n{})", indent_str, name, args, indent_str)
                 };
@@ -141,12 +141,27 @@ impl Expr {
                     effect
                 }
             },
+            Expr::SelfFnCall { name, args } => {
+                let formatted_args = formatted_args(args);
+
+                if args.len() <= 1 {
+                    format!("{}self.{}({})", indent_str, name, formatted_args)
+                } else {
+                    format!("{}self.{}(\n{}\n{})", indent_str, name, formatted_args, indent_str)
+                }
+            },
+            Expr::FnCall { name, args } => {
+                let formatted_args = formatted_args(args);
+
+                if args.len() <= 1 {
+                    format!("{}{}({})", indent_str, name, formatted_args)
+                } else {
+                    format!("{}{}(\n{}\n{})", indent_str, name, formatted_args, indent_str)
+                }
+            },
             Expr::Call { function, args } => {
 
-                let formatted_args = args.iter()
-                    .map(|e| e.format(if args.len() == 1 { 0 } else { indent + 4 }))
-                    .collect::<Vec<_>>()
-                    .join(",\n");
+                let formatted_args = formatted_args(args);
 
                 let (prefix, suffix) = match function {
                     FnCall::ColorRgb            => ("Color::rgb(", ")"),
@@ -174,10 +189,7 @@ impl Expr {
                 }
             },
             Expr::Sequence { effects, cell_filter } => {
-                let inner = effects.iter()
-                    .map(|e| e.format(indent + 4))
-                    .collect::<Vec<_>>()
-                    .join(",\n");
+                let inner = formatted_args(effects);
 
                 if let Some(cell_filter) = cell_filter {
                     let cell_filter = cell_filter.format(indent + 4);
@@ -189,10 +201,7 @@ impl Expr {
                 }
             },
             Expr::Parallel { effects, cell_filter } => {
-                let inner = effects.iter()
-                    .map(|e| e.format(indent + 4))
-                    .collect::<Vec<_>>()
-                    .join(",\n");
+                let inner = formatted_args(effects);
 
                 if let Some(cell_filter) = cell_filter {
                     let cell_filter = cell_filter.format(indent + 4);
