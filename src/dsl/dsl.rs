@@ -79,7 +79,8 @@ impl EffectDsl {
     /// Registers a new effect compiler with the DSL.
     ///
     /// This method allows extending the DSL with custom effects. The compiler function
-    /// receives parsed arguments and should return a concrete `Effect` instance.
+    /// receives parsed arguments and should return a concrete `Effect` instance or `DslError`
+    /// if compilation fails.
     ///
     /// # Arguments
     ///
@@ -102,7 +103,7 @@ impl EffectDsl {
     ///         let color = args.color()?;
     ///
     ///         // Return your custom effect
-    ///         # todo!()
+    ///         todo!("e.g. Ok(custom_effect(duration, color))")
     ///     });
     /// ```
     pub fn register(
@@ -188,7 +189,8 @@ impl EffectDsl {
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                Ok(fx::sequence(&effects))
+
+                Ok(apply_cell_filter(fx::sequence(&effects), cell_filter)?)
             },
             Expr::Parallel { effects, cell_filter } => {
                 let mut args = Arguments::new(effects.into(), self, env);
@@ -196,7 +198,7 @@ impl EffectDsl {
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                Ok(fx::parallel(&effects))
+                Ok(apply_cell_filter(fx::parallel(&effects), cell_filter)?)
             },
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
