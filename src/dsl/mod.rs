@@ -36,6 +36,9 @@ pub enum DslError {
         name: &'static str,
     },
 
+    #[error("Unknown function '{name}'")]
+    UnknownFunction { name: String },
+
     #[error("Invalid argument length. Expected {expected}, got {actual}")]
     InvalidArgumentLength {
         expected: usize,

@@ -28,6 +28,16 @@ impl<'a> Arguments<'a> {
         Self { args, vars, context, initial_arg_count }
     }
 
+    pub(super) fn single<T>(
+        args: Vec<Expr>,
+        context: &'a EffectDsl,
+        vars: &'a DslEnv,
+        get: impl Fn(&mut Self) -> Result<T, DslError>
+    ) -> Result<T, DslError> {
+        let mut args = Self::new(args.into(), context, vars);
+        get(&mut args)
+    }
+
     pub(super) fn args(&self) -> &VecDeque<Expr> {
         &self.args
     }

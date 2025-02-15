@@ -1,6 +1,6 @@
 use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
-use crate::dsl::expressions::Expr;
+use crate::dsl::expressions::{Expr, FnCallInfo};
 use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
@@ -152,36 +152,23 @@ impl EffectDsl {
         env: &DslEnv,
         input: Expr
     ) -> Result<Effect, DslError> {
-        let mut apply_cell_filter = |effect: Effect, cell_filter: Option<Box<Expr>>| {
-            let mut effect = effect;
-            if let Some(filter) = cell_filter {
-                let mut args = Arguments::new(vec![*filter].into(), self, env);
-                match args.cell_filter() {
-                    Ok(f) => effect.filter(f),
-                    Err(e) => return Err(e),
-                };
-            }
-            Ok(effect)
-        };
-
         match input {
             Expr::Fx { name, arguments, self_fns } => self.compilers
                 .iter()
-                .find(|d| d.effect_name == name)
+                .find(|d| d.effect_name == name.as_str())
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = Arguments::new(arguments.into(), self, env);
-                    // let effect = apply_cell_filter((d.compile)(&mut args)?, cell_filter);
-                    //
-                    // match () {
-                    //     _ if effect.is_err() => effect,
-                    //     // todo: check on each compiler if there are any remaining arguments
-                    //     _ if !args.args().is_empty() => Err(DslError::TooManyArguments {
-                    //         expected: args.original_arg_count() - args.args().len(),
-                    //         actual: args.original_arg_count(),
-                    //     }),
-                    //     _ => effect,
-                    // }
+                    let effect = self.apply_effect_fns((d.compile)(&mut args)?, self_fns, env);
+
+                    match () {
+                        _ if effect.is_err() => effect,
+                        _ if !args.args().is_empty() => Err(DslError::InvalidArgumentLength {
+                            expected: args.original_arg_count() - args.args().len(),
+                            actual: args.original_arg_count(),
+                        }),
+                        _ => effect,
+                    }
                 }),
             Expr::Sequence { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
@@ -189,9 +176,7 @@ impl EffectDsl {
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                todo!("apply self_fns");
-
-                // Ok(apply_cell_filter(fx::sequence(&effects), cell_filter)?)
+                Ok(self.apply_effect_fns(fx::sequence(&effects), self_fns, env)?)
             },
             Expr::Parallel { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
@@ -199,14 +184,48 @@ impl EffectDsl {
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                todo!("apply self_fns");
-                // Ok(apply_cell_filter(fx::parallel(&effects), cell_filter)?)
+                Ok(self.apply_effect_fns(fx::parallel(&effects), self_fns, env)?)
             },
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
                 actual: input.type_name(),
             }),
         }
+    }
+
+    fn apply_effect_fns(
+        &self,
+        effect: Effect,
+        fns: Vec<FnCallInfo>,
+        env: &DslEnv
+    ) -> Result<Effect, DslError> {
+        let mut effect = effect;
+        for self_fn in fns {
+            match self_fn.name.as_str() {
+                "with_area" => {
+                    let area = Arguments::single(
+                        self_fn.args, self, env, Arguments::rect
+                    )?;
+                    effect = effect.with_area(area);
+                },
+                "with_filter" => {
+                    let cell_filter = Arguments::single(
+                        self_fn.args, self, env, Arguments::cell_filter
+                    )?;
+
+                    effect = effect.with_filter(cell_filter);
+                },
+                "filter" => {
+                    let cell_filter = Arguments::single(
+                        self_fn.args, self, env, Arguments::cell_filter
+                    )?;
+                    effect.filter(cell_filter);
+                },
+                _ => return Err(DslError::UnknownFunction { name: self_fn.name }),
+            }
+        }
+
+        Ok(effect)
     }
 }
 
