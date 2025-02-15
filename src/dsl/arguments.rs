@@ -50,13 +50,11 @@ impl<'a> Arguments<'a> {
         match self.next("duration")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
                 "Duration::from_millis" => {
-                    let mut inner_args = self.inner_args(args, 1)?;
-                    let ms = inner_args.read_u32()?;
+                    let ms = self.inner_arg(args, Arguments::read_u32)?;
                     Duration::from_millis(ms as _)
                 },
                 "Duration::from_secs_f32" => {
-                    let mut inner_args = self.inner_args(args, 1)?;
-                    let seconds = inner_args.read_f32()?;
+                    let seconds = self.inner_arg(args, Arguments::read_f32)?;
                     Duration::from_secs_f32(seconds)
                 },
                 _ => self.expected_type("duration", name)?,
@@ -238,7 +236,7 @@ impl<'a> Arguments<'a> {
             }),
             Expr::Literal(Value::Color(c)) => Ok(c),
             Expr::Var(name)                => self.bound_var(name),
-            e                              => self.expected_type("color", e.type_name().into()),
+            e                              => self.expected_type_expr("color", e),
         }
     }
 
@@ -262,8 +260,7 @@ impl<'a> Arguments<'a> {
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
             Expr::Call { function: FnCall::RepeatModeTimes, args } => {
-                let mut inner_args = self.inner_args(args, 1)?;
-                let times = inner_args.read_u32()?;
+                let times = self.inner_arg(args, Arguments::read_u32)?;
                 Ok(RepeatMode::Times(times))
             },
             Expr::Literal(Value::RepeatMode(m))  => Ok(m),
@@ -309,7 +306,7 @@ impl<'a> Arguments<'a> {
         match self.next("array")? {
             Expr::Array(exprs)    => self.map_exprs(exprs, inner),
             Expr::ArrayRef(exprs) => self.map_exprs(exprs, inner),
-            Expr::Var(name)       => self.bound_var(name).into(),
+            Expr::Var(name)       => self.bound_var(name),
             e                     => self.expected_type_expr("array", e),
         }
     }

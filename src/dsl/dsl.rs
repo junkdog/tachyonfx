@@ -4,7 +4,7 @@ use crate::dsl::expressions::{Expr, FnCallInfo};
 use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
-use crate::{fx, CellFilter, Effect, Shader};
+use crate::{fx, Effect, Shader};
 use std::fmt;
 use std::fmt::Formatter;
 
@@ -57,7 +57,7 @@ use std::fmt::Formatter;
 ///         # todo!()
 ///     });
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EffectDsl {
     compilers: Vec<EffectCompiler>,
 }
@@ -66,7 +66,6 @@ struct EffectCompiler {
     effect_name: &'static str,
     compile: Box<dyn Fn(&mut Arguments) -> Result<Effect, DslError>>,
 }
-
 
 impl EffectDsl {
     /// Creates a new `EffectDsl` instance with all standard effect compilers registered.
