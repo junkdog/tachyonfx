@@ -7,7 +7,7 @@ use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
-use crate::dsl::expressions::{compile_style, Expr, FnCall, Value};
+use crate::dsl::expressions::{compile_style, Expr, FnCall, FnCallInfo, Value};
 use crate::fx::RepeatMode;
 
 #[derive(Debug)]
@@ -39,12 +39,12 @@ impl<'a> Arguments<'a> {
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
             Expr::Call { function: FnCall::DurationFromMillis, args } => {
-                let mut inner_args = self.inner_args(args);
+                let mut inner_args = self.inner_args(args, 1)?;
                 let ms = inner_args.read_u32()?;
                 Ok(Duration::from_millis(ms as _))
             },
             Expr::Call { function: FnCall::DurationFromSeconds, args } => {
-                let mut inner_args = self.inner_args(args);
+                let mut inner_args = self.inner_args(args, 1)?;
                 let seconds = inner_args.read_f32()?;
                 Ok(Duration::from_secs_f32(seconds))
             },
@@ -62,13 +62,13 @@ impl<'a> Arguments<'a> {
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
             Expr::Call { function: FnCall::EffectTimerFromMs, args } => {
-                let mut inner_args = self.inner_args(args);
+                let mut inner_args = self.inner_args(args, 2)?;
                 let ms = inner_args.read_u32()?;
                 let interpolation = inner_args.interpolation()?;
                 Ok(EffectTimer::from_ms(ms, interpolation))
             },
             Expr::Call { function: FnCall::EffectTimerNew, args } => {
-                let mut inner_args = self.inner_args(args);
+                let mut inner_args = self.inner_args(args, 2)?;
                 let duration = inner_args.duration()?;
                 let interpolation = inner_args.interpolation()?;
                 Ok(EffectTimer::new(duration, interpolation))
@@ -183,7 +183,7 @@ impl<'a> Arguments<'a> {
         match self.next("option")? {
             Expr::Literal(Value::None) => Ok(None),
             Expr::OptionSome(expr)     => {
-                let mut args = self.inner_args(vec![*expr]);
+                let mut args = self.inner_args(vec![*expr], 1)?;
                 inner(&mut args).map(Some)
             },
             Expr::Var(name)            => self.bound_var(name),
@@ -193,12 +193,12 @@ impl<'a> Arguments<'a> {
 
     pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
-            Expr::Fx { name, arguments, cell_filter } =>
-                self.compile_effect(Expr::Fx { name, arguments, cell_filter }),
-            Expr::Sequence { effects, cell_filter } =>
-                self.compile_effect(Expr::Sequence { effects, cell_filter }),
-            Expr::Parallel { effects, cell_filter } =>
-                self.compile_effect(Expr::Parallel { effects, cell_filter}),
+            Expr::Fx { name, arguments, self_fns } =>
+                self.compile_effect(Expr::Fx { name, arguments, self_fns }),
+            Expr::Sequence { effects, self_fns } =>
+                self.compile_effect(Expr::Sequence { effects, self_fns }),
+            Expr::Parallel { effects, self_fns } =>
+                self.compile_effect(Expr::Parallel { effects, self_fns }),
 
             Expr::Var(name) => self.bound_var(name),
             e               => self.expected_type_expr("effect", e),
@@ -208,11 +208,11 @@ impl<'a> Arguments<'a> {
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
             Expr::Call { function: FnCall::ColorIndexed, args } => {
-                let mut inner_args = self.inner_args(args);
+                let mut inner_args = self.inner_args(args, 1)?;
                 Ok(Color::Indexed(inner_args.read_u8()?))
             },
-            Expr::Call { function: FnCall::ColorFromU32, args } => {
-                let mut inner_args = self.inner_args(args);
+            Expr::FnCall(FnCallInfo { name, args }) if name == "Color::from_u32" => {
+                let mut inner_args = self.inner_args(args, 1)?;
                 inner_args
                     .read_u32()
                     .map(Color::from_u32)
@@ -243,7 +243,7 @@ impl<'a> Arguments<'a> {
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
             Expr::Call { function: FnCall::RepeatModeTimes, args } => {
-                let mut inner_args = self.inner_args(args);
+                let mut inner_args = self.inner_args(args, 1)?;
                 let times = inner_args.read_u32()?;
                 Ok(RepeatMode::Times(times))
             },
@@ -291,7 +291,7 @@ impl<'a> Arguments<'a> {
         exprs: Vec<Expr>,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
-        let mut args = self.inner_args(exprs);
+        let mut args = self.all_inner_args(exprs);
         (0..args.initial_arg_count)
             .map(|_| inner(&mut args)).collect()
     }
@@ -332,7 +332,18 @@ impl<'a> Arguments<'a> {
         self.expected_type(expected, actual.type_name().to_string())
     }
 
-    fn inner_args(&mut self, exprs: Vec<Expr>) -> Self {
+    fn inner_args(&mut self, exprs: Vec<Expr>, required_arg_count: usize) -> Result<Self, DslError> {
+        if exprs.len() != required_arg_count {
+            return Err(DslError::InvalidArgumentLength {
+                expected: required_arg_count,
+                actual: exprs.len(),
+            });
+        }
+
+        Ok(self.all_inner_args(exprs))
+    }
+
+    fn all_inner_args(&mut self, exprs: Vec<Expr>) -> Self {
         Self::new(exprs.into(), self.context, self.vars)
     }
 }
@@ -645,7 +656,7 @@ mod tests {
                 Expr::Fx {
                     name: "test".to_string(),
                     arguments: vec![Expr::Literal(Value::U32(500))],
-                    cell_filter: None,
+                    self_fns: vec![],
                 },
             ].into(),
             &context,

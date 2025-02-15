@@ -1,4 +1,4 @@
-use crate::dsl::expressions::{Expr, FnCall, StyleMethod, Value};
+use crate::dsl::expressions::{Expr, FnCall, FnCallInfo, StyleMethod, Value};
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Interpolation, Motion};
 use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
@@ -39,12 +39,13 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
     );
 
     let args = middle(trim("("), arguments(), trim(")"));
+    let self_fns = many_to_vec(self_fn_call(), true, separator(trim(""), true));
 
-    tuplify!(name, args, effect_cell_filter())
-        .map(|(name, arguments, cell_filter)| Expr::Fx {
+    tuplify!(name, args, self_fns)
+        .map(|(name, arguments, self_fns)| Expr::Fx {
             name: name.to_string(),
             arguments,
-            cell_filter: cell_filter.map(Box::new),
+            self_fns
         }
     )
 }
@@ -80,10 +81,10 @@ fn container_effect<'a>() -> impl StrParser<'a, Expr> {
     tuplify!(
         name,
         args,
-        effect_cell_filter()
-    ).map(|(name, args, cell_filter)| match name {
-        "sequence" => Expr::Sequence { effects: args, cell_filter: cell_filter.map(Box::new) },
-        "parallel" => Expr::Parallel { effects: args, cell_filter: cell_filter.map(Box::new) },
+        many_to_vec(self_fn_call(), true, separator(trim(""), true))
+    ).map(|(name, args, self_fns)| match name {
+        "sequence" => Expr::Sequence { effects: args, self_fns },
+        "parallel" => Expr::Parallel { effects: args, self_fns },
         _ => unreachable!()
     })
 }
@@ -104,7 +105,7 @@ fn string_literal<'a>() -> impl StrParser<'a, Expr> {
 fn array_ref<'a>() -> impl StrParser<'a, Expr> {
     middle(
         trim("&["),
-        many_to_vec(argument(), true, separator(trim(","), false)),
+        arguments(),
         trim("]")
     ).map(Expr::ArrayRef)
 }
@@ -112,7 +113,7 @@ fn array_ref<'a>() -> impl StrParser<'a, Expr> {
 fn array<'a>() -> impl StrParser<'a, Expr> {
     middle(
         trim("["),
-        many_to_vec(argument(), true, separator(trim(","), false)),
+        arguments(),
         trim("]")
     ).map(Expr::Array)
 }
@@ -251,7 +252,9 @@ fn argument<'a>() -> impl StrParser<'a, Expr> {
             array(),     // e.g. [1, 2, 3]
             container_effect(),
             option(),
+            cell_filter(),
             effect(),
+            fn_call().map(Expr::FnCall),
             var(),
         )
     }
@@ -280,32 +283,22 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
     )
 }
 
-fn fn_call<'a>(
-    fn_name: &'static str,
-) -> impl StrParser<'a, Expr> {
-    right!(
-        skip!(fn_name),
+fn fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
+    let fn_name_char = item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_'));
+    let fn_name = many(fn_name_char, false, no_separator())
+        .map(|s: &str| s.to_string());
+
+    tuplify!(
+        fn_name,
         middle(trim("("), arguments(), trim(")"))
-    ).map(|args| Expr::FnCall {
-        name: fn_name.into(),
-        args
-    })
+    ).map(FnCallInfo::from)
 }
 
-fn self_fn_call<'a>(
-    fn_name: &'static str,
-) -> impl StrParser<'a, Expr> {
+fn self_fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
     right!(
         skip_whitespace(),
-        skip!('.'),
-        fn_call(fn_name)
-    ).map(|call| {
-        if let Expr::FnCall { args, .. } = call {
-            Expr::SelfFnCall { name: fn_name.into(), args }
-        } else {
-            unreachable!("Expr::FnCall always produced by fn_call() parser")
-        }
-    }
+        skip!("."),
+        fn_call()
     )
 }
 
@@ -560,10 +553,10 @@ fn color_ctor<'a>() -> impl StrParser<'a, Expr> {
         trim("Color::from_u32("),
         parse_u32(),
         trim(")")
-    ).map(|u32| Expr::Call {
-        function: FnCall::ColorFromU32,
+    ).map(|u32| Expr::FnCall(FnCallInfo {
+        name: "Color::from_u32".to_string(),
         args: vec![u32]
-    })
+    }))
 }
 
 fn color<'a>() -> impl StrParser<'a, Expr> {
@@ -665,10 +658,10 @@ fn interpolation<'a>() -> impl StrParser<'a, Expr> {
 
 #[cfg(test)]
 mod tests {
-    use crate::dsl::expressions::{Expr, FnCall, StyleMethod, Value};
+    use crate::dsl::expressions::{Expr, FnCall, FnCallInfo, StyleMethod, Value};
     use crate::fx::RepeatMode;
     use crate::{CellFilter, Duration, Interpolation, Motion};
-    use anpa::core::{parse, AnpaResult};
+    use anpa::core::{parse, AnpaResult, ParserExt};
     use ratatui::style::{Color, Modifier};
 
     fn assert_expr_eq(
@@ -712,7 +705,10 @@ mod tests {
         let input = "Color::from_u32(0x1d2021)";
         assert_expr_eq(
             parse(super::color_ctor(), input),
-            call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x1d2021))])
+            Expr::FnCall(FnCallInfo {
+                name: "Color::from_u32".to_string(),
+                args: vec![Expr::Literal(Value::U32(0x1d2021))]
+            })
         );
     }
 
@@ -832,21 +828,21 @@ mod tests {
     fn test_fn_call_and_self_fn_call() {
         let input = "foo(\"bar\")";
         assert_expr_eq(
-            parse(super::fn_call("foo"), input),
-            Expr::FnCall {
+            parse(super::fn_call().map(Expr::FnCall), input),
+            Expr::FnCall(FnCallInfo {
                 name: "foo".to_string(),
                 args: vec![literal(Value::String("bar".into()))]
-            }
+            })
         );
 
-        let input = ".foo(10)";
-        assert_expr_eq(
-            parse(super::self_fn_call("foo"), input),
-            Expr::SelfFnCall {
-                name: "foo".to_string(),
-                args: vec![literal(Value::U32(10))]
-            }
-        );
+        // let input = ".bar(10)";
+        // assert_expr_eq(
+        //     parse(super::self_fn_call().map(Expr::SelfFnCall), input),
+        //     Expr::SelfFnCall(FnCallInfo {
+        //         name: "bar".to_string(),
+        //         args: vec![literal(Value::U32(10))]
+        //     })
+        // );
     }
 
     #[test]
@@ -859,14 +855,20 @@ mod tests {
 
         let input = "Style::new()\
             .fg(Color::from_u32(0x1d2021))\
-            .bg(Color::from_u32(0x1d2021))\
+            .bg(Color::from_u32(0x1d2023))\
             .add_modifier(Modifier::BOLD)";
 
         assert_expr_eq(
             parse(super::style(), input),
             Expr::Style(vec![
-                StyleMethod::Fg(call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x1d2021))])),
-                StyleMethod::Bg(call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x1d2021))])),
+                StyleMethod::Fg(Expr::FnCall(FnCallInfo {
+                    name: "Color::from_u32".to_string(),
+                    args: vec![Expr::Literal(Value::U32(0x1d2021))]
+                })),
+                StyleMethod::Bg(Expr::FnCall(FnCallInfo {
+                    name: "Color::from_u32".to_string(),
+                    args: vec![Expr::Literal(Value::U32(0x1d2023))]
+                })),
                 StyleMethod::AddModifier(Modifier::BOLD),
             ])
         );
@@ -879,11 +881,11 @@ mod tests {
         )"#;
         assert_expr_eq(
             parse(super::container_effect(), input),
-            Expr::Sequence { cell_filter: None, effects: vec![
-                Expr::Fx { name: "yolo".to_string(), cell_filter: None, arguments: vec![
+            Expr::Sequence { self_fns: vec![], effects: vec![
+                Expr::Fx { name: "yolo".to_string(), self_fns: vec![], arguments: vec![
                     literal(Value::String("Hello".to_string()))
                 ]},
-                Expr::Fx { name: "fubar".to_string(), cell_filter: None, arguments: vec![
+                Expr::Fx { name: "fubar".to_string(), self_fns: vec![], arguments: vec![
                     literal(Value::String("World".to_string()))
                 ]}
             ]}
@@ -897,8 +899,11 @@ mod tests {
             parse(super::effect(), input),
             Expr::Fx {
                 name: "yolo".to_string(),
-                cell_filter: Some(Box::new(literal(Value::CellFilter(CellFilter::Text)))),
-                arguments: vec![literal(Value::String("Hello".to_string()))]
+                arguments: vec![literal(Value::String("Hello".to_string()))],
+                self_fns: vec![
+                    FnCallInfo::new("filter",
+                        vec![literal(Value::CellFilter(CellFilter::Text))]
+                    )],
             }
         );
     }
@@ -911,9 +916,9 @@ mod tests {
         ])"#;
         assert_expr_eq(
             parse(super::container_effect(), input),
-            Expr::Parallel{ cell_filter: None, effects: vec![
-                Expr::Fx { name: "foo".to_string(), cell_filter: None, arguments: vec![] },
-                Expr::Fx { name: "bar".to_string(), cell_filter: None, arguments: vec![] }
+            Expr::Parallel{ self_fns: vec![], effects: vec![
+                Expr::Fx { name: "foo".to_string(), self_fns: vec![], arguments: vec![] },
+                Expr::Fx { name: "bar".to_string(), self_fns: vec![], arguments: vec![] }
             ]}
         );
     }
@@ -925,7 +930,10 @@ mod tests {
             "FgColor(Color::from_u32(0xFF0000))",
             Expr::CellFilter {
                 filter_type: "FgColor",
-                arguments: vec![call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0xFF0000))])]
+                arguments: vec![Expr::FnCall(FnCallInfo {
+                    name: "Color::from_u32".to_string(),
+                    args: vec![Expr::Literal(Value::U32(0xFF0000))]
+                })]
             }
         );
 
@@ -934,7 +942,10 @@ mod tests {
             "BgColor(Color::from_u32(0x00FF00))",
             Expr::CellFilter {
                 filter_type: "BgColor",
-                arguments: vec![call_expr(FnCall::ColorFromU32, &[literal(Value::U32(0x00FF00))])]
+                arguments: vec![Expr::FnCall(FnCallInfo {
+                    name: "Color::from_u32".to_string(),
+                    args: vec![Expr::Literal(Value::U32(0x00FF00))]
+                })],
             }
         );
     }
@@ -1376,7 +1387,7 @@ mod tests {
             arguments: vec![
                 call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(220))]),
             ],
-            cell_filter: None
+            self_fns: vec![]
         };
         assert_eq!(result, Some(expected));
 
@@ -1384,7 +1395,7 @@ mod tests {
         let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
             name: "dissolve".to_string(),
-            cell_filter: None,
+            self_fns: vec![],
             arguments: vec![
                 call_expr(FnCall::EffectTimerNew, &[
                     call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(220))]),
@@ -1397,11 +1408,11 @@ mod tests {
         let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
             name: "ping_pong".to_string(),
-            cell_filter: None,
+            self_fns: vec![],
             arguments: vec![
                 Expr::Fx {
                     name: "coalesce".to_string(),
-                    cell_filter: None,
+                    self_fns: vec![],
                     arguments: vec![
                         call_expr(FnCall::EffectTimerNew, &[
                             call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(500))]),

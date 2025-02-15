@@ -36,8 +36,8 @@ pub enum DslError {
         name: &'static str,
     },
 
-    #[error("Too many arguments provided. Expected {expected}, got {actual}")]
-    TooManyArguments {
+    #[error("Invalid argument length. Expected {expected}, got {actual}")]
+    InvalidArgumentLength {
         expected: usize,
         actual: usize,
     },

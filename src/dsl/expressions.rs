@@ -5,27 +5,40 @@ use ratatui::prelude::{Color, Modifier, Style};
 use crate::color_ext::ToRgbComponents;
 
 #[derive(Clone, Debug, PartialEq)]
+pub(super) struct FnCallInfo {
+    pub name: String,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(super) enum Expr {
     Literal(Value),
     Var(String),
     ArrayRef(Vec<Expr>),
     Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
-    SelfFnCall { name: String, args: Vec<Expr> }, // e.g. effet.with_area(area)
-    FnCall { name: String, args: Vec<Expr> }, // e.g. foo_bar(area)
+    // SelfFnCall(FnCallInfo), // e.g. effet.with_area(area)
+    FnCall(FnCallInfo), // e.g. foo_bar(area)
     Call {
         function: FnCall,  // e.g. ["Duration", "from_millis"]
         args: Vec<Expr>
     },
     OptionSome(Box<Expr>),
-    Sequence { effects: Vec<Expr>, cell_filter: Option<Box<Expr>> },
-    Parallel { effects: Vec<Expr>, cell_filter: Option<Box<Expr>> },
+    Sequence {
+        effects: Vec<Expr>,
+        self_fns: Vec<FnCallInfo>
+    },
+    Parallel {
+        effects: Vec<Expr>,
+        self_fns: Vec<FnCallInfo>
+    },
     Style(Vec<StyleMethod>),
     Fx {
         name: String,
         arguments: Vec<Expr>,
-        cell_filter: Option<Box<Expr>>,
-    }
+        self_fns: Vec<FnCallInfo>,
+    },
+    InvalidExpr { input: String }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -50,7 +63,7 @@ pub(super) enum Value {
 pub(super) enum FnCall {
     ColorRgb,
     ColorIndexed,
-    ColorFromU32,
+    // ColorFromU32,
     DurationFromMillis,
     DurationFromSeconds,
     EffectTimerNew,
@@ -83,24 +96,40 @@ pub(super) fn compile_style(methods: Vec<StyleMethod>) -> Style {
     })
 }
 
+impl FnCallInfo {
+    pub fn new(
+        name: impl Into<String>,
+        args: Vec<Expr>
+    ) -> Self {
+        Self { name: name.into(), args }
+    }
+}
+
+impl From<(String, Vec<Expr>)> for FnCallInfo {
+    fn from((name, args): (String, Vec<Expr>)) -> Self {
+        Self { name, args }
+    }
+}
+
 impl Expr {
     /// Returns a string representation of the expression's type
     /// Used for error messages
     pub fn type_name(&self) -> &'static str {
         match self {
-            Expr::Var(_)            => "variable",
-            Expr::Fx { .. }         => "effect",
-            Expr::Literal(_)        => "literal",
-            Expr::Call { .. }       => "function_call",
-            Expr::ArrayRef(_)       => "array_ref",
-            Expr::Array(_)          => "array_ref",
-            Expr::CellFilter { .. } => "cell_filter",
-            Expr::Sequence { .. }   => "sequence",
-            Expr::Parallel { .. }   => "parallel",
-            Expr::Style(_)          => "style",
-            Expr::OptionSome(_)     => "some",
-            Expr::FnCall { .. }     => "fn_call",
-            Expr::SelfFnCall { .. } => "self_fn_call",
+            Expr::Var(_)             => "variable",
+            Expr::Fx { .. }          => "effect",
+            Expr::Literal(_)         => "literal",
+            Expr::Call { .. }        => "function_call",
+            Expr::ArrayRef(_)        => "array_ref",
+            Expr::Array(_)           => "array_ref",
+            Expr::CellFilter { .. }  => "cell_filter",
+            Expr::Sequence { .. }    => "sequence",
+            Expr::Parallel { .. }    => "parallel",
+            Expr::Style(_)           => "style",
+            Expr::OptionSome(_)      => "some",
+            Expr::FnCall { .. }      => "fn_call",
+            // Expr::SelfFnCall { .. }  => "self_fn_call",
+            Expr::InvalidExpr { .. } => "invalid",
         }
     }
 
@@ -111,6 +140,14 @@ impl Expr {
             .map(|e| e.format(if args.len() == 1 { 0 } else { indent + 4 }))
             .collect::<Vec<_>>()
             .join(",\n");
+
+        let chained_fns = |self_fns: &[FnCallInfo]| self_fns.iter()
+            .map(|fn_call| {
+                let args = formatted_args(&fn_call.args);
+                format!("\n{indent_str}.{}({args})", fn_call.name)
+            })
+            .collect::<Vec<_>>()
+            .join("");
 
         match self {
             Expr::Literal(value) => format!("{}{}", indent_str, value.format()),
@@ -123,34 +160,28 @@ impl Expr {
                 let inner = formatted_args(exprs);
                 format!("{}[\n{}\n{}]", indent_str, inner, indent_str)
             },
-            Expr::Fx { name, arguments, cell_filter } => {
+            Expr::Fx { name, arguments, self_fns } => {
                 let effect = if arguments.is_empty() {
                     format!("{}fx::{}()", indent_str, name)
                 } else if arguments.len() == 1 {
                     format!("{}fx::{}({})", indent_str, name, arguments[0].format(indent).trim())
                 } else {
                     let args = formatted_args(arguments);
-
                     format!("{}fx::{}(\n{}\n{})", indent_str, name, args, indent_str)
                 };
 
-                if let Some(cell_filter) = cell_filter {
-                    let cell_filter = cell_filter.format(indent + 4);
-                    format!("{}{},\n{}", effect, indent_str, cell_filter)
-                } else {
-                    effect
-                }
+                format!("{effect}{}", chained_fns(self_fns))
             },
-            Expr::SelfFnCall { name, args } => {
-                let formatted_args = formatted_args(args);
-
-                if args.len() <= 1 {
-                    format!("{}self.{}({})", indent_str, name, formatted_args)
-                } else {
-                    format!("{}self.{}(\n{}\n{})", indent_str, name, formatted_args, indent_str)
-                }
-            },
-            Expr::FnCall { name, args } => {
+            // Expr::SelfFnCall(FnCallInfo { name, args }) => {
+            //     let formatted_args = formatted_args(args);
+            //
+            //     if args.len() <= 1 {
+            //         format!("{}self.{}({})", indent_str, name, formatted_args)
+            //     } else {
+            //         format!("{}self.{}(\n{}\n{})", indent_str, name, formatted_args, indent_str)
+            //     }
+            // },
+            Expr::FnCall(FnCallInfo { name, args }) => {
                 let formatted_args = formatted_args(args);
 
                 if args.len() <= 1 {
@@ -166,7 +197,6 @@ impl Expr {
                 let (prefix, suffix) = match function {
                     FnCall::ColorRgb            => ("Color::rgb(", ")"),
                     FnCall::ColorIndexed        => ("Color::indexed(", ")"),
-                    FnCall::ColorFromU32        => ("Color::from_u32(", ")"),
                     FnCall::DurationFromMillis  => ("Duration::from_millis(", ")"),
                     FnCall::DurationFromSeconds => ("Duration::from_secs(", ")"),
                     FnCall::EffectTimerNew      => ("EffectTimer::new(", ")"),
@@ -188,29 +218,19 @@ impl Expr {
                         indent_str, suffix)
                 }
             },
-            Expr::Sequence { effects, cell_filter } => {
-                let inner = formatted_args(effects);
-
-                if let Some(cell_filter) = cell_filter {
-                    let cell_filter = cell_filter.format(indent + 4);
-                    format!("{}fx::sequence(&[\n{}\n{}],\n{})",
-                        indent_str, inner, indent_str, cell_filter)
-                } else {
-                    format!("{}fx::sequence(&[\n{}\n{}])",
-                        indent_str, inner, indent_str)
-                }
+            Expr::Sequence { effects, self_fns } => {
+                format!(
+                    "{indent_str}fx::sequence(&[\n{}\n{indent_str}]){}",
+                    formatted_args(effects),
+                    chained_fns(self_fns),
+                )
             },
-            Expr::Parallel { effects, cell_filter } => {
-                let inner = formatted_args(effects);
-
-                if let Some(cell_filter) = cell_filter {
-                    let cell_filter = cell_filter.format(indent + 4);
-                    format!("{}fx::parallel(&[\n{}\n{}],\n{})",
-                        indent_str, inner, indent_str, cell_filter)
-                } else {
-                    format!("{}fx::parallel(&[\n{}\n{}])",
-                        indent_str, inner, indent_str)
-                }
+            Expr::Parallel { effects, self_fns } => {
+                format!(
+                    "{indent_str}fx::parallel(&[\n{}\n{indent_str}]){}",
+                    formatted_args(effects),
+                    chained_fns(self_fns),
+                )
             },
             Expr::CellFilter { .. } => format!("{}// TODO: format cell filter", indent_str),
             Expr::Style(methods) => {
@@ -227,6 +247,7 @@ impl Expr {
                 format!("{}Style::new(){}", indent_str, inner)
             }
             Expr::OptionSome(v) => format!("{}Some({})", indent_str, v.format(0)),
+            Expr::InvalidExpr { input } => format!("{}// Invalid expression: {}", indent_str, input),
         }
     }
 }

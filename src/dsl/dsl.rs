@@ -165,39 +165,42 @@ impl EffectDsl {
         };
 
         match input {
-            Expr::Fx { name, arguments, cell_filter } => self.compilers
+            Expr::Fx { name, arguments, self_fns } => self.compilers
                 .iter()
                 .find(|d| d.effect_name == name)
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = Arguments::new(arguments.into(), self, env);
-                    let effect = apply_cell_filter((d.compile)(&mut args)?, cell_filter);
-
-                    match () {
-                        _ if effect.is_err() => effect,
-                        // todo: check on each compiler if there are any remaining arguments
-                        _ if !args.args().is_empty() => Err(DslError::TooManyArguments {
-                            expected: args.original_arg_count() - args.args().len(),
-                            actual: args.original_arg_count(),
-                        }),
-                        _ => effect,
-                    }
+                    // let effect = apply_cell_filter((d.compile)(&mut args)?, cell_filter);
+                    //
+                    // match () {
+                    //     _ if effect.is_err() => effect,
+                    //     // todo: check on each compiler if there are any remaining arguments
+                    //     _ if !args.args().is_empty() => Err(DslError::TooManyArguments {
+                    //         expected: args.original_arg_count() - args.args().len(),
+                    //         actual: args.original_arg_count(),
+                    //     }),
+                    //     _ => effect,
+                    // }
                 }),
-            Expr::Sequence { effects, cell_filter } => {
+            Expr::Sequence { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
                 let effects = (0..args.args_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                Ok(apply_cell_filter(fx::sequence(&effects), cell_filter)?)
+                todo!("apply self_fns");
+
+                // Ok(apply_cell_filter(fx::sequence(&effects), cell_filter)?)
             },
-            Expr::Parallel { effects, cell_filter } => {
+            Expr::Parallel { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
                 let effects = (0..args.args_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                Ok(apply_cell_filter(fx::parallel(&effects), cell_filter)?)
+                todo!("apply self_fns");
+                // Ok(apply_cell_filter(fx::parallel(&effects), cell_filter)?)
             },
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
@@ -649,7 +652,7 @@ mod tests {
 
         let ctx = EffectDsl::new();
         let err = ctx.compiler().compile(input).unwrap_err();
-        assert!(matches!(err, DslError::TooManyArguments { .. }), "{:?}", err);
+        assert!(matches!(err, DslError::InvalidArgumentLength { .. }), "{:?}", err);
     }
 
     // Error cases
