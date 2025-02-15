@@ -17,7 +17,6 @@ pub(super) enum Expr {
     ArrayRef(Vec<Expr>),
     Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
-    // SelfFnCall(FnCallInfo), // e.g. effet.with_area(area)
     FnCall(FnCallInfo), // e.g. foo_bar(area)
     Call {
         function: FnCall,  // e.g. ["Duration", "from_millis"]
@@ -61,9 +60,6 @@ pub(super) enum Value {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum FnCall {
-    ColorRgb,
-    ColorIndexed,
-    // ColorFromU32,
     DurationFromMillis,
     DurationFromSeconds,
     EffectTimerNew,
@@ -195,8 +191,6 @@ impl Expr {
                 let formatted_args = formatted_args(args);
 
                 let (prefix, suffix) = match function {
-                    FnCall::ColorRgb            => ("Color::rgb(", ")"),
-                    FnCall::ColorIndexed        => ("Color::indexed(", ")"),
                     FnCall::DurationFromMillis  => ("Duration::from_millis(", ")"),
                     FnCall::DurationFromSeconds => ("Duration::from_secs(", ")"),
                     FnCall::EffectTimerNew      => ("EffectTimer::new(", ")"),

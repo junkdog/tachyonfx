@@ -229,7 +229,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     )
 }
 
-fn argument<'a>() -> impl StrParser<'a, Expr> {
+pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
     // must defer to avoid recursive opaqueness
     defer_parser! {
         // `parse_f32` must come after `parse_u32` due to how float() is
@@ -569,20 +569,14 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
             right!(trim(","), parse_u32()),
         ),
         trim(")")
-    ).map(|(r, g, b)| Expr::Call {
-        function: FnCall::ColorRgb,
-        args: vec![r, g, b]
-    });
+    ).map(|(r, g, b)| Expr::FnCall(FnCallInfo::new("Color::Rgb", vec![r, g, b])));
 
     // indexed
     let indexed = middle(
         trim("Color::Indexed("),
         parse_u32(),
         trim(")")
-    ).map(|idx| Expr::Call {
-        function: FnCall::ColorIndexed,
-        args: vec![idx]
-    });
+    ).map(|idx| Expr::FnCall(FnCallInfo::new("Color::Indexed", vec![idx])));
 
 
     // named colors
@@ -742,17 +736,23 @@ mod tests {
         let input = "Color::Indexed(3)";
         assert_expr_eq(
             parse(super::color(), input),
-            call_expr(FnCall::ColorIndexed, &[literal(Value::U32(3))])
+            Expr::FnCall(FnCallInfo {
+                name: "Color::Indexed".to_string(),
+                args: vec![Expr::Literal(Value::U32(3))]
+            })
         );
 
         let input = "Color::Rgb(255, 127, 64)";
         assert_expr_eq(
             parse(super::color(), input),
-            call_expr(FnCall::ColorRgb, &[
-                literal(Value::U32(255)),
-                literal(Value::U32(127)),
-                literal(Value::U32(64))
-            ])
+            Expr::FnCall(FnCallInfo {
+                name: "Color::Rgb".to_string(),
+                args: vec![
+                    literal(Value::U32(255)),
+                    literal(Value::U32(127)),
+                    literal(Value::U32(64))
+                ]
+            })
         );
     }
 

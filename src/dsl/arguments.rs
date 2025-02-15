@@ -217,16 +217,22 @@ impl<'a> Arguments<'a> {
 
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
-            Expr::Call { function: FnCall::ColorIndexed, args } => {
-                let mut inner_args = self.inner_args(args, 1)?;
-                Ok(Color::Indexed(inner_args.read_u8()?))
-            },
-            Expr::FnCall(FnCallInfo { name, args }) if name == "Color::from_u32" => {
-                let mut inner_args = self.inner_args(args, 1)?;
-                inner_args
-                    .read_u32()
-                    .map(Color::from_u32)
-            }
+            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+                "Color::Rgb" => {
+                    let mut inner_args = self.inner_args(args, 3)?;
+                    let r = inner_args.read_u8()?;
+                    let g = inner_args.read_u8()?;
+                    let b = inner_args.read_u8()?;
+                    Color::Rgb(r, g, b)
+                },
+                "Color::from_u32" => {
+                    Color::from_u32(self.inner_arg(args, Arguments::read_u32)?)
+                }
+                "Color::Indexed" => {
+                    Color::Indexed(self.inner_arg(args, Arguments::read_u8)?)
+                }
+                _ => self.expected_type("color", name)?,
+            }),
             Expr::Literal(Value::Color(c)) => Ok(c),
             Expr::Var(name)                => self.bound_var(name),
             e                              => self.expected_type("color", e.type_name().into()),
@@ -353,6 +359,15 @@ impl<'a> Arguments<'a> {
         Ok(self.all_inner_args(exprs))
     }
 
+    fn inner_arg<T>(
+        &mut self,
+        exprs: Vec<Expr>,
+        inner: impl Fn(&mut Self) -> Result<T, DslError>
+    ) -> Result<T, DslError> {
+        let mut args = self.inner_args(exprs, 1)?;
+        inner(&mut args)
+    }
+
     fn all_inner_args(&mut self, exprs: Vec<Expr>) -> Self {
         Self::new(exprs.into(), self.context, self.vars)
     }
@@ -380,11 +395,12 @@ mod tests {
     use crate::dsl::arguments::Arguments;
     use crate::dsl::environment::DslEnv;
     use crate::dsl::dsl::EffectDsl;
-    use crate::dsl::DslError;
+    use crate::dsl::{parsers, DslError};
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use ratatui::layout::{Margin, Rect};
     use ratatui::prelude::{Color, Style};
     use std::collections::VecDeque;
+    use anpa::core::parse;
     use crate::dsl::expressions::{Expr, Value};
 
     fn empty_env() -> DslEnv {
@@ -531,6 +547,12 @@ mod tests {
         assert_eq!(inner_arg, None);
     }
 
+    fn parse_expr(input: &str) -> Expr {
+        let binding = empty_env();
+        let parsing_result = parse(parsers::argument(), input);
+        assert_eq!(parsing_result.state, "");
+        parsing_result.result.unwrap()
+    }
 
     #[test]
     fn test_string_parsing() {
@@ -557,23 +579,40 @@ mod tests {
 
     #[test]
     fn test_color_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::Color(Color::Red)),
-                Expr::Literal(Value::Color(Color::Blue)),
-            ].into(),
-            &context,
-            &binding
-        );
+        let dsl = EffectDsl::new();
+        let env = empty_env();
 
-        assert_eq!(args.color(), Ok(Color::Red));
-        assert_eq!(args.color(), Ok(Color::Blue));
-        assert_eq!(args.color(), Err(DslError::MissingArgument {
-            position: 2,
-            name: "color",
-        }));
+        let expr = parse_expr("Color::Rgb(1, 2, 3)");
+        let color = Arguments::single(vec![expr], &EffectDsl::new(), &env, Arguments::color)
+            .expect("expected color");
+        assert_eq!(color, Color::Rgb(1, 2, 3));
+
+        let expr = parse_expr("Color::from_u32(0xffaabb)");
+        let color = Arguments::single(vec![expr], &EffectDsl::new(), &env, Arguments::color)
+            .expect("expected color");
+        assert_eq!(color, Color::from_u32(0xffaabb));
+
+
+
+        //
+        //
+        // let binding = empty_env();
+        // let context = EffectDsl::new();
+        // let mut args = Arguments::new(
+        //     vec![
+        //         Expr::Literal(Value::Color(Color::Red)),
+        //         Expr::Literal(Value::Color(Color::Blue)),
+        //     ].into(),
+        //     &context,
+        //     &binding
+        // );
+        //
+        // assert_eq!(args.color(), Ok(Color::Red));
+        // assert_eq!(args.color(), Ok(Color::Blue));
+        // assert_eq!(args.color(), Err(DslError::MissingArgument {
+        //     position: 2,
+        //     name: "color",
+        // }));
     }
 
     #[test]
