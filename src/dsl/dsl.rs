@@ -521,10 +521,11 @@ mod tests {
     use crate::dsl::DslError;
     use crate::fx::RepeatMode;
     use crate::Interpolation::QuadOut;
-    use crate::{fx, Duration, Effect, EffectTimer, Interpolation, Motion, Shader};
+    use crate::{fx, CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion, Shader};
     use ratatui::style::{Color, Style};
     use regex::Regex;
     use std::collections::VecDeque;
+    use ratatui::layout::Rect;
     use Interpolation::Linear;
 
     fn assert_effect_roundtrip_eq(
@@ -629,6 +630,38 @@ mod tests {
         let effect = dsl.compiler()
             .bind("motion", Motion::LeftToRight)
             .bind("c", Color::from_u32(0x1d2021))
+            .compile(input)
+            .expect("effect to be compiled");
+
+
+        assert_eq!(effect.name(), "sweep_in");
+        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
+    }
+
+    #[test]
+    fn happy_path_method_chaining() {
+        let expected = fx::sweep_in(
+            Motion::LeftToRight,
+            10,
+            0,
+            Color::from_u32(0x1d2021),
+            EffectTimer::from_ms(1000, QuadOut)
+        ).with_filter(
+            CellFilter::Not(Box::new(CellFilter::Text))
+        ).with_area(Rect::new(0, 0, 10, 10));
+
+        let input = r#"fx::sweep_in(
+            Motion::LeftToRight,
+            10,
+            0,
+            Color::from_u32(0x1d2021),
+            EffectTimer::from_ms(1000, QuadOut)
+        ).with_filter(
+            CellFilter::Not(Box::new(CellFilter::Text))
+        ).with_area(Rect::new(0, 0, 10, 10))"#;
+
+        let effect = EffectDsl::new()
+            .compiler()
             .compile(input)
             .expect("effect to be compiled");
 

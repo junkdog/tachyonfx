@@ -48,16 +48,19 @@ impl<'a> Arguments<'a> {
 
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
-            Expr::Call { function: FnCall::DurationFromMillis, args } => {
-                let mut inner_args = self.inner_args(args, 1)?;
-                let ms = inner_args.read_u32()?;
-                Ok(Duration::from_millis(ms as _))
-            },
-            Expr::Call { function: FnCall::DurationFromSeconds, args } => {
-                let mut inner_args = self.inner_args(args, 1)?;
-                let seconds = inner_args.read_f32()?;
-                Ok(Duration::from_secs_f32(seconds))
-            },
+            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+                "Duration::from_millis" => {
+                    let mut inner_args = self.inner_args(args, 1)?;
+                    let ms = inner_args.read_u32()?;
+                    Duration::from_millis(ms as _)
+                },
+                "Duration::from_secs_f32" => {
+                    let mut inner_args = self.inner_args(args, 1)?;
+                    let seconds = inner_args.read_f32()?;
+                    Duration::from_secs_f32(seconds)
+                },
+                _ => self.expected_type("duration", name)?,
+            }),
             Expr::Literal(v)  => match v {
                 Value::Duration(d) => Ok(d),
                 Value::U32(ms)     => Ok(Duration::from_millis(ms as _)),
@@ -279,6 +282,19 @@ impl<'a> Arguments<'a> {
 
     pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
+            Expr::FnCall(FnCallInfo{ name, args }) => match name.as_str() {
+                "Rect::new" => {
+                    let mut inner_args = self.inner_args(args, 4)?;
+                    let x = inner_args.read_u16()?;
+                    let y = inner_args.read_u16()?;
+                    let width = inner_args.read_u16()?;
+                    let height = inner_args.read_u16()?;
+                    Ok(Rect::new(x, y, width, height))
+                },
+                e => Err(DslError::UnknownFunction {
+                    name: e.to_string(),
+                }),
+            },
             Expr::Literal(Value::Rect(r)) => Ok(r),
             Expr::Var(name)               => self.bound_var(name),
             e                             => self.expected_type_expr("rect", e),

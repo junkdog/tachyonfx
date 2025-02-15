@@ -60,11 +60,8 @@ pub(super) enum Value {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum FnCall {
-    DurationFromMillis,
-    DurationFromSeconds,
     EffectTimerNew,
     EffectTimerFromMs,
-    RectNew,
     RectStruct,
     MarginNew,
     MarginStruct,
@@ -168,15 +165,6 @@ impl Expr {
 
                 format!("{effect}{}", chained_fns(self_fns))
             },
-            // Expr::SelfFnCall(FnCallInfo { name, args }) => {
-            //     let formatted_args = formatted_args(args);
-            //
-            //     if args.len() <= 1 {
-            //         format!("{}self.{}({})", indent_str, name, formatted_args)
-            //     } else {
-            //         format!("{}self.{}(\n{}\n{})", indent_str, name, formatted_args, indent_str)
-            //     }
-            // },
             Expr::FnCall(FnCallInfo { name, args }) => {
                 let formatted_args = formatted_args(args);
 
@@ -191,11 +179,8 @@ impl Expr {
                 let formatted_args = formatted_args(args);
 
                 let (prefix, suffix) = match function {
-                    FnCall::DurationFromMillis  => ("Duration::from_millis(", ")"),
-                    FnCall::DurationFromSeconds => ("Duration::from_secs(", ")"),
                     FnCall::EffectTimerNew      => ("EffectTimer::new(", ")"),
                     FnCall::EffectTimerFromMs   => ("EffectTimer::from_ms(", ")"),
-                    FnCall::RectNew             => ("Rect::new(", ")"),
                     FnCall::RectStruct          => ("Rect {\n", "\n}"),
                     FnCall::MarginNew           => ("Margin::new(", ")"),
                     FnCall::MarginStruct        => ("Margin {\n", "\n}"),

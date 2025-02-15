@@ -402,10 +402,7 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
 
     let into_duration = or!(
         duration(),
-        parse_u32().map(|ms| Expr::Call {
-            function: FnCall::DurationFromMillis,
-            args: vec![ms]
-        }),
+        parse_u32().map(|ms| fn_call_expr("Duration::from_millis", vec![ms])),
     );
 
     // tuple: (u32, interpolation)
@@ -457,10 +454,7 @@ fn rect<'a>() -> impl StrParser<'a, Expr> {
             right!(trim(","), parse_u32()),
         ),
         trim(")")
-    ).map(|(x, y, w, h)| Expr::Call {
-        function: FnCall::RectNew,
-        args: vec![x, y, w, h]
-    });
+    ).map(|(x, y, w, h)| fn_call_expr("Rect::new", vec![x, y, w, h]));
 
     let raw = middle(
         right!(trim("Rect"), trim("{")),
@@ -515,20 +509,14 @@ fn duration<'a>() -> impl StrParser<'a, Expr> {
         trim("Duration::from_millis("),
         parse_u32(),
         trim(")"),
-    ).map(|ms| Expr::Call {
-        function: FnCall::DurationFromMillis,
-        args: vec![ms]
-    });
+    ).map(|ms| Expr::FnCall(FnCallInfo::new("Duration::from_millis", vec![ms])));
 
     // ctor from_secs_f32
     let from_secs = middle(
         trim("Duration::from_secs_f32("),
         parse_f32(),
         trim(")"),
-    ).map(|secs| Expr::Call {
-        function: FnCall::DurationFromSeconds,
-        args: vec![secs]
-    });
+    ).map(|secs| fn_call_expr("Duration::from_secs_f32", vec![secs]));
 
     or!(from_millis, from_secs)
 }
@@ -650,6 +638,10 @@ fn interpolation<'a>() -> impl StrParser<'a, Expr> {
     or!(literal, var())
 }
 
+fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
+    Expr::FnCall(FnCallInfo::new(name, args))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::dsl::expressions::{Expr, FnCall, FnCallInfo, StyleMethod, Value};
@@ -657,6 +649,7 @@ mod tests {
     use crate::{CellFilter, Duration, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult, ParserExt};
     use ratatui::style::{Color, Modifier};
+    use crate::dsl::parsers::fn_call_expr;
 
     fn assert_expr_eq(
         result: AnpaResult<&str, Expr>,
@@ -810,7 +803,7 @@ mod tests {
         assert_expr_eq(
             parse(super::repeat_mode(), input),
             call_expr(FnCall::RepeatModeDuration, &[
-                call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))])
+                fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))])
             ])
         );
     }
@@ -1089,7 +1082,7 @@ mod tests {
         let input = "Rect::new(10, 20, 30, 40)";
         assert_expr_eq(
             parse(super::rect(), input),
-            call_expr(FnCall::RectNew, &[
+            fn_call_expr("Rect::new", vec![
                 literal(Value::U32(10)),
                 literal(Value::U32(20)),
                 literal(Value::U32(30)),
@@ -1145,19 +1138,19 @@ mod tests {
     fn test_duration() {
         let input = "Duration::from_millis(1000)";
         let result = parse(super::duration(), input).result.unwrap();
-        let expected = call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]);
+        let expected = fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]);
         assert_eq!(result, expected);
 
         let input = "Duration::from_secs_f32(0.5)";
         let result = parse(super::duration(), input).result.unwrap();
-        let expected = call_expr(FnCall::DurationFromSeconds, &[literal(Value::F32(0.5))]);
+        let expected = fn_call_expr("Duration::from_secs_f32", vec![literal(Value::F32(0.5))]);
         assert_eq!(result, expected);
 
         let input = r#"Duration::from_millis(
                            321
                        )"#;
         let result = parse(super::duration(), input).result.unwrap();
-        let expected = call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(321))]);
+        let expected = fn_call_expr("Duration::from_millis", vec![literal(Value::U32(321))]);
         assert_eq!(result, expected);
     }
 
@@ -1218,7 +1211,7 @@ mod tests {
             Expr::Literal(Value::U32(1337)),
             Expr::Literal(Value::F32(3.14)),
             call_expr(FnCall::EffectTimerNew, &[
-                call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]),
+                fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]),
                 literal(Value::Interpolation(Interpolation::SineIn))
             ])
         ]);
@@ -1235,7 +1228,7 @@ mod tests {
             Expr::Literal(Value::U32(1337)),
             Expr::Literal(Value::F32(3.14)),
             call_expr(FnCall::EffectTimerNew, &[
-                call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]),
+                fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]),
                 literal(Value::Interpolation(Interpolation::SineIn))
             ])
         ]);
@@ -1256,7 +1249,7 @@ mod tests {
         let input = "EffectTimer::new(Duration::from_millis(1000), Linear)";
         let result = parse(super::effect_timer(), input).result.unwrap();
         let expected = call_expr(FnCall::EffectTimerNew, &[
-            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]),
+            fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]),
             literal(Value::Interpolation(Interpolation::Linear))
         ]);
         assert_eq!(result, expected);
@@ -1264,7 +1257,7 @@ mod tests {
         let input = "EffectTimer::new(Duration::from_secs_f32(0.5), Linear)";
         let result = parse(super::effect_timer(), input).result.unwrap();
         let expected = call_expr(FnCall::EffectTimerNew, &[
-            call_expr(FnCall::DurationFromSeconds, &[literal(Value::F32(0.5))]),
+            fn_call_expr("Duration::from_secs_f32", vec![literal(Value::F32(0.5))]),
             literal(Value::Interpolation(Interpolation::Linear))
         ]);
         assert_eq!(result, expected);
@@ -1272,7 +1265,7 @@ mod tests {
         let input = "(1337, Reverse)";
         let result = parse(super::effect_timer(), input).result.unwrap();
         let expected = call_expr(FnCall::EffectTimerNew, &[
-            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1337))]),
+            fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1337))]),
             literal(Value::Interpolation(Interpolation::Reverse))
         ]);
         assert_eq!(result, expected);
@@ -1280,7 +1273,7 @@ mod tests {
         let input = "(Duration::from_millis(1337), Reverse)";
         let result = parse(super::effect_timer(), input).result.unwrap();
         let expected = call_expr(FnCall::EffectTimerNew, &[
-            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1337))]),
+            fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1337))]),
             literal(Value::Interpolation(Interpolation::Reverse))
         ]);
         assert_eq!(result, expected);
@@ -1357,7 +1350,7 @@ mod tests {
         let input = "Duration::from_millis(1000)";
         assert_expr_eq(
             parse(super::argument(), input),
-            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))])
+            fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))])
         );
     }
 
@@ -1371,7 +1364,7 @@ mod tests {
                 Expr::Literal(Value::U32(1337)),
                 Expr::Literal(Value::F32(3.14)),
                 call_expr(FnCall::EffectTimerNew, &[
-                    call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(1000))]),
+                    fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]),
                     literal(Value::Interpolation(Interpolation::SineIn))
                 ])
             ])
@@ -1385,7 +1378,7 @@ mod tests {
         let expected = Expr::Fx {
             name: "coalesce".to_string(),
             arguments: vec![
-                call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(220))]),
+                fn_call_expr("Duration::from_millis", vec![literal(Value::U32(220))]),
             ],
             self_fns: vec![]
         };
@@ -1398,7 +1391,7 @@ mod tests {
             self_fns: vec![],
             arguments: vec![
                 call_expr(FnCall::EffectTimerNew, &[
-                    call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(220))]),
+                    fn_call_expr("Duration::from_millis", vec![literal(Value::U32(220))]),
                     Expr::Literal(Value::Interpolation(Interpolation::ElasticOut))
                 ])
             ]};
@@ -1415,7 +1408,7 @@ mod tests {
                     self_fns: vec![],
                     arguments: vec![
                         call_expr(FnCall::EffectTimerNew, &[
-                            call_expr(FnCall::DurationFromMillis, &[literal(Value::U32(500))]),
+                            fn_call_expr("Duration::from_millis", vec![literal(Value::U32(500))]),
                             Expr::Literal(Value::Interpolation(Interpolation::CircOut))
                         ])
                     ]
