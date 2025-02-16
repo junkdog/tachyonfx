@@ -22,11 +22,7 @@ pub struct HslShift {
 
 impl Shader for HslShift {
     fn name(&self) -> &'static str {
-        // if self.hsl_mod_fg.is_some() && self.hsl_mod_bg.is_some() {
-            "hsl_shift"
-        // } else {
-        //     "hsl_shift_fg"
-        // }
+        "hsl_shift"
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {

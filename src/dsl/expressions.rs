@@ -18,10 +18,6 @@ pub(super) enum Expr {
     Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
     FnCall(FnCallInfo), // e.g. foo_bar(area)
-    Call {
-        function: FnCall,  // e.g. ["Duration", "from_millis"]
-        args: Vec<Expr>
-    },
     OptionSome(Box<Expr>),
     Sequence {
         effects: Vec<Expr>,
@@ -37,7 +33,7 @@ pub(super) enum Expr {
         arguments: Vec<Expr>,
         self_fns: Vec<FnCallInfo>,
     },
-    InvalidExpr { input: String }
+    InvalidExpr { remaining: String }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -48,7 +44,7 @@ pub(super) enum Value {
     String(String),
     U32(u32),
     F32(f32),
-    None,
+    OptionNone,
     Duration(Duration),
     Timer(EffectTimer),
     Motion(Motion),
@@ -58,19 +54,9 @@ pub(super) enum Value {
     Interpolation(Interpolation),
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub(super) enum FnCall {
-    EffectTimerNew,
-    EffectTimerFromMs,
-    RectStruct,
-    MarginNew,
-    MarginStruct,
-    RepeatModeDuration,
-    RepeatModeTimes,
-}
-
 // Helper enum for method types
 #[derive(Debug, Clone, PartialEq)]
+#[deprecated]
 pub(super) enum StyleMethod {
     Fg(Expr),
     Bg(Expr),
@@ -78,6 +64,7 @@ pub(super) enum StyleMethod {
     SubModifier(Modifier),
 }
 
+#[deprecated]
 pub(super) fn compile_style(methods: Vec<StyleMethod>) -> Style {
     methods.into_iter().fold(Style::new(), |style, method| {
         match method {
@@ -112,7 +99,6 @@ impl Expr {
             Expr::Var(_)             => "variable",
             Expr::Fx { .. }          => "effect",
             Expr::Literal(_)         => "literal",
-            Expr::Call { .. }        => "function_call",
             Expr::ArrayRef(_)        => "array_ref",
             Expr::Array(_)           => "array_ref",
             Expr::CellFilter { .. }  => "cell_filter",
@@ -174,29 +160,6 @@ impl Expr {
                     format!("{}{}(\n{}\n{})", indent_str, name, formatted_args, indent_str)
                 }
             },
-            Expr::Call { function, args } => {
-
-                let formatted_args = formatted_args(args);
-
-                let (prefix, suffix) = match function {
-                    FnCall::EffectTimerNew      => ("EffectTimer::new(", ")"),
-                    FnCall::EffectTimerFromMs   => ("EffectTimer::from_ms(", ")"),
-                    FnCall::RectStruct          => ("Rect {\n", "\n}"),
-                    FnCall::MarginNew           => ("Margin::new(", ")"),
-                    FnCall::MarginStruct        => ("Margin {\n", "\n}"),
-                    FnCall::RepeatModeDuration  => ("RepeatMode::Duration(", ")"),
-                    FnCall::RepeatModeTimes     => ("RepeatMode::Times(", ")"),
-                };
-
-                if args.len() <= 1 {
-                    format!("{}{}{}{}", indent_str, prefix, formatted_args, suffix)
-                } else {
-                    format!("{}{}\n{}\n{}{}",
-                        indent_str, prefix,
-                        formatted_args,
-                        indent_str, suffix)
-                }
-            },
             Expr::Sequence { effects, self_fns } => {
                 format!(
                     "{indent_str}fx::sequence(&[\n{}\n{indent_str}]){}",
@@ -226,7 +189,7 @@ impl Expr {
                 format!("{}Style::new(){}", indent_str, inner)
             }
             Expr::OptionSome(v) => format!("{}Some({})", indent_str, v.format(0)),
-            Expr::InvalidExpr { input } => format!("{}// Invalid expression: {}", indent_str, input),
+            Expr::InvalidExpr { remaining: input } => format!("{}// Invalid expression: {}", indent_str, input),
         }
     }
 }
@@ -266,7 +229,7 @@ impl Value {
                 "RepeatMode::Forever".to_string(),
             Value::Interpolation(i) =>
                 format!("{i:?}"),
-            Value::None => "None".to_string(),
+            Value::OptionNone => "None".to_string(),
         }
     }
 }

@@ -7,7 +7,7 @@ use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
-use crate::dsl::expressions::{compile_style, Expr, FnCall, FnCallInfo, Value};
+use crate::dsl::expressions::{compile_style, Expr, FnCallInfo, Value};
 use crate::fx::RepeatMode;
 
 #[derive(Debug)]
@@ -72,18 +72,21 @@ impl<'a> Arguments<'a> {
 
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
-            Expr::Call { function: FnCall::EffectTimerFromMs, args } => {
-                let mut inner_args = self.inner_args(args, 2)?;
-                let ms = inner_args.read_u32()?;
-                let interpolation = inner_args.interpolation()?;
-                Ok(EffectTimer::from_ms(ms, interpolation))
-            },
-            Expr::Call { function: FnCall::EffectTimerNew, args } => {
-                let mut inner_args = self.inner_args(args, 2)?;
-                let duration = inner_args.duration()?;
-                let interpolation = inner_args.interpolation()?;
-                Ok(EffectTimer::new(duration, interpolation))
-            },
+            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+                "EffectTimer::from_ms" => {
+                    let mut inner_args = self.inner_args(args, 2)?;
+                    let ms = inner_args.read_u32()?;
+                    let interpolation = inner_args.interpolation()?;
+                    EffectTimer::from_ms(ms, interpolation)
+                },
+                "EffectTimer::new" => {
+                    let mut inner_args = self.inner_args(args, 2)?;
+                    let duration = inner_args.duration()?;
+                    let interpolation = inner_args.interpolation()?;
+                    EffectTimer::new(duration, interpolation)
+                },
+                _ => self.expected_type("timer", name)?,
+            }),
             Expr::Literal(Value::Timer(t)) => Ok(t),
             Expr::Literal(Value::U32(ms))  => Ok(ms.into()),
             Expr::Var(name)                => self.bound_var(name),
@@ -192,7 +195,7 @@ impl<'a> Arguments<'a> {
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Option<T>, DslError> {
         match self.next("option")? {
-            Expr::Literal(Value::None) => Ok(None),
+            Expr::Literal(Value::OptionNone) => Ok(None),
             Expr::OptionSome(expr)     => {
                 let mut args = self.inner_args(vec![*expr], 1)?;
                 inner(&mut args).map(Some)
@@ -259,10 +262,11 @@ impl<'a> Arguments<'a> {
 
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
-            Expr::Call { function: FnCall::RepeatModeTimes, args } => {
-                let times = self.inner_arg(args, Arguments::read_u32)?;
-                Ok(RepeatMode::Times(times))
-            },
+            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+                "RepeatMode::Forever" => RepeatMode::Forever,
+                "RepeatMode::Times"   => RepeatMode::Times(self.inner_arg(args, Arguments::read_u32)?),
+                _                     => self.expected_type("repeat_mode", name)?,
+            }),
             Expr::Literal(Value::RepeatMode(m))  => Ok(m),
             Expr::Var(name)                      => self.bound_var(name),
             e                                    => self.expected_type("repeat_mode", e.type_name().into()),
@@ -550,7 +554,7 @@ mod tests {
 
         let mut args = Arguments::new(
             vec![
-                Expr::Literal(Value::None),
+                Expr::Literal(Value::OptionNone),
             ].into(),
             &context,
             &binding

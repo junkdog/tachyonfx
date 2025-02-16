@@ -1,4 +1,4 @@
-use crate::dsl::expressions::{Expr, FnCall, FnCallInfo, StyleMethod, Value};
+use crate::dsl::expressions::{Expr, FnCallInfo, StyleMethod, Value};
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Interpolation, Motion};
 use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
@@ -29,6 +29,13 @@ fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
         skip_whitespace(),
         skip!(prefix),
         skip_whitespace()
+    )
+}
+
+fn trim_to<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
+    right!(
+        skip_whitespace(),
+        skip!(prefix),
     )
 }
 
@@ -120,7 +127,7 @@ fn array<'a>() -> impl StrParser<'a, Expr> {
 
 fn option<'a>() -> impl StrParser<'a, Expr> {
     or!(
-        trim("None").map(|_| Expr::Literal(Value::None)),
+        trim("None").map(|_| Expr::Literal(Value::OptionNone)),
         middle(
             trim("Some("),
             argument(),
@@ -341,29 +348,25 @@ fn modifier<'a>() -> impl StrParser<'a, Modifier> {
 
 fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
     let plain = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
-        .map(|s: &str| s.parse().unwrap());
+        .map_if(|s: &str| s.parse().ok());
 
     let hexadecimal = right!(
         skip!("0x"),
         item_while(|c: char| c.is_ascii_hexdigit())
-    ).map_if(|s: &str| {
-        match s.len() {
-            6 => u32::from_str_radix(s, 16).ok(),  // rrggbb
-            8 => u32::from_str_radix(s, 16).ok(),  // aarrggbb
-            _ => None
-        }
-    });
+    ).map_if(|s: &str| u32::from_str_radix(s, 16).ok());
 
     or!(
-        or!(hexadecimal, plain).map(|v| Expr::Literal(Value::U32(v))),
+        right!(skip_whitespace(), or!(hexadecimal, plain))
+            .map(Value::U32)
+            .map(Expr::Literal),
         var()
     )
 }
 
 fn parse_f32<'a>() -> impl StrParser<'a, Expr> {
     or!(
-        float().map(|f| Expr::Literal(Value::F32(f))),
-        var()
+        float().map(Value::F32).map(Expr::Literal),
+        var(),
     )
 }
 
@@ -375,19 +378,13 @@ fn repeat_mode<'a>() -> impl StrParser<'a, Expr> {
         trim("RepeatMode::Times("),
         parse_u32(),
         trim(")")
-    ).map(|times| Expr::Call {
-        function: FnCall::RepeatModeTimes,
-        args: vec![times] // placeholder
-    });
+    ).map(|times| fn_call_expr("RepeatMode::Times", vec![times]));
 
     let duration = middle(
         trim("RepeatMode::Duration("),
         duration(),
         trim(")")
-    ).map(|duration| Expr::Call {
-        function: FnCall::RepeatModeDuration,
-        args: vec![duration] // placeholder
-    });
+    ).map(|duration| fn_call_expr("RepeatMode::Duration", vec![duration]));
 
     or!(forever, times, duration)
 }
@@ -395,10 +392,10 @@ fn repeat_mode<'a>() -> impl StrParser<'a, Expr> {
 fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
     // raw int: ms with linear interpolation
     let from_u32 = parse_u32()
-        .map(|ms| Expr::Call {
-            function: FnCall::EffectTimerFromMs,
-            args: vec![ms, Expr::Literal(Value::Interpolation(Interpolation::Linear))]
-        });
+        .map(|ms| fn_call_expr(
+            "EffectTimer::from_ms",
+            vec![ms, Expr::Literal(Value::Interpolation(Interpolation::Linear))]
+        ));
 
     let into_duration = or!(
         duration(),
@@ -409,9 +406,8 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
     let from_tuple = tuplify!(
         right!(trim("("), into_duration),
         middle(trim(","), interpolation(), trim(")")),
-    ).map(|(duration, interpolation)| Expr::Call {
-        function: FnCall::EffectTimerNew,
-        args: vec![duration, interpolation]
+    ).map(|(duration, interpolation)| {
+        fn_call_expr("EffectTimer::new", vec![duration, interpolation])
     });
 
     // ctor: EffectTimer::new(duration, interpolation)
@@ -422,19 +418,15 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
             right!(trim(","), interpolation()),
         ),
         trim(")")
-    ).map(|(duration, interpolation)| Expr::Call {
-        function: FnCall::EffectTimerNew,
-        args: vec![duration, interpolation]
+    ).map(|(duration, interpolation)| {
+        fn_call_expr("EffectTimer::new", vec![duration, interpolation])
     });
 
     // from ms: EffectTimer::from_ms(u32, Interpolation)
     let from_ms = tuplify!(
         right!(trim("EffectTimer::from_ms("), parse_u32()),
         middle(trim(","), interpolation(), trim(")")),
-    ).map(|(ms, interpolation)| Expr::Call {
-        function: FnCall::EffectTimerFromMs,
-        args: vec![ms, interpolation]
-    });
+    ).map(|(ms, interpolation)| fn_call_expr("EffectTimer::from_ms", vec![ms, interpolation]));
 
     or!(
         from_tuple,
@@ -465,10 +457,7 @@ fn rect<'a>() -> impl StrParser<'a, Expr> {
             right!(trim("height:"), parse_u32()),
         ),
         trim("}")
-    ).map(|(x, y, w, h)| Expr::Call {
-        function: FnCall::RectStruct,
-        args: vec![x, y, w, h]
-    });
+    ).map(|(x, y, w, h)| fn_call_expr("Rect::new", vec![x, y, w, h]));
 
     or!(new, raw)
 }
@@ -482,10 +471,7 @@ fn margin<'a>() -> impl StrParser<'a, Expr> {
             right!(trim(","), parse_u32())
         ),
         trim(")")
-    ).map(|(x, y)| Expr::Call {
-        function: FnCall::MarginNew,
-        args: vec![x, y]
-    });
+    ).map(|(x, y)| fn_call_expr("Margin::new", vec![x, y]));
 
     // ctor: Margin::new(u32)
     let construct = middle(
@@ -495,10 +481,7 @@ fn margin<'a>() -> impl StrParser<'a, Expr> {
             right!(trim("vertical:"), parse_u32()),
         ),
         trim("}")
-    ).map(|(horizontal, vertical)| Expr::Call {
-        function: FnCall::MarginStruct,
-        args: vec![horizontal, vertical]
-    });
+    ).map(|(horizontal, vertical)| fn_call_expr("Margin::new", vec![horizontal, vertical]));
 
     or!(new, construct)
 }
@@ -644,7 +627,7 @@ fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
 
 #[cfg(test)]
 mod tests {
-    use crate::dsl::expressions::{Expr, FnCall, FnCallInfo, StyleMethod, Value};
+    use crate::dsl::expressions::{Expr, FnCallInfo, StyleMethod, Value};
     use crate::fx::RepeatMode;
     use crate::{CellFilter, Duration, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult, ParserExt};
@@ -754,7 +737,7 @@ mod tests {
         let input = "Margin::new(10, 20)";
         assert_expr_eq(
             parse(super::margin(), input),
-            call_expr(FnCall::MarginNew, &[literal(Value::U32(10)), literal(Value::U32(20))])
+            fn_call_expr("Margin::new", vec![literal(Value::U32(10)), literal(Value::U32(20))])
         );
 
         let input = r#"Margin {
@@ -763,10 +746,7 @@ mod tests {
         }"#;
         assert_expr_eq(
             parse(super::margin(), input),
-            call_expr(FnCall::MarginStruct, &[
-                literal(Value::U32(10)),
-                literal(Value::U32(20))
-            ])
+            fn_call_expr("Margin::new", vec![literal(Value::U32(10)), literal(Value::U32(20))])
         );
     }
 
@@ -775,7 +755,7 @@ mod tests {
         let input = "None";
         assert_expr_eq(
             parse(super::option(), input),
-            Expr::Literal(Value::None)
+            Expr::Literal(Value::OptionNone)
         );
 
         let input = "Some(10)";
@@ -796,13 +776,13 @@ mod tests {
         let input = "RepeatMode::Times(10)";
         assert_expr_eq(
             parse(super::repeat_mode(), input),
-            call_expr(FnCall::RepeatModeTimes, &[literal(Value::U32(10))])
+            fn_call_expr("RepeatMode::Times", vec![literal(Value::U32(10))])
         );
 
         let input = "RepeatMode::Duration(Duration::from_millis(1000))";
         assert_expr_eq(
             parse(super::repeat_mode(), input),
-            call_expr(FnCall::RepeatModeDuration, &[
+            fn_call_expr("RepeatMode::Duration", vec![
                 fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))])
             ])
         );
@@ -950,7 +930,12 @@ mod tests {
             "Inner(Margin::new(1, 2))",
             Expr::CellFilter {
                 filter_type: "Inner",
-                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(2))])]
+                arguments: vec![
+                    fn_call_expr(
+                        "Margin::new",
+                        vec![literal(Value::U32(1)), literal(Value::U32(2))]
+                    )
+                ]
             }
         );
 
@@ -959,7 +944,12 @@ mod tests {
             "Outer(Margin::new(3, 4))",
             Expr::CellFilter {
                 filter_type: "Outer",
-                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(3)), literal(Value::U32(4))])]
+                arguments: vec![
+                    fn_call_expr(
+                        "Margin::new",
+                        vec![literal(Value::U32(3)), literal(Value::U32(4))]
+                    )
+                ]
             }
         );
     }
@@ -994,7 +984,11 @@ mod tests {
                     Expr::Literal(Value::CellFilter(CellFilter::Text)),
                     Expr::CellFilter {
                         filter_type: "Inner",
-                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(1))])]
+                        arguments: vec![
+                            fn_call_expr("Margin::new",
+                                vec![literal(Value::U32(1)), literal(Value::U32(1))]
+                            )
+                        ]
                     }
                 ]
             }
@@ -1009,7 +1003,10 @@ mod tests {
                     literal(Value::CellFilter(CellFilter::Text)),
                     Expr::CellFilter {
                         filter_type: "Outer",
-                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(1))])]
+                        arguments: vec![fn_call_expr(
+                            "Margin::new",
+                            vec![literal(Value::U32(1)), literal(Value::U32(1))]
+                        )]
                     }
                 ]
             }
@@ -1024,7 +1021,11 @@ mod tests {
                     literal(Value::CellFilter(CellFilter::Text)),
                     Expr::CellFilter {
                         filter_type: "Inner",
-                        arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(1))])]
+                        arguments: vec![
+                            fn_call_expr("Margin::new",
+                                vec![literal(Value::U32(1)), literal(Value::U32(1))]
+                            )
+                        ]
                     }
                 ]
             }
@@ -1064,11 +1065,19 @@ mod tests {
                         arguments: vec![
                             Expr::CellFilter {
                                 filter_type: "Inner",
-                                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(1)), literal(Value::U32(1))])]
+                                arguments: vec![
+                                    fn_call_expr("Margin::new",
+                                        vec![literal(Value::U32(1)), literal(Value::U32(1))]
+                                    )
+                                ]
                             },
                             Expr::CellFilter {
                                 filter_type: "Outer",
-                                arguments: vec![call_expr(FnCall::MarginNew, &[literal(Value::U32(2)), literal(Value::U32(2))])]
+                                arguments: vec![
+                                    fn_call_expr("Margin::new",
+                                        vec![literal(Value::U32(2)), literal(Value::U32(2))]
+                                    )
+                                ]
                             }
                         ]
                     }
@@ -1098,7 +1107,7 @@ mod tests {
         }"#;
         assert_expr_eq(
             parse(super::rect(), input),
-            call_expr(FnCall::RectStruct, &[
+            fn_call_expr("Rect::new", vec![
                 literal(Value::U32(10)),
                 literal(Value::U32(20)),
                 literal(Value::U32(30)),
@@ -1210,7 +1219,7 @@ mod tests {
             Expr::Literal(Value::String("Hello, World!".to_string())),
             Expr::Literal(Value::U32(1337)),
             Expr::Literal(Value::F32(3.14)),
-            call_expr(FnCall::EffectTimerNew, &[
+            fn_call_expr("EffectTimer::new", vec![
                 fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]),
                 literal(Value::Interpolation(Interpolation::SineIn))
             ])
@@ -1227,7 +1236,7 @@ mod tests {
             Expr::Literal(Value::String("Hello, World!".to_string())),
             Expr::Literal(Value::U32(1337)),
             Expr::Literal(Value::F32(3.14)),
-            call_expr(FnCall::EffectTimerNew, &[
+            fn_call_expr("EffectTimer::new", vec![
                 fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]),
                 literal(Value::Interpolation(Interpolation::SineIn))
             ])
@@ -1240,7 +1249,7 @@ mod tests {
     fn parse_effect_timer() {
         let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
         let result = parse(super::effect_timer(), input).result.unwrap();
-        let expected = call_expr(FnCall::EffectTimerFromMs, &[
+        let expected = fn_call_expr("EffectTimer::from_ms", vec![
             literal(Value::U32(1000)),
             literal(Value::Interpolation(Interpolation::Linear))
         ]);
@@ -1248,7 +1257,7 @@ mod tests {
 
         let input = "EffectTimer::new(Duration::from_millis(1000), Linear)";
         let result = parse(super::effect_timer(), input).result.unwrap();
-        let expected = call_expr(FnCall::EffectTimerNew, &[
+        let expected = fn_call_expr("EffectTimer::new", vec![
             fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]),
             literal(Value::Interpolation(Interpolation::Linear))
         ]);
@@ -1256,7 +1265,7 @@ mod tests {
 
         let input = "EffectTimer::new(Duration::from_secs_f32(0.5), Linear)";
         let result = parse(super::effect_timer(), input).result.unwrap();
-        let expected = call_expr(FnCall::EffectTimerNew, &[
+        let expected = fn_call_expr("EffectTimer::new", vec![
             fn_call_expr("Duration::from_secs_f32", vec![literal(Value::F32(0.5))]),
             literal(Value::Interpolation(Interpolation::Linear))
         ]);
@@ -1264,7 +1273,7 @@ mod tests {
 
         let input = "(1337, Reverse)";
         let result = parse(super::effect_timer(), input).result.unwrap();
-        let expected = call_expr(FnCall::EffectTimerNew, &[
+        let expected = fn_call_expr("EffectTimer::new", vec![
             fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1337))]),
             literal(Value::Interpolation(Interpolation::Reverse))
         ]);
@@ -1272,7 +1281,7 @@ mod tests {
 
         let input = "(Duration::from_millis(1337), Reverse)";
         let result = parse(super::effect_timer(), input).result.unwrap();
-        let expected = call_expr(FnCall::EffectTimerNew, &[
+        let expected = fn_call_expr("EffectTimer::new", vec![
             fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1337))]),
             literal(Value::Interpolation(Interpolation::Reverse))
         ]);
@@ -1280,7 +1289,7 @@ mod tests {
 
         let input = "1234";
         let result = parse(super::effect_timer(), input).result.unwrap();
-        let expected = call_expr(FnCall::EffectTimerFromMs, &[
+        let expected = fn_call_expr("EffectTimer::from_ms", vec![
             literal(Value::U32(1234)),
             literal(Value::Interpolation(Interpolation::Linear))
         ]);
@@ -1341,7 +1350,7 @@ mod tests {
         let input = "EffectTimer::from_ms(1000, Interpolation::Linear)";
         assert_expr_eq(
             parse(super::argument(), input),
-            call_expr(FnCall::EffectTimerFromMs, &[
+            fn_call_expr("EffectTimer::from_ms", vec![
                 literal(Value::U32(1000)),
                 literal(Value::Interpolation(Interpolation::Linear))
             ])
@@ -1363,7 +1372,7 @@ mod tests {
                 Expr::Literal(Value::String("Hello, World!".to_string())),
                 Expr::Literal(Value::U32(1337)),
                 Expr::Literal(Value::F32(3.14)),
-                call_expr(FnCall::EffectTimerNew, &[
+                fn_call_expr("EffectTimer::new", vec![
                     fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]),
                     literal(Value::Interpolation(Interpolation::SineIn))
                 ])
@@ -1390,7 +1399,7 @@ mod tests {
             name: "dissolve".to_string(),
             self_fns: vec![],
             arguments: vec![
-                call_expr(FnCall::EffectTimerNew, &[
+                fn_call_expr("EffectTimer::new", vec![
                     fn_call_expr("Duration::from_millis", vec![literal(Value::U32(220))]),
                     Expr::Literal(Value::Interpolation(Interpolation::ElasticOut))
                 ])
@@ -1407,7 +1416,7 @@ mod tests {
                     name: "coalesce".to_string(),
                     self_fns: vec![],
                     arguments: vec![
-                        call_expr(FnCall::EffectTimerNew, &[
+                        fn_call_expr("EffectTimer::new", vec![
                             fn_call_expr("Duration::from_millis", vec![literal(Value::U32(500))]),
                             Expr::Literal(Value::Interpolation(Interpolation::CircOut))
                         ])
@@ -1418,9 +1427,9 @@ mod tests {
         assert_eq!(result, Some(expected));
     }
 
-    fn call_expr(function: FnCall, args: &[Expr]) -> Expr {
-        Expr::Call { function, args: args.into() }
-    }
+    // fn call_expr(function: FnCall, args: &[Expr]) -> Expr {
+    //     Expr::Call { function, args: args.into() }
+    // }
 
     fn literal(value: Value) -> Expr {
         Expr::Literal(value)
