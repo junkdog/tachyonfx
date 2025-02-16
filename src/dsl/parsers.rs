@@ -7,8 +7,9 @@ use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
-use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
-use ratatui::prelude::Style;
+use anpa::{defer_parser, greedy_or, map, or, right, skip, take, tuplify};
+use ratatui::layout::Direction;
+use ratatui::prelude::{Layout, Style};
 use ratatui::style::{Color, Modifier};
 use crate::dsl::DslError;
 use crate::dsl::expressions::Value::Constraint;
@@ -43,7 +44,7 @@ fn trim_to<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
 fn effect<'a>() -> impl StrParser<'a, Expr> {
     let name = right!(
         succeed(attempt(skip!("fx::"))),
-        item_while(|c: char| c.is_ascii_alphabetic() || c.is_ascii_digit() || c == '_'),
+        item_while(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')),
     );
 
     let args = middle(trim("("), arguments(), trim(")"));
@@ -180,10 +181,13 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
         });
 
     // Layout filter
-    // let layout = tuplify!(
-    //     right!(trim("Layout("), parse_layout()),
-    //     right!(trim(","), parse_u32(), trim(")")),
-    // ).map(|(layout, idx)| CellFilter::Layout(layout, idx));
+    let layout = tuplify!(
+        right!(trim("Layout("), layout()),
+        middle(trim(","), parse_u32(), trim(")")),
+    ).map(|(layout, idx)| Expr::CellFilter {
+        filter_type: "Layout",
+        arguments: vec![layout, idx]
+    });
 
     // Compound filters
     let all_of = middle(
@@ -227,7 +231,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
         bg_color,
         inner,
         outer,
-        // layout,
+        layout,
         all_of,
         any_of,
         none_of,
@@ -251,6 +255,9 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
             duration(),
             motion(),
             modifier(),
+            constraint(),
+            direction(),
+            layout(),
             rect(),
             margin(),
             color(),
@@ -330,20 +337,59 @@ fn modifier<'a>() -> impl StrParser<'a, Expr> {
 fn constraint<'a>() -> impl StrParser<'a, Expr> {
     right!(
         skip_whitespace(),
-        succeed(skip!("Constraint::")),
+        succeed(attempt(skip!("Constraint::"))),
         tuplify!(
             item_while(|c: char| c.is_ascii_alphabetic()),
             middle(trim("("), arguments(), trim(")")),
         )
-    ).map(|(name, args)| match name {
-        "Min"        => fn_call_expr("Constraint::Min", args),
-        "Max"        => fn_call_expr("Constraint::Max", args),
-        "Length"     => fn_call_expr("Constraint::Length", args),
-        "Percentage" => fn_call_expr("Constraint::Percentage", args),
-        "Fill"       => fn_call_expr("Constraint::Fill", args),
-        "Ratio"      => fn_call_expr("Constraint::Ratio", args),
-        n            => Expr::ParserError(format!("Invalid constraint: {n}")),
+    ).map_if(|(name, args)| match name {
+        "Min"        => Some(fn_call_expr("Constraint::Min", args)),
+        "Max"        => Some(fn_call_expr("Constraint::Max", args)),
+        "Length"     => Some(fn_call_expr("Constraint::Length", args)),
+        "Percentage" => Some(fn_call_expr("Constraint::Percentage", args)),
+        "Fill"       => Some(fn_call_expr("Constraint::Fill", args)),
+        "Ratio"      => Some(fn_call_expr("Constraint::Ratio", args)),
+        _            => None,
     })
+}
+
+fn direction<'a>() -> impl StrParser<'a, Expr> {
+    right!(
+        succeed(skip!("Direction::")),
+        or!(
+            skip!("Horizontal").map(|_| Direction::Horizontal),
+            skip!("Vertical").map(|_| Direction::Vertical),
+        )
+    ).map(Value::Direction).map(Expr::Literal)
+}
+
+fn layout<'a>() -> impl StrParser<'a, Expr> {
+    let layout_expr = |ctor, self_fns| Expr::Layout { expr: Box::new(ctor), self_fns };
+
+    let new = middle(
+        trim("Layout::new("),
+        arguments(),
+        trim(")")
+    ).map(|args| fn_call_expr("Layout::new", args));
+
+    let horizontal = middle(
+        trim("Layout::horizontal("),
+        arguments(),
+        trim(")")
+    ).map(|args| fn_call_expr("Layout::horizontal", args));
+
+    let vertical = middle(
+        trim("Layout::vertical("),
+        arguments(),
+        trim(")")
+    ).map(|args| fn_call_expr("Layout::vertical", args));
+
+    let self_fns = many_to_vec(self_fn_call(), true, separator(trim(""), true));
+
+    tuplify!(
+        or!(new, horizontal, vertical),
+        self_fns
+    ).map(move |(ctor, self_fns)| layout_expr(ctor, self_fns))
 }
 
 fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
@@ -630,7 +676,7 @@ mod tests {
     use crate::fx::RepeatMode;
     use crate::{CellFilter, Duration, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult, ParserExt};
-    use ratatui::layout::Constraint;
+    use ratatui::layout::{Constraint, Direction};
     use ratatui::style::{Color, Modifier};
     use crate::dsl::parsers::{fn_call_expr, self_fn_call};
 
@@ -640,7 +686,11 @@ mod tests {
     ) {
         assert_eq!(result.state, "", "Expected parser to consume the entire input");
         assert!(result.result.is_some());
-        assert_eq!(result.result.unwrap(), expected);
+
+        assert_eq!(
+            format!("{:#?}", result.result.unwrap()),
+            format!("{:#?}", expected),
+        );
     }
 
     fn assert_parser_eq(
@@ -1468,9 +1518,154 @@ mod tests {
         assert_eq!(result, Some(expected));
     }
 
-    // fn call_expr(function: FnCall, args: &[Expr]) -> Expr {
-    //     Expr::Call { function, args: args.into() }
-    // }
+    #[test]
+    fn test_layout_parser() {
+        // Test Layout::new
+        let input = "Layout::new(Direction::Horizontal, [Length(1), Percentage(50)])";
+        assert_expr_eq(
+            parse(super::layout(), input),
+            Expr::Layout {
+                expr: Box::new(fn_call_expr("Layout::new", vec![
+                    literal(Value::Direction(Direction::Horizontal)),
+                    Expr::Array(vec![
+                        fn_call_expr("Constraint::Length", vec![literal(Value::U32(1))]),
+                        fn_call_expr("Constraint::Percentage", vec![literal(Value::U32(50))])
+                    ])
+                ])),
+                self_fns: vec![]
+            }
+        );
+
+        // Test Layout::horizontal with constraints
+        let input = "Layout::horizontal([Length(1), Percentage(50)])";
+        assert_expr_eq(
+            parse(super::layout(), input),
+            Expr::Layout {
+                expr: Box::new(fn_call_expr("Layout::horizontal", vec![
+                    Expr::Array(vec![
+                        fn_call_expr("Constraint::Length", vec![literal(Value::U32(1))]),
+                        fn_call_expr("Constraint::Percentage", vec![literal(Value::U32(50))])
+                    ])
+                ])),
+                self_fns: vec![]
+            }
+        );
+
+        // Test Layout::vertical with method chaining
+        let input = "Layout::vertical([Min(5)]).margin(1).spacing(2)";
+        assert_expr_eq(
+            parse(super::layout(), input),
+            Expr::Layout {
+                expr: Box::new(fn_call_expr("Layout::vertical", vec![
+                    Expr::Array(vec![
+                        fn_call_expr("Constraint::Min", vec![literal(Value::U32(5))])
+                    ])
+                ])),
+                self_fns: vec![
+                    FnCallInfo::new("margin", vec![literal(Value::U32(1))]),
+                    FnCallInfo::new("spacing", vec![literal(Value::U32(2))])
+                ]
+            }
+        );
+
+        // Test complex nested layout
+        let input = r#"Layout::horizontal([
+            Constraint::Length(1),
+            Constraint::Percentage(80),
+            Constraint::Ratio(1, 3)
+        ]).spacing(1).direction(Direction::Vertical)"#;
+
+        assert_expr_eq(
+            parse(super::layout(), input),
+            Expr::Layout {
+                expr: Box::new(fn_call_expr("Layout::horizontal", vec![
+                    Expr::Array(vec![
+                        fn_call_expr("Constraint::Length", vec![literal(Value::U32(1))]),
+                        fn_call_expr("Constraint::Percentage", vec![literal(Value::U32(80))]),
+                        fn_call_expr("Constraint::Ratio", vec![
+                            literal(Value::U32(1)),
+                            literal(Value::U32(3))
+                        ])
+                    ])
+                ])),
+                self_fns: vec![
+                    FnCallInfo::new("spacing", vec![literal(Value::U32(1))]),
+                    FnCallInfo::new("direction", vec![
+                        literal(Value::Direction(Direction::Vertical))
+                    ])
+                ]
+            }
+        );
+
+        // Test with variables
+        let input = "Layout::horizontal(constraints).margin(spacing)";
+        assert_expr_eq(
+            parse(super::layout(), input),
+            Expr::Layout {
+                expr: Box::new(fn_call_expr("Layout::horizontal", vec![
+                    Expr::Var("constraints".to_string())
+                ])),
+                self_fns: vec![
+                    FnCallInfo::new("margin", vec![Expr::Var("spacing".to_string())])
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn test_layout_parser_edge_cases() {
+        // Test empty constraint array
+        let input = "Layout::vertical([])";
+        assert_expr_eq(
+            parse(super::layout(), input),
+            Expr::Layout {
+                expr: Box::new(fn_call_expr("Layout::vertical", vec![
+                    Expr::Array(vec![])
+                ])),
+                self_fns: vec![]
+            }
+        );
+
+        // Test multiple method chains with complex arguments
+        let input = "Layout::new(Direction::Horizontal).constraints([Length(1)]).spacing(2).margin(3)";
+        assert_expr_eq(
+            parse(super::layout(), input),
+            Expr::Layout {
+                expr: Box::new(fn_call_expr("Layout::new", vec![
+                    literal(Value::Direction(Direction::Horizontal))
+                ])),
+                self_fns: vec![
+                    FnCallInfo::new("constraints", vec![
+                        Expr::Array(vec![
+                            fn_call_expr("Constraint::Length", vec![literal(Value::U32(1))])
+                        ])
+                    ]),
+                    FnCallInfo::new("spacing", vec![literal(Value::U32(2))]),
+                    FnCallInfo::new("margin", vec![literal(Value::U32(3))])
+                ]
+            }
+        );
+
+        // Test whitespace handling
+        let input = r#"Layout::horizontal( [ Length ( 1 ) ] )
+            .margin ( 2 )
+            .spacing ( 3 )"#;
+
+        assert_expr_eq(
+            parse(super::layout(), input),
+            Expr::Layout {
+                expr: Box::new(fn_call_expr("Layout::horizontal", vec![
+                    Expr::Array(vec![
+                        fn_call_expr("Constraint::Length", vec![literal(Value::U32(1))])
+                    ])
+                ])),
+                self_fns: vec![
+                    FnCallInfo::new("margin", vec![literal(Value::U32(2))]),
+                    FnCallInfo::new("spacing", vec![literal(Value::U32(3))])
+                ]
+            }
+        );
+    }
 
     fn literal(value: Value) -> Expr {
         Expr::Literal(value)

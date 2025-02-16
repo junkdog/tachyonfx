@@ -2,7 +2,7 @@ use crate::dsl::environment::DslEnv;
 use crate::dsl::dsl::EffectDsl;
 use crate::dsl::DslError;
 use crate::{CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
-use ratatui::layout::{Layout, Margin, Rect};
+use ratatui::layout::{Constraint, Layout, Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
 use std::fmt;
@@ -120,6 +120,30 @@ impl<'a> Arguments<'a> {
             Expr::Literal(Value::CellFilter(f)) => Ok(f),
             Expr::Var(name)                     => self.bound_var(name),
             e                                   => self.expected_type_expr("cell_filter", e),
+        }
+    }
+
+    pub fn constraint(&mut self) -> Result<Constraint, DslError> {
+        use Constraint::*;
+
+        match self.next("constraint")? {
+            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+                "Constraint::Min"        => Min(self.inner_arg(args, Arguments::read_u16)?),
+                "Constraint::Max"        => Max(self.inner_arg(args, Arguments::read_u16)?),
+                "Constraint::Length"     => Length(self.inner_arg(args, Arguments::read_u16)?),
+                "Constraint::Percentage" => Percentage(self.inner_arg(args, Arguments::read_u16)?),
+                "Constraint::Fill"       => Fill(self.inner_arg(args, Arguments::read_u16)?),
+                "Constraint::Ratio"      => {
+                    let mut inner_args = self.inner_args(args, 2)?;
+                    let a = inner_args.read_u32()?;
+                    let b = inner_args.read_u32()?;
+                    Ratio(a, b)
+                },
+                _ => self.expected_type("constraint", name)?,
+            }),
+            Expr::Literal(Value::Constraint(c)) => Ok(c),
+            Expr::Var(name) => self.bound_var(name),
+            e               => self.expected_type("constraint", e.type_name().into()),
         }
     }
 

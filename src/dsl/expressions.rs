@@ -1,6 +1,6 @@
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
-use ratatui::layout::{Constraint, Margin, Rect};
+use ratatui::layout::{Constraint, Direction, Margin, Rect};
 use ratatui::prelude::{Color, Modifier, Style};
 use crate::color_ext::ToRgbComponents;
 use crate::dsl::DslFormat;
@@ -20,6 +20,7 @@ pub(super) enum Expr {
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
     FnCall(FnCallInfo), // e.g. foo_bar(area)
     OptionSome(Box<Expr>),
+    Layout { expr: Box<Expr>, self_fns: Vec<FnCallInfo> },
     Sequence {
         effects: Vec<Expr>,
         self_fns: Vec<FnCallInfo>
@@ -43,6 +44,7 @@ pub(super) enum Value {
     CellFilter(CellFilter),
     Color(Color),
     Constraint(Constraint),
+    Direction(Direction),
     Style(Style),
     String(String),
     U32(u32),
@@ -112,6 +114,7 @@ impl Expr {
             Expr::FnCall { .. }      => "fn_call",
             Expr::InvalidExpr { .. } => "invalid",
             Expr::ParserError(_)     => "parser_error",
+            Expr::Layout { .. }      => "layout"
         }
     }
 
@@ -192,6 +195,7 @@ impl Expr {
             Expr::OptionSome(v) => format!("{}Some({})", indent_str, v.format(0)),
             Expr::InvalidExpr { remaining: input } => format!("{}// Invalid expression: {}", indent_str, input),
             Expr::ParserError(message) => format!("{}// Parser error: {}", indent_str, message), // ?
+            Expr::Layout { .. } => "layout(todo)".to_string()
         }
     }
 }
@@ -234,6 +238,7 @@ impl Value {
             Value::OptionNone => "None".to_string(),
             Value::Modifier(m) => m.dsl_format(),
             Value::Constraint(c) => c.to_string(),
+            Value::Direction(dir) => dir.to_string(),
         }
     }
 }
