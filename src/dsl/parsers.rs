@@ -1,4 +1,4 @@
-use crate::dsl::expressions::{Expr, FnCallInfo, StyleMethod, Value};
+use crate::dsl::expressions::{Expr, FnCallInfo, Value};
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Interpolation, Motion};
 use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
@@ -155,24 +155,24 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     let text = cf("Text").map(|_| Expr::Literal(Value::CellFilter(CellFilter::Text)));
 
     // Color filters
-    let fg_color = middle(cf("FgColor("), color_ctor(), trim(")"))
+    let fg_color = middle(cf("FgColor("), or!(color(), var()), trim(")"))
         .map(|color| Expr::CellFilter {
             filter_type: "FgColor",
             arguments: vec![color]
         });
-    let bg_color = middle(cf("BgColor("), color_ctor(), trim(")"))
+    let bg_color = middle(cf("BgColor("), or!(color(), var()), trim(")"))
         .map(|color| Expr::CellFilter {
             filter_type: "BgColor",
             arguments: vec![color]
         });
 
     // Margin-based filters
-    let inner = middle(cf("Inner("), margin(), trim(")"))
+    let inner = middle(cf("Inner("), or!(margin(), var()), trim(")"))
         .map(|margin| Expr::CellFilter {
             filter_type: "Inner",
             arguments: vec![margin]
         });
-    let outer = middle(cf("Outer("), margin(), trim(")"))
+    let outer = middle(cf("Outer("), or!(margin(), var()), trim(")"))
         .map(|margin| Expr::CellFilter {
             filter_type: "Outer",
             arguments: vec![margin]
@@ -249,10 +249,10 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
             effect_timer(),
             duration(),
             motion(),
+            modifier(),
             rect(),
             margin(),
             color(),
-            color_ctor(),
             repeat_mode(), // used by fx::repeat
             style(),
             array_ref(), // e.g. &[fx1, fx2, fx3]
@@ -279,7 +279,7 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
         ))
     ).map(|_| Style::default());
 
-    let style_chain = many_to_vec(style_method_call(), false, separator(trim(""), true));
+    let style_chain = many_to_vec(self_fn_call(), true, separator(trim(""), true));
 
     right!(
         constructor,
@@ -309,27 +309,7 @@ fn self_fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
     )
 }
 
-
-fn style_method_call<'a>() -> impl StrParser<'a, StyleMethod> {
-    or!(
-        right!(
-            skip!("."),
-            middle(trim("fg("), color_ctor(), trim(")"))
-        ).map(StyleMethod::Fg),
-
-        right!(
-            skip!("."),
-            middle(trim("bg("), color_ctor(), trim(")"))
-        ).map(StyleMethod::Bg),
-
-        right!(
-            skip!("."),
-            middle(trim("add_modifier("), modifier(), trim(")"))
-        ).map(StyleMethod::AddModifier)
-    )
-}
-
-fn modifier<'a>() -> impl StrParser<'a, Modifier> {
+fn modifier<'a>() -> impl StrParser<'a, Expr> {
     right!(
         trim("Modifier::"),
         or!(
@@ -343,7 +323,7 @@ fn modifier<'a>() -> impl StrParser<'a, Modifier> {
             skip!("HIDDEN").map(|_| Modifier::HIDDEN),
             skip!("CROSSED_OUT").map(|_| Modifier::CROSSED_OUT)
         )
-    )
+    ).map(Value::Modifier).map(Expr::Literal)
 }
 
 fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
@@ -519,18 +499,17 @@ fn motion<'a>() -> impl StrParser<'a, Expr> {
     or!(literal, var())
 }
 
-fn color_ctor<'a>() -> impl StrParser<'a, Expr> {
-    middle(
+fn color<'a>() -> impl StrParser<'a, Expr> {
+    // from_u32
+    let from_u32 = middle(
         trim("Color::from_u32("),
         parse_u32(),
         trim(")")
     ).map(|u32| Expr::FnCall(FnCallInfo {
         name: "Color::from_u32".to_string(),
         args: vec![u32]
-    }))
-}
+    }));
 
-fn color<'a>() -> impl StrParser<'a, Expr> {
     // rgb
     let rgb = middle(
         trim("Color::Rgb("),
@@ -575,7 +554,7 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
         _              => None
     }).map(|c| Expr::Literal(Value::Color(c)));
 
-    or!(literal, rgb, indexed)
+    or!(from_u32, literal, rgb, indexed)
 }
 
 fn interpolation<'a>() -> impl StrParser<'a, Expr> {
@@ -627,12 +606,12 @@ fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
 
 #[cfg(test)]
 mod tests {
-    use crate::dsl::expressions::{Expr, FnCallInfo, StyleMethod, Value};
+    use crate::dsl::expressions::{Expr, FnCallInfo, Value};
     use crate::fx::RepeatMode;
     use crate::{CellFilter, Duration, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult, ParserExt};
     use ratatui::style::{Color, Modifier};
-    use crate::dsl::parsers::fn_call_expr;
+    use crate::dsl::parsers::{fn_call_expr, self_fn_call};
 
     fn assert_expr_eq(
         result: AnpaResult<&str, Expr>,
@@ -674,7 +653,7 @@ mod tests {
     fn test_color_from_u32() {
         let input = "Color::from_u32(0x1d2021)";
         assert_expr_eq(
-            parse(super::color_ctor(), input),
+            parse(super::color(), input),
             Expr::FnCall(FnCallInfo {
                 name: "Color::from_u32".to_string(),
                 args: vec![Expr::Literal(Value::U32(0x1d2021))]
@@ -789,6 +768,26 @@ mod tests {
     }
 
     #[test]
+    fn test_modifiers() {
+        [
+            ("Modifier::BOLD", Modifier::BOLD),
+            ("Modifier::DIM", Modifier::DIM),
+            ("Modifier::ITALIC", Modifier::ITALIC),
+            ("Modifier::UNDERLINED", Modifier::UNDERLINED),
+            ("Modifier::SLOW_BLINK", Modifier::SLOW_BLINK),
+            ("Modifier::RAPID_BLINK", Modifier::RAPID_BLINK),
+            ("Modifier::REVERSED", Modifier::REVERSED),
+            ("Modifier::HIDDEN", Modifier::HIDDEN),
+            ("Modifier::CROSSED_OUT", Modifier::CROSSED_OUT),
+        ].into_iter().for_each(|(input, expected)| {
+            assert_expr_eq(
+                parse(super::modifier(), input),
+                Expr::Literal(Value::Modifier(expected))
+            );
+        });
+    }
+
+    #[test]
     fn test_basic_filters() {
         // Test All filter
         assert_cell_filter_eq("All", literal(Value::CellFilter(CellFilter::All)));
@@ -834,15 +833,13 @@ mod tests {
         assert_expr_eq(
             parse(super::style(), input),
             Expr::Style(vec![
-                StyleMethod::Fg(Expr::FnCall(FnCallInfo {
-                    name: "Color::from_u32".to_string(),
-                    args: vec![Expr::Literal(Value::U32(0x1d2021))]
-                })),
-                StyleMethod::Bg(Expr::FnCall(FnCallInfo {
-                    name: "Color::from_u32".to_string(),
-                    args: vec![Expr::Literal(Value::U32(0x1d2023))]
-                })),
-                StyleMethod::AddModifier(Modifier::BOLD),
+                FnCallInfo::new("fg", vec![
+                    fn_call_expr("Color::from_u32", vec![literal(Value::U32(0x1d2021))])
+                ]),
+                FnCallInfo::new("bg", vec![
+                    fn_call_expr("Color::from_u32", vec![literal(Value::U32(0x1d2023))])
+                ]),
+                FnCallInfo::new("add_modifier", vec![Expr::Literal(Value::Modifier(Modifier::BOLD))])
             ])
         );
     }

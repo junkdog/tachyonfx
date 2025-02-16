@@ -3,6 +3,7 @@ use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
 use ratatui::layout::{Margin, Rect};
 use ratatui::prelude::{Color, Modifier, Style};
 use crate::color_ext::ToRgbComponents;
+use crate::dsl::DslFormat;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct FnCallInfo {
@@ -27,7 +28,7 @@ pub(super) enum Expr {
         effects: Vec<Expr>,
         self_fns: Vec<FnCallInfo>
     },
-    Style(Vec<StyleMethod>),
+    Style(Vec<FnCallInfo>),
     Fx {
         name: String,
         arguments: Vec<Expr>,
@@ -47,6 +48,7 @@ pub(super) enum Value {
     OptionNone,
     Duration(Duration),
     Timer(EffectTimer),
+    Modifier(Modifier),
     Motion(Motion),
     Rect(Rect),
     Margin(Margin),
@@ -54,23 +56,22 @@ pub(super) enum Value {
     Interpolation(Interpolation),
 }
 
-// Helper enum for method types
-#[derive(Debug, Clone, PartialEq)]
-#[deprecated]
-pub(super) enum StyleMethod {
-    Fg(Expr),
-    Bg(Expr),
-    AddModifier(Modifier),
-    SubModifier(Modifier),
-}
-
-#[deprecated]
-pub(super) fn compile_style(methods: Vec<StyleMethod>) -> Style {
+// todo: rething; doens't support resolving vars
+pub(super) fn compile_style(methods: Vec<FnCallInfo>) -> Style {
     methods.into_iter().fold(Style::new(), |style, method| {
-        match method {
-            StyleMethod::Fg(Expr::Literal(Value::Color(color))) => style.fg(color),
-            StyleMethod::Bg(Expr::Literal(Value::Color(color))) => style.bg(color),
-            StyleMethod::AddModifier(modifier) => style.add_modifier(modifier),
+        match method.name.as_str() {
+            "fg" => match method.args[0] {
+                Expr::Literal(Value::Color(color)) => style.fg(color),
+                _ => style
+            },
+            "bg" => match method.args[0] {
+                Expr::Literal(Value::Color(color)) => style.bg(color),
+                _ => style
+            },
+            "add_modifier" => match method.args[0] {
+                Expr::Literal(Value::Modifier(modifier)) => style.add_modifier(modifier),
+                _ => style
+            },
             _ => style
         }
     })
@@ -177,11 +178,9 @@ impl Expr {
             Expr::CellFilter { .. } => format!("{}// TODO: format cell filter", indent_str),
             Expr::Style(methods) => {
                 let inner = methods.iter()
-                    .map(|m| match m {
-                        StyleMethod::Fg(expr) => format!("{}fg({})", indent_str, expr.format(indent + 4)),
-                        StyleMethod::Bg(expr) => format!("{}bg({})", indent_str, expr.format(indent + 4)),
-                        StyleMethod::AddModifier(modifier) => format!("{}add_modifier({:?})", indent_str, modifier),
-                        StyleMethod::SubModifier(modifier) => format!("{}sub_modifier({:?})", indent_str, modifier),
+                    .map(|f| {
+                        let args = formatted_args(&f.args);
+                        format!("\n{indent_str}.{}({args})", f.name)
                     })
                     .collect::<Vec<_>>()
                     .join("\n{indent_str}");
@@ -230,6 +229,7 @@ impl Value {
             Value::Interpolation(i) =>
                 format!("{i:?}"),
             Value::OptionNone => "None".to_string(),
+            Value::Modifier(m) => m.dsl_format(),
         }
     }
 }
