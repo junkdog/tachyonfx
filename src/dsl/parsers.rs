@@ -11,6 +11,7 @@ use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
 use ratatui::prelude::Style;
 use ratatui::style::{Color, Modifier};
 use crate::dsl::DslError;
+use crate::dsl::expressions::Value::Constraint;
 
 pub(super) fn parse_expr(
     input: &str,
@@ -326,6 +327,25 @@ fn modifier<'a>() -> impl StrParser<'a, Expr> {
     ).map(Value::Modifier).map(Expr::Literal)
 }
 
+fn constraint<'a>() -> impl StrParser<'a, Expr> {
+    right!(
+        skip_whitespace(),
+        succeed(skip!("Constraint::")),
+        tuplify!(
+            item_while(|c: char| c.is_ascii_alphabetic()),
+            middle(trim("("), arguments(), trim(")")),
+        )
+    ).map(|(name, args)| match name {
+        "Min"        => fn_call_expr("Constraint::Min", args),
+        "Max"        => fn_call_expr("Constraint::Max", args),
+        "Length"     => fn_call_expr("Constraint::Length", args),
+        "Percentage" => fn_call_expr("Constraint::Percentage", args),
+        "Fill"       => fn_call_expr("Constraint::Fill", args),
+        "Ratio"      => fn_call_expr("Constraint::Ratio", args),
+        n            => Expr::ParserError(format!("Invalid constraint: {n}")),
+    })
+}
+
 fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
     let plain = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
         .map_if(|s: &str| s.parse().ok());
@@ -610,6 +630,7 @@ mod tests {
     use crate::fx::RepeatMode;
     use crate::{CellFilter, Duration, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult, ParserExt};
+    use ratatui::layout::Constraint;
     use ratatui::style::{Color, Modifier};
     use crate::dsl::parsers::{fn_call_expr, self_fn_call};
 
@@ -1111,6 +1132,29 @@ mod tests {
                 literal(Value::U32(40))
             ])
         );
+    }
+
+    #[test]
+    fn test_constraints() {
+        [
+            ("Constraint::Min(10)",        fn_call_expr("Constraint::Min",
+                vec![literal(Value::U32(10))])),
+            ("Constraint::Max(20)",        fn_call_expr("Constraint::Max",
+                vec![literal(Value::U32(20))])),
+            ("Constraint::Length(30)",     fn_call_expr("Constraint::Length",
+                vec![literal(Value::U32(30))])),
+            ("Constraint::Percentage(40)", fn_call_expr("Constraint::Percentage",
+                vec![literal(Value::U32(40))])),
+            ("Constraint::Fill(50)",       fn_call_expr("Constraint::Fill",
+                vec![literal(Value::U32(50))])),
+            ("Constraint::Ratio(60, 61)",  fn_call_expr("Constraint::Ratio",
+                vec![literal(Value::U32(60)), literal(Value::U32(61))])),
+        ].into_iter().for_each(|(input, expected)| {
+            assert_expr_eq(
+                parse(super::constraint(), input),
+                expected
+            );
+        });
     }
 
     #[test]
