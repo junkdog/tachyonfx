@@ -25,6 +25,18 @@ pub(super) fn parse_expr(
     }
 }
 
+// remove after use
+pub(super) fn parse_argument(
+    input: &str,
+) -> Result<Expr, DslError> {
+    let parsed = parse(argument(), input);
+    if let Some(expr) = parsed.result {
+        Ok(expr)
+    } else {
+        Err(DslError::ParseError(format!("remaining input: {}", parsed.state)))
+    }
+}
+
 
 fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
     right!(
@@ -156,6 +168,20 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     let all = cf("All").map(|_| Expr::Literal(Value::CellFilter(CellFilter::All)));
     let text = cf("Text").map(|_| Expr::Literal(Value::CellFilter(CellFilter::Text)));
 
+    // Layout filter
+    let layout = middle(
+        cf("Layout("),
+        tuplify!(
+            argument(),
+            // layout(),
+            parse_u32()
+        ),
+        trim(")")
+    ).map(|(layout, idx)| Expr::CellFilter {
+        filter_type: "Layout",
+        arguments: vec![layout, idx]
+    });
+
     // Color filters
     let fg_color = middle(cf("FgColor("), or!(color(), var()), trim(")"))
         .map(|color| Expr::CellFilter {
@@ -179,15 +205,6 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
             filter_type: "Outer",
             arguments: vec![margin]
         });
-
-    // Layout filter
-    let layout = tuplify!(
-        right!(trim("Layout("), layout()),
-        middle(trim(","), parse_u32(), trim(")")),
-    ).map(|(layout, idx)| Expr::CellFilter {
-        filter_type: "Layout",
-        arguments: vec![layout, idx]
-    });
 
     // Compound filters
     let all_of = middle(
@@ -364,8 +381,6 @@ fn direction<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn layout<'a>() -> impl StrParser<'a, Expr> {
-    let layout_expr = |ctor, self_fns| Expr::Layout { expr: Box::new(ctor), self_fns };
-
     let new = middle(
         trim("Layout::new("),
         arguments(),
@@ -389,7 +404,7 @@ fn layout<'a>() -> impl StrParser<'a, Expr> {
     tuplify!(
         or!(new, horizontal, vertical),
         self_fns
-    ).map(move |(ctor, self_fns)| layout_expr(ctor, self_fns))
+    ).map(move |(ctor, self_fns)| Expr::Layout { expr: Box::new(ctor), self_fns })
 }
 
 fn parse_u32<'a>() -> impl StrParser<'a, Expr> {

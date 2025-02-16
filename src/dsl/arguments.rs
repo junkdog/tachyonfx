@@ -2,7 +2,7 @@ use crate::dsl::environment::DslEnv;
 use crate::dsl::dsl::EffectDsl;
 use crate::dsl::DslError;
 use crate::{CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
-use ratatui::layout::{Constraint, Layout, Margin, Rect};
+use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
 use std::fmt;
@@ -147,11 +147,69 @@ impl<'a> Arguments<'a> {
         }
     }
 
-    pub fn layout(&mut self) -> Result<Layout, DslError> {
-        match self.next("layout")? {
-            // Expr::Layout(l) => Ok(l),
+    pub fn direction(&mut self) -> Result<Direction, DslError> {
+        match self.next("direction")? {
+            Expr::Literal(Value::Direction(d)) => Ok(d),
             Expr::Var(name) => self.bound_var(name),
-            e               => self.expected_type_expr("layout", e),
+            e               => self.expected_type("direction", e.type_name().into()),
+        }
+    }
+
+    pub fn layout(&mut self) -> Result<Layout, DslError> {
+        // First get the layout expression
+        let layout_expr = self.next("layout")?;
+
+        // Helper closure that doesn't capture self
+        let apply_single_fn = |layout: Layout, f: FnCallInfo, context: &EffectDsl, vars: &DslEnv| -> Result<Layout, DslError> {
+            let mut args = Arguments::new(f.args.into(), context, vars);
+            match f.name.as_str() {
+                "constraints"       => Ok(layout.constraints(args.array(Arguments::constraint)?)),
+                "margin"           => Ok(layout.margin(args.read_u16()?)),
+                "horizontal_margin" => Ok(layout.horizontal_margin(args.read_u16()?)),
+                "vertical_margin"  => Ok(layout.vertical_margin(args.read_u16()?)),
+                "spacing"          => Ok(layout.spacing(args.read_u16()?)),
+                _                  => Err(DslError::WrongArgumentType {
+                    actual: f.name,
+                    expected: "layout method",
+                    position: 0,
+                }),
+            }
+        };
+
+        // Process the layout expression
+        match layout_expr {
+            Expr::Layout { expr, self_fns } => {
+                let mut expr = *expr;
+                let base_layout = match expr {
+                    Expr::FnCall(FnCallInfo { name, args }) => {
+                        match name.as_str() {
+                            "Layout::horizontal" => {
+                                let constraints = self.inner_arg(args.clone(), |a| a.array(Arguments::constraint))?;
+                                Ok(Layout::horizontal(constraints))
+                            },
+                            "Layout::vertical" => {
+                                let constraints = self.inner_arg(args.clone(), |a| a.array(Arguments::constraint))?;
+                                Ok(Layout::vertical(constraints))
+                            },
+                            "Layout::new" => {
+                                let mut inner_args = self.inner_args(args.clone(), 2)?;
+                                let direction = inner_args.direction()?;
+                                let constraints = inner_args.array(Arguments::constraint)?;
+                                Ok(Layout::new(direction, constraints))
+                            },
+                            _ => self.expected_type("layout", name),
+                        }
+                    },
+                    e => self.expected_type_expr("layout", e),
+                }?;
+
+                // Apply method chains
+                self_fns.into_iter().try_fold(base_layout, |layout, f| {
+                    apply_single_fn(layout, f, self.context, self.vars)
+                })
+            },
+            Expr::Var(name) => self.bound_var(name),
+            e => self.expected_type_expr("layout", e),
         }
     }
 

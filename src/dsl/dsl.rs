@@ -524,8 +524,10 @@ mod tests {
     use ratatui::style::{Color, Style};
     use regex::Regex;
     use std::collections::VecDeque;
-    use ratatui::layout::Rect;
+    use ratatui::layout::{Layout, Margin, Rect};
+    use ratatui::layout::Constraint::Percentage;
     use Interpolation::Linear;
+    use crate::dsl::parsers::{parse_argument, parse_expr};
 
     fn assert_effect_roundtrip_eq(
         effect: Effect,
@@ -646,7 +648,13 @@ mod tests {
             Color::from_u32(0x1d2021),
             EffectTimer::from_ms(1000, QuadOut)
         ).with_filter(
-            CellFilter::Not(Box::new(CellFilter::Text))
+            CellFilter::Not(Box::new(CellFilter::Layout(
+                Layout::horizontal([Percentage(50), Percentage(50)])
+                    .spacing(1)
+                    .vertical_margin(1)
+                    .horizontal_margin(2),
+                1)
+            ))
         ).with_area(Rect::new(0, 0, 10, 10));
 
         let input = r#"fx::sweep_in(
@@ -656,8 +664,19 @@ mod tests {
             Color::from_u32(0x1d2021),
             EffectTimer::from_ms(1000, QuadOut)
         ).with_filter(
-            CellFilter::Not(Box::new(CellFilter::Text))
-        ).with_area(Rect::new(0, 0, 10, 10))"#;
+            CellFilter::Not(Box::new(CellFilter::Layout(
+                Layout::horizontal([Percentage(50), Percentage(50)])
+                    .spacing(1)
+                    .vertical_margin(1)
+                    .horizontal_margin(2),
+                1)
+            ))
+        ).with_area(Rect::new(0, 0, 10, 10));"#;
+
+
+        let ast_3 = parse_argument("Layout::horizontal([Percentage(50), Percentage(50)])").expect("expression to parse");
+        let ast_2 = parse_argument("CellFilter::Layout(Layout::horizontal([Percentage(50), Percentage(50)]), 2)").expect("expression to parse");
+        let ast = parse_expr(input).expect("expression to parse");
 
         let effect = EffectDsl::new()
             .compiler()
@@ -666,7 +685,7 @@ mod tests {
 
 
         assert_eq!(effect.name(), "sweep_in");
-        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
+        assert_eq!(format!("{effect:#?}"), format!("{expected:#?}"));
     }
 
     #[test]
