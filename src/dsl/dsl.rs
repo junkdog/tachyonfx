@@ -162,8 +162,8 @@ impl EffectDsl {
 
                     match () {
                         _ if effect.is_err() => effect,
-                        _ if !args.args().is_empty() => Err(DslError::InvalidArgumentLength {
-                            expected: args.original_arg_count() - args.args().len(),
+                        _ if !args.remaining_args().is_empty() => Err(DslError::InvalidArgumentLength {
+                            expected: args.original_arg_count() - args.remaining_args().len(),
                             actual: args.original_arg_count(),
                         }),
                         _ => effect,
@@ -171,7 +171,7 @@ impl EffectDsl {
                 }),
             Expr::Sequence { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
-                let effects = (0..args.args_count())
+                let effects = (0..args.remaining_arg_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
@@ -179,7 +179,7 @@ impl EffectDsl {
             },
             Expr::Parallel { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
-                let effects = (0..args.args_count())
+                let effects = (0..args.remaining_arg_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
@@ -202,20 +202,20 @@ impl EffectDsl {
         for self_fn in fns {
             match self_fn.name.as_str() {
                 "with_area" => {
-                    let area = Arguments::single(
+                    let area = Arguments::extract_with(
                         self_fn.args, self, env, Arguments::rect
                     )?;
                     effect = effect.with_area(area);
                 },
                 "with_filter" => {
-                    let cell_filter = Arguments::single(
+                    let cell_filter = Arguments::extract_with(
                         self_fn.args, self, env, Arguments::cell_filter
                     )?;
 
                     effect = effect.with_filter(cell_filter);
                 },
                 "filter" => {
-                    let cell_filter = Arguments::single(
+                    let cell_filter = Arguments::extract_with(
                         self_fn.args, self, env, Arguments::cell_filter
                     )?;
                     effect.filter(cell_filter);

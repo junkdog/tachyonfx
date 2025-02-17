@@ -53,7 +53,7 @@ impl<'a> Arguments<'a> {
         Self { args, vars, context, initial_arg_count }
     }
 
-    pub(super) fn single<T>(
+    pub(super) fn extract_with<T>(
         args: Vec<Expr>,
         context: &'a EffectDsl,
         vars: &'a DslEnv,
@@ -63,11 +63,11 @@ impl<'a> Arguments<'a> {
         get(&mut args)
     }
 
-    pub(super) fn args(&self) -> &VecDeque<Expr> {
+    pub(super) fn remaining_args(&self) -> &VecDeque<Expr> {
         &self.args
     }
 
-    pub(super) fn args_count(&self) -> usize {
+    pub(super) fn remaining_arg_count(&self) -> usize {
         self.args.len()
     }
 
@@ -76,11 +76,11 @@ impl<'a> Arguments<'a> {
         match self.next("duration")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
                 "Duration::from_millis" => {
-                    let ms = self.inner_arg(args, Arguments::read_u32)?;
+                    let ms = self.extract_nested(args, Arguments::read_u32)?;
                     Duration::from_millis(ms as _)
                 },
                 "Duration::from_secs_f32" => {
-                    let seconds = self.inner_arg(args, Arguments::read_f32)?;
+                    let seconds = self.extract_nested(args, Arguments::read_f32)?;
                     Duration::from_secs_f32(seconds)
                 },
                 _ => self.expected_type("duration", name)?,
@@ -101,13 +101,13 @@ impl<'a> Arguments<'a> {
         match self.next("timer")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
                 "EffectTimer::from_ms" => {
-                    let mut inner_args = self.inner_args(args, 2)?;
+                    let mut inner_args = self.nested_args(args, 2)?;
                     let ms = inner_args.read_u32()?;
                     let interpolation = inner_args.interpolation()?;
                     EffectTimer::from_ms(ms, interpolation)
                 },
                 "EffectTimer::new" => {
-                    let mut inner_args = self.inner_args(args, 2)?;
+                    let mut inner_args = self.nested_args(args, 2)?;
                     let duration = inner_args.duration()?;
                     let interpolation = inner_args.interpolation()?;
                     EffectTimer::new(duration, interpolation)
@@ -157,13 +157,13 @@ impl<'a> Arguments<'a> {
 
         match self.next("constraint")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
-                "Constraint::Min"        => Min(self.inner_arg(args, Arguments::read_u16)?),
-                "Constraint::Max"        => Max(self.inner_arg(args, Arguments::read_u16)?),
-                "Constraint::Length"     => Length(self.inner_arg(args, Arguments::read_u16)?),
-                "Constraint::Percentage" => Percentage(self.inner_arg(args, Arguments::read_u16)?),
-                "Constraint::Fill"       => Fill(self.inner_arg(args, Arguments::read_u16)?),
+                "Constraint::Min"        => Min(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Max"        => Max(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Length"     => Length(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Percentage" => Percentage(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Fill"       => Fill(self.extract_nested(args, Arguments::read_u16)?),
                 "Constraint::Ratio"      => {
-                    let mut inner_args = self.inner_args(args, 2)?;
+                    let mut inner_args = self.nested_args(args, 2)?;
                     let a = inner_args.read_u32()?;
                     let b = inner_args.read_u32()?;
                     Ratio(a, b)
@@ -214,18 +214,18 @@ impl<'a> Arguments<'a> {
                     Expr::FnCall(FnCallInfo { name, args }) => {
                         match name.as_str() {
                             "Layout::horizontal" => {
-                                let constraints = self.inner_arg(
+                                let constraints = self.extract_nested(
                                     args, |a| a.array(Arguments::constraint))?;
 
                                 Ok(Layout::horizontal(constraints))
                             },
                             "Layout::vertical" => {
-                                let constraints = self.inner_arg(
+                                let constraints = self.extract_nested(
                                     args, |a| a.array(Arguments::constraint))?;
                                 Ok(Layout::vertical(constraints))
                             },
                             "Layout::new" => {
-                                let mut inner_args = self.inner_args(args, 2)?;
+                                let mut inner_args = self.nested_args(args, 2)?;
                                 let direction = inner_args.direction()?;
                                 let constraints = inner_args.array(Arguments::constraint)?;
                                 Ok(Layout::new(direction, constraints))
@@ -320,7 +320,7 @@ impl<'a> Arguments<'a> {
         match self.next("option")? {
             Expr::Literal(Value::OptionNone) => Ok(None),
             Expr::OptionSome(expr)     => {
-                let mut args = self.inner_args(vec![*expr], 1)?;
+                let mut args = self.nested_args(vec![*expr], 1)?;
                 inner(&mut args).map(Some)
             },
             Expr::Var(name)            => self.bound_var(name),
@@ -348,17 +348,17 @@ impl<'a> Arguments<'a> {
         match self.next("color")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
                 "Color::Rgb" => {
-                    let mut inner_args = self.inner_args(args, 3)?;
+                    let mut inner_args = self.nested_args(args, 3)?;
                     let r = inner_args.read_u8()?;
                     let g = inner_args.read_u8()?;
                     let b = inner_args.read_u8()?;
                     Color::Rgb(r, g, b)
                 },
                 "Color::from_u32" => {
-                    Color::from_u32(self.inner_arg(args, Arguments::read_u32)?)
+                    Color::from_u32(self.extract_nested(args, Arguments::read_u32)?)
                 }
                 "Color::Indexed" => {
-                    Color::Indexed(self.inner_arg(args, Arguments::read_u8)?)
+                    Color::Indexed(self.extract_nested(args, Arguments::read_u8)?)
                 }
                 _ => self.expected_type("color", name)?,
             }),
@@ -401,7 +401,7 @@ impl<'a> Arguments<'a> {
         match self.next("repeat_mode")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
                 "RepeatMode::Forever" => RepeatMode::Forever,
-                "RepeatMode::Times"   => RepeatMode::Times(self.inner_arg(args, Arguments::read_u32)?),
+                "RepeatMode::Times"   => RepeatMode::Times(self.extract_nested(args, Arguments::read_u32)?),
                 _                     => self.expected_type("repeat_mode", name)?,
             }),
             Expr::Literal(Value::RepeatMode(m))  => Ok(m),
@@ -424,7 +424,7 @@ impl<'a> Arguments<'a> {
         match self.next("rect")? {
             Expr::FnCall(FnCallInfo{ name, args }) => match name.as_str() {
                 "Rect::new" => {
-                    let mut inner_args = self.inner_args(args, 4)?;
+                    let mut inner_args = self.nested_args(args, 4)?;
                     let x = inner_args.read_u16()?;
                     let y = inner_args.read_u16()?;
                     let width = inner_args.read_u16()?;
@@ -476,13 +476,13 @@ impl<'a> Arguments<'a> {
     fn compile_style(&mut self, methods: Vec<FnCallInfo>) -> Result<Style, DslError> {
         methods.into_iter().fold(Ok(Style::new()), |style, method| {
             match method.name.as_str() {
-                "fg" => self.inner_arg(method.args, Arguments::color)
+                "fg" => self.extract_nested(method.args, Arguments::color)
                     .map(|color| style.map(|s| s.fg(color)))?,
 
-                "bg" => self.inner_arg(method.args, Arguments::color)
+                "bg" => self.extract_nested(method.args, Arguments::color)
                     .map(|color| style.map(|s| s.bg(color)))?,
 
-                "add_modifier" => self.inner_arg(method.args, Arguments::modifier)
+                "add_modifier" => self.extract_nested(method.args, Arguments::modifier)
                     .map(|modifier| style.map(|s| s.add_modifier(modifier)))?,
 
                 _ => style
@@ -522,7 +522,7 @@ impl<'a> Arguments<'a> {
         self.expected_type(expected, actual.type_name().to_string())
     }
 
-    fn inner_args(&mut self, exprs: Vec<Expr>, required_arg_count: usize) -> Result<Self, DslError> {
+    fn nested_args(&mut self, exprs: Vec<Expr>, required_arg_count: usize) -> Result<Self, DslError> {
         if exprs.len() != required_arg_count {
             return Err(DslError::InvalidArgumentLength {
                 expected: required_arg_count,
@@ -533,12 +533,12 @@ impl<'a> Arguments<'a> {
         Ok(self.all_inner_args(exprs))
     }
 
-    fn inner_arg<T>(
+    fn extract_nested<T>(
         &mut self,
         exprs: Vec<Expr>,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<T, DslError> {
-        let mut args = self.inner_args(exprs, 1)?;
+        let mut args = self.nested_args(exprs, 1)?;
         inner(&mut args)
     }
 
@@ -751,12 +751,12 @@ mod tests {
         let env = empty_env();
 
         let expr = parse_expr("Color::Rgb(1, 2, 3)");
-        let color = Arguments::single(vec![expr], &EffectDsl::new(), &env, Arguments::color)
+        let color = Arguments::extract_with(vec![expr], &EffectDsl::new(), &env, Arguments::color)
             .expect("expected color");
         assert_eq!(color, Color::Rgb(1, 2, 3));
 
         let expr = parse_expr("Color::from_u32(0xffaabb)");
-        let color = Arguments::single(vec![expr], &EffectDsl::new(), &env, Arguments::color)
+        let color = Arguments::extract_with(vec![expr], &EffectDsl::new(), &env, Arguments::color)
             .expect("expected color");
         assert_eq!(color, Color::from_u32(0xffaabb));
 
