@@ -11,6 +11,30 @@ use ratatui::style::Modifier;
 use crate::dsl::expressions::{Expr, FnCallInfo, Value};
 use crate::fx::RepeatMode;
 
+/// A helper struct for parsing arguments when implementing custom effect compilers.
+///
+/// `Arguments` is primarily used when registering custom effects with [`EffectDsl`].
+/// It provides methods to safely extract and validate typed values from DSL expressions.
+///
+/// # Example
+///
+/// ```
+/// use tachyonfx::dsl::{EffectDsl, DslError};
+/// use tachyonfx::{Effect, Duration, fx};
+///
+/// // re-registering `sweep_in` under the name `sweep_in_dup`, this
+/// // would typically be supplanted by a custom effect implementation.
+/// let dsl = EffectDsl::new()
+///     .register("sweep_in_dup", |args| {
+///         Ok(fx::sweep_in(
+///             args.motion()?,
+///             args.read_u16()?,
+///             args.read_u16()?,
+///             args.color()?,
+///             args.effect_timer()?
+///         ))
+///     });
+/// ```
 #[derive(Debug)]
 pub struct Arguments<'a> {
     args: VecDeque<Expr>,
@@ -47,6 +71,7 @@ impl<'a> Arguments<'a> {
         self.args.len()
     }
 
+    /// Consumes the next argument and returns a [`Duration`].
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
@@ -71,6 +96,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns an [`EffectTimer`].
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
@@ -95,6 +121,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Color`].
     pub fn cell_filter(&mut self) -> Result<CellFilter, DslError> {
         match self.next("cell_filter")? {
             Expr::CellFilter { filter_type, arguments } => {
@@ -124,6 +151,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Constraint`].
     pub fn constraint(&mut self) -> Result<Constraint, DslError> {
         use Constraint::*;
 
@@ -148,6 +176,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Direction`].
     pub fn direction(&mut self) -> Result<Direction, DslError> {
         match self.next("direction")? {
             Expr::Literal(Value::Direction(d)) => Ok(d),
@@ -156,6 +185,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Layout`].
     pub fn layout(&mut self) -> Result<Layout, DslError> {
         // First get the layout expression
         let layout_expr = self.next("layout")?;
@@ -216,6 +246,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Interpolation`].
     pub fn interpolation(&mut self) -> Result<Interpolation, DslError> {
         match self.next("interpolation")? {
             Expr::Literal(Value::Interpolation(i)) => Ok(i),
@@ -224,6 +255,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a `u8`.
     pub fn read_u8(&mut self) -> Result<u8, DslError> {
         u8::try_from(self.read_u32()?)
             .map_err(|_| DslError::CastOverflow {
@@ -233,6 +265,7 @@ impl<'a> Arguments<'a> {
             })
     }
 
+    /// Consumes the next argument and returns a `u16`.
     pub fn read_u16(&mut self) -> Result<u16, DslError> {
         u16::try_from(self.read_u32()?)
             .map_err(|_| DslError::CastOverflow {
@@ -242,6 +275,7 @@ impl<'a> Arguments<'a> {
             })
     }
 
+    /// Consumes the next argument and returns a `u32`.
     pub fn read_u32(&mut self) -> Result<u32, DslError> {
         match self.next("u32")? {
             Expr::Literal(Value::U32(u)) => Ok(u),
@@ -250,6 +284,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a `f32`.
     pub fn read_into_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
             Expr::Literal(Value::F32(f)) => Ok(f),
@@ -259,6 +294,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a `f32`.
     pub fn read_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
             Expr::Literal(Value::F32(f)) => Ok(f),
@@ -267,6 +303,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`String`].
     pub fn string(&mut self) -> Result<String, DslError> {
         match self.next("string")? {
             Expr::Literal(Value::String(s)) => Ok(s),
@@ -275,6 +312,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns an `Option<T>`.
     pub fn option<T: Clone + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
@@ -290,6 +328,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns an [`Effect`].
     pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
             Expr::Fx { name, arguments, self_fns } =>
@@ -304,6 +343,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Color`].
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
@@ -328,6 +368,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Modifier`].
     pub fn modifier(&mut self) -> Result<Modifier, DslError> {
         match self.next("modifier")? {
             Expr::Literal(Value::Modifier(m)) => Ok(m),
@@ -336,6 +377,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Style`].
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
             Expr::Literal(Value::Style(s))  => Ok(s),
@@ -345,6 +387,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Motion`].
     pub fn motion(&mut self) -> Result<Motion, DslError> {
         match self.next("motion")? {
             Expr::Literal(Value::Motion(m))  => Ok(m),
@@ -353,6 +396,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`RepeatMode`].
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
             Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
@@ -366,6 +410,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Margin`].
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
             Expr::Literal(Value::Margin(m)) => Ok(m),
@@ -374,6 +419,7 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Rect`].
     pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
             Expr::FnCall(FnCallInfo{ name, args }) => match name.as_str() {
@@ -396,6 +442,7 @@ impl<'a> Arguments<'a> {
     }
 
 
+    /// Consumes the next argument and returns a `Vec<T>`.
     pub fn array<T: Clone + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>

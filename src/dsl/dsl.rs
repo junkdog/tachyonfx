@@ -527,7 +527,6 @@ mod tests {
     use ratatui::layout::{Layout, Margin, Rect};
     use ratatui::layout::Constraint::Percentage;
     use Interpolation::Linear;
-    use crate::dsl::parsers::{parse_argument, parse_expr};
 
     fn assert_effect_roundtrip_eq(
         effect: Effect,

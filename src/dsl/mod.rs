@@ -5,10 +5,12 @@ mod environment;
 mod expressions;
 mod dsl_format;
 
+
 use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
 use std::fmt;
 
+pub use arguments::Arguments;
 pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
 
@@ -114,7 +116,7 @@ pub enum DslError {
 /// # See Also
 ///
 /// - [`Shader::to_dsl`](crate::Shader::to_dsl) for converting a shader to a DSL expression
-/// - [`DslError`](crate::DslError) for possible error types
+/// - [`DslError`] for possible error types
 pub struct EffectExpression {
     expr: Expr,
 }
