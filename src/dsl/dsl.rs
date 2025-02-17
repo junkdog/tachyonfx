@@ -674,10 +674,6 @@ mod tests {
         ).with_area(Rect::new(0, 0, 10, 10));"#;
 
 
-        let ast_3 = parse_argument("Layout::horizontal([Percentage(50), Percentage(50)])").expect("expression to parse");
-        let ast_2 = parse_argument("CellFilter::Layout(Layout::horizontal([Percentage(50), Percentage(50)]), 2)").expect("expression to parse");
-        let ast = parse_expr(input).expect("expression to parse");
-
         let effect = EffectDsl::new()
             .compiler()
             .compile(input)

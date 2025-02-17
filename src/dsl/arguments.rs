@@ -7,7 +7,8 @@ use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
-use crate::dsl::expressions::{compile_style, Expr, FnCallInfo, Value};
+use ratatui::style::Modifier;
+use crate::dsl::expressions::{Expr, FnCallInfo, Value};
 use crate::fx::RepeatMode;
 
 #[derive(Debug)]
@@ -164,11 +165,11 @@ impl<'a> Arguments<'a> {
             let mut args = Arguments::new(f.args.into(), context, vars);
             match f.name.as_str() {
                 "constraints"       => Ok(layout.constraints(args.array(Arguments::constraint)?)),
-                "margin"           => Ok(layout.margin(args.read_u16()?)),
+                "margin"            => Ok(layout.margin(args.read_u16()?)),
                 "horizontal_margin" => Ok(layout.horizontal_margin(args.read_u16()?)),
-                "vertical_margin"  => Ok(layout.vertical_margin(args.read_u16()?)),
-                "spacing"          => Ok(layout.spacing(args.read_u16()?)),
-                _                  => Err(DslError::WrongArgumentType {
+                "vertical_margin"   => Ok(layout.vertical_margin(args.read_u16()?)),
+                "spacing"           => Ok(layout.spacing(args.read_u16()?)),
+                _                   => Err(DslError::WrongArgumentType {
                     actual: f.name,
                     expected: "layout method",
                     position: 0,
@@ -179,20 +180,22 @@ impl<'a> Arguments<'a> {
         // Process the layout expression
         match layout_expr {
             Expr::Layout { expr, self_fns } => {
-                let mut expr = *expr;
-                let base_layout = match expr {
+                let base_layout = match *expr {
                     Expr::FnCall(FnCallInfo { name, args }) => {
                         match name.as_str() {
                             "Layout::horizontal" => {
-                                let constraints = self.inner_arg(args.clone(), |a| a.array(Arguments::constraint))?;
+                                let constraints = self.inner_arg(
+                                    args, |a| a.array(Arguments::constraint))?;
+
                                 Ok(Layout::horizontal(constraints))
                             },
                             "Layout::vertical" => {
-                                let constraints = self.inner_arg(args.clone(), |a| a.array(Arguments::constraint))?;
+                                let constraints = self.inner_arg(
+                                    args, |a| a.array(Arguments::constraint))?;
                                 Ok(Layout::vertical(constraints))
                             },
                             "Layout::new" => {
-                                let mut inner_args = self.inner_args(args.clone(), 2)?;
+                                let mut inner_args = self.inner_args(args, 2)?;
                                 let direction = inner_args.direction()?;
                                 let constraints = inner_args.array(Arguments::constraint)?;
                                 Ok(Layout::new(direction, constraints))
@@ -209,7 +212,7 @@ impl<'a> Arguments<'a> {
                 })
             },
             Expr::Var(name) => self.bound_var(name),
-            e => self.expected_type_expr("layout", e),
+            e               => self.expected_type_expr("layout", e),
         }
     }
 
@@ -325,10 +328,18 @@ impl<'a> Arguments<'a> {
         }
     }
 
+    pub fn modifier(&mut self) -> Result<Modifier, DslError> {
+        match self.next("modifier")? {
+            Expr::Literal(Value::Modifier(m)) => Ok(m),
+            Expr::Var(name)                   => self.bound_var(name),
+            e                                 => self.expected_type_expr("modifier", e),
+        }
+    }
+
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
             Expr::Literal(Value::Style(s))  => Ok(s),
-            Expr::Style(methods)            => Ok(compile_style(methods)),
+            Expr::Style(methods)            => self.compile_style(methods),
             Expr::Var(name)                 => self.bound_var(name),
             e                               => self.expected_type("style", e.type_name().into()),
         }
@@ -415,6 +426,23 @@ impl<'a> Arguments<'a> {
         self.context.compile(self.vars, expr)
     }
 
+    fn compile_style(&mut self, methods: Vec<FnCallInfo>) -> Result<Style, DslError> {
+        methods.into_iter().fold(Ok(Style::new()), |style, method| {
+            match method.name.as_str() {
+                "fg" => self.inner_arg(method.args, Arguments::color)
+                    .map(|color| style.map(|s| s.fg(color)))?,
+
+                "bg" => self.inner_arg(method.args, Arguments::color)
+                    .map(|color| style.map(|s| s.bg(color)))?,
+
+                "add_modifier" => self.inner_arg(method.args, Arguments::modifier)
+                    .map(|modifier| style.map(|s| s.add_modifier(modifier)))?,
+
+                _ => style
+            }
+        })
+    }
+
     fn bound_var<T: Clone + 'static>(&self, name: String) -> Result<T, DslError> {
         self.vars.get(name).cloned()
     }
@@ -469,12 +497,6 @@ impl<'a> Arguments<'a> {
 
     fn all_inner_args(&mut self, exprs: Vec<Expr>) -> Self {
         Self::new(exprs.into(), self.context, self.vars)
-    }
-}
-
-impl From<Box<Expr>> for VecDeque<Expr> {
-    fn from(expr: Box<Expr>) -> Self {
-        vec![*expr].into()
     }
 }
 

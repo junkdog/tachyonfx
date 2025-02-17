@@ -60,27 +60,6 @@ pub(super) enum Value {
     Interpolation(Interpolation),
 }
 
-// todo: rething; doens't support resolving vars
-pub(super) fn compile_style(methods: Vec<FnCallInfo>) -> Style {
-    methods.into_iter().fold(Style::new(), |style, method| {
-        match method.name.as_str() {
-            "fg" => match method.args[0] {
-                Expr::Literal(Value::Color(color)) => style.fg(color),
-                _ => style
-            },
-            "bg" => match method.args[0] {
-                Expr::Literal(Value::Color(color)) => style.bg(color),
-                _ => style
-            },
-            "add_modifier" => match method.args[0] {
-                Expr::Literal(Value::Modifier(modifier)) => style.add_modifier(modifier),
-                _ => style
-            },
-            _ => style
-        }
-    })
-}
-
 impl FnCallInfo {
     pub fn new(
         name: impl Into<String>,

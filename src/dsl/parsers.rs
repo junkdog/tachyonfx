@@ -1,4 +1,5 @@
 use crate::dsl::expressions::{Expr, FnCallInfo, Value};
+use crate::dsl::DslError;
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Interpolation, Motion};
 use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
@@ -7,12 +8,10 @@ use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
-use anpa::{defer_parser, greedy_or, map, or, right, skip, take, tuplify};
+use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
 use ratatui::layout::Direction;
-use ratatui::prelude::{Layout, Style};
+use ratatui::prelude::Style;
 use ratatui::style::{Color, Modifier};
-use crate::dsl::DslError;
-use crate::dsl::expressions::Value::Constraint;
 
 pub(super) fn parse_expr(
     input: &str,
@@ -24,19 +23,6 @@ pub(super) fn parse_expr(
         Err(DslError::ParseError(format!("remaining input: {}", parsed.state)))
     }
 }
-
-// remove after use
-pub(super) fn parse_argument(
-    input: &str,
-) -> Result<Expr, DslError> {
-    let parsed = parse(argument(), input);
-    if let Some(expr) = parsed.result {
-        Ok(expr)
-    } else {
-        Err(DslError::ParseError(format!("remaining input: {}", parsed.state)))
-    }
-}
-
 
 fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
     right!(
@@ -173,8 +159,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
         cf("Layout("),
         tuplify!(
             argument(),
-            // layout(),
-            parse_u32()
+            right!(trim(","), parse_u32())
         ),
         trim(")")
     ).map(|(layout, idx)| Expr::CellFilter {
@@ -688,12 +673,12 @@ fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
 #[cfg(test)]
 mod tests {
     use crate::dsl::expressions::{Expr, FnCallInfo, Value};
+    use crate::dsl::parsers::fn_call_expr;
     use crate::fx::RepeatMode;
-    use crate::{CellFilter, Duration, Interpolation, Motion};
+    use crate::{CellFilter, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult, ParserExt};
-    use ratatui::layout::{Constraint, Direction};
+    use ratatui::layout::Direction;
     use ratatui::style::{Color, Modifier};
-    use crate::dsl::parsers::{fn_call_expr, self_fn_call};
 
     fn assert_expr_eq(
         result: AnpaResult<&str, Expr>,
