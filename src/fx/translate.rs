@@ -1,3 +1,4 @@
+use compact_str::ToCompactString;
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 
@@ -119,7 +120,7 @@ impl Shader for Translate {
 
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
         Err(DslError::UnsupportedEffect {
-            name: self.name().to_string(),
+            name: self.name().to_compact_string(),
         })
     }
 }

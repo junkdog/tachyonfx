@@ -7,6 +7,7 @@ use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
+use compact_str::{CompactString, ToCompactString};
 use ratatui::style::Modifier;
 use crate::dsl::expressions::{Expr, FnCallInfo, Value};
 use crate::fx::RepeatMode;
@@ -141,7 +142,7 @@ impl<'a> Arguments<'a> {
                     "PositionFn" => Ok(CellFilter::PositionFn(todo!("fn"))),
                     "EvalCell"   => Ok(CellFilter::EvalCell(todo!("fn"))),
                     _            => Err(DslError::UnknownCellFilter {
-                        name: filter_type.to_string(),
+                        name: filter_type.to_compact_string(),
                     })?,
                 }
             }
@@ -303,8 +304,8 @@ impl<'a> Arguments<'a> {
         }
     }
 
-    /// Consumes the next argument and returns a [`String`].
-    pub fn string(&mut self) -> Result<String, DslError> {
+    /// Consumes the next argument and returns a [`CompactString`].
+    pub fn string(&mut self) -> Result<CompactString, DslError> {
         match self.next("string")? {
             Expr::Literal(Value::String(s)) => Ok(s),
             Expr::Var(name)                 => self.bound_var(name),
@@ -432,7 +433,7 @@ impl<'a> Arguments<'a> {
                     Ok(Rect::new(x, y, width, height))
                 },
                 e => Err(DslError::UnknownFunction {
-                    name: e.to_string(),
+                    name: e.to_compact_string(),
                 }),
             },
             Expr::Literal(Value::Rect(r)) => Ok(r),
@@ -490,8 +491,8 @@ impl<'a> Arguments<'a> {
         })
     }
 
-    fn bound_var<T: Clone + 'static>(&self, name: String) -> Result<T, DslError> {
-        self.vars.get(name).cloned()
+    fn bound_var<T: Clone + 'static>(&self, name: impl Into<CompactString>) -> Result<T, DslError> {
+        self.vars.get(name.into()).cloned()
     }
 
     fn next(&mut self, type_name: &'static str) -> Result<Expr, DslError> {
@@ -505,7 +506,7 @@ impl<'a> Arguments<'a> {
     fn expected_type<T>(
         &self,
         expected: &'static str,
-        actual: String,
+        actual: CompactString,
     ) -> Result<T, DslError>  {
         Err(DslError::WrongArgumentType {
             position: self.initial_arg_count - self.args.len() - 1,
@@ -519,7 +520,7 @@ impl<'a> Arguments<'a> {
         expected: &'static str,
         actual: Expr,
     ) -> Result<T, DslError>  {
-        self.expected_type(expected, actual.type_name().to_string())
+        self.expected_type(expected, actual.type_name().to_compact_string())
     }
 
     fn nested_args(&mut self, exprs: Vec<Expr>, required_arg_count: usize) -> Result<Self, DslError> {
@@ -569,6 +570,7 @@ mod tests {
     use ratatui::prelude::{Color, Style};
     use std::collections::VecDeque;
     use anpa::core::parse;
+    use compact_str::ToCompactString;
     use crate::dsl::expressions::{Expr, Value};
 
     fn empty_env() -> DslEnv {
@@ -728,21 +730,21 @@ mod tests {
         let context = EffectDsl::new();
         let mut args = Arguments::new(
             vec![
-                Expr::Literal(Value::String("hello".to_string())),
+                Expr::Literal(Value::String("hello".to_compact_string())),
                 Expr::Literal(Value::U32(42)), // Wrong type
-                Expr::Literal(Value::String("world".to_string())),
+                Expr::Literal(Value::String("world".to_compact_string())),
             ].into(),
             &context,
             &binding
         );
 
-        assert_eq!(args.string(), Ok("hello".to_string()));
+        assert_eq!(args.string(), Ok("hello".to_compact_string()));
         assert_eq!(args.string(), Err(DslError::WrongArgumentType {
             position: 1,
             expected: "string",
-            actual: "literal".to_string(), // fixme: should be u32?
+            actual: "literal".to_compact_string(), // fixme: should be u32?
         }));
-        assert_eq!(args.string(), Ok("world".to_string()));
+        assert_eq!(args.string(), Ok("world".to_compact_string()));
     }
 
     #[test]
@@ -871,7 +873,7 @@ mod tests {
         let mut args = Arguments::new(
             vec![
                 Expr::Fx {
-                    name: "test".to_string(),
+                    name: "test".to_compact_string(),
                     arguments: vec![Expr::Literal(Value::U32(500))],
                     self_fns: vec![],
                 },
@@ -885,7 +887,7 @@ mod tests {
         assert_eq!(
             result.expect_err("expected error"),
             DslError::UnknownEffect {
-                name: "test".to_string(),
+                name: "test".to_compact_string(),
             }
         );
     }

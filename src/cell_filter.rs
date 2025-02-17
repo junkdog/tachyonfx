@@ -1,4 +1,5 @@
 use std::fmt;
+use compact_str::{format_compact, CompactString, CompactStringExt, ToCompactString};
 use ratatui::buffer::Cell;
 use ratatui::layout;
 use ratatui::layout::{Margin, Position, Rect};
@@ -110,38 +111,38 @@ impl CellFilter {
         }
     }
 
-    pub(super) fn format(&self) -> String {
+    pub(super) fn format(&self) -> CompactString {
         use std::borrow::Borrow;
 
-        fn to_hex(c: &Color) -> String {
+        fn to_hex(c: &Color) -> CompactString {
             let (r, g, b) = c.to_rgb();
-            format!("0x{:02x}{:02x}{:02x}", r, g, b)
+            format_compact!("0x{:02x}{:02x}{:02x}", r, g, b)
         }
 
-        fn format(filters: &[CellFilter]) -> String {
+        fn format(filters: &[CellFilter]) -> CompactString {
             filters.iter()
                 .map(CellFilter::to_string)
                 .collect::<Vec<String>>()
-                .join(", ")
+                .join_compact(", ")
         }
 
         match self {
-            CellFilter::All             => "All".to_string(),
-            CellFilter::FgColor(color)  => format!("FgColor(Color::from_u32({}))", to_hex(color)),
-            CellFilter::BgColor(color)  => format!("BgColor(Color::from_u32({}))", to_hex(color)),
-            CellFilter::Inner(m)        => format!("Inner(Margin::new({}, {}))", m.horizontal, m.vertical),
-            CellFilter::Outer(m)        => format!("Outer(Margin::new({}, {}))", m.horizontal, m.vertical),
-            CellFilter::Text            => "text".to_string(),
-            CellFilter::AllOf(filters)  => format!("AllOf({})", format(filters)),
-            CellFilter::AnyOf(filters)  => format!("AnyOf({})", format(filters)),
-            CellFilter::NoneOf(filters) => format!("NoneOf({})", format(filters)),
+            CellFilter::All             => "All".to_compact_string(),
+            CellFilter::FgColor(color)  => format_compact!("FgColor(Color::from_u32({}))", to_hex(color)),
+            CellFilter::BgColor(color)  => format_compact!("BgColor(Color::from_u32({}))", to_hex(color)),
+            CellFilter::Inner(m)        => format_compact!("Inner(Margin::new({}, {}))", m.horizontal, m.vertical),
+            CellFilter::Outer(m)        => format_compact!("Outer(Margin::new({}, {}))", m.horizontal, m.vertical),
+            CellFilter::Text            => "text".to_compact_string(),
+            CellFilter::AllOf(filters)  => format_compact!("AllOf({})", format(filters)),
+            CellFilter::AnyOf(filters)  => format_compact!("AnyOf({})", format(filters)),
+            CellFilter::NoneOf(filters) => format_compact!("NoneOf({})", format(filters)),
             CellFilter::Not(filter)     => {
                 let f: &CellFilter = filter.borrow();
-                format!("Not(Box::new({}))", f.format())
+                format_compact!("Not(Box::new({}))", f.format())
             },
-            CellFilter::Layout(_, idx)  => format!("layout({})", idx),
-            CellFilter::PositionFn(_)   => "position_fn".to_string(),
-            CellFilter::EvalCell(_)     => "eval_cell".to_string(),
+            CellFilter::Layout(_, idx)  => format_compact!("layout({})", idx),
+            CellFilter::PositionFn(_)   => "position_fn".to_compact_string(),
+            CellFilter::EvalCell(_)     => "eval_cell".to_compact_string(),
         }
     }
 }

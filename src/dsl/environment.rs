@@ -1,6 +1,7 @@
 use std::any::{type_name, Any};
 use std::collections::BTreeMap;
 use std::fmt;
+use compact_str::ToCompactString;
 use crate::dsl::DslError;
 
 pub(super) struct DslEnv {
@@ -33,11 +34,11 @@ impl DslEnv {
         match self.bound_variables.get(name.as_ref()) {
             Some(v) => Ok(v),
             None => Err(DslError::UnknownArgument {
-                name: name.as_ref().to_string(),
+                name: name.as_ref().to_compact_string(),
             }),
         }.and_then(|v| v.downcast_ref().ok_or_else(|| DslError::NoSuchVariable {
             position: 0, // todo: resolve position
-            name: name.as_ref().to_string(),
+            name: name.as_ref().to_compact_string(),
             expected: type_name::<T>(),
         }))
     }

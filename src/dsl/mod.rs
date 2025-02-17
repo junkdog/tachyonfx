@@ -9,7 +9,7 @@ mod dsl_format;
 use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;
 use std::fmt;
-
+use compact_str::CompactString;
 pub use arguments::Arguments;
 pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
@@ -17,18 +17,18 @@ pub use dsl_format::DslFormat;
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
     #[error("Failed to parse dsl: {0}")]
-    ParseError(String),
+    ParseError(CompactString),
 
     #[error("Compiler not found for effect '{name}'")]
-    UnknownEffect { name: String },
+    UnknownEffect { name: CompactString },
 
     #[error("Variable '{name}' not found")]
-    UnknownArgument { name: String },
+    UnknownArgument { name: CompactString },
 
     #[error("Invalid argument type at position {position}. Expected {expected}")]
     NoSuchVariable {
         position: usize,
-        name: String,
+        name: CompactString,
         expected: &'static str,
     },
 
@@ -39,7 +39,7 @@ pub enum DslError {
     },
 
     #[error("Unknown function '{name}'")]
-    UnknownFunction { name: String },
+    UnknownFunction { name: CompactString },
 
     #[error("Invalid argument length. Expected {expected}, got {actual}")]
     InvalidArgumentLength {
@@ -48,7 +48,7 @@ pub enum DslError {
     },
 
     #[error("Failed to compile effect: {0}")]
-    CompilationError(String),
+    CompilationError(CompactString),
 
     #[error("Invalid expression. Expected {expected}, got {actual}")]
     InvalidExpression {
@@ -67,7 +67,7 @@ pub enum DslError {
     WrongArgumentType {
         position: usize,
         expected: &'static str,
-        actual: String,
+        actual: CompactString,
     },
 
     #[error("{name} does not provide a to_dsl() implementation")]
@@ -77,7 +77,7 @@ pub enum DslError {
 
     #[error("{name} is not supported by the dsl")]
     UnsupportedEffect {
-        name: String,
+        name: CompactString,
     },
 
     #[error("Array length mismatch. Expected {expected}, got {actual}")]
@@ -87,7 +87,7 @@ pub enum DslError {
     },
 
     #[error("Unknown cell filter '{name}'")]
-    UnknownCellFilter { name: String },
+    UnknownCellFilter { name: CompactString },
 }
 
 /// A parsed representation of a tachyonfx effect expression.

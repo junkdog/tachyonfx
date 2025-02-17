@@ -524,6 +524,7 @@ mod tests {
     use ratatui::style::{Color, Style};
     use regex::Regex;
     use std::collections::VecDeque;
+    use compact_str::ToCompactString;
     use ratatui::layout::{Layout, Margin, Rect};
     use ratatui::layout::Constraint::Percentage;
     use Interpolation::Linear;
@@ -734,7 +735,7 @@ mod tests {
     fn test_compiler_wrong_argument_type() {
         let dsl = EffectDsl::new();
         let exprs = vec![
-            Expr::Literal(Value::String("wrong".to_string())),
+            Expr::Literal(Value::String("wrong".to_compact_string())),
             Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
         ];
         let env = DslEnv::new();

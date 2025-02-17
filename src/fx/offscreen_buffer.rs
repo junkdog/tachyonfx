@@ -1,3 +1,4 @@
+use compact_str::ToCompactString;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use crate::{CellFilter, Duration, Effect, RefCount, Shader};
@@ -76,7 +77,7 @@ impl Shader for OffscreenBuffer {
 
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
         Err(DslError::UnsupportedEffect {
-            name: self.name().to_string(),
+            name: self.name().to_compact_string(),
         })
     }
 }

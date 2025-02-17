@@ -9,6 +9,7 @@ use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
 use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
+use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::layout::Direction;
 use ratatui::prelude::Style;
 use ratatui::style::{Color, Modifier};
@@ -20,7 +21,7 @@ pub(super) fn parse_expr(
     if let Some(expr) = parsed.result {
         Ok(expr)
     } else {
-        Err(DslError::ParseError(format!("remaining input: {}", parsed.state)))
+        Err(DslError::ParseError(format_compact!("remaining input: {}", parsed.state)))
     }
 }
 
@@ -50,7 +51,7 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
 
     tuplify!(name, args, self_fns)
         .map(|(name, arguments, self_fns)| Expr::Fx {
-            name: name.to_string(),
+            name: name.to_compact_string(),
             arguments,
             self_fns
         }
@@ -103,9 +104,9 @@ fn string_literal<'a>() -> impl StrParser<'a, Expr> {
     let not_end = or_diff(valid_char, escaped);
 
     middle(skip!('"'), many(not_end, true, no_separator()), skip!('"'))
-        .map(|s: &str| s.to_string())
-        .map(|s: String| s.replace("\\\"", "\""))
-        .map(Value::String)
+        .map(|s: &str| s.to_compact_string())
+        .map(|s: CompactString| s.replace("\\\"", "\""))
+        .map(|s| Value::String(s.to_compact_string()))
         .map(Expr::Literal)
 }
 
@@ -138,7 +139,7 @@ fn option<'a>() -> impl StrParser<'a, Expr> {
 
 fn var<'a>() -> impl StrParser<'a, Expr> {
     many(item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')), false, no_separator())
-        .map(|s: &str| s.to_string())
+        .map(|s: &str| s.to_compact_string())
         .map(Expr::Var)
 }
 
@@ -303,7 +304,7 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
 fn fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
     let fn_name_char = item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_'));
     let fn_name = many(fn_name_char, false, no_separator())
-        .map(|s: &str| s.to_string());
+        .map(|s: &str| s.to_compact_string());
 
     tuplify!(
         fn_name,
@@ -572,7 +573,7 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
         parse_u32(),
         trim(")")
     ).map(|u32| Expr::FnCall(FnCallInfo {
-        name: "Color::from_u32".to_string(),
+        name: "Color::from_u32".to_compact_string(),
         args: vec![u32]
     }));
 
@@ -677,6 +678,7 @@ mod tests {
     use crate::fx::RepeatMode;
     use crate::{CellFilter, Interpolation, Motion};
     use anpa::core::{parse, AnpaResult, ParserExt};
+    use compact_str::ToCompactString;
     use ratatui::layout::Direction;
     use ratatui::style::{Color, Modifier};
 
@@ -726,7 +728,7 @@ mod tests {
         assert_expr_eq(
             parse(super::color(), input),
             Expr::FnCall(FnCallInfo {
-                name: "Color::from_u32".to_string(),
+                name: "Color::from_u32".to_compact_string(),
                 args: vec![Expr::Literal(Value::U32(0x1d2021))]
             })
         );
@@ -752,7 +754,7 @@ mod tests {
             Color::LightCyan,
             Color::White,
         ].into_iter().for_each(|color| {
-            let input = format!("Color::{}", color.to_string());
+            let input = format!("Color::{}", color.to_compact_string());
             assert_parser_eq(
                 parse(super::color(), &input),
                 Value::Color(color)
@@ -763,7 +765,7 @@ mod tests {
         assert_expr_eq(
             parse(super::color(), input),
             Expr::FnCall(FnCallInfo {
-                name: "Color::Indexed".to_string(),
+                name: "Color::Indexed".to_compact_string(),
                 args: vec![Expr::Literal(Value::U32(3))]
             })
         );
@@ -772,7 +774,7 @@ mod tests {
         assert_expr_eq(
             parse(super::color(), input),
             Expr::FnCall(FnCallInfo {
-                name: "Color::Rgb".to_string(),
+                name: "Color::Rgb".to_compact_string(),
                 args: vec![
                     literal(Value::U32(255)),
                     literal(Value::U32(127)),
@@ -873,7 +875,7 @@ mod tests {
         assert_expr_eq(
             parse(super::fn_call().map(Expr::FnCall), input),
             Expr::FnCall(FnCallInfo {
-                name: "foo".to_string(),
+                name: "foo".to_compact_string(),
                 args: vec![literal(Value::String("bar".into()))]
             })
         );
@@ -882,7 +884,7 @@ mod tests {
         // assert_expr_eq(
         //     parse(super::self_fn_call().map(Expr::SelfFnCall), input),
         //     Expr::SelfFnCall(FnCallInfo {
-        //         name: "bar".to_string(),
+        //         name: "bar".to_compact_string(),
         //         args: vec![literal(Value::U32(10))]
         //     })
         // );
@@ -923,11 +925,11 @@ mod tests {
         assert_expr_eq(
             parse(super::container_effect(), input),
             Expr::Sequence { self_fns: vec![], effects: vec![
-                Expr::Fx { name: "yolo".to_string(), self_fns: vec![], arguments: vec![
-                    literal(Value::String("Hello".to_string()))
+                Expr::Fx { name: "yolo".to_compact_string(), self_fns: vec![], arguments: vec![
+                    literal(Value::String("Hello".to_compact_string()))
                 ]},
-                Expr::Fx { name: "fubar".to_string(), self_fns: vec![], arguments: vec![
-                    literal(Value::String("World".to_string()))
+                Expr::Fx { name: "fubar".to_compact_string(), self_fns: vec![], arguments: vec![
+                    literal(Value::String("World".to_compact_string()))
                 ]}
             ]}
         );
@@ -939,8 +941,8 @@ mod tests {
         assert_expr_eq(
             parse(super::effect(), input),
             Expr::Fx {
-                name: "yolo".to_string(),
-                arguments: vec![literal(Value::String("Hello".to_string()))],
+                name: "yolo".to_compact_string(),
+                arguments: vec![literal(Value::String("Hello".to_compact_string()))],
                 self_fns: vec![
                     FnCallInfo::new("filter",
                         vec![literal(Value::CellFilter(CellFilter::Text))]
@@ -958,8 +960,8 @@ mod tests {
         assert_expr_eq(
             parse(super::container_effect(), input),
             Expr::Parallel{ self_fns: vec![], effects: vec![
-                Expr::Fx { name: "foo".to_string(), self_fns: vec![], arguments: vec![] },
-                Expr::Fx { name: "bar".to_string(), self_fns: vec![], arguments: vec![] }
+                Expr::Fx { name: "foo".to_compact_string(), self_fns: vec![], arguments: vec![] },
+                Expr::Fx { name: "bar".to_compact_string(), self_fns: vec![], arguments: vec![] }
             ]}
         );
     }
@@ -972,7 +974,7 @@ mod tests {
             Expr::CellFilter {
                 filter_type: "FgColor",
                 arguments: vec![Expr::FnCall(FnCallInfo {
-                    name: "Color::from_u32".to_string(),
+                    name: "Color::from_u32".to_compact_string(),
                     args: vec![Expr::Literal(Value::U32(0xFF0000))]
                 })]
             }
@@ -984,7 +986,7 @@ mod tests {
             Expr::CellFilter {
                 filter_type: "BgColor",
                 arguments: vec![Expr::FnCall(FnCallInfo {
-                    name: "Color::from_u32".to_string(),
+                    name: "Color::from_u32".to_compact_string(),
                     args: vec![Expr::Literal(Value::U32(0x00FF00))]
                 })],
             }
@@ -1299,7 +1301,7 @@ mod tests {
     fn parse_var() {
         let input = "my_var";
         let result = parse(super::var(), input).result;
-        assert_eq!(result, Some(Expr::Var("my_var".to_string())));
+        assert_eq!(result, Some(Expr::Var("my_var".to_compact_string())));
     }
 
     #[test]
@@ -1307,7 +1309,7 @@ mod tests {
         let input = "&[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
         let result = parse(super::array_ref(), input);
         let expected = Expr::ArrayRef(vec![
-            Expr::Literal(Value::String("Hello, World!".to_string())),
+            Expr::Literal(Value::String("Hello, World!".to_compact_string())),
             Expr::Literal(Value::U32(1337)),
             Expr::Literal(Value::F32(3.14)),
             fn_call_expr("EffectTimer::new", vec![
@@ -1324,7 +1326,7 @@ mod tests {
         let input = "[\"Hello, World!\", 1337, 3.14, (1000, SineIn)]";
         let result = parse(super::array(), input);
         let expected = Expr::Array(vec![
-            Expr::Literal(Value::String("Hello, World!".to_string())),
+            Expr::Literal(Value::String("Hello, World!".to_compact_string())),
             Expr::Literal(Value::U32(1337)),
             Expr::Literal(Value::F32(3.14)),
             fn_call_expr("EffectTimer::new", vec![
@@ -1392,14 +1394,14 @@ mod tests {
         let input = "\"Hello, World!\"";
         assert_parser_eq(
             parse(super::string_literal(), input),
-            Value::String("Hello, World!".to_string())
+            Value::String("Hello, World!".to_compact_string())
         );
 
         // let input = r#""Hello, \"World!\"""#;
         let input = "\"Hello, \\\"World!\\\"\"";
         assert_parser_eq(
             parse(super::string_literal(), input),
-            Value::String("Hello, \"World!\"".to_string())
+            Value::String("Hello, \"World!\"".to_compact_string())
         );
     }
 
@@ -1423,7 +1425,7 @@ mod tests {
         let input = "\"Hello, World!\"";
         assert_parser_eq(
             parse(super::argument(), input),
-            Value::String("Hello, World!".to_string())
+            Value::String("Hello, World!".to_compact_string())
         );
 
         let input = "1337";
@@ -1460,7 +1462,7 @@ mod tests {
         assert_eq!(
             parse(super::arguments(), input).result,
             Some(vec![
-                Expr::Literal(Value::String("Hello, World!".to_string())),
+                Expr::Literal(Value::String("Hello, World!".to_compact_string())),
                 Expr::Literal(Value::U32(1337)),
                 Expr::Literal(Value::F32(3.14)),
                 fn_call_expr("EffectTimer::new", vec![
@@ -1476,7 +1478,7 @@ mod tests {
         let input = "coalesce(Duration::from_millis(220))";
         let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
-            name: "coalesce".to_string(),
+            name: "coalesce".to_compact_string(),
             arguments: vec![
                 fn_call_expr("Duration::from_millis", vec![literal(Value::U32(220))]),
             ],
@@ -1487,7 +1489,7 @@ mod tests {
         let input = "fx::dissolve((Duration::from_millis(220), ElasticOut))";
         let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
-            name: "dissolve".to_string(),
+            name: "dissolve".to_compact_string(),
             self_fns: vec![],
             arguments: vec![
                 fn_call_expr("EffectTimer::new", vec![
@@ -1500,11 +1502,11 @@ mod tests {
         let input = "fx::ping_pong(fx::coalesce((500, CircOut)))";
         let result = parse(super::effect(), input).result;
         let expected = Expr::Fx {
-            name: "ping_pong".to_string(),
+            name: "ping_pong".to_compact_string(),
             self_fns: vec![],
             arguments: vec![
                 Expr::Fx {
-                    name: "coalesce".to_string(),
+                    name: "coalesce".to_compact_string(),
                     self_fns: vec![],
                     arguments: vec![
                         fn_call_expr("EffectTimer::new", vec![
@@ -1603,10 +1605,10 @@ mod tests {
             parse(super::layout(), input),
             Expr::Layout {
                 expr: Box::new(fn_call_expr("Layout::horizontal", vec![
-                    Expr::Var("constraints".to_string())
+                    Expr::Var("constraints".to_compact_string())
                 ])),
                 self_fns: vec![
-                    FnCallInfo::new("margin", vec![Expr::Var("spacing".to_string())])
+                    FnCallInfo::new("margin", vec![Expr::Var("spacing".to_compact_string())])
                 ]
             }
         );

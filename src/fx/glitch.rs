@@ -1,7 +1,7 @@
 use bon::{builder, Builder};
 use std::fmt::Debug;
 use std::ops::Range;
-
+use compact_str::ToCompactString;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
 use crate::{CellFilter, Duration, EffectTimer};
@@ -186,7 +186,7 @@ impl Shader for Glitch {
 
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
         Err(DslError::UnsupportedEffect {
-            name: self.name().to_string(),
+            name: self.name().to_compact_string()
         })
     }
 }

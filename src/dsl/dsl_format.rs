@@ -1,3 +1,4 @@
+use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::style::{Color, Modifier, Style};
 use crate::fx::RepeatMode;
 use crate::{Duration, EffectTimer, Interpolation, Motion};
@@ -13,116 +14,116 @@ pub trait DslFormat {
     ///
     /// # Returns
     ///
-    /// A `String` containing the DSL representation of the type, which should be:
+    /// A `CompactString` containing the DSL representation of the type, which should be:
     /// - Valid Rust syntax
     /// - Parseable by the tachyonfx DSL parser
     /// - Complete with all necessary type information
-    fn dsl_format(&self) -> String;
+    fn dsl_format(&self) -> CompactString;
 }
 
 impl DslFormat for Color {
-    fn dsl_format(&self) -> String {
+    fn dsl_format(&self) -> CompactString {
         let (r, g, b) = self.to_rgb();
-        format!("Color::from_u32(0x{:02x}{:02x}{:02x})", r, g, b)
+        format_compact!("Color::from_u32(0x{:02x}{:02x}{:02x})", r, g, b)
     }
 }
 
 impl DslFormat for RepeatMode {
-    fn dsl_format(&self) -> String {
+    fn dsl_format(&self) -> CompactString {
         match self {
             RepeatMode::Forever =>
-                "RepeatMode::Forever".to_string(),
+                "RepeatMode::Forever".to_compact_string(),
             RepeatMode::Times(n) =>
-                format!("RepeatMode::Times({})", n),
+                format_compact!("RepeatMode::Times({})", n),
             RepeatMode::Duration(d) =>
-                format!("RepeatMode::Duration(Duration::from_millis({}))", d.as_millis()),
+                format_compact!("RepeatMode::Duration(Duration::from_millis({}))", d.as_millis()),
         }
     }
 }
 
 impl DslFormat for Motion {
-    fn dsl_format(&self) -> String {
+    fn dsl_format(&self) -> CompactString {
         match self {
-            Motion::LeftToRight => "Motion::LeftToRight".to_string(),
-            Motion::RightToLeft => "Motion::RightToLeft".to_string(),
-            Motion::UpToDown    => "Motion::UpToDown".to_string(),
-            Motion::DownToUp    => "Motion::DownToUp".to_string(),
+            Motion::LeftToRight => "Motion::LeftToRight".to_compact_string(),
+            Motion::RightToLeft => "Motion::RightToLeft".to_compact_string(),
+            Motion::UpToDown    => "Motion::UpToDown".to_compact_string(),
+            Motion::DownToUp    => "Motion::DownToUp".to_compact_string(),
         }
     }
 }
 
 impl DslFormat for Style {
-    fn dsl_format(&self) -> String {
-        let mut methods = String::new();
+    fn dsl_format(&self) -> CompactString {
+        let mut methods = CompactString::new("");
 
         if let Some(fg) = self.fg {
-            methods.push_str(&format!(".fg({})", fg.dsl_format()));
+            methods.push_str(&format_compact!(".fg({})", fg.dsl_format()));
         }
 
         if let Some(bg) = self.bg {
-            methods.push_str(&format!(".bg({})", bg.dsl_format()));
+            methods.push_str(&format_compact!(".bg({})", bg.dsl_format()));
         }
 
         self.add_modifier.iter().for_each(|m| {
-            methods.push_str(&format!(".add_modifier({:?})", m));
+            methods.push_str(&format_compact!(".add_modifier({:?})", m));
         });
 
         self.sub_modifier.iter().for_each(|m| {
-            methods.push_str(&format!(".sub_modifier({:?})", m));
+            methods.push_str(&format_compact!(".sub_modifier({:?})", m));
         });
 
-        format!("Style::new(){}", methods)
+        format_compact!("Style::new(){}", methods)
     }
 }
 
 impl DslFormat for Modifier {
-    fn dsl_format(&self) -> String {
-        format!("{:?}", self)
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("{:?}", self)
     }
 }
 
 impl DslFormat for Interpolation {
-    fn dsl_format(&self) -> String {
+    fn dsl_format(&self) -> CompactString {
         match self {
-            Interpolation::BackIn => "Interpolation::BackIn".to_string(),
-            Interpolation::BackOut => "Interpolation::BackOut".to_string(),
-            Interpolation::BackInOut => "Interpolation::BackInOut".to_string(),
-            Interpolation::BounceIn => "Interpolation::BounceIn".to_string(),
-            Interpolation::BounceOut => "Interpolation::BounceOut".to_string(),
-            Interpolation::BounceInOut => "Interpolation::BounceInOut".to_string(),
-            Interpolation::CircIn => "Interpolation::CircIn".to_string(),
-            Interpolation::CircOut => "Interpolation::CircOut".to_string(),
-            Interpolation::CircInOut => "Interpolation::CircInOut".to_string(),
-            Interpolation::CubicIn => "Interpolation::CubicIn".to_string(),
-            Interpolation::CubicOut => "Interpolation::CubicOut".to_string(),
-            Interpolation::CubicInOut => "Interpolation::CubicInOut".to_string(),
-            Interpolation::ElasticIn => "Interpolation::ElasticIn".to_string(),
-            Interpolation::ElasticOut => "Interpolation::ElasticOut".to_string(),
-            Interpolation::ElasticInOut => "Interpolation::ElasticInOut".to_string(),
-            Interpolation::ExpoIn => "Interpolation::ExpoIn".to_string(),
-            Interpolation::ExpoOut => "Interpolation::ExpoOut".to_string(),
-            Interpolation::ExpoInOut => "Interpolation::ExpoInOut".to_string(),
-            Interpolation::Linear => "Interpolation::Linear".to_string(),
-            Interpolation::QuadIn => "Interpolation::QuadIn".to_string(),
-            Interpolation::QuadOut => "Interpolation::QuadOut".to_string(),
-            Interpolation::QuadInOut => "Interpolation::QuadInOut".to_string(),
-            Interpolation::QuartIn => "Interpolation::QuartIn".to_string(),
-            Interpolation::QuartOut => "Interpolation::QuartOut".to_string(),
-            Interpolation::QuartInOut => "Interpolation::QuartInOut".to_string(),
-            Interpolation::QuintIn => "Interpolation::QuintIn".to_string(),
-            Interpolation::QuintOut => "Interpolation::QuintOut".to_string(),
-            Interpolation::QuintInOut => "Interpolation::QuintInOut".to_string(),
-            Interpolation::Reverse => "Interpolation::Reverse".to_string(),
-            Interpolation::SineIn => "Interpolation::SineIn".to_string(),
-            Interpolation::SineOut => "Interpolation::SineOut".to_string(),
-            Interpolation::SineInOut => "Interpolation::SineInOut".to_string(),
-        }
+            Interpolation::BackIn => "Interpolation::BackIn",
+            Interpolation::BackOut => "Interpolation::BackOut",
+            Interpolation::BackInOut => "Interpolation::BackInOut",
+            Interpolation::BounceIn => "Interpolation::BounceIn",
+            Interpolation::BounceOut => "Interpolation::BounceOut",
+            Interpolation::BounceInOut => "Interpolation::BounceInOut",
+            Interpolation::CircIn => "Interpolation::CircIn",
+            Interpolation::CircOut => "Interpolation::CircOut",
+            Interpolation::CircInOut => "Interpolation::CircInOut",
+            Interpolation::CubicIn => "Interpolation::CubicIn",
+            Interpolation::CubicOut => "Interpolation::CubicOut",
+            Interpolation::CubicInOut => "Interpolation::CubicInOut",
+            Interpolation::ElasticIn => "Interpolation::ElasticIn",
+            Interpolation::ElasticOut => "Interpolation::ElasticOut",
+            Interpolation::ElasticInOut => "Interpolation::ElasticInOut",
+            Interpolation::ExpoIn => "Interpolation::ExpoIn",
+            Interpolation::ExpoOut => "Interpolation::ExpoOut",
+            Interpolation::ExpoInOut => "Interpolation::ExpoInOut",
+            Interpolation::Linear => "Interpolation::Linear",
+            Interpolation::QuadIn => "Interpolation::QuadIn",
+            Interpolation::QuadOut => "Interpolation::QuadOut",
+            Interpolation::QuadInOut => "Interpolation::QuadInOut",
+            Interpolation::QuartIn => "Interpolation::QuartIn",
+            Interpolation::QuartOut => "Interpolation::QuartOut",
+            Interpolation::QuartInOut => "Interpolation::QuartInOut",
+            Interpolation::QuintIn => "Interpolation::QuintIn",
+            Interpolation::QuintOut => "Interpolation::QuintOut",
+            Interpolation::QuintInOut => "Interpolation::QuintInOut",
+            Interpolation::Reverse => "Interpolation::Reverse",
+            Interpolation::SineIn => "Interpolation::SineIn",
+            Interpolation::SineOut => "Interpolation::SineOut",
+            Interpolation::SineInOut => "Interpolation::SineInOut",
+        }.to_compact_string()
     }
 }
 
 impl DslFormat for EffectTimer {
-    fn dsl_format(&self) -> String {
-        format!("EffectTimer::from_ms({}, {})",
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("EffectTimer::from_ms({}, {})",
             self.duration().as_millis(),
             self.interpolation().dsl_format(),
         )
@@ -130,7 +131,7 @@ impl DslFormat for EffectTimer {
 }
 
 impl DslFormat for Duration {
-    fn dsl_format(&self) -> String {
-        format!("Duration::from_millis({})", self.as_millis())
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("Duration::from_millis({})", self.as_millis())
     }
 }
