@@ -15,7 +15,7 @@ pub(super) struct FnCallInfo {
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum Expr {
     Literal(Value),
-    Var(CompactString),
+    Var { name: CompactString, self_fns: Vec<FnCallInfo> },
     ArrayRef(Vec<Expr>),
     Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
@@ -81,7 +81,7 @@ impl Expr {
     /// Used for error messages
     pub fn type_name(&self) -> &'static str {
         match self {
-            Expr::Var(_)             => "variable",
+            Expr::Var { .. }         => "variable",
             Expr::Fx { .. }          => "effect",
             Expr::Literal(_)         => "literal",
             Expr::ArrayRef(_)        => "array_ref",
@@ -116,7 +116,7 @@ impl Expr {
 
         match self {
             Expr::Literal(value) => format_compact!("{}{}", indent_str, value.format()),
-            Expr::Var(name) => format_compact!("{}{}", indent_str, name),
+            Expr::Var { name, self_fns } => format_compact!("{}{}", indent_str, name),
             Expr::ArrayRef(exprs) => {
                 let inner = formatted_args(exprs);
                 format_compact!("{}&[\n{}\n{}]", indent_str, inner, indent_str)

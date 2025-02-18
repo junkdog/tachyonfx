@@ -47,9 +47,8 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
     );
 
     let args = middle(trim("("), arguments(), trim(")"));
-    let self_fns = many_to_vec(self_fn_call(), true, separator(trim(""), true));
 
-    tuplify!(name, args, self_fns)
+    tuplify!(name, args, chained_fn_calls())
         .map(|(name, arguments, self_fns)| Expr::Fx {
             name: name.to_compact_string(),
             arguments,
@@ -78,7 +77,7 @@ fn container_effect<'a>() -> impl StrParser<'a, Expr> {
     tuplify!(
         name,
         args,
-        many_to_vec(self_fn_call(), true, separator(trim(""), true))
+        chained_fn_calls()
     ).map(|(name, args, self_fns)| match name {
         "sequence" => Expr::Sequence { effects: args, self_fns },
         "parallel" => Expr::Parallel { effects: args, self_fns },
@@ -127,9 +126,10 @@ fn option<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn var<'a>() -> impl StrParser<'a, Expr> {
-    snake_case()
-        .map(|s: &str| s.to_compact_string())
-        .map(Expr::Var)
+    tuplify!(
+        snake_case().map(|s: &str| s.to_compact_string()),
+        chained_fn_calls()
+    ).map(|(name, self_fns)| Expr::Var { name, self_fns })
 }
 
 fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
@@ -283,12 +283,11 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
         ))
     ).map(|_| Style::default());
 
-    let style_chain = many_to_vec(self_fn_call(), true, separator(trim(""), true));
 
     right!(
         constructor,
         or!(
-            style_chain.map(Expr::Style),
+            chained_fn_calls().map(Expr::Style),
             succeed(trim("")).map(|_| Expr::Style(vec![]))
         )
     )
@@ -312,6 +311,10 @@ fn self_fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
         skip!("."),
         fn_call()
     )
+}
+
+fn chained_fn_calls<'a>() -> impl StrParser<'a, Vec<FnCallInfo>> {
+    many_to_vec(self_fn_call(), true, separator(trim(""), true))
 }
 
 fn modifier<'a>() -> impl StrParser<'a, Expr> {
@@ -379,11 +382,10 @@ fn layout<'a>() -> impl StrParser<'a, Expr> {
         trim(")")
     ).map(|args| fn_call_expr("Layout::vertical", args));
 
-    let self_fns = many_to_vec(self_fn_call(), true, separator(trim(""), true));
 
     tuplify!(
         or!(new, horizontal, vertical),
-        self_fns
+        chained_fn_calls()
     ).map(move |(ctor, self_fns)| Expr::Layout { expr: Box::new(ctor), self_fns })
 }
 
@@ -431,6 +433,8 @@ fn repeat_mode<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
+    let duration_or_var = or!(duration(), var());
+
     // raw int: ms with linear interpolation
     let from_u32 = parse_u32()
         .map(|ms| fn_call_expr(
@@ -439,7 +443,7 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
         ));
 
     let into_duration = or!(
-        or!(duration(), var()),
+        duration_or_var,
         parse_u32().map(|ms| fn_call_expr("Duration::from_millis", vec![ms])),
     );
 
@@ -455,7 +459,7 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
     let from_new = middle(
         trim("EffectTimer::new("),
         tuplify!(
-            or!(duration(), var()),
+            duration_or_var,
             right!(trim(","), interpolation()),
         ),
         trim(")")
@@ -1290,7 +1294,7 @@ mod tests {
     fn parse_var() {
         let input = "my_var";
         let result = parse(super::var(), input).result;
-        assert_eq!(result, Some(Expr::Var("my_var".to_compact_string())));
+        assert_eq!(result, Some(Expr::Var { name: "my_var".to_compact_string(), self_fns: vec![] }));
     }
 
     #[test]
@@ -1594,10 +1598,13 @@ mod tests {
             parse(super::layout(), input),
             Expr::Layout {
                 expr: Box::new(fn_call_expr("Layout::horizontal", vec![
-                    Expr::Var("constraints".to_compact_string())
+                    Expr::Var { name: "constraints".to_compact_string(), self_fns: vec![] }
                 ])),
                 self_fns: vec![
-                    FnCallInfo::new("margin", vec![Expr::Var("spacing".to_compact_string())])
+                    FnCallInfo::new("margin", vec![Expr::Var {
+                        name: "spacing".to_compact_string(),
+                        self_fns: vec![]
+                    }])
                 ]
             }
         );

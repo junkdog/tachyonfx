@@ -87,13 +87,13 @@ impl<'a> Arguments<'a> {
                 _ => self.expected_type("duration", name)?,
             }),
             Expr::Literal(v)  => match v {
-                Value::Duration(d) => Ok(d),
-                Value::U32(ms)     => Ok(Duration::from_millis(ms as _)),
-                e                  => self.expected_type("duration", e.format()),
+                Value::Duration(d)       => Ok(d),
+                Value::U32(ms)           => Ok(Duration::from_millis(ms as _)),
+                e                        => self.expected_type("duration", e.format()),
             },
 
-            Expr::Var(name)   => self.bound_var(name),
-            e                 => self.expected_type_expr("duration", e),
+            Expr::Var { name, self_fns } => self.bound_var(name),
+            e                            => self.expected_type_expr("duration", e),
         }
     }
 
@@ -115,10 +115,10 @@ impl<'a> Arguments<'a> {
                 },
                 _ => self.expected_type("timer", name)?,
             }),
-            Expr::Literal(Value::Timer(t)) => Ok(t),
-            Expr::Literal(Value::U32(ms))  => Ok(ms.into()),
-            Expr::Var(name)                => self.bound_var(name),
-            e                              => self.expected_type_expr("timer", e),
+            Expr::Literal(Value::Timer(t))     => Ok(t),
+            Expr::Literal(Value::U32(ms))      => Ok(ms.into()),
+            Expr::Var { name: name, self_fns } => self.bound_var(name),
+            e                                  => self.expected_type_expr("timer", e),
         }
     }
 
@@ -147,7 +147,7 @@ impl<'a> Arguments<'a> {
                 }
             }
             Expr::Literal(Value::CellFilter(f)) => Ok(f),
-            Expr::Var(name)                     => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                                   => self.expected_type_expr("cell_filter", e),
         }
     }
@@ -172,7 +172,7 @@ impl<'a> Arguments<'a> {
                 _ => self.expected_type("constraint", name)?,
             }),
             Expr::Literal(Value::Constraint(c)) => Ok(c),
-            Expr::Var(name) => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e               => self.expected_type("constraint", e.type_name().into()),
         }
     }
@@ -181,7 +181,7 @@ impl<'a> Arguments<'a> {
     pub fn direction(&mut self) -> Result<Direction, DslError> {
         match self.next("direction")? {
             Expr::Literal(Value::Direction(d)) => Ok(d),
-            Expr::Var(name) => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e               => self.expected_type("direction", e.type_name().into()),
         }
     }
@@ -242,7 +242,7 @@ impl<'a> Arguments<'a> {
                     apply_single_fn(layout, f, self.context, self.vars)
                 })
             },
-            Expr::Var(name) => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e               => self.expected_type_expr("layout", e),
         }
     }
@@ -251,7 +251,7 @@ impl<'a> Arguments<'a> {
     pub fn interpolation(&mut self) -> Result<Interpolation, DslError> {
         match self.next("interpolation")? {
             Expr::Literal(Value::Interpolation(i)) => Ok(i),
-            Expr::Var(name)            => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                          => self.expected_type_expr("interpolation", e),
         }
     }
@@ -280,7 +280,7 @@ impl<'a> Arguments<'a> {
     pub fn read_u32(&mut self) -> Result<u32, DslError> {
         match self.next("u32")? {
             Expr::Literal(Value::U32(u)) => Ok(u),
-            Expr::Var(name)              => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                            => self.expected_type_expr("u32", e),
         }
     }
@@ -290,7 +290,7 @@ impl<'a> Arguments<'a> {
         match self.next("f32")? {
             Expr::Literal(Value::F32(f)) => Ok(f),
             Expr::Literal(Value::U32(v)) => Ok(v as f32),
-            Expr::Var(name)              => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                            => self.expected_type_expr("f32", e),
         }
     }
@@ -299,7 +299,7 @@ impl<'a> Arguments<'a> {
     pub fn read_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
             Expr::Literal(Value::F32(f)) => Ok(f),
-            Expr::Var(name)              => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                            => self.expected_type_expr("f32", e),
         }
     }
@@ -308,7 +308,7 @@ impl<'a> Arguments<'a> {
     pub fn string(&mut self) -> Result<CompactString, DslError> {
         match self.next("string")? {
             Expr::Literal(Value::String(s)) => Ok(s),
-            Expr::Var(name)                 => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                               => self.expected_type_expr("string", e),
         }
     }
@@ -324,7 +324,7 @@ impl<'a> Arguments<'a> {
                 let mut args = self.nested_args(vec![*expr], 1)?;
                 inner(&mut args).map(Some)
             },
-            Expr::Var(name)            => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                          => self.expected_type_expr("option", e),
         }
     }
@@ -339,7 +339,7 @@ impl<'a> Arguments<'a> {
             Expr::Parallel { effects, self_fns } =>
                 self.compile_effect(Expr::Parallel { effects, self_fns }),
 
-            Expr::Var(name) => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e               => self.expected_type_expr("effect", e),
         }
     }
@@ -364,7 +364,7 @@ impl<'a> Arguments<'a> {
                 _ => self.expected_type("color", name)?,
             }),
             Expr::Literal(Value::Color(c)) => Ok(c),
-            Expr::Var(name)                => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                              => self.expected_type_expr("color", e),
         }
     }
@@ -373,7 +373,7 @@ impl<'a> Arguments<'a> {
     pub fn modifier(&mut self) -> Result<Modifier, DslError> {
         match self.next("modifier")? {
             Expr::Literal(Value::Modifier(m)) => Ok(m),
-            Expr::Var(name)                   => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                                 => self.expected_type_expr("modifier", e),
         }
     }
@@ -383,7 +383,7 @@ impl<'a> Arguments<'a> {
         match self.next("style")? {
             Expr::Literal(Value::Style(s))  => Ok(s),
             Expr::Style(methods)            => self.compile_style(methods),
-            Expr::Var(name)                 => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                               => self.expected_type("style", e.type_name().into()),
         }
     }
@@ -392,7 +392,7 @@ impl<'a> Arguments<'a> {
     pub fn motion(&mut self) -> Result<Motion, DslError> {
         match self.next("motion")? {
             Expr::Literal(Value::Motion(m))  => Ok(m),
-            Expr::Var(name)                  => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                                => self.expected_type("motion", e.type_name().into()),
         }
     }
@@ -406,7 +406,7 @@ impl<'a> Arguments<'a> {
                 _                     => self.expected_type("repeat_mode", name)?,
             }),
             Expr::Literal(Value::RepeatMode(m))  => Ok(m),
-            Expr::Var(name)                      => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                                    => self.expected_type("repeat_mode", e.type_name().into()),
         }
     }
@@ -415,7 +415,7 @@ impl<'a> Arguments<'a> {
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
             Expr::Literal(Value::Margin(m)) => Ok(m),
-            Expr::Var(name)                 => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                               => self.expected_type_expr("margin", e),
         }
     }
@@ -437,7 +437,7 @@ impl<'a> Arguments<'a> {
                 }),
             },
             Expr::Literal(Value::Rect(r)) => Ok(r),
-            Expr::Var(name)               => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                             => self.expected_type_expr("rect", e),
         }
     }
@@ -451,7 +451,7 @@ impl<'a> Arguments<'a> {
         match self.next("array")? {
             Expr::Array(exprs)    => self.map_exprs(exprs, inner),
             Expr::ArrayRef(exprs) => self.map_exprs(exprs, inner),
-            Expr::Var(name)       => self.bound_var(name),
+            Expr::Var { name, self_fns } => self.bound_var(name),
             e                     => self.expected_type_expr("array", e),
         }
     }
