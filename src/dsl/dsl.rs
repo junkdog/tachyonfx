@@ -521,12 +521,12 @@ mod tests {
     use crate::fx::RepeatMode;
     use crate::Interpolation::QuadOut;
     use crate::{fx, CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion, Shader};
+    use compact_str::ToCompactString;
+    use ratatui::layout::Constraint::Percentage;
+    use ratatui::layout::{Layout, Rect};
     use ratatui::style::{Color, Style};
     use regex::Regex;
     use std::collections::VecDeque;
-    use compact_str::ToCompactString;
-    use ratatui::layout::{Layout, Margin, Rect};
-    use ratatui::layout::Constraint::Percentage;
     use Interpolation::Linear;
 
     fn assert_effect_roundtrip_eq(

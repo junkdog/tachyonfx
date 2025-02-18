@@ -43,7 +43,7 @@ fn trim_to<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
 fn effect<'a>() -> impl StrParser<'a, Expr> {
     let name = right!(
         succeed(attempt(skip!("fx::"))),
-        item_while(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')),
+        snake_case(),
     );
 
     let args = middle(trim("("), arguments(), trim(")"));
@@ -55,17 +55,6 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
             arguments,
             self_fns
         }
-    )
-}
-
-// parameterizing effect with CellFilter, e.g. effect.filter(CellFilter::All)
-fn effect_cell_filter<'a>() -> impl StrParser<'a, Option<Expr>> {
-    succeed(
-        middle(
-            trim(".filter("),
-            cell_filter(),
-            trim(")")
-        )
     )
 }
 
@@ -138,12 +127,16 @@ fn option<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn var<'a>() -> impl StrParser<'a, Expr> {
-    many(item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')), false, no_separator())
+    snake_case()
         .map(|s: &str| s.to_compact_string())
         .map(Expr::Var)
 }
 
 fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
+    // parsers with var fallback
+    let filter_or_var = or!(defer_parser!(cell_filter()), var());
+    let margin_or_var = or!(margin(), var());
+
     // cell id filter
     let cf = |s| right!(
         skip_whitespace(),
@@ -181,12 +174,12 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
         });
 
     // Margin-based filters
-    let inner = middle(cf("Inner("), or!(margin(), var()), trim(")"))
+    let inner = middle(cf("Inner("), margin_or_var, trim(")"))
         .map(|margin| Expr::CellFilter {
             filter_type: "Inner",
             arguments: vec![margin]
         });
-    let outer = middle(cf("Outer("), or!(margin(), var()), trim(")"))
+    let outer = middle(cf("Outer("), margin_or_var, trim(")"))
         .map(|margin| Expr::CellFilter {
             filter_type: "Outer",
             arguments: vec![margin]
@@ -195,7 +188,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     // Compound filters
     let all_of = middle(
         cf("AllOf(vec!["),
-        many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
+        many_to_vec(filter_or_var, true, separator(trim(","), true)),
         trim("])")
     ).map(|filters| Expr::CellFilter {
         filter_type: "AllOf",
@@ -204,7 +197,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
 
     let any_of = middle(
         cf("AnyOf(vec!["),
-        many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
+        many_to_vec(filter_or_var, true, separator(trim(","), true)),
         trim("])")
     ).map(|filters| Expr::CellFilter {
         filter_type: "AnyOf",
@@ -213,7 +206,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
 
     let none_of = middle(
         cf("NoneOf(vec!["),
-        many_to_vec(defer_parser!(cell_filter()), true, separator(trim(","), false)),
+        many_to_vec(filter_or_var, true, separator(trim(","), true)),
         trim("])")
     ).map(|filters| Expr::CellFilter {
         filter_type: "NoneOf",
@@ -221,8 +214,8 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     });
 
     let not = middle(
-        cf("Not(Box::new("),
-        defer_parser!(cell_filter()),
+        right!(cf("Not("), trim("Box::new(")),
+        filter_or_var,
         trim("))")
     ).map(|filter| Expr::CellFilter {
         filter_type: "Not",
@@ -279,7 +272,7 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn arguments<'a>() -> impl StrParser<'a, Vec<Expr>> {
-    many_to_vec(argument(), true, separator(trim(","), false))
+    many_to_vec(argument(), true, separator(trim(","), true))
 }
 
 fn style<'a>() -> impl StrParser<'a, Expr> {
@@ -301,13 +294,14 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
     )
 }
 
-fn fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
-    let fn_name_char = item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_'));
-    let fn_name = many(fn_name_char, false, no_separator())
-        .map(|s: &str| s.to_compact_string());
+fn snake_case<'a>() -> impl StrParser<'a, &'a str> {
+    many(item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')), false, no_separator())
+        .map_if(|s: &str| if s.starts_with(|c| matches!(c, 'a'..='z')) { Some(s) } else { None })
+}
 
+fn fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
     tuplify!(
-        fn_name,
+        snake_case(),
         middle(trim("("), arguments(), trim(")"))
     ).map(FnCallInfo::from)
 }
@@ -429,7 +423,7 @@ fn repeat_mode<'a>() -> impl StrParser<'a, Expr> {
 
     let duration = middle(
         trim("RepeatMode::Duration("),
-        duration(),
+        or!(duration(), var()),
         trim(")")
     ).map(|duration| fn_call_expr("RepeatMode::Duration", vec![duration]));
 
@@ -445,14 +439,14 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
         ));
 
     let into_duration = or!(
-        duration(),
+        or!(duration(), var()),
         parse_u32().map(|ms| fn_call_expr("Duration::from_millis", vec![ms])),
     );
 
     // tuple: (u32, interpolation)
     let from_tuple = tuplify!(
         right!(trim("("), into_duration),
-        middle(trim(","), interpolation(), trim(")")),
+        middle(trim(","), or!(interpolation(), var()), trim(")")),
     ).map(|(duration, interpolation)| {
         fn_call_expr("EffectTimer::new", vec![duration, interpolation])
     });
@@ -461,7 +455,7 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
     let from_new = middle(
         trim("EffectTimer::new("),
         tuplify!(
-            duration(),
+            or!(duration(), var()),
             right!(trim(","), interpolation()),
         ),
         trim(")")
@@ -472,7 +466,7 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
     // from ms: EffectTimer::from_ms(u32, Interpolation)
     let from_ms = tuplify!(
         right!(trim("EffectTimer::from_ms("), parse_u32()),
-        middle(trim(","), interpolation(), trim(")")),
+        middle(trim(","), or!(interpolation(), var()), trim(")")),
     ).map(|(ms, interpolation)| fn_call_expr("EffectTimer::from_ms", vec![ms, interpolation]));
 
     or!(
@@ -539,7 +533,7 @@ fn duration<'a>() -> impl StrParser<'a, Expr> {
         trim("Duration::from_millis("),
         parse_u32(),
         trim(")"),
-    ).map(|ms| Expr::FnCall(FnCallInfo::new("Duration::from_millis", vec![ms])));
+    ).map(|ms| fn_call_expr("Duration::from_millis", vec![ms]));
 
     // ctor from_secs_f32
     let from_secs = middle(
@@ -572,10 +566,7 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
         trim("Color::from_u32("),
         parse_u32(),
         trim(")")
-    ).map(|u32| Expr::FnCall(FnCallInfo {
-        name: "Color::from_u32".to_compact_string(),
-        args: vec![u32]
-    }));
+    ).map(|u32| fn_call_expr("Color::from_u32", vec![u32]));
 
     // rgb
     let rgb = middle(
@@ -586,14 +577,14 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
             right!(trim(","), parse_u32()),
         ),
         trim(")")
-    ).map(|(r, g, b)| Expr::FnCall(FnCallInfo::new("Color::Rgb", vec![r, g, b])));
+    ).map(|(r, g, b)| fn_call_expr("Color::Rgb", vec![r, g, b]));
 
     // indexed
     let indexed = middle(
         trim("Color::Indexed("),
         parse_u32(),
         trim(")")
-    ).map(|idx| Expr::FnCall(FnCallInfo::new("Color::Indexed", vec![idx])));
+    ).map(|idx| fn_call_expr("Color::Indexed", vec![idx]));
 
 
     // named colors
@@ -625,7 +616,7 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn interpolation<'a>() -> impl StrParser<'a, Expr> {
-    let literal = right!(
+    right!(
         succeed(attempt(skip!("Interpolation::"))),
         item_while(|c: char| c.is_ascii_alphabetic()),
     ).map_if(|s: &str| match s {
@@ -662,9 +653,7 @@ fn interpolation<'a>() -> impl StrParser<'a, Expr> {
         "SineOut"      => Some(Interpolation::SineOut),
         "SineInOut"    => Some(Interpolation::SineInOut),
         _              => None
-    }).map(|interpolation| Expr::Literal(Value::Interpolation(interpolation)));
-
-    or!(literal, var())
+    }).map(|interpolation| Expr::Literal(Value::Interpolation(interpolation)))
 }
 
 fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {

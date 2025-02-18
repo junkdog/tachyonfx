@@ -70,9 +70,9 @@ impl FnCallInfo {
     }
 }
 
-impl From<(CompactString, Vec<Expr>)> for FnCallInfo {
-    fn from((name, args): (CompactString, Vec<Expr>)) -> Self {
-        Self { name, args }
+impl From<(&str, Vec<Expr>)> for FnCallInfo {
+    fn from((name, args): (&str, Vec<Expr>)) -> Self {
+        Self { name: name.into(), args }
     }
 }
 
