@@ -1,7 +1,7 @@
 use crate::dsl::environment::DslEnv;
 use crate::dsl::dsl::EffectDsl;
 use crate::dsl::DslError;
-use crate::{CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
+use crate::{fx, CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
 use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
 use ratatui::prelude::{Color, Style};
 use std::collections::VecDeque;
@@ -218,9 +218,13 @@ impl<'a> Arguments<'a> {
                 }?;
 
                 // Apply method chains
-                self.apply_fns(base_layout, self_fns)
+                base_layout
+                    .fold_fns(self_fns, self.context, self.vars)
             },
-            Expr::Var { name, self_fns } => self.bound_var(name),
+
+            Expr::Var { name, self_fns } => self.bound_var::<Layout>(name)?
+                .fold_fns(self_fns, self.context, self.vars),
+
             e               => self.expected_type_expr("layout", e),
         }
     }
@@ -360,8 +364,10 @@ impl<'a> Arguments<'a> {
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
             Expr::Literal(Value::Style(s))  => Ok(s),
-            Expr::Style(methods)            => self.apply_fns(Style::new(), methods),
-            Expr::Var { name, self_fns }    => self.bound_var(name),
+            Expr::Style(methods)            => Style::new()
+                .fold_fns(methods, self.context, self.vars),
+            Expr::Var { name, self_fns }    => self.bound_var::<Style>(name)?
+                .fold_fns(self_fns, self.context, self.vars),
             e                               => self.expected_type("style", e.type_name().into()),
         }
     }
@@ -509,14 +515,6 @@ impl<'a> Arguments<'a> {
 
     fn all_inner_args(&mut self, exprs: Vec<Expr>) -> Self {
         Self::new(exprs.into(), self.context, self.vars)
-    }
-
-    fn apply_fns<T>(
-        &self,
-        value: T,
-        self_fns: Vec<FnCallInfo>,
-    ) -> Result<T, DslError> where T: ChainableMethods {
-        ChainableMethods::apply_chain(value, self_fns, self.context, self.vars)
     }
 }
 

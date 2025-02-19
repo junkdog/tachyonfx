@@ -7,21 +7,21 @@ use crate::dsl::expressions::FnCallInfo;
 use crate::Effect;
 
 pub(super) trait ChainableMethods where Self: Sized {
-    fn apply_chain<'dsl>(
-        value: Self,
+    fn fold_fns<'dsl>(
+        self,
         self_fns: Vec<FnCallInfo>,
         context: &'dsl EffectDsl,
         vars: &'dsl DslEnv,
     ) -> Result<Self, DslError> {
-        self_fns.iter().try_fold(value, |result, f| {
-            let name = f.name.clone();
-            let mut args = Arguments::new(f.args.clone().into(), context, vars);
-            Self::apply_fn(result, name, &mut args)
+        self_fns.into_iter().try_fold(self, |this, f| {
+            let name = f.name;
+            let mut args = Arguments::new(f.args.into(), context, vars);
+            Self::apply_fn(this, name, &mut args)
         })
     }
 
     fn apply_fn(
-        value: Self,
+        object: Self,
         name: CompactString,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError>;
@@ -44,10 +44,10 @@ impl ChainableMethods for Effect {
 impl ChainableMethods for Layout {
     fn apply_fn(
         layout: Self,
-        fn_name: CompactString,
+        name: CompactString,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
-        Ok(match fn_name.as_str() {
+        Ok(match name.as_str() {
             "constraints"       => layout.constraints(args.array(Arguments::constraint)?),
             "margin"            => layout.margin(args.read_u16()?),
             "horizontal_margin" => layout.horizontal_margin(args.read_u16()?),
@@ -61,10 +61,10 @@ impl ChainableMethods for Layout {
 impl ChainableMethods for Style {
     fn apply_fn(
         style: Self,
-        fn_name: CompactString,
+        name: CompactString,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
-        Ok(match fn_name.as_str() {
+        Ok(match name.as_str() {
             "fg"           => style.fg(args.color()?),
             "bg"           => style.bg(args.color()?),
             "add_modifier" => style.add_modifier(args.modifier()?),

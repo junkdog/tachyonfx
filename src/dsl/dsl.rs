@@ -159,8 +159,7 @@ impl EffectDsl {
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = Arguments::new(arguments.into(), self, env);
-                    let effect =(d.compile)(&mut args)?;
-                    let effect = ChainableMethods::apply_chain(effect, self_fns, &self, env);
+                    let effect = (d.compile)(&mut args)?.fold_fns(self_fns, &self, env);
 
                     match () {
                         _ if effect.is_err() => effect,
@@ -177,8 +176,8 @@ impl EffectDsl {
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                let effect = fx::sequence(&effects);
-                ChainableMethods::apply_chain(effect, self_fns, &self, env)
+                fx::sequence(&effects)
+                    .fold_fns(self_fns, &self, env)
             },
             Expr::Parallel { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
@@ -186,8 +185,8 @@ impl EffectDsl {
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                let effect = fx::parallel(&effects);
-                ChainableMethods::apply_chain(effect, self_fns, &self, env)
+                fx::parallel(&effects)
+                    .fold_fns(self_fns, &self, env)
             },
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
@@ -479,6 +478,7 @@ impl fmt::Debug for EffectCompiler {
             .finish()
     }
 }
+
 
 #[cfg(test)]
 mod tests {
