@@ -4,6 +4,7 @@ use crate::dsl::expressions::{Expr, FnCallInfo};
 use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
+use crate::dsl::method_chains::ChainableMethods;
 use crate::{fx, Effect, Shader};
 use std::fmt;
 use std::fmt::Formatter;
@@ -158,7 +159,8 @@ impl EffectDsl {
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = Arguments::new(arguments.into(), self, env);
-                    let effect = self.apply_effect_fns((d.compile)(&mut args)?, self_fns, env);
+                    let effect =(d.compile)(&mut args)?;
+                    let effect = ChainableMethods::apply_chain(effect, self_fns, &self, env);
 
                     match () {
                         _ if effect.is_err() => effect,
@@ -175,7 +177,8 @@ impl EffectDsl {
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                Ok(self.apply_effect_fns(fx::sequence(&effects), self_fns, env)?)
+                let effect = fx::sequence(&effects);
+                ChainableMethods::apply_chain(effect, self_fns, &self, env)
             },
             Expr::Parallel { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
@@ -183,48 +186,14 @@ impl EffectDsl {
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                Ok(self.apply_effect_fns(fx::parallel(&effects), self_fns, env)?)
+                let effect = fx::parallel(&effects);
+                ChainableMethods::apply_chain(effect, self_fns, &self, env)
             },
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
                 actual: input.type_name(),
             }),
         }
-    }
-
-    fn apply_effect_fns(
-        &self,
-        effect: Effect,
-        fns: Vec<FnCallInfo>,
-        env: &DslEnv
-    ) -> Result<Effect, DslError> {
-        let mut effect = effect;
-        for self_fn in fns {
-            match self_fn.name.as_str() {
-                "with_area" => {
-                    let area = Arguments::extract_with(
-                        self_fn.args, self, env, Arguments::rect
-                    )?;
-                    effect = effect.with_area(area);
-                },
-                "with_filter" => {
-                    let cell_filter = Arguments::extract_with(
-                        self_fn.args, self, env, Arguments::cell_filter
-                    )?;
-
-                    effect = effect.with_filter(cell_filter);
-                },
-                "filter" => {
-                    let cell_filter = Arguments::extract_with(
-                        self_fn.args, self, env, Arguments::cell_filter
-                    )?;
-                    effect.filter(cell_filter);
-                },
-                _ => return Err(DslError::UnknownFunction { name: self_fn.name }),
-            }
-        }
-
-        Ok(effect)
     }
 }
 

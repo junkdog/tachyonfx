@@ -10,6 +10,7 @@ use std::fmt::Formatter;
 use compact_str::{CompactString, ToCompactString};
 use ratatui::style::Modifier;
 use crate::dsl::expressions::{Expr, FnCallInfo, Value};
+use crate::dsl::method_chains::ChainableMethods;
 use crate::fx::RepeatMode;
 
 /// A helper struct for parsing arguments when implementing custom effect compilers.
@@ -188,28 +189,7 @@ impl<'a> Arguments<'a> {
 
     /// Consumes the next argument and returns a [`Layout`].
     pub fn layout(&mut self) -> Result<Layout, DslError> {
-        // First get the layout expression
-        let layout_expr = self.next("layout")?;
-
-        // Helper closure that doesn't capture self
-        let apply_single_fn = |layout: Layout, f: FnCallInfo, context: &EffectDsl, vars: &DslEnv| -> Result<Layout, DslError> {
-            let mut args = Arguments::new(f.args.into(), context, vars);
-            match f.name.as_str() {
-                "constraints"       => Ok(layout.constraints(args.array(Arguments::constraint)?)),
-                "margin"            => Ok(layout.margin(args.read_u16()?)),
-                "horizontal_margin" => Ok(layout.horizontal_margin(args.read_u16()?)),
-                "vertical_margin"   => Ok(layout.vertical_margin(args.read_u16()?)),
-                "spacing"           => Ok(layout.spacing(args.read_u16()?)),
-                _                   => Err(DslError::WrongArgumentType {
-                    actual: f.name,
-                    expected: "layout method",
-                    position: 0,
-                }),
-            }
-        };
-
-        // Process the layout expression
-        match layout_expr {
+        match self.next("layout")? {
             Expr::Layout { expr, self_fns } => {
                 let base_layout = match *expr {
                     Expr::FnCall(FnCallInfo { name, args }) => {
@@ -238,9 +218,7 @@ impl<'a> Arguments<'a> {
                 }?;
 
                 // Apply method chains
-                self_fns.into_iter().try_fold(base_layout, |layout, f| {
-                    apply_single_fn(layout, f, self.context, self.vars)
-                })
+                self.apply_fns(base_layout, self_fns)
             },
             Expr::Var { name, self_fns } => self.bound_var(name),
             e               => self.expected_type_expr("layout", e),
@@ -365,7 +343,7 @@ impl<'a> Arguments<'a> {
             }),
             Expr::Literal(Value::Color(c)) => Ok(c),
             Expr::Var { name, self_fns } => self.bound_var(name),
-            e                              => self.expected_type_expr("color", e),
+            e                            => self.expected_type_expr("color", e),
         }
     }
 
@@ -382,8 +360,8 @@ impl<'a> Arguments<'a> {
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
             Expr::Literal(Value::Style(s))  => Ok(s),
-            Expr::Style(methods)            => self.compile_style(methods),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Style(methods)            => self.apply_fns(Style::new(), methods),
+            Expr::Var { name, self_fns }    => self.bound_var(name),
             e                               => self.expected_type("style", e.type_name().into()),
         }
     }
@@ -437,7 +415,7 @@ impl<'a> Arguments<'a> {
                 }),
             },
             Expr::Literal(Value::Rect(r)) => Ok(r),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns }  => self.bound_var(name),
             e                             => self.expected_type_expr("rect", e),
         }
     }
@@ -474,24 +452,10 @@ impl<'a> Arguments<'a> {
         self.context.compile(self.vars, expr)
     }
 
-    fn compile_style(&mut self, methods: Vec<FnCallInfo>) -> Result<Style, DslError> {
-        methods.into_iter().fold(Ok(Style::new()), |style, method| {
-            match method.name.as_str() {
-                "fg" => self.extract_nested(method.args, Arguments::color)
-                    .map(|color| style.map(|s| s.fg(color)))?,
-
-                "bg" => self.extract_nested(method.args, Arguments::color)
-                    .map(|color| style.map(|s| s.bg(color)))?,
-
-                "add_modifier" => self.extract_nested(method.args, Arguments::modifier)
-                    .map(|modifier| style.map(|s| s.add_modifier(modifier)))?,
-
-                _ => style
-            }
-        })
-    }
-
-    fn bound_var<T: Clone + 'static>(&self, name: impl Into<CompactString>) -> Result<T, DslError> {
+    fn bound_var<T: Clone + 'static>(
+        &self,
+        name: impl Into<CompactString>,
+    ) -> Result<T, DslError> {
         self.vars.get(name.into()).cloned()
     }
 
@@ -534,7 +498,7 @@ impl<'a> Arguments<'a> {
         Ok(self.all_inner_args(exprs))
     }
 
-    fn extract_nested<T>(
+    pub(super) fn extract_nested<T>(
         &mut self,
         exprs: Vec<Expr>,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
@@ -545,6 +509,14 @@ impl<'a> Arguments<'a> {
 
     fn all_inner_args(&mut self, exprs: Vec<Expr>) -> Self {
         Self::new(exprs.into(), self.context, self.vars)
+    }
+
+    fn apply_fns<T>(
+        &self,
+        value: T,
+        self_fns: Vec<FnCallInfo>,
+    ) -> Result<T, DslError> where T: ChainableMethods {
+        ChainableMethods::apply_chain(value, self_fns, self.context, self.vars)
     }
 }
 
@@ -558,6 +530,7 @@ impl fmt::Display for Arguments<'_> {
         )
     }
 }
+
 
 #[cfg(test)]
 mod tests {

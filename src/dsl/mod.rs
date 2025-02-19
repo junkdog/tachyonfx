@@ -4,7 +4,7 @@ mod arguments;
 mod environment;
 mod expressions;
 mod dsl_format;
-
+mod method_chains;
 
 use crate::dsl::expressions::Expr;
 use crate::dsl::parsers::parse_expr;

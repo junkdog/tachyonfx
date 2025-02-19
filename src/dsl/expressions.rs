@@ -116,7 +116,8 @@ impl Expr {
 
         match self {
             Expr::Literal(value) => format_compact!("{}{}", indent_str, value.format()),
-            Expr::Var { name, self_fns } => format_compact!("{}{}", indent_str, name),
+            Expr::Var { name, self_fns } =>
+                format_compact!("{}{}{}", indent_str, name, chained_fns(self_fns)),
             Expr::ArrayRef(exprs) => {
                 let inner = formatted_args(exprs);
                 format_compact!("{}&[\n{}\n{}]", indent_str, inner, indent_str)
