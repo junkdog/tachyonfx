@@ -1,17 +1,17 @@
-use crate::dsl::environment::DslEnv;
 use crate::dsl::dsl::EffectDsl;
+use crate::dsl::environment::DslEnv;
+use crate::dsl::expressions::{Expr, FnCallInfo, Value};
+use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::DslError;
-use crate::{fx, CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
+use crate::fx::RepeatMode;
+use crate::{CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
+use compact_str::{CompactString, ToCompactString};
 use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
 use ratatui::prelude::{Color, Style};
+use ratatui::style::Modifier;
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
-use compact_str::{CompactString, ToCompactString};
-use ratatui::style::Modifier;
-use crate::dsl::expressions::{Expr, FnCallInfo, Value};
-use crate::dsl::method_chains::ChainableMethods;
-use crate::fx::RepeatMode;
 
 /// A helper struct for parsing arguments when implementing custom effect compilers.
 ///
@@ -93,7 +93,7 @@ impl<'a> Arguments<'a> {
                 e                        => self.expected_type("duration", e.format()),
             },
 
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
             e                            => self.expected_type_expr("duration", e),
         }
     }
@@ -118,7 +118,7 @@ impl<'a> Arguments<'a> {
             }),
             Expr::Literal(Value::Timer(t))     => Ok(t),
             Expr::Literal(Value::U32(ms))      => Ok(ms.into()),
-            Expr::Var { name: name, self_fns } => self.bound_var(name),
+            Expr::Var { name: name, self_fns: _ } => self.bound_var(name),
             e                                  => self.expected_type_expr("timer", e),
         }
     }
@@ -148,7 +148,7 @@ impl<'a> Arguments<'a> {
                 }
             }
             Expr::Literal(Value::CellFilter(f)) => Ok(f),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns: _ }     => self.bound_var(name),
             e                                   => self.expected_type_expr("cell_filter", e),
         }
     }
@@ -173,7 +173,7 @@ impl<'a> Arguments<'a> {
                 _ => self.expected_type("constraint", name)?,
             }),
             Expr::Literal(Value::Constraint(c)) => Ok(c),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns: _ }     => self.bound_var(name),
             e               => self.expected_type("constraint", e.type_name().into()),
         }
     }
@@ -182,7 +182,7 @@ impl<'a> Arguments<'a> {
     pub fn direction(&mut self) -> Result<Direction, DslError> {
         match self.next("direction")? {
             Expr::Literal(Value::Direction(d)) => Ok(d),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns: _ }    => self.bound_var(name),
             e               => self.expected_type("direction", e.type_name().into()),
         }
     }
@@ -233,8 +233,8 @@ impl<'a> Arguments<'a> {
     pub fn interpolation(&mut self) -> Result<Interpolation, DslError> {
         match self.next("interpolation")? {
             Expr::Literal(Value::Interpolation(i)) => Ok(i),
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e                          => self.expected_type_expr("interpolation", e),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("interpolation", e),
         }
     }
 
@@ -261,28 +261,28 @@ impl<'a> Arguments<'a> {
     /// Consumes the next argument and returns a `u32`.
     pub fn read_u32(&mut self) -> Result<u32, DslError> {
         match self.next("u32")? {
-            Expr::Literal(Value::U32(u)) => Ok(u),
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e                            => self.expected_type_expr("u32", e),
+            Expr::Literal(Value::U32(u))    => Ok(u),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("u32", e),
         }
     }
 
     /// Consumes the next argument and returns a `f32`.
     pub fn read_into_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
-            Expr::Literal(Value::F32(f)) => Ok(f),
-            Expr::Literal(Value::U32(v)) => Ok(v as f32),
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e                            => self.expected_type_expr("f32", e),
+            Expr::Literal(Value::F32(f))    => Ok(f),
+            Expr::Literal(Value::U32(v))    => Ok(v as f32),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("f32", e),
         }
     }
 
     /// Consumes the next argument and returns a `f32`.
     pub fn read_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
-            Expr::Literal(Value::F32(f)) => Ok(f),
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e                            => self.expected_type_expr("f32", e),
+            Expr::Literal(Value::F32(f))    => Ok(f),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("f32", e),
         }
     }
 
@@ -290,7 +290,7 @@ impl<'a> Arguments<'a> {
     pub fn string(&mut self) -> Result<CompactString, DslError> {
         match self.next("string")? {
             Expr::Literal(Value::String(s)) => Ok(s),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
             e                               => self.expected_type_expr("string", e),
         }
     }
@@ -306,8 +306,8 @@ impl<'a> Arguments<'a> {
                 let mut args = self.nested_args(vec![*expr], 1)?;
                 inner(&mut args).map(Some)
             },
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e                          => self.expected_type_expr("option", e),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("option", e),
         }
     }
 
@@ -321,8 +321,10 @@ impl<'a> Arguments<'a> {
             Expr::Parallel { effects, self_fns } =>
                 self.compile_effect(Expr::Parallel { effects, self_fns }),
 
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e               => self.expected_type_expr("effect", e),
+            Expr::Var { name, self_fns } => self.bound_var::<Effect>(name)?
+                .fold_fns(self_fns, self.context, self.vars),
+
+            e => self.expected_type_expr("effect", e),
         }
     }
 
@@ -345,9 +347,9 @@ impl<'a> Arguments<'a> {
                 }
                 _ => self.expected_type("color", name)?,
             }),
-            Expr::Literal(Value::Color(c)) => Ok(c),
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e                            => self.expected_type_expr("color", e),
+            Expr::Literal(Value::Color(c))  => Ok(c),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("color", e),
         }
     }
 
@@ -355,7 +357,7 @@ impl<'a> Arguments<'a> {
     pub fn modifier(&mut self) -> Result<Modifier, DslError> {
         match self.next("modifier")? {
             Expr::Literal(Value::Modifier(m)) => Ok(m),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns: _ }   => self.bound_var(name),
             e                                 => self.expected_type_expr("modifier", e),
         }
     }
@@ -376,7 +378,7 @@ impl<'a> Arguments<'a> {
     pub fn motion(&mut self) -> Result<Motion, DslError> {
         match self.next("motion")? {
             Expr::Literal(Value::Motion(m))  => Ok(m),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns: _ }  => self.bound_var(name),
             e                                => self.expected_type("motion", e.type_name().into()),
         }
     }
@@ -389,9 +391,9 @@ impl<'a> Arguments<'a> {
                 "RepeatMode::Times"   => RepeatMode::Times(self.extract_nested(args, Arguments::read_u32)?),
                 _                     => self.expected_type("repeat_mode", name)?,
             }),
-            Expr::Literal(Value::RepeatMode(m))  => Ok(m),
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e                                    => self.expected_type("repeat_mode", e.type_name().into()),
+            Expr::Literal(Value::RepeatMode(m)) => Ok(m),
+            Expr::Var { name, self_fns: _ }     => self.bound_var(name),
+            e                                   => self.expected_type("repeat_mode", e.type_name().into()),
         }
     }
 
@@ -399,7 +401,7 @@ impl<'a> Arguments<'a> {
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
             Expr::Literal(Value::Margin(m)) => Ok(m),
-            Expr::Var { name, self_fns } => self.bound_var(name),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
             e                               => self.expected_type_expr("margin", e),
         }
     }
@@ -433,10 +435,10 @@ impl<'a> Arguments<'a> {
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
         match self.next("array")? {
-            Expr::Array(exprs)    => self.map_exprs(exprs, inner),
-            Expr::ArrayRef(exprs) => self.map_exprs(exprs, inner),
-            Expr::Var { name, self_fns } => self.bound_var(name),
-            e                     => self.expected_type_expr("array", e),
+            Expr::Array(exprs)              => self.map_exprs(exprs, inner),
+            Expr::ArrayRef(exprs)           => self.map_exprs(exprs, inner),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("array", e),
         }
     }
 
@@ -533,16 +535,16 @@ impl fmt::Display for Arguments<'_> {
 #[cfg(test)]
 mod tests {
     use crate::dsl::arguments::Arguments;
-    use crate::dsl::environment::DslEnv;
     use crate::dsl::dsl::EffectDsl;
+    use crate::dsl::environment::DslEnv;
+    use crate::dsl::expressions::{Expr, Value};
     use crate::dsl::{parsers, DslError};
     use crate::{Duration, EffectTimer, Interpolation, Motion};
+    use anpa::core::parse;
+    use compact_str::ToCompactString;
     use ratatui::layout::{Margin, Rect};
     use ratatui::prelude::{Color, Style};
     use std::collections::VecDeque;
-    use anpa::core::parse;
-    use compact_str::ToCompactString;
-    use crate::dsl::expressions::{Expr, Value};
 
     fn empty_env() -> DslEnv {
         DslEnv::new()
