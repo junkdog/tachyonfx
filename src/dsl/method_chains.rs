@@ -22,7 +22,7 @@ pub(super) trait ChainableMethods where Self: Sized {
 
     fn apply_fn(
         value: Self,
-        fn_name: CompactString,
+        name: CompactString,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError>;
 }
@@ -30,13 +30,13 @@ pub(super) trait ChainableMethods where Self: Sized {
 impl ChainableMethods for Effect {
     fn apply_fn(
         effect: Self,
-        fn_name: CompactString,
+        name: CompactString,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
-        Ok(match fn_name.as_str() {
+        Ok(match name.as_str() {
             "with_area"              => effect.with_area(args.rect()?),
             "with_filter" | "filter" => effect.with_filter(args.cell_filter()?),
-            _ => Err(DslError::UnknownFunction { name: fn_name })?,
+            _                        => Err(DslError::UnknownFunction { name })?,
         })
     }
 }
@@ -53,11 +53,7 @@ impl ChainableMethods for Layout {
             "horizontal_margin" => layout.horizontal_margin(args.read_u16()?),
             "vertical_margin"   => layout.vertical_margin(args.read_u16()?),
             "spacing"           => layout.spacing(args.read_u16()?),
-            _                   => Err(DslError::WrongArgumentType {
-                actual: fn_name,
-                expected: "layout method",
-                position: 0,
-            })?,
+            _                   => Err(DslError::UnknownFunction { name })?,
         })
     }
 }
@@ -72,7 +68,7 @@ impl ChainableMethods for Style {
             "fg"           => style.fg(args.color()?),
             "bg"           => style.bg(args.color()?),
             "add_modifier" => style.add_modifier(args.modifier()?),
-            _              => style
+            _              => Err(DslError::UnknownFunction { name })?,
         })
     }
 }
