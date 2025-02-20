@@ -1,11 +1,23 @@
 use compact_str::CompactString;
-use ratatui::layout::Layout;
+use ratatui::layout::{Layout, Rect};
 use ratatui::style::Style;
 use crate::dsl::{Arguments, DslError, EffectDsl};
 use crate::dsl::environment::DslEnv;
 use crate::dsl::expressions::FnCallInfo;
 use crate::Effect;
 
+/// A trait for types that support method chaining in the tachyonfx DSL.
+///
+/// This trait enables types to handle method chains in DSL expressions by providing
+/// a mechanism to fold a sequence of function calls into a final result. It's primarily
+/// used for applying sequential modifications to objects like Effects, Layouts, and Styles.
+///
+/// # Implementation Notes
+///
+/// Implementors only need to provide the `apply_fn` method, which handles individual
+/// function applications. The default `fold_fns` implementation will handle iterating
+/// over multiple chained methods.
+/// ```
 pub(super) trait ChainableMethods where Self: Sized {
     fn fold_fns<'dsl>(
         self,
@@ -68,6 +80,22 @@ impl ChainableMethods for Style {
             "fg"           => style.fg(args.color()?),
             "bg"           => style.bg(args.color()?),
             "add_modifier" => style.add_modifier(args.modifier()?),
+            _              => Err(DslError::UnknownFunction { name })?,
+        })
+    }
+}
+
+impl ChainableMethods for Rect {
+    fn apply_fn(
+        rect: Self,
+        name: CompactString,
+        args: &mut Arguments<'_>
+    ) -> Result<Self, DslError> {
+        Ok(match name.as_str() {
+            "clamp"        => rect.clamp(args.rect()?),
+            "inner"        => rect.inner(args.margin()?),
+            "interesction" => rect.intersection(args.rect()?),
+            "union"        => rect.union(args.rect()?),
             _              => Err(DslError::UnknownFunction { name })?,
         })
     }

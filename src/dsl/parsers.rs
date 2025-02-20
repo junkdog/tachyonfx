@@ -43,7 +43,7 @@ fn trim_to<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
 fn effect<'a>() -> impl StrParser<'a, Expr> {
     let name = right!(
         succeed(attempt(skip!("fx::"))),
-        snake_case(),
+        snake_case_str(),
     );
 
     let args = middle(trim("("), arguments(), trim(")"));
@@ -127,7 +127,7 @@ fn option<'a>() -> impl StrParser<'a, Expr> {
 
 fn var<'a>() -> impl StrParser<'a, Expr> {
     tuplify!(
-        snake_case().map(|s: &str| s.to_compact_string()),
+        snake_case_str().map(|s: &str| s.to_compact_string()),
         chained_fn_calls()
     ).map(|(name, self_fns)| Expr::Var { name, self_fns })
 }
@@ -265,7 +265,7 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
             option(),
             cell_filter(),
             effect(),
-            fn_call().map(Expr::FnCall),
+            fn_call().map(|call| Expr::FnCall { call, self_fns: Vec::default() }),
             var(),
         )
     }
@@ -293,14 +293,14 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
     )
 }
 
-fn snake_case<'a>() -> impl StrParser<'a, &'a str> {
+fn snake_case_str<'a>() -> impl StrParser<'a, &'a str> {
     many(item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')), false, no_separator())
         .map_if(|s: &str| if s.starts_with(|c| matches!(c, 'a'..='z')) { Some(s) } else { None })
 }
 
 fn fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
     tuplify!(
-        snake_case(),
+        snake_case_str(),
         middle(trim("("), arguments(), trim(")"))
     ).map(FnCallInfo::from)
 }
@@ -661,7 +661,15 @@ fn interpolation<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
-    Expr::FnCall(FnCallInfo::new(name, args))
+    Expr::FnCall { call: FnCallInfo::new(name, args), self_fns: Vec::default() }
+}
+
+fn fn_call_expr_chained(
+    name: &str,
+    args: Vec<Expr>,
+    self_fns: Vec<FnCallInfo>,
+) -> Expr {
+    Expr::FnCall { call: FnCallInfo::new(name, args), self_fns }
 }
 
 #[cfg(test)]
@@ -720,10 +728,7 @@ mod tests {
         let input = "Color::from_u32(0x1d2021)";
         assert_expr_eq(
             parse(super::color(), input),
-            Expr::FnCall(FnCallInfo {
-                name: "Color::from_u32".to_compact_string(),
-                args: vec![Expr::Literal(Value::U32(0x1d2021))]
-            })
+            fn_call_expr("Color::from_u32", vec![Expr::Literal(Value::U32(0x1d2021))])
         );
     }
 
@@ -757,23 +762,17 @@ mod tests {
         let input = "Color::Indexed(3)";
         assert_expr_eq(
             parse(super::color(), input),
-            Expr::FnCall(FnCallInfo {
-                name: "Color::Indexed".to_compact_string(),
-                args: vec![Expr::Literal(Value::U32(3))]
-            })
+            fn_call_expr("Color::Indexed", vec![Expr::Literal(Value::U32(3))])
         );
 
         let input = "Color::Rgb(255, 127, 64)";
         assert_expr_eq(
             parse(super::color(), input),
-            Expr::FnCall(FnCallInfo {
-                name: "Color::Rgb".to_compact_string(),
-                args: vec![
-                    literal(Value::U32(255)),
-                    literal(Value::U32(127)),
-                    literal(Value::U32(64))
-                ]
-            })
+            fn_call_expr("Color::Rgb", vec![
+                Expr::Literal(Value::U32(255)),
+                Expr::Literal(Value::U32(127)),
+                Expr::Literal(Value::U32(64))
+            ])
         );
     }
 
@@ -865,12 +864,12 @@ mod tests {
     #[test]
     fn test_fn_call_and_self_fn_call() {
         let input = "foo(\"bar\")";
+        let result = parse(super::fn_call()
+            .map(|call| Expr::FnCall { call, self_fns: Vec::default() }), input);
+
         assert_expr_eq(
-            parse(super::fn_call().map(Expr::FnCall), input),
-            Expr::FnCall(FnCallInfo {
-                name: "foo".to_compact_string(),
-                args: vec![literal(Value::String("bar".into()))]
-            })
+            result,
+            fn_call_expr("foo", vec![literal(Value::String("bar".into()))])
         );
 
         // let input = ".bar(10)";
@@ -966,10 +965,9 @@ mod tests {
             "FgColor(Color::from_u32(0xFF0000))",
             Expr::CellFilter {
                 filter_type: "FgColor",
-                arguments: vec![Expr::FnCall(FnCallInfo {
-                    name: "Color::from_u32".to_compact_string(),
-                    args: vec![Expr::Literal(Value::U32(0xFF0000))]
-                })]
+                arguments: vec![
+                    fn_call_expr("Color::from_u32", vec![Expr::Literal(Value::U32(0xFF0000))])
+                ]
             }
         );
 
@@ -978,10 +976,9 @@ mod tests {
             "BgColor(Color::from_u32(0x00FF00))",
             Expr::CellFilter {
                 filter_type: "BgColor",
-                arguments: vec![Expr::FnCall(FnCallInfo {
-                    name: "Color::from_u32".to_compact_string(),
-                    args: vec![Expr::Literal(Value::U32(0x00FF00))]
-                })],
+                arguments: vec![
+                    fn_call_expr("Color::from_u32", vec![literal(Value::U32(0x00FF00))])
+                ],
             }
         );
     }

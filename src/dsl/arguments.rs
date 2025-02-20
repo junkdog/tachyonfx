@@ -38,18 +38,18 @@ use std::fmt::Formatter;
 ///     });
 /// ```
 #[derive(Debug)]
-pub struct Arguments<'a> {
+pub struct Arguments<'dsl> {
     args: VecDeque<Expr>,
-    vars: &'a DslEnv,
-    context: &'a EffectDsl,
+    vars: &'dsl DslEnv,
+    context: &'dsl EffectDsl,
     initial_arg_count: usize,
 }
 
-impl<'a> Arguments<'a> {
+impl<'dsl> Arguments<'dsl> {
     pub(super) fn new(
         args: VecDeque<Expr>,
-        context: &'a EffectDsl,
-        vars: &'a DslEnv
+        context: &'dsl EffectDsl,
+        vars: &'dsl DslEnv
     ) -> Self {
         let initial_arg_count = args.len();
         Self { args, vars, context, initial_arg_count }
@@ -57,8 +57,8 @@ impl<'a> Arguments<'a> {
 
     pub(super) fn extract_with<T>(
         args: Vec<Expr>,
-        context: &'a EffectDsl,
-        vars: &'a DslEnv,
+        context: &'dsl EffectDsl,
+        vars: &'dsl DslEnv,
         get: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<T, DslError> {
         let mut args = Self::new(args.into(), context, vars);
@@ -76,7 +76,7 @@ impl<'a> Arguments<'a> {
     /// Consumes the next argument and returns a [`Duration`].
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
-            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
                 "Duration::from_millis" => {
                     let ms = self.extract_nested(args, Arguments::read_u32)?;
                     Duration::from_millis(ms as _)
@@ -101,7 +101,7 @@ impl<'a> Arguments<'a> {
     /// Consumes the next argument and returns an [`EffectTimer`].
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
-            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
                 "EffectTimer::from_ms" => {
                     let mut inner_args = self.nested_args(args, 2)?;
                     let ms = inner_args.read_u32()?;
@@ -116,10 +116,10 @@ impl<'a> Arguments<'a> {
                 },
                 _ => self.expected_type("timer", name)?,
             }),
-            Expr::Literal(Value::Timer(t))     => Ok(t),
-            Expr::Literal(Value::U32(ms))      => Ok(ms.into()),
-            Expr::Var { name: name, self_fns: _ } => self.bound_var(name),
-            e                                  => self.expected_type_expr("timer", e),
+            Expr::Literal(Value::Timer(t))  => Ok(t),
+            Expr::Literal(Value::U32(ms))   => Ok(ms.into()),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("timer", e),
         }
     }
 
@@ -158,7 +158,7 @@ impl<'a> Arguments<'a> {
         use Constraint::*;
 
         match self.next("constraint")? {
-            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
                 "Constraint::Min"        => Min(self.extract_nested(args, Arguments::read_u16)?),
                 "Constraint::Max"        => Max(self.extract_nested(args, Arguments::read_u16)?),
                 "Constraint::Length"     => Length(self.extract_nested(args, Arguments::read_u16)?),
@@ -192,7 +192,7 @@ impl<'a> Arguments<'a> {
         match self.next("layout")? {
             Expr::Layout { expr, self_fns } => {
                 let base_layout = match *expr {
-                    Expr::FnCall(FnCallInfo { name, args }) => {
+                    Expr::FnCall { call: FnCallInfo { name, args }, .. } => {
                         match name.as_str() {
                             "Layout::horizontal" => {
                                 let constraints = self.extract_nested(
@@ -331,7 +331,7 @@ impl<'a> Arguments<'a> {
     /// Consumes the next argument and returns a [`Color`].
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
-            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
                 "Color::Rgb" => {
                     let mut inner_args = self.nested_args(args, 3)?;
                     let r = inner_args.read_u8()?;
@@ -386,7 +386,7 @@ impl<'a> Arguments<'a> {
     /// Consumes the next argument and returns a [`RepeatMode`].
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
-            Expr::FnCall(FnCallInfo { name, args }) => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
                 "RepeatMode::Forever" => RepeatMode::Forever,
                 "RepeatMode::Times"   => RepeatMode::Times(self.extract_nested(args, Arguments::read_u32)?),
                 _                     => self.expected_type("repeat_mode", name)?,
@@ -409,21 +409,23 @@ impl<'a> Arguments<'a> {
     /// Consumes the next argument and returns a [`Rect`].
     pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
-            Expr::FnCall(FnCallInfo{ name, args }) => match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, self_fns } => match name.as_str() {
                 "Rect::new" => {
                     let mut inner_args = self.nested_args(args, 4)?;
                     let x = inner_args.read_u16()?;
                     let y = inner_args.read_u16()?;
                     let width = inner_args.read_u16()?;
                     let height = inner_args.read_u16()?;
-                    Ok(Rect::new(x, y, width, height))
+                    Ok(Rect::new(x, y, width, height)
+                        .fold_fns(self_fns, self.context, self.vars)?)
                 },
                 e => Err(DslError::UnknownFunction {
                     name: e.to_compact_string(),
                 }),
             },
             Expr::Literal(Value::Rect(r)) => Ok(r),
-            Expr::Var { name, self_fns }  => self.bound_var(name),
+            Expr::Var { name, self_fns }  => self.bound_var::<Rect>(name)?
+                .fold_fns(self_fns, self.context, self.vars),
             e                             => self.expected_type_expr("rect", e),
         }
     }
@@ -546,22 +548,24 @@ mod tests {
     use ratatui::prelude::{Color, Style};
     use std::collections::VecDeque;
 
+    fn prepare_test<'a>(args: impl Into<VecDeque<Expr>>) -> Arguments<'a> {
+        // leaking, but it's fine for tests as it reduces boilerplate
+        let dsl = Box::leak(Box::new(EffectDsl::new()));
+        let env = Box::leak(Box::new(DslEnv::new()));
+
+        Arguments::new(args.into(), dsl, env)
+    }
+
     fn empty_env() -> DslEnv {
         DslEnv::new()
     }
 
     #[test]
     fn test_duration_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::Duration(Duration::from_millis(500))),
-                Expr::Literal(Value::U32(1000)),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::Duration(Duration::from_millis(500))),
+            Expr::Literal(Value::U32(1000)),
+        ]);
 
         assert_eq!(args.duration(), Ok(Duration::from_millis(500)));
         assert_eq!(args.duration(), Ok(Duration::from_millis(1000)));
@@ -573,16 +577,10 @@ mod tests {
 
     #[test]
     fn test_effect_timer_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Interpolation::Linear))),
-                Expr::Literal(Value::U32(1000)),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Interpolation::Linear))),
+            Expr::Literal(Value::U32(1000)),
+        ]);
 
         assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(500, Interpolation::Linear)));
         assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::Linear)));
@@ -594,16 +592,10 @@ mod tests {
 
     #[test]
     fn test_numeric_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::U32(42)),
-                Expr::Literal(Value::F32(3.14)),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::U32(42)),
+            Expr::Literal(Value::F32(3.14)),
+        ]);
 
         assert_eq!(args.read_u32(), Ok(42));
         assert_eq!(args.read_f32(), Ok(3.14));
@@ -615,34 +607,25 @@ mod tests {
 
     #[test]
     fn test_array_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::ArrayRef(vec![
-                    Expr::Literal(Value::F32(10.0)),
-                    Expr::Literal(Value::F32(3.14)),
-                ]),
-            ].into(),
-            &context,
-            &binding
-        );
+        // test a
+        let mut args = prepare_test(vec![
+            Expr::ArrayRef(vec![
+                Expr::Literal(Value::F32(10.0)),
+                Expr::Literal(Value::F32(3.14)),
+            ]),
+        ]);
 
         let floats = args.array(Arguments::read_f32).unwrap();
         assert_eq!(floats, vec![10.0, 3.14]);
 
-
-        let mut args = Arguments::new(
-            vec![
-                Expr::ArrayRef(vec![
-                    Expr::Literal(Value::String("a".into())),
-                    Expr::Literal(Value::String("b".into())),
-                    Expr::Literal(Value::String("c".into())),
-                ]),
-            ].into(),
-            &context,
-            &binding
-        );
+        // test b
+        let mut args = prepare_test(vec![
+            Expr::ArrayRef(vec![
+                Expr::Literal(Value::String("a".into())),
+                Expr::Literal(Value::String("b".into())),
+                Expr::Literal(Value::String("c".into())),
+            ]),
+        ]);
 
         let strings = args.array(Arguments::string).unwrap();
         assert_eq!(strings, vec!["a", "b", "c"]);
@@ -658,34 +641,20 @@ mod tests {
 
     #[test]
     fn test_option_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-
-        let mut args = Arguments::new(
-            vec![
-                Expr::OptionSome(Box::new(
-                    Expr::Array(vec![
-                        Expr::Literal(Value::U32(1)),
-                        Expr::Literal(Value::U32(2)),
-                        Expr::Literal(Value::U32(3)),
-                    ])
-                )),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::OptionSome(Box::new(
+                Expr::Array(vec![
+                    Expr::Literal(Value::U32(1)),
+                    Expr::Literal(Value::U32(2)),
+                    Expr::Literal(Value::U32(3)),
+                ])
+            )),
+        ]);
 
         let inner_arg = args.option(|args| args.array(Arguments::read_u32)).unwrap();
         assert_eq!(inner_arg, Some(vec![1, 2, 3]));
 
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::OptionNone),
-            ].into(),
-            &context,
-            &binding
-        );
-
+        let mut args = prepare_test(vec![Expr::Literal(Value::OptionNone)]);
         let inner_arg = args.option(Arguments::read_u32).unwrap();
         assert_eq!(inner_arg, None);
     }
@@ -699,17 +668,11 @@ mod tests {
 
     #[test]
     fn test_string_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::String("hello".to_compact_string())),
-                Expr::Literal(Value::U32(42)), // Wrong type
-                Expr::Literal(Value::String("world".to_compact_string())),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::String("hello".to_compact_string())),
+            Expr::Literal(Value::U32(42)), // Wrong type
+            Expr::Literal(Value::String("world".to_compact_string())),
+        ]);
 
         assert_eq!(args.string(), Ok("hello".to_compact_string()));
         assert_eq!(args.string(), Err(DslError::WrongArgumentType {
@@ -760,16 +723,8 @@ mod tests {
 
     #[test]
     fn test_style_parsing() {
-        let context = EffectDsl::new();
         let style = Style::default().fg(Color::Red);
-        let binding = empty_env();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::Style(style)),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![Expr::Literal(Value::Style(style))]);
 
         assert_eq!(args.style(), Ok(style));
         assert_eq!(args.style(), Err(DslError::MissingArgument {
@@ -780,16 +735,10 @@ mod tests {
 
     #[test]
     fn test_motion_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::Motion(Motion::LeftToRight)),
-                Expr::Literal(Value::Motion(Motion::UpToDown)),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::Motion(Motion::LeftToRight)),
+            Expr::Literal(Value::Motion(Motion::UpToDown)),
+        ]);
 
         assert_eq!(args.motion(), Ok(Motion::LeftToRight));
         assert_eq!(args.motion(), Ok(Motion::UpToDown));
@@ -802,15 +751,7 @@ mod tests {
     #[test]
     fn test_margin_parsing() {
         let margin = Margin::new(10, 20);
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::Margin(margin)),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![Expr::Literal(Value::Margin(margin))]);
 
         assert_eq!(args.margin(), Ok(margin));
         assert_eq!(args.margin(), Err(DslError::MissingArgument {
@@ -822,15 +763,7 @@ mod tests {
     #[test]
     fn test_rect_parsing() {
         let rect = Rect::new(0, 0, 100, 100);
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::Rect(rect)),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![Expr::Literal(Value::Rect(rect))]);
 
         assert_eq!(args.rect(), Ok(rect));
         assert_eq!(args.rect(), Err(DslError::MissingArgument {
@@ -841,19 +774,13 @@ mod tests {
 
     #[test]
     fn test_effect_parsing() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Fx {
-                    name: "test".to_compact_string(),
-                    arguments: vec![Expr::Literal(Value::U32(500))],
-                    self_fns: vec![],
-                },
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::Fx {
+                name: "test".to_compact_string(),
+                arguments: vec![Expr::Literal(Value::U32(500))],
+                self_fns: vec![],
+            },
+        ]);
 
         let result = args.effect();
         assert!(result.is_err());
@@ -867,18 +794,12 @@ mod tests {
 
     #[test]
     fn test_mixed_arguments() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::U32(500)),
-                Expr::Literal(Value::Motion(Motion::LeftToRight)),
-                Expr::Literal(Value::Color(Color::Blue)),
-                Expr::Literal(Value::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))),
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::U32(500)),
+            Expr::Literal(Value::Motion(Motion::LeftToRight)),
+            Expr::Literal(Value::Color(Color::Blue)),
+            Expr::Literal(Value::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))),
+        ]);
 
         assert_eq!(args.read_u32(), Ok(500));
         assert_eq!(args.motion(), Ok(Motion::LeftToRight));
@@ -892,16 +813,10 @@ mod tests {
 
     #[test]
     fn test_u16_conversion() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(
-            vec![
-                Expr::Literal(Value::U32(65535)), // Max u16
-                Expr::Literal(Value::U32(65536)), // Too large for u16
-            ].into(),
-            &context,
-            &binding
-        );
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::U32(65535)), // Max u16
+            Expr::Literal(Value::U32(65536)), // Too large for u16
+        ]);
 
         assert_eq!(args.read_u16(), Ok(65535));
         assert_eq!(args.read_u16(), Err(DslError::CastOverflow {
@@ -913,9 +828,7 @@ mod tests {
 
     #[test]
     fn test_empty_args() {
-        let binding = empty_env();
-        let context = EffectDsl::new();
-        let mut args = Arguments::new(VecDeque::new(), &context, &binding);
+        let mut args = prepare_test([]);
 
         let missing = |idx, name| Err(DslError::MissingArgument {
             position: idx,

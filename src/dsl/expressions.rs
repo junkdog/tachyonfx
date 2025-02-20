@@ -19,7 +19,7 @@ pub(super) enum Expr {
     ArrayRef(Vec<Expr>),
     Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
-    FnCall(FnCallInfo), // e.g. foo_bar(area)
+    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo> }, // e.g. foo_bar(area)
     OptionSome(Box<Expr>),
     Layout { expr: Box<Expr>, self_fns: Vec<FnCallInfo> },
     Sequence {
@@ -138,7 +138,7 @@ impl Expr {
 
                 format_compact!("{effect}{}", chained_fns(self_fns))
             },
-            Expr::FnCall(FnCallInfo { name, args }) => {
+            Expr::FnCall { call: FnCallInfo { name, args }, self_fns } => {
                 let formatted_args = formatted_args(args);
 
                 if args.len() <= 1 {
