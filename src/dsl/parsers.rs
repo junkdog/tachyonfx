@@ -133,10 +133,6 @@ fn var<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
-    // parsers with var fallback
-    let filter_or_var = or!(defer_parser!(cell_filter()), var());
-    let margin_or_var = or!(margin(), var());
-
     // cell id filter
     let cf = |s| right!(
         skip_whitespace(),
@@ -174,12 +170,12 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
         });
 
     // Margin-based filters
-    let inner = middle(cf("Inner("), margin_or_var, trim(")"))
+    let inner = middle(cf("Inner("), argument(), trim(")"))
         .map(|margin| Expr::CellFilter {
             filter_type: "Inner",
             arguments: vec![margin]
         });
-    let outer = middle(cf("Outer("), margin_or_var, trim(")"))
+    let outer = middle(cf("Outer("), argument(), trim(")"))
         .map(|margin| Expr::CellFilter {
             filter_type: "Outer",
             arguments: vec![margin]
@@ -188,7 +184,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     // Compound filters
     let all_of = middle(
         cf("AllOf(vec!["),
-        many_to_vec(filter_or_var, true, separator(trim(","), true)),
+        many_to_vec(argument(), true, separator(trim(","), true)),
         trim("])")
     ).map(|filters| Expr::CellFilter {
         filter_type: "AllOf",
@@ -197,7 +193,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
 
     let any_of = middle(
         cf("AnyOf(vec!["),
-        many_to_vec(filter_or_var, true, separator(trim(","), true)),
+        many_to_vec(argument(), true, separator(trim(","), true)),
         trim("])")
     ).map(|filters| Expr::CellFilter {
         filter_type: "AnyOf",
@@ -206,7 +202,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
 
     let none_of = middle(
         cf("NoneOf(vec!["),
-        many_to_vec(filter_or_var, true, separator(trim(","), true)),
+        many_to_vec(argument(), true, separator(trim(","), true)),
         trim("])")
     ).map(|filters| Expr::CellFilter {
         filter_type: "NoneOf",
@@ -215,7 +211,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
 
     let not = middle(
         right!(cf("Not("), trim("Box::new(")),
-        filter_or_var,
+        argument(),
         trim("))")
     ).map(|filter| Expr::CellFilter {
         filter_type: "Not",
@@ -419,13 +415,13 @@ fn repeat_mode<'a>() -> impl StrParser<'a, Expr> {
 
     let times = middle(
         trim("RepeatMode::Times("),
-        parse_u32(),
+        argument(),
         trim(")")
     ).map(|times| fn_call_expr("RepeatMode::Times", vec![times]));
 
     let duration = middle(
         trim("RepeatMode::Duration("),
-        or!(duration(), var()),
+        argument(),
         trim(")")
     ).map(|duration| fn_call_expr("RepeatMode::Duration", vec![duration]));
 
@@ -485,10 +481,10 @@ fn rect<'a>() -> impl StrParser<'a, Expr> {
     let new = middle(
         trim("Rect::new("),
         tuplify!(
-            parse_u32(),
-            right!(trim(","), parse_u32()),
-            right!(trim(","), parse_u32()),
-            right!(trim(","), parse_u32()),
+            argument(),
+            right!(trim(","), argument()),
+            right!(trim(","), argument()),
+            right!(trim(","), argument()),
         ),
         trim(")")
     );
@@ -496,10 +492,10 @@ fn rect<'a>() -> impl StrParser<'a, Expr> {
     let raw = middle(
         right!(trim("Rect"), trim("{")),
         tuplify!(
-            middle(trim("x:"), parse_u32(), trim(",")),
-            middle(trim("y:"), parse_u32(), trim(",")),
-            middle(trim("width:"), parse_u32(), trim(",")),
-            right!(trim("height:"), parse_u32()),
+            middle(trim("x:"), argument(), trim(",")),
+            middle(trim("y:"), argument(), trim(",")),
+            middle(trim("width:"), argument(), trim(",")),
+            right!(trim("height:"), argument()),
         ),
         trim("}")
     );
@@ -517,8 +513,8 @@ fn margin<'a>() -> impl StrParser<'a, Expr> {
     let new = middle(
         trim("Margin::new("),
         tuplify!(
-            parse_u32(),
-            right!(trim(","), parse_u32())
+            argument(),
+            right!(trim(","), argument())
         ),
         trim(")")
     ).map(|(x, y)| fn_call_expr("Margin::new", vec![x, y]));
@@ -527,8 +523,8 @@ fn margin<'a>() -> impl StrParser<'a, Expr> {
     let construct = middle(
         right!(trim("Margin"), trim("{")),
         tuplify!(
-            middle(trim("horizontal:"), parse_u32(), trim(",")),
-            right!(trim("vertical:"), parse_u32()),
+            middle(trim("horizontal:"), argument(), trim(",")),
+            right!(trim("vertical:"), argument()),
         ),
         trim("}")
     ).map(|(horizontal, vertical)| fn_call_expr("Margin::new", vec![horizontal, vertical]));
@@ -540,14 +536,14 @@ fn duration<'a>() -> impl StrParser<'a, Expr> {
     // ctor from_millis
     let from_millis = middle(
         trim("Duration::from_millis("),
-        parse_u32(),
+        argument(),
         trim(")"),
     ).map(|ms| fn_call_expr("Duration::from_millis", vec![ms]));
 
     // ctor from_secs_f32
     let from_secs = middle(
         trim("Duration::from_secs_f32("),
-        parse_f32(),
+        argument(),
         trim(")"),
     ).map(|secs| fn_call_expr("Duration::from_secs_f32", vec![secs]));
 
@@ -573,7 +569,7 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
     // from_u32
     let from_u32 = middle(
         trim("Color::from_u32("),
-        parse_u32(),
+        argument(),
         trim(")")
     ).map(|u32| fn_call_expr("Color::from_u32", vec![u32]));
 
@@ -581,9 +577,9 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
     let rgb = middle(
         trim("Color::Rgb("),
         tuplify!(
-            parse_u32(),
-            right!(trim(","), parse_u32()),
-            right!(trim(","), parse_u32()),
+            argument(),
+            right!(trim(","), argument()),
+            right!(trim(","), argument()),
         ),
         trim(")")
     ).map(|(r, g, b)| fn_call_expr("Color::Rgb", vec![r, g, b]));
@@ -591,10 +587,9 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
     // indexed
     let indexed = middle(
         trim("Color::Indexed("),
-        parse_u32(),
+        argument(),
         trim(")")
     ).map(|idx| fn_call_expr("Color::Indexed", vec![idx]));
-
 
     // named colors
     let literal = right!(
