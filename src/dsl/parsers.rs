@@ -491,7 +491,7 @@ fn rect<'a>() -> impl StrParser<'a, Expr> {
             right!(trim(","), parse_u32()),
         ),
         trim(")")
-    ).map(|(x, y, w, h)| fn_call_expr("Rect::new", vec![x, y, w, h]));
+    );
 
     let raw = middle(
         right!(trim("Rect"), trim("{")),
@@ -502,9 +502,14 @@ fn rect<'a>() -> impl StrParser<'a, Expr> {
             right!(trim("height:"), parse_u32()),
         ),
         trim("}")
-    ).map(|(x, y, w, h)| fn_call_expr("Rect::new", vec![x, y, w, h]));
+    );
 
-    or!(new, raw)
+    tuplify!(
+        or!(new, raw),
+        chained_fn_calls()
+    ).map(|((x, y, w, h), self_fns)| {
+        fn_call_chained_expr("Rect::new", vec![x, y, w, h], self_fns)
+    })
 }
 
 fn margin<'a>() -> impl StrParser<'a, Expr> {
@@ -664,12 +669,8 @@ fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
     Expr::FnCall { call: FnCallInfo::new(name, args), self_fns: Vec::default() }
 }
 
-fn fn_call_expr_chained(
-    name: &str,
-    args: Vec<Expr>,
-    self_fns: Vec<FnCallInfo>,
-) -> Expr {
-    Expr::FnCall { call: FnCallInfo::new(name, args), self_fns }
+fn fn_call_chained_expr(name: &str, args: Vec<Expr>, self_fns: Vec<FnCallInfo>) -> Expr {
+    Expr::FnCall { call: FnCallInfo::new(name, args), self_fns: self_fns.into() }
 }
 
 #[cfg(test)]

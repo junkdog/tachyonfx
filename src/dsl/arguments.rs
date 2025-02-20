@@ -93,7 +93,7 @@ impl<'dsl> Arguments<'dsl> {
                 e                        => self.expected_type("duration", e.format()),
             },
 
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            Expr::Var { name, .. }       => self.bound_var(name),
             e                            => self.expected_type_expr("duration", e),
         }
     }
@@ -399,7 +399,12 @@ impl<'dsl> Arguments<'dsl> {
 
     /// Consumes the next argument and returns a [`Margin`].
     pub fn margin(&mut self) -> Result<Margin, DslError> {
-        match self.next("margin")? {
+        let yolo = self.next("margin");
+        match yolo? {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } if name == "Margin::new" => {
+                let mut inner_args = self.nested_args(args, 2)?;
+                Ok(Margin::new(inner_args.read_u16()?, inner_args.read_u16()?))
+            },
             Expr::Literal(Value::Margin(m)) => Ok(m),
             Expr::Var { name, self_fns: _ } => self.bound_var(name),
             e                               => self.expected_type_expr("margin", e),
@@ -416,6 +421,7 @@ impl<'dsl> Arguments<'dsl> {
                     let y = inner_args.read_u16()?;
                     let width = inner_args.read_u16()?;
                     let height = inner_args.read_u16()?;
+
                     Ok(Rect::new(x, y, width, height)
                         .fold_fns(self_fns, self.context, self.vars)?)
                 },
@@ -533,7 +539,6 @@ impl fmt::Display for Arguments<'_> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::dsl::arguments::Arguments;
@@ -556,8 +561,18 @@ mod tests {
         Arguments::new(args.into(), dsl, env)
     }
 
-    fn empty_env() -> DslEnv {
-        DslEnv::new()
+    fn validate<'a, T>(
+        input: &str,
+        f: impl Fn(&mut Arguments<'a>) -> Result<T, DslError>
+    ) -> T {
+        // leaking, but it's fine for tests as it reduces boilerplate
+        let dsl = Box::leak(Box::new(EffectDsl::new()));
+        let env = Box::leak(Box::new(DslEnv::new()));
+
+        let args = parse_expr(input);
+        let mut args = Arguments::new([args].into(), dsl, env);
+        f(&mut args)
+            .expect("value from arguments")
     }
 
     #[test]
@@ -629,14 +644,6 @@ mod tests {
 
         let strings = args.array(Arguments::string).unwrap();
         assert_eq!(strings, vec!["a", "b", "c"]);
-
-        // let mut inner_args = args.array_ref().unwrap();
-        // assert_eq!(inner_args.read_u32(), Ok(42));
-        // assert_eq!(inner_args.read_f32(), Ok(3.14));
-        // assert_eq!(inner_args.read_u32(), Err(DslError::MissingArgument {
-        //     position: 2,
-        //     name: "u32",
-        // }));
     }
 
     #[test]
@@ -660,7 +667,6 @@ mod tests {
     }
 
     fn parse_expr(input: &str) -> Expr {
-        let binding = empty_env();
         let parsing_result = parse(parsers::argument(), input);
         assert_eq!(parsing_result.state, "");
         parsing_result.result.unwrap()
@@ -686,7 +692,7 @@ mod tests {
     #[test]
     fn test_color_parsing() {
         let dsl = EffectDsl::new();
-        let env = empty_env();
+        let env = DslEnv::new();
 
         let expr = parse_expr("Color::Rgb(1, 2, 3)");
         let color = Arguments::extract_with(vec![expr], &EffectDsl::new(), &env, Arguments::color)
@@ -698,27 +704,17 @@ mod tests {
             .expect("expected color");
         assert_eq!(color, Color::from_u32(0xffaabb));
 
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::Color(Color::Red)),
+            Expr::Literal(Value::Color(Color::Blue)),
+        ]);
 
-
-        //
-        //
-        // let binding = empty_env();
-        // let context = EffectDsl::new();
-        // let mut args = Arguments::new(
-        //     vec![
-        //         Expr::Literal(Value::Color(Color::Red)),
-        //         Expr::Literal(Value::Color(Color::Blue)),
-        //     ].into(),
-        //     &context,
-        //     &binding
-        // );
-        //
-        // assert_eq!(args.color(), Ok(Color::Red));
-        // assert_eq!(args.color(), Ok(Color::Blue));
-        // assert_eq!(args.color(), Err(DslError::MissingArgument {
-        //     position: 2,
-        //     name: "color",
-        // }));
+        assert_eq!(args.color(), Ok(Color::Red));
+        assert_eq!(args.color(), Ok(Color::Blue));
+        assert_eq!(args.color(), Err(DslError::MissingArgument {
+            position: 2,
+            name: "color",
+        }));
     }
 
     #[test]
@@ -770,6 +766,30 @@ mod tests {
             position: 1,
             name: "rect",
         }));
+    }
+
+    #[test]
+    fn test_rect_method_chaining() {
+        let expected = Rect::new(0, 0, 10, 10)
+            .inner(Margin::new(1, 1))
+            .clamp(Rect::new(5, 5, 10, 10))
+            .intersection(Rect::new(0, 0, 5, 5))
+            .union(Rect::new(5, 5, 15, 7));
+
+        let input = r#"Rect::new(0, 0, 10, 10)
+            .inner(Margin::new(1, 1))
+            .clamp(Rect::new(5, 5, 10, 10))
+            .intersection(Rect::new(0, 0, 5, 5))
+            .union(Rect::new(5, 5, 15, 7))
+        "#;
+
+        let dsl = EffectDsl::new();
+        let rect = validate(input, Arguments::rect);
+
+        assert_eq!(
+            format!("{rect:#?}"),
+            format!("{expected:#?}")
+        );
     }
 
     #[test]

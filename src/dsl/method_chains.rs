@@ -94,7 +94,7 @@ impl ChainableMethods for Rect {
         Ok(match name.as_str() {
             "clamp"        => rect.clamp(args.rect()?),
             "inner"        => rect.inner(args.margin()?),
-            "interesction" => rect.intersection(args.rect()?),
+            "intersection" => rect.intersection(args.rect()?),
             "union"        => rect.union(args.rect()?),
             _              => Err(DslError::UnknownFunction { name })?,
         })

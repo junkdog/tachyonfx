@@ -1,11 +1,11 @@
 use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
-use crate::dsl::expressions::{Expr, FnCallInfo};
+use crate::dsl::expressions::Expr;
+use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
-use crate::dsl::method_chains::ChainableMethods;
-use crate::{fx, Effect, Shader};
+use crate::{fx, Effect};
 use std::fmt;
 use std::fmt::Formatter;
 
@@ -492,7 +492,7 @@ mod tests {
     use crate::{fx, CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion, Shader};
     use compact_str::ToCompactString;
     use ratatui::layout::Constraint::Percentage;
-    use ratatui::layout::{Layout, Rect};
+    use ratatui::layout::{Layout, Margin, Rect};
     use ratatui::style::{Color, Style};
     use regex::Regex;
     use std::collections::VecDeque;
@@ -653,7 +653,6 @@ mod tests {
         assert_eq!(format!("{effect:#?}"), format!("{expected:#?}"));
     }
 
-    #[test]
     fn error_unknown_effect() {
         let input = r#"fx::nonexistent()"#;
         let ctx = EffectDsl::new();
@@ -666,7 +665,6 @@ mod tests {
         let input = r#"fx::sweep_in("wrong", 10, 0, Color::from_u32(0x1d2021), 1000)"#;
         let ctx = EffectDsl::new();
         let err = ctx.compiler().compile(input).unwrap_err();
-        let actual = "string".to_string();
         assert!(matches!(err, DslError::WrongArgumentType {
             position: 0,
             expected: "motion",
