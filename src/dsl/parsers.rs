@@ -8,7 +8,7 @@ use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
-use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
+use anpa::{defer_parser, greedy_or, left, or, right, skip, take, tuplify};
 use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::layout::Direction;
 use ratatui::prelude::Style;
@@ -16,12 +16,20 @@ use ratatui::style::{Color, Modifier};
 
 pub(super) fn parse_expr(
     input: &str,
-) -> Result<Expr, DslError> {
-    let parsed = parse(or!(container_effect(), effect()), input);
-    if let Some(expr) = parsed.result {
-        Ok(expr)
-    } else {
-        Err(DslError::ParseError(format_compact!("remaining input: {}", parsed.state)))
+) -> Result<Vec<Expr>, DslError> {
+    let main_parser = or!(let_binding(), container_effect(), effect());
+    let parsed_expr = parse(many_to_vec(main_parser, true, no_separator()), input);
+
+    if !parsed_expr.state.is_empty() {
+        return Err(DslError::ParseError(format_compact!("unparsed input: {}", parsed_expr.state)));
+    }
+
+    match parsed_expr.result {
+        Some(exprs) => {
+            println!("{:?}", exprs);
+            Ok(exprs)
+        },
+        None => Err(DslError::ParseError(format_compact!("unparsed input: {}", parsed_expr.state)))
     }
 }
 
@@ -65,7 +73,11 @@ fn fx_name<'a>(s: &'static str) -> impl StrParser<'a, &'a str> {
 }
 
 fn container_effect<'a>() -> impl StrParser<'a, Expr> {
-    let effect_parser = or!(defer_parser!(container_effect()), effect());
+    let effect_parser = or!(
+        defer_parser!(container_effect()), // nested sequence() or parallel()
+        effect(),                          // regular effect
+        var()                              // bound variable or let binding
+    );
 
     let name = or!(fx_name("sequence"), fx_name("parallel"));
     let args = middle(
@@ -130,6 +142,16 @@ fn var<'a>() -> impl StrParser<'a, Expr> {
         snake_case_str().map(|s: &str| s.to_compact_string()),
         chained_fn_calls()
     ).map(|(name, self_fns)| Expr::Var { name, self_fns })
+}
+
+fn let_binding<'a>() -> impl StrParser<'a, Expr> {
+    tuplify!(
+        right!(trim("let"), snake_case_str()),
+        middle(trim("="), argument(), trim(";")),
+    ).map(|(name, value)| Expr::LetBinding {
+        name: name.to_compact_string(),
+        let_expr: Box::new(value),
+    })
 }
 
 fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
@@ -241,6 +263,7 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
         // isn't chosen over `parse_f32`.
         greedy_or!(
             string_literal(),
+            parse_i32(),
             parse_u32(),
             parse_f32(),
             effect_timer(),
@@ -251,6 +274,7 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
             direction(),
             layout(),
             rect(),
+            offset(),
             margin(),
             color(),
             repeat_mode(), // used by fx::repeat
@@ -263,6 +287,7 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
             effect(),
             fn_call().map(|call| Expr::FnCall { call, self_fns: Vec::default() }),
             var(),
+            let_binding(),
         )
     }
 }
@@ -349,6 +374,17 @@ fn constraint<'a>() -> impl StrParser<'a, Expr> {
     })
 }
 
+fn offset<'a>() -> impl StrParser<'a, Expr> {
+    middle(
+        right!(trim("Offset"), trim("{")),
+        tuplify!(
+            middle(trim("x:"), argument(), trim(",")),
+            right!(trim("y:"), argument()),
+        ),
+        trim("}"),
+    ).map(move |(x, y)| fn_call_expr("Offset", vec![x, y]))
+}
+
 fn direction<'a>() -> impl StrParser<'a, Expr> {
     right!(
         succeed(skip!("Direction::")),
@@ -397,6 +433,18 @@ fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
     or!(
         right!(skip_whitespace(), or!(hexadecimal, plain))
             .map(Value::U32)
+            .map(Expr::Literal),
+        var()
+    )
+}
+
+fn parse_i32<'a>() -> impl StrParser<'a, Expr> {
+    let plain = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
+        .map_if(|s: &str| s.parse().ok());
+
+    or!(
+        right!(skip_whitespace(), trim("-"), plain)
+            .map(Value::I32)
             .map(Expr::Literal),
         var()
     )
@@ -1656,6 +1704,60 @@ mod tests {
                 ]
             }
         );
+    }
+
+    #[test]
+    fn parse_simple_let() {
+        let input = "let x = 42;";
+        let result = parse(super::let_binding(), input).result.unwrap();
+
+        match result {
+            Expr::LetBinding { name, let_expr: value } => {
+                assert_eq!(name, "x");
+                assert!(matches!(*value, Expr::Literal(Value::U32(42))));
+            }
+            _ => panic!("Expected LetBinding"),
+        }
+    }
+
+    #[test]
+    fn parse_let_with_complex_expr() {
+        let input = "let duration = Duration::from_millis(500);";
+        let result = parse(super::let_binding(), input).result.unwrap();
+
+        match result {
+            Expr::LetBinding { name, .. } => {
+                assert_eq!(name, "duration");
+            }
+            _ => panic!("Expected LetBinding"),
+        }
+    }
+
+    #[test]
+    fn parse_let_with_spacing() {
+        let input = "let    my_var   =    42   ;";
+        let result = parse(super::let_binding(), input).result.unwrap();
+
+        match result {
+            Expr::LetBinding { name, let_expr } => {
+                assert_eq!(name, "my_var");
+                assert!(matches!(*let_expr, Expr::Literal(Value::U32(42))));
+            }
+            _ => panic!("Expected LetBinding"),
+        }
+    }
+
+    #[test]
+    fn parse_let_with_effect() {
+        let input = "let fade = fx::fade_to(Color::Red, 1000);";
+        let result = parse(super::let_binding(), input).result.unwrap();
+
+        match result {
+            Expr::LetBinding { name, .. } => {
+                assert_eq!(name, "fade");
+            }
+            _ => panic!("Expected LetBinding"),
+        }
     }
 
     fn literal(value: Value) -> Expr {

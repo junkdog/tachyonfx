@@ -70,6 +70,12 @@ pub enum DslError {
         actual: CompactString,
     },
 
+    #[error("Too many arguments for function '{name}'. Expected {count}")]
+    TooManyArguments {
+        name: CompactString,
+        count: usize,
+    },
+
     #[error("{name} does not provide a to_dsl() implementation")]
     EffectExpressionNotSupported {
         name: &'static str,
@@ -118,7 +124,7 @@ pub enum DslError {
 /// - [`Shader::to_dsl`](crate::Shader::to_dsl) for converting a shader to a DSL expression
 /// - [`DslError`] for possible error types
 pub struct EffectExpression {
-    expr: Expr,
+    expr: Vec<Expr>,
 }
 
 
@@ -146,7 +152,12 @@ impl EffectExpression {
 
 impl fmt::Display for EffectExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.expr.format(0))
+        let dsl = self.expr.iter()
+            .map(|e| e.format(0))
+            .collect::<Vec<_>>()
+            .join(",\n");
+
+        write!(f, "{}", dsl)
     }
 }
 

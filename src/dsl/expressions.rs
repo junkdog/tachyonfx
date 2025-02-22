@@ -16,6 +16,10 @@ pub(super) struct FnCallInfo {
 pub(super) enum Expr {
     Literal(Value),
     Var { name: CompactString, self_fns: Vec<FnCallInfo> },
+    LetBinding {
+        name: CompactString,
+        let_expr: Box<Expr>,
+    },
     ArrayRef(Vec<Expr>),
     Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
@@ -48,6 +52,7 @@ pub(super) enum Value {
     Direction(Direction),
     Style(Style),
     String(CompactString),
+    I32(i32),
     U32(u32),
     F32(f32),
     OptionNone,
@@ -94,7 +99,8 @@ impl Expr {
             Expr::FnCall { .. }      => "fn_call",
             Expr::InvalidExpr { .. } => "invalid",
             Expr::ParserError(_)     => "parser_error",
-            Expr::Layout { .. }      => "layout"
+            Expr::Layout { .. }      => "layout",
+            Expr::LetBinding { .. }  => "let_binding",
         }
     }
 
@@ -147,6 +153,13 @@ impl Expr {
                     format_compact!("{}{}(\n{}\n{})", indent_str, name, formatted_args, indent_str)
                 }
             },
+            Expr::LetBinding { name, let_expr} => {
+                format_compact!(
+                    "{indent_str}let {name} = {value}",
+                    name = name,
+                    value = let_expr.format(indent),
+                )
+            },
             Expr::Sequence { effects, self_fns } => {
                 format_compact!(
                     "{indent_str}fx::sequence(&[\n{}\n{indent_str}]){}",
@@ -188,22 +201,16 @@ impl Value {
                 let (r, g, b) = c.to_rgb();
                 format_compact!("Color::from_u32(0x{:02x}{:02x}{:02x})", r, g, b)
             }
-            Value::Duration(d) =>
-                format_compact!("Duration::from_millis({})", d.as_millis()),
-            Value::Motion(m) =>
-                format_compact!("{m:?}"),
-            Value::String(s) =>
-                format_compact!("\"{}\"", s.replace('"', "\\\"")),
-            Value::U32(n) =>
-                n.to_compact_string(),
-            Value::F32(f) =>
-                f.to_compact_string(),
-            Value::CellFilter(c) =>
-                c.format(),
-            Value::Style(_) =>
-                todo!("format style"),
-            Value::Timer(t) =>
-                format_compact!("EffectTimer::from_millis({}, {:?})", t.duration().as_millis(), t.interpolation()),
+            Value::Duration(d)   => format_compact!("Duration::from_millis({})", d.as_millis()),
+            Value::Motion(m)     => format_compact!("{m:?}"),
+            Value::String(s)     => format_compact!("\"{}\"", s.replace('"', "\\\"")),
+            Value::U32(n)        => n.to_compact_string(),
+            Value::F32(f)        => f.to_compact_string(),
+            Value::I32(i)        => i.to_compact_string(),
+            Value::CellFilter(c) => c.format(),
+            Value::Style(_)      => todo!("format style"),
+            Value::Timer(t)      => format_compact!(
+                "EffectTimer::from_millis({}, {:?})", t.duration().as_millis(), t.interpolation()),
             Value::Rect(r) =>
                 format_compact!("Rect::new({}, {}, {}, {})", r.x, r.y, r.width, r.height),
             Value::Margin(m) =>

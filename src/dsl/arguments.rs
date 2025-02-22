@@ -6,7 +6,7 @@ use crate::dsl::DslError;
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
 use compact_str::{CompactString, ToCompactString};
-use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
+use ratatui::layout::{Constraint, Direction, Layout, Margin, Offset, Rect};
 use ratatui::prelude::{Color, Style};
 use ratatui::style::Modifier;
 use std::collections::VecDeque;
@@ -183,7 +183,7 @@ impl<'dsl> Arguments<'dsl> {
         match self.next("direction")? {
             Expr::Literal(Value::Direction(d)) => Ok(d),
             Expr::Var { name, self_fns: _ }    => self.bound_var(name),
-            e               => self.expected_type("direction", e.type_name().into()),
+            e => self.expected_type("direction", e.type_name().into()),
         }
     }
 
@@ -267,6 +267,15 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    pub fn read_i32(&mut self) -> Result<i32, DslError> {
+        match self.next("i32")? {
+            Expr::Literal(Value::I32(i))    => Ok(i),
+            Expr::Literal(Value::U32(i))    => Ok(i as _),
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("i32", e),
+        }
+    }
+
     /// Consumes the next argument and returns a `f32`.
     pub fn read_into_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
@@ -296,7 +305,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an `Option<T>`.
-    pub fn option<T: Clone + 'static>(
+    pub fn option<T: Clone + FromArgs + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Option<T>, DslError> {
@@ -414,9 +423,9 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Rect`].
     pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, self_fns } => match name.as_str() {
+            Expr::FnCall { call, self_fns } => match call.name.as_str() {
                 "Rect::new" => {
-                    let mut inner_args = self.nested_args(args, 4)?;
+                    let mut inner_args = self.nested_args(call.args, 4)?;
                     let x = inner_args.read_u16()?;
                     let y = inner_args.read_u16()?;
                     let width = inner_args.read_u16()?;
@@ -436,9 +445,20 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns a `Offset` tuple.
+    pub fn offset(&mut self) -> Result<Offset, DslError> {
+        match self.next("offset")? {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } if name == "Offset" => {
+                let mut inner_args = self.nested_args(args, 2)?;
+                Ok(Offset { x: inner_args.read_i32()?, y: inner_args.read_i32()? })
+            },
+            Expr::Var { name, self_fns: _ } => self.bound_var(name),
+            e                               => self.expected_type_expr("offset", e),
+        }
+    }
 
     /// Consumes the next argument and returns a `Vec<T>`.
-    pub fn array<T: Clone + 'static>(
+    pub fn array<T: Clone + FromArgs + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
@@ -465,14 +485,20 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     fn compile_effect(&self, expr: Expr) -> Result<Effect, DslError> {
-        self.context.compile(self.vars, expr)
+        self.context.compile(self.vars, [expr].into())
     }
 
-    fn bound_var<T: Clone + 'static>(
+    fn bound_var<T: Clone + FromArgs + 'static>(
         &self,
         name: impl Into<CompactString>,
     ) -> Result<T, DslError> {
-        self.vars.get(name.into()).cloned()
+        let name = name.into();
+        if let Some(expr) = self.vars.let_expr(name.as_str()) {
+            let mut args = Arguments::new([expr].into(), self.context, self.vars);
+            Ok(FromArgs::from_expr(&mut args)?)
+        } else {
+            self.vars.bound_var(name.as_str())
+        }
     }
 
     fn next(&mut self, type_name: &'static str) -> Result<Expr, DslError> {
@@ -539,6 +565,79 @@ impl fmt::Display for Arguments<'_> {
     }
 }
 
+pub(super) trait FromArgs where Self: Sized {
+    fn from_expr(
+        args: &mut Arguments<'_>,
+    ) -> Result<Self, DslError>;
+}
+
+impl<T: Clone + FromArgs + 'static> FromArgs for Option<T> {
+    fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        args.option(FromArgs::from_expr)
+    }
+}
+
+impl<T: Clone + FromArgs + 'static> FromArgs for Vec<T> {
+    fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        args.array(FromArgs::from_expr)
+    }
+}
+
+impl FromArgs for [f32; 3] {
+    fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        args.array(FromArgs::from_expr)
+            .map(|v| {
+                let mut arr = [0.0; 3];
+                arr.copy_from_slice(&v);
+                arr
+            })
+    }
+}
+
+#[macro_export]
+macro_rules! impl_from_args {
+    ($type:ty, $method:ident) => {
+        impl FromArgs for $type {
+            fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
+                args.$method()
+            }
+        }
+    };
+}
+
+// Basic numeric types
+impl_from_args!(u8,  read_u8);
+impl_from_args!(u16, read_u16);
+impl_from_args!(u32, read_u32);
+impl_from_args!(i32, read_i32);
+impl_from_args!(f32, read_f32);
+
+// String types
+impl_from_args!(CompactString, string);
+
+// Color/Style related
+impl_from_args!(Color, color);
+impl_from_args!(Style, style);
+impl_from_args!(Modifier, modifier);
+
+// Layout related
+impl_from_args!(Direction, direction);
+impl_from_args!(Layout, layout);
+impl_from_args!(Constraint, constraint);
+impl_from_args!(Margin, margin);
+impl_from_args!(Rect, rect);
+impl_from_args!(Offset, offset);
+
+// Effect related
+impl_from_args!(Effect, effect);
+impl_from_args!(Duration, duration);
+impl_from_args!(EffectTimer, effect_timer);
+impl_from_args!(Interpolation, interpolation);
+impl_from_args!(Motion, motion);
+impl_from_args!(RepeatMode, repeat_mode);
+impl_from_args!(CellFilter, cell_filter);
+
+
 #[cfg(test)]
 mod tests {
     use crate::dsl::arguments::Arguments;
@@ -549,9 +648,10 @@ mod tests {
     use crate::{Duration, EffectTimer, Interpolation, Motion};
     use anpa::core::parse;
     use compact_str::ToCompactString;
-    use ratatui::layout::{Margin, Rect};
+    use ratatui::layout::{Margin, Offset, Rect};
     use ratatui::prelude::{Color, Style};
     use std::collections::VecDeque;
+    use std::fmt::Debug;
 
     fn prepare_test<'a>(args: impl Into<VecDeque<Expr>>) -> Arguments<'a> {
         // leaking, but it's fine for tests as it reduces boilerplate
@@ -561,18 +661,24 @@ mod tests {
         Arguments::new(args.into(), dsl, env)
     }
 
-    fn validate<'a, T>(
+    fn assert_result<'a, T: Debug>(
         input: &str,
+        expected: T,
         f: impl Fn(&mut Arguments<'a>) -> Result<T, DslError>
-    ) -> T {
+    ) {
         // leaking, but it's fine for tests as it reduces boilerplate
         let dsl = Box::leak(Box::new(EffectDsl::new()));
         let env = Box::leak(Box::new(DslEnv::new()));
 
         let args = parse_expr(input);
         let mut args = Arguments::new([args].into(), dsl, env);
-        f(&mut args)
-            .expect("value from arguments")
+        let result = f(&mut args)
+            .expect("value from arguments");
+
+        assert_eq!(
+            format!("{result:#?}"),
+            format!("{expected:#?}")
+        );
     }
 
     #[test]
@@ -774,22 +880,18 @@ mod tests {
             .inner(Margin::new(1, 1))
             .clamp(Rect::new(5, 5, 10, 10))
             .intersection(Rect::new(0, 0, 5, 5))
-            .union(Rect::new(5, 5, 15, 7));
+            .union(Rect::new(5, 5, 15, 7))
+            .offset(Offset { x: 20, y: 30 });
 
         let input = r#"Rect::new(0, 0, 10, 10)
             .inner(Margin::new(1, 1))
             .clamp(Rect::new(5, 5, 10, 10))
             .intersection(Rect::new(0, 0, 5, 5))
             .union(Rect::new(5, 5, 15, 7))
+            .offset(Offset { x: 20, y: 30 })
         "#;
 
-        let dsl = EffectDsl::new();
-        let rect = validate(input, Arguments::rect);
-
-        assert_eq!(
-            format!("{rect:#?}"),
-            format!("{expected:#?}")
-        );
+        assert_result(input, expected, Arguments::rect);
     }
 
     #[test]

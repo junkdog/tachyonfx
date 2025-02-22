@@ -28,13 +28,18 @@ pub(super) trait ChainableMethods where Self: Sized {
         self_fns.into_iter().try_fold(self, |this, f| {
             let name = f.name;
             let mut args = Arguments::new(f.args.into(), context, vars);
-            Self::apply_fn(this, name, &mut args)
+            let result = Self::apply_fn(this, name.as_str(), &mut args);
+            if args.remaining_arg_count() > 0 {
+                Err(DslError::TooManyArguments { name, count: args.remaining_arg_count() })
+            } else {
+                result
+            }
         })
     }
 
     fn apply_fn(
         object: Self,
-        name: CompactString,
+        name: &str,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError>;
 }
@@ -42,13 +47,15 @@ pub(super) trait ChainableMethods where Self: Sized {
 impl ChainableMethods for Effect {
     fn apply_fn(
         effect: Self,
-        name: CompactString,
+        name: &str,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
-        Ok(match name.as_str() {
+        Ok(match name {
+            "clone"                  => effect.clone(),
+            "reversed"               => effect.reversed(),
             "with_area"              => effect.with_area(args.rect()?),
             "with_filter" | "filter" => effect.with_filter(args.cell_filter()?),
-            _                        => Err(DslError::UnknownFunction { name })?,
+            _                        => Err(DslError::UnknownFunction { name: name.into() })?,
         })
     }
 }
@@ -56,16 +63,17 @@ impl ChainableMethods for Effect {
 impl ChainableMethods for Layout {
     fn apply_fn(
         layout: Self,
-        name: CompactString,
+        name: &str,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
-        Ok(match name.as_str() {
+        Ok(match name {
+            "clone"             => layout.clone(),
             "constraints"       => layout.constraints(args.array(Arguments::constraint)?),
             "margin"            => layout.margin(args.read_u16()?),
             "horizontal_margin" => layout.horizontal_margin(args.read_u16()?),
             "vertical_margin"   => layout.vertical_margin(args.read_u16()?),
             "spacing"           => layout.spacing(args.read_u16()?),
-            _                   => Err(DslError::UnknownFunction { name })?,
+            _                   => Err(DslError::UnknownFunction { name: name.into() })?,
         })
     }
 }
@@ -73,14 +81,15 @@ impl ChainableMethods for Layout {
 impl ChainableMethods for Style {
     fn apply_fn(
         style: Self,
-        name: CompactString,
+        name: &str,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
-        Ok(match name.as_str() {
+        Ok(match name {
+            "clone"        => style.clone(),
             "fg"           => style.fg(args.color()?),
             "bg"           => style.bg(args.color()?),
             "add_modifier" => style.add_modifier(args.modifier()?),
-            _              => Err(DslError::UnknownFunction { name })?,
+            _              => Err(DslError::UnknownFunction { name: name.into() })?,
         })
     }
 }
@@ -88,15 +97,17 @@ impl ChainableMethods for Style {
 impl ChainableMethods for Rect {
     fn apply_fn(
         rect: Self,
-        name: CompactString,
+        name: &str,
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
-        Ok(match name.as_str() {
+        Ok(match name {
+            "clone"        => rect.clone(),
             "clamp"        => rect.clamp(args.rect()?),
             "inner"        => rect.inner(args.margin()?),
             "intersection" => rect.intersection(args.rect()?),
             "union"        => rect.union(args.rect()?),
-            _              => Err(DslError::UnknownFunction { name })?,
+            "offset"       => rect.offset(args.offset()?),
+            _              => Err(DslError::UnknownFunction { name: name.into() })?,
         })
     }
 }

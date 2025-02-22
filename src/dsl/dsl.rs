@@ -1,6 +1,6 @@
 use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
-use crate::dsl::expressions::Expr;
+use crate::dsl::expressions::{Expr, Value};
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
@@ -8,6 +8,7 @@ use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
 use std::fmt;
 use std::fmt::Formatter;
+use compact_str::CompactString;
 
 /// A compiler and registry for tachyonfx effect DSL expressions.
 ///
@@ -150,9 +151,12 @@ impl EffectDsl {
     pub(super) fn compile(
         &self,
         env: &DslEnv,
-        input: Expr
+        input: Vec<Expr>
     ) -> Result<Effect, DslError> {
-        match input {
+        // compile expressions leading up to last
+        let remaining_expr = self.compile_let_bindings(input, env)?;
+
+        match remaining_expr {
             Expr::Fx { name, arguments, self_fns } => self.compilers
                 .iter()
                 .find(|d| d.effect_name == name.as_str())
@@ -190,9 +194,36 @@ impl EffectDsl {
             },
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
-                actual: input.type_name(),
+                actual: remaining_expr.type_name(),
             }),
         }
+    }
+
+    fn compile_let_bindings(
+        &self,
+        expr: Vec<Expr>,
+        env: &DslEnv,
+    ) -> Result<Expr, DslError> {
+        let mut expr = expr;
+        let final_effect_expr = expr.remove(expr.len() - 1);
+
+        let err = expr.into_iter().map(|e| match e {
+            Expr::LetBinding { name, let_expr } => {
+                env.bind_local(name.clone(), *let_expr);
+                None
+            }
+            e => Some(DslError::InvalidExpression {
+                expected: "let binding",
+                actual: e.type_name(),
+            }),
+        }).find(|e| e.is_some());
+
+        if let Some(Some(err)) = err {
+            Err(err)
+        } else {
+            Ok(final_effect_expr) // effect expr
+        }
+
     }
 }
 
@@ -224,7 +255,7 @@ impl DslCompiler<'_> {
     /// Returns self for method chaining.
     pub fn bind<K, T>(mut self, name: K, value: T) -> Self
     where
-        K: Into<String>,
+        K: Into<CompactString>,
         T: 'static,
     {
         self.environment = self.environment.bind(name, value);
@@ -488,12 +519,12 @@ mod tests {
     use crate::dsl::expressions::{Expr, Value};
     use crate::dsl::DslError;
     use crate::fx::RepeatMode;
-    use crate::Interpolation::QuadOut;
+    use crate::Interpolation::{CircOut, QuadOut};
     use crate::{fx, CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion, Shader};
     use compact_str::ToCompactString;
     use ratatui::layout::Constraint::Percentage;
     use ratatui::layout::{Layout, Margin, Rect};
-    use ratatui::style::{Color, Style};
+    use ratatui::style::{Color, Modifier, Style};
     use regex::Regex;
     use std::collections::VecDeque;
     use Interpolation::Linear;
@@ -640,7 +671,7 @@ mod tests {
                     .horizontal_margin(2),
                 1)
             ))
-        ).with_area(Rect::new(0, 0, 10, 10));"#;
+        ).with_area(Rect::new(0, 0, 10, 10))"#;
 
 
         let effect = EffectDsl::new()
@@ -651,6 +682,176 @@ mod tests {
 
         assert_eq!(effect.name(), "sweep_in");
         assert_eq!(format!("{effect:#?}"), format!("{expected:#?}"));
+    }
+
+    #[test]
+    fn happy_path_with_let_binding() {
+        let motion = Motion::LeftToRight;
+        let c = Color::from_u32(0x1d2021);
+        let expected = fx::sweep_in(motion, 10, 0, c, EffectTimer::from_ms(1000, QuadOut));
+
+        let input = r#"
+            let motion = Motion::LeftToRight;
+            let c = Color::from_u32(0x1d2021);
+
+            fx::sweep_in(motion, 10, 0, c, (1000, QuadOut))
+        "#;
+
+        let dsl = EffectDsl::new();
+        let effect = dsl.compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        assert_eq!(effect.name(), "sweep_in");
+        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
+    }
+
+    #[test]
+    fn test_let_bindings_with_style_chaining() {
+        let expected = fx::dissolve_to(
+            Style::default()
+                .fg(Color::Red)
+                .bg(Color::Blue)
+                .add_modifier(Modifier::BOLD),
+            EffectTimer::from_ms(500, CircOut)
+        );
+
+        let input = r#"
+            let style = Style::new()
+                .fg(Color::Red)
+                .bg(Color::Blue)
+                .add_modifier(Modifier::BOLD);
+            let timer = (500, CircOut);
+
+            fx::dissolve_to(style, timer)
+        "#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        let without_rng_state = |e: Effect| -> String {
+            let regex = Regex::new("SimpleRng \\{ state: \\d+ }").unwrap();
+            let s = format!("{:?}", e);
+            regex.replace_all(&s, "SimpleRng").to_string()
+        };
+
+        assert_eq!("dissolve_to", effect.name());
+        assert_eq!(without_rng_state(expected), without_rng_state(effect));
+    }
+
+    #[test]
+    fn test_let_bindings_with_effect_chaining() {
+        let filter = CellFilter::Text;
+        let color = Color::from_u32(0xffaabb);
+        let expected = fx::fade_to_fg(color, EffectTimer::from_ms(1000, Linear))
+            .with_filter(filter);
+
+        let input = r#"
+            let color = Color::from_u32(0xffaabb);
+            let filter = CellFilter::Text;
+
+            fx::fade_to_fg(color, 1000)
+                .with_filter(filter)
+        "#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        assert_eq!("fade_to", effect.name());
+        assert_eq!(format!("{expected:?}"), format!("{effect:?}"));
+    }
+
+    #[test]
+    fn test_let_bindings_with_layout_chaining() {
+        let expected = {
+            let layout = Layout::horizontal([Percentage(50), Percentage(50)])
+                .spacing(1)
+                .horizontal_margin(2);
+
+            fx::fade_to_fg(Color::Red, EffectTimer::from_ms(500, QuadOut))
+                .with_filter(CellFilter::Layout(layout, 1))
+        };
+
+        let input = r#"
+            let layout = Layout::horizontal([Percentage(50), Percentage(50)])
+                .spacing(1)
+                .horizontal_margin(2);
+
+            let filter = CellFilter::Layout(layout, 1);
+            let color = Color::Red;
+
+            fx::fade_to_fg(color.clone(), (500, QuadOut))
+                .with_filter(filter)
+        "#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        assert_eq!(effect.name(), "fade_to");
+        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
+    }
+
+    #[test]
+    fn test_let_bindings_with_compound_effects() {
+        let expected = {
+            let base_effect = fx::fade_to_fg(Color::Red, 500);
+            fx::sequence(&[
+                base_effect.clone(),
+                base_effect.reversed(),
+                base_effect.reversed()
+                    .with_filter(CellFilter::Not(Box::new(CellFilter::Text))),
+            ])
+        };
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .bind("base", fx::fade_to_fg(Color::Red, 500))
+            .compile(r#"
+                let reversed = base.reversed();
+                let filtered = reversed
+                        .with_filter(CellFilter::Not(Box::new(CellFilter::Text)));
+
+                fx::sequence(&[base.clone(), reversed, filtered])
+            "#)
+            .expect("effect to be compiled");
+
+        assert_eq!(effect.name(), "sequence");
+        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
+    }
+
+    #[test]
+    fn test_let_bindings_with_nested_effects() {
+        let margin = Margin::new(1, 1);
+        let expected = fx::parallel(&[
+            fx::fade_from_fg(Color::Blue, (500, CircOut))
+                .with_filter(CellFilter::Inner(margin)),
+            fx::fade_to_fg(Color::Red, (500, CircOut))
+                .with_filter(CellFilter::Outer(margin))
+        ]);
+
+        let input = r#"
+            let margin = Margin::new(1, 1);
+            let inner_effect = fx::fade_from_fg(Color::Blue, (500, CircOut))
+                .with_filter(CellFilter::Inner(margin));
+            let outer_effect = fx::fade_to_fg(Color::Red, (500, CircOut))
+                .with_filter(CellFilter::Outer(margin));
+
+            fx::parallel(&[inner_effect, outer_effect])
+        "#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        assert_eq!(effect.name(), "parallel");
+        assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
     }
 
     fn error_unknown_effect() {
