@@ -375,12 +375,12 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Style`].
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
-            Expr::Literal(Value::Style(s))  => Ok(s),
-            Expr::Style(methods)            => Style::new()
-                .fold_fns(methods, self.context, self.vars),
-            Expr::Var { name, self_fns }    => self.bound_var::<Style>(name)?
+            Expr::Literal(Value::Style(s)) => Ok(s),
+            Expr::Style(self_fns)          => Style::new()
                 .fold_fns(self_fns, self.context, self.vars),
-            e                               => self.expected_type("style", e.type_name().into()),
+            Expr::Var { name, self_fns }   => self.bound_var::<Style>(name)?
+                .fold_fns(self_fns, self.context, self.vars),
+            e                              => self.expected_type("style", e.type_name().into()),
         }
     }
 

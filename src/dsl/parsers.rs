@@ -57,9 +57,9 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
             array_ref(), // e.g. &[fx1, fx2, fx3]
             array(),     // e.g. [1, 2, 3]
             container_effect(),
+            effect(),
             option(),
             cell_filter(),
-            effect(),
             var(),
             let_binding(),
         )
@@ -606,13 +606,9 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
     // rgb
     let rgb = middle(
         trim("Color::Rgb("),
-        tuplify!(
-            argument(),
-            right!(trim(","), argument()),
-            right!(trim(","), argument()),
-        ),
+        arguments(),
         trim(")")
-    ).map(|(r, g, b)| fn_call_expr("Color::Rgb", vec![r, g, b]));
+    ).map(|rgb| fn_call_expr("Color::Rgb", rgb));
 
     // indexed
     let indexed = middle(

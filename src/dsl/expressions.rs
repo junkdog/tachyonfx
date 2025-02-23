@@ -104,42 +104,44 @@ impl Expr {
         }
     }
 
-    pub(super) fn format(&self, indent: usize) -> CompactString {
+    pub(super) fn format(&self, indent: usize, indent_arg: bool) -> CompactString {
         let indent_str = " ".repeat(indent);
+        let prefix = if indent_arg { &indent_str } else { "" };
 
         let formatted_args = |args: &[Expr]| args.iter()
-            .map(|e| e.format(if args.len() == 1 { 0 } else { indent + 4 }))
+            .map(|e| e.format(indent + 4, args.len() > 1))
             .collect::<Vec<_>>()
-            .join_compact(",\n");
+            // .join_compact(",\n");
+            .join(",\n");
 
         let chained_fns = |self_fns: &[FnCallInfo]| self_fns.iter()
             .map(|fn_call| {
                 let args = formatted_args(&fn_call.args);
-                format_compact!("\n{indent_str}.{}({args})", fn_call.name)
+                format_compact!("\n{prefix}.{}({args})", fn_call.name)
             })
             .collect::<Vec<_>>()
             .join_compact("");
 
         match self {
-            Expr::Literal(value) => format_compact!("{}{}", indent_str, value.format()),
+            Expr::Literal(value) => format_compact!("{}{}", prefix, value.format()),
             Expr::Var { name, self_fns } =>
-                format_compact!("{}{}{}", indent_str, name, chained_fns(self_fns)),
+                format_compact!("{}{}{}", prefix, name, chained_fns(self_fns)),
             Expr::ArrayRef(exprs) => {
                 let inner = formatted_args(exprs);
-                format_compact!("{}&[\n{}\n{}]", indent_str, inner, indent_str)
+                format_compact!("{}&[\n{}\n{}]", prefix, inner, indent_str)
             },
             Expr::Array(exprs) => {
                 let inner = formatted_args(exprs);
-                format_compact!("{}[\n{}\n{}]", indent_str, inner, indent_str)
+                format_compact!("{}[\n{}\n{}]", prefix, inner, indent_str)
             },
             Expr::Fx { name, arguments, self_fns } => {
                 let effect = if arguments.is_empty() {
-                    format_compact!("{}fx::{}()", indent_str, name)
+                    format_compact!("{}fx::{}()", prefix, name)
                 } else if arguments.len() == 1 {
-                    format_compact!("{}fx::{}({})", indent_str, name, arguments[0].format(indent).trim())
+                    format_compact!("{}fx::{}({})", prefix, name, arguments[0].format(indent, false).trim())
                 } else {
                     let args = formatted_args(arguments);
-                    format_compact!("{}fx::{}(\n{}\n{})", indent_str, name, args, indent_str)
+                    format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
                 };
 
                 format_compact!("{effect}{}", chained_fns(self_fns))
@@ -148,16 +150,16 @@ impl Expr {
                 let formatted_args = formatted_args(args);
 
                 if args.len() <= 1 {
-                    format_compact!("{}{}({})", indent_str, name, formatted_args)
+                    format_compact!("{}{}({})", prefix, name, formatted_args)
                 } else {
-                    format_compact!("{}{}(\n{}\n{})", indent_str, name, formatted_args, indent_str)
+                    format_compact!("{}{}(\n{}\n{})", prefix, name, formatted_args, indent_str)
                 }
             },
             Expr::LetBinding { name, let_expr} => {
                 format_compact!(
                     "{indent_str}let {name} = {value}",
                     name = name,
-                    value = let_expr.format(indent),
+                    value = let_expr.format(indent, false),
                 )
             },
             Expr::Sequence { effects, self_fns } => {
@@ -186,7 +188,7 @@ impl Expr {
 
                 format_compact!("{}Style::new(){}", indent_str, inner)
             }
-            Expr::OptionSome(v) => format_compact!("{}Some({})", indent_str, v.format(0)),
+            Expr::OptionSome(v) => format_compact!("{}Some({})", indent_str, v.format(indent, false)),
             Expr::InvalidExpr { remaining: input } => format_compact!("{}// Invalid expression: {}", indent_str, input),
             Expr::ParserError(message) => format_compact!("{}// Parser error: {}", indent_str, message), // ?
             Expr::Layout { .. } => "layout(todo)".to_compact_string()

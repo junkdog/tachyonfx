@@ -153,7 +153,7 @@ impl EffectExpression {
 impl fmt::Display for EffectExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let dsl = self.expr.iter()
-            .map(|e| e.format(0))
+            .map(|e| e.format(0, false))
             .collect::<Vec<_>>()
             .join(",\n");
 
