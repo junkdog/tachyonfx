@@ -2,9 +2,8 @@ use crate::dsl::expressions::{Expr, FnCallInfo, Value};
 use crate::dsl::DslError;
 use crate::fx::RepeatMode;
 use crate::{CellFilter, EffectTimer, Interpolation, Motion};
-use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
-use anpa::core::parse;
-use anpa::core::{ParserExt, StrParser};
+use anpa::combinators::*;
+use anpa::core::{parse, ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
@@ -26,27 +25,57 @@ pub(super) fn parse_expr(
     }
 
     match parsed_expr.result {
-        Some(exprs) => {
-            println!("{:?}", exprs);
-            Ok(exprs)
-        },
+        Some(exprs) => Ok(exprs),
         None => Err(DslError::ParseError(format_compact!("unparsed input: {}", parsed_expr.state)))
     }
 }
 
+pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
+    // must defer to avoid recursive opaqueness
+    defer_parser! {
+        // `parse_f32` must come after `parse_u32` due to how float() is
+        // implemented, as such we use greedy_or to ensure that `parse_u32`
+        // isn't chosen over `parse_f32`.
+        greedy_or!(
+            string_literal(),
+            parse_i32(),
+            parse_u32(),
+            parse_f32(),
+            effect_timer(),
+            duration(),
+            motion(),
+            modifier(),
+            constraint(),
+            direction(),
+            layout(),
+            rect(),
+            offset(),
+            margin(),
+            color(),
+            repeat_mode(), // used by fx::repeat
+            style(),
+            array_ref(), // e.g. &[fx1, fx2, fx3]
+            array(),     // e.g. [1, 2, 3]
+            container_effect(),
+            option(),
+            cell_filter(),
+            effect(),
+            var(),
+            let_binding(),
+        )
+    }
+}
+
+fn arguments<'a>() -> impl StrParser<'a, Vec<Expr>> {
+    many_to_vec(argument(), true, separator(trim(","), true))
+}
+
 fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
-    right!(
-        skip_whitespace(),
-        skip!(prefix),
-        skip_whitespace()
-    )
+    right!(skip_whitespace(), skip!(prefix), skip_whitespace())
 }
 
 fn trim_to<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
-    right!(
-        skip_whitespace(),
-        skip!(prefix),
-    )
+    right!(skip_whitespace(), skip!(prefix))
 }
 
 fn effect<'a>() -> impl StrParser<'a, Expr> {
@@ -255,47 +284,6 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     )
 }
 
-pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
-    // must defer to avoid recursive opaqueness
-    defer_parser! {
-        // `parse_f32` must come after `parse_u32` due to how float() is
-        // implemented, as such we use greedy_or to ensure that `parse_u32`
-        // isn't chosen over `parse_f32`.
-        greedy_or!(
-            string_literal(),
-            parse_i32(),
-            parse_u32(),
-            parse_f32(),
-            effect_timer(),
-            duration(),
-            motion(),
-            modifier(),
-            constraint(),
-            direction(),
-            layout(),
-            rect(),
-            offset(),
-            margin(),
-            color(),
-            repeat_mode(), // used by fx::repeat
-            style(),
-            array_ref(), // e.g. &[fx1, fx2, fx3]
-            array(),     // e.g. [1, 2, 3]
-            container_effect(),
-            option(),
-            cell_filter(),
-            effect(),
-            fn_call().map(|call| Expr::FnCall { call, self_fns: Vec::default() }),
-            var(),
-            let_binding(),
-        )
-    }
-}
-
-fn arguments<'a>() -> impl StrParser<'a, Vec<Expr>> {
-    many_to_vec(argument(), true, separator(trim(","), true))
-}
-
 fn style<'a>() -> impl StrParser<'a, Expr> {
     let constructor = or!(
         right!(trim("Style::"), or!(
@@ -315,7 +303,7 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
 }
 
 fn snake_case_str<'a>() -> impl StrParser<'a, &'a str> {
-    many(item_if(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')), false, no_separator())
+    not_empty(item_while(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')))
         .map_if(|s: &str| if s.starts_with(|c| matches!(c, 'a'..='z')) { Some(s) } else { None })
 }
 
@@ -327,11 +315,7 @@ fn fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
 }
 
 fn self_fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
-    right!(
-        skip_whitespace(),
-        skip!("."),
-        fn_call()
-    )
+    right!(trim_to("."), fn_call())
 }
 
 fn chained_fn_calls<'a>() -> impl StrParser<'a, Vec<FnCallInfo>> {

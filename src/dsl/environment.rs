@@ -1,10 +1,10 @@
+use crate::dsl::expressions::Expr;
+use crate::dsl::DslError;
+use compact_str::{CompactString, ToCompactString};
 use std::any::{type_name, Any};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
-use compact_str::{CompactString, ToCompactString};
-use crate::dsl::DslError;
-use crate::dsl::expressions::{Expr, FnCallInfo};
 
 pub(super) struct DslEnv {
     globals: BTreeMap<CompactString, Box<dyn Any>>,

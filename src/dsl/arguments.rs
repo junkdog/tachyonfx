@@ -305,6 +305,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an `Option<T>`.
+    #[allow(private_bounds)]
     pub fn option<T: Clone + FromDslExpr + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
@@ -458,6 +459,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `Vec<T>`.
+    #[allow(private_bounds)]
     pub fn array<T: Clone + FromDslExpr + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
@@ -567,9 +569,7 @@ impl fmt::Display for Arguments<'_> {
 
 /// An internal trait for types that can be compiled from let
 /// expressions in the DSL.
-#[allow(private_bounds)]
-pub(super) trait FromDslExpr
-where Self: Sized {
+pub(super) trait FromDslExpr where Self: Sized {
     /// Attempts to compile a value of type `Self` from a let expression.
     ///
     /// # Arguments
@@ -811,7 +811,6 @@ mod tests {
 
     #[test]
     fn test_color_parsing() {
-        let dsl = EffectDsl::new();
         let env = DslEnv::new();
 
         let expr = parse_expr("Color::Rgb(1, 2, 3)");

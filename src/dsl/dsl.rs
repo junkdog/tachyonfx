@@ -1,14 +1,14 @@
 use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
-use crate::dsl::expressions::{Expr, Value};
+use crate::dsl::expressions::Expr;
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
+use compact_str::CompactString;
 use std::fmt;
 use std::fmt::Formatter;
-use compact_str::CompactString;
 
 /// A compiler and registry for tachyonfx effect DSL expressions.
 ///
@@ -854,6 +854,7 @@ mod tests {
         assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
     }
 
+    #[test]
     fn error_unknown_effect() {
         let input = r#"fx::nonexistent()"#;
         let ctx = EffectDsl::new();

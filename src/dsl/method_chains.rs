@@ -1,10 +1,9 @@
-use compact_str::CompactString;
-use ratatui::layout::{Layout, Rect};
-use ratatui::style::Style;
-use crate::dsl::{Arguments, DslError, EffectDsl};
 use crate::dsl::environment::DslEnv;
 use crate::dsl::expressions::FnCallInfo;
+use crate::dsl::{Arguments, DslError, EffectDsl};
 use crate::Effect;
+use ratatui::layout::{Layout, Rect};
+use ratatui::style::Style;
 
 /// A trait for types that support method chaining in the tachyonfx DSL.
 ///
