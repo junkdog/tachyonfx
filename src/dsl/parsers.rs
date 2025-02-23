@@ -1091,25 +1091,6 @@ mod tests {
         );
     }
 
-    // #[test]
-    fn test_layout_filter() {
-        todo!("Layout filter is not yet implemented");
-        // let layout = Layout::default()
-        //     .direction(Direction::Vertical)
-        //     .constraints([Constraint::Length(1), Constraint::Min(0)]);
-        //
-        // assert_cell_filter_eq(
-        //     "Layout(Layout::vertical([Length(1), Min(0)]), 1)",
-        //     Expr::CellFilter {
-        //         filter_type: "Layout",
-        //         arguments: vec![
-        //             Expr::Literal(Value::Layout(layout)),
-        //             Expr::Literal(Value::U32(1))
-        //         ]
-        //     }
-        // );
-    }
-
     #[test]
     fn test_compound_filters() {
         // Test AllOf
