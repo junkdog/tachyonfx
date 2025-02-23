@@ -127,7 +127,7 @@ mod tests {
         assert_eq!(format!("{result:?}"), format!("{expected:?}"));
     }
 
-    // #[test] ignored for now
+    #[test]
     fn test_expr_to_dsl() {
         let input = "fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear))";
         let result = EffectExpression::parse(input).unwrap();

@@ -815,7 +815,7 @@ mod tests {
             .compile(r#"
                 let reversed = base.reversed();
                 let filtered = reversed
-                        .with_filter(CellFilter::Not(Box::new(CellFilter::Text)));
+                    .with_filter(CellFilter::Not(Box::new(CellFilter::Text)));
 
                 fx::sequence(&[base.clone(), reversed, filtered])
             "#)

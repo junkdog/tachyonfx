@@ -305,7 +305,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an `Option<T>`.
-    pub fn option<T: Clone + FromArgs + 'static>(
+    pub fn option<T: Clone + FromDslExpr + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Option<T>, DslError> {
@@ -458,7 +458,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `Vec<T>`.
-    pub fn array<T: Clone + FromArgs + 'static>(
+    pub fn array<T: Clone + FromDslExpr + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
@@ -488,14 +488,14 @@ impl<'dsl> Arguments<'dsl> {
         self.context.compile(self.vars, [expr].into())
     }
 
-    fn bound_var<T: Clone + FromArgs + 'static>(
+    fn bound_var<T: Clone + FromDslExpr + 'static>(
         &self,
         name: impl Into<CompactString>,
     ) -> Result<T, DslError> {
         let name = name.into();
         if let Some(expr) = self.vars.let_expr(name.as_str()) {
             let mut args = Arguments::new([expr].into(), self.context, self.vars);
-            Ok(FromArgs::from_expr(&mut args)?)
+            Ok(FromDslExpr::from_expr(&mut args)?)
         } else {
             self.vars.bound_var(name.as_str())
         }
@@ -565,27 +565,41 @@ impl fmt::Display for Arguments<'_> {
     }
 }
 
-pub(super) trait FromArgs where Self: Sized {
+/// An internal trait for types that can be compiled from let
+/// expressions in the DSL.
+#[allow(private_bounds)]
+pub(super) trait FromDslExpr
+where Self: Sized {
+    /// Attempts to compile a value of type `Self` from a let expression.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - The argument parser containing the expression to convert
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Self)` - The successfully compiled value
+    /// * `Err(DslError)` - If the compilation fails or the expression type doesn't match
     fn from_expr(
         args: &mut Arguments<'_>,
     ) -> Result<Self, DslError>;
 }
 
-impl<T: Clone + FromArgs + 'static> FromArgs for Option<T> {
+impl<T: Clone + FromDslExpr + 'static> FromDslExpr for Option<T> {
     fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
-        args.option(FromArgs::from_expr)
+        args.option(FromDslExpr::from_expr)
     }
 }
 
-impl<T: Clone + FromArgs + 'static> FromArgs for Vec<T> {
+impl<T: Clone + FromDslExpr + 'static> FromDslExpr for Vec<T> {
     fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
-        args.array(FromArgs::from_expr)
+        args.array(FromDslExpr::from_expr)
     }
 }
 
-impl FromArgs for [f32; 3] {
+impl FromDslExpr for [f32; 3] {
     fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
-        args.array(FromArgs::from_expr)
+        args.array(FromDslExpr::from_expr)
             .map(|v| {
                 let mut arr = [0.0; 3];
                 arr.copy_from_slice(&v);
@@ -597,7 +611,7 @@ impl FromArgs for [f32; 3] {
 #[macro_export]
 macro_rules! impl_from_args {
     ($type:ty, $method:ident) => {
-        impl FromArgs for $type {
+        impl FromDslExpr for $type {
             fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
                 args.$method()
             }

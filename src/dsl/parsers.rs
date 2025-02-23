@@ -1,18 +1,19 @@
 use crate::dsl::expressions::{Expr, FnCallInfo, Value};
 use crate::dsl::DslError;
 use crate::fx::RepeatMode;
-use crate::{CellFilter, Interpolation, Motion};
+use crate::{CellFilter, EffectTimer, Interpolation, Motion};
 use anpa::combinators::{attempt, many, many_to_vec, middle, no_separator, or_diff, right, separator, succeed, times};
 use anpa::core::parse;
 use anpa::core::{ParserExt, StrParser};
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while};
 use anpa::whitespace::skip_whitespace;
-use anpa::{defer_parser, greedy_or, left, or, right, skip, take, tuplify};
+use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
 use compact_str::{format_compact, CompactString, ToCompactString};
-use ratatui::layout::Direction;
+use ratatui::layout::{Constraint, Direction, Margin, Rect};
 use ratatui::prelude::Style;
 use ratatui::style::{Color, Modifier};
+use std::ops::Neg;
 
 pub(super) fn parse_expr(
     input: &str,
@@ -90,10 +91,10 @@ fn container_effect<'a>() -> impl StrParser<'a, Expr> {
         name,
         args,
         chained_fn_calls()
-    ).map(|(name, args, self_fns)| match name {
-        "sequence" => Expr::Sequence { effects: args, self_fns },
-        "parallel" => Expr::Parallel { effects: args, self_fns },
-        _ => unreachable!()
+    ).map(|(name, effects, self_fns)| match name {
+        "sequence" => Expr::Sequence { effects, self_fns },
+        "parallel" => Expr::Parallel { effects, self_fns },
+        _ => unreachable!("already confirmed name is either sequence or parallel")
     })
 }
 
@@ -104,10 +105,9 @@ fn string_literal<'a>() -> impl StrParser<'a, Expr> {
     let not_end = or_diff(valid_char, escaped);
 
     middle(skip!('"'), many(not_end, true, no_separator()), skip!('"'))
-        .map(|s: &str| s.to_compact_string())
-        .map(|s: CompactString| s.replace("\\\"", "\""))
-        .map(|s| Value::String(s.to_compact_string()))
-        .map(Expr::Literal)
+        .map(|s: &str| s.replace("\\\"", "\""))
+        .map(|s| s.to_compact_string())
+        .map(IntoLiteral::into_literal)
 }
 
 fn array_ref<'a>() -> impl StrParser<'a, Expr> {
@@ -163,8 +163,8 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     );
 
     // Basic filters
-    let all = cf("All").map(|_| Expr::Literal(Value::CellFilter(CellFilter::All)));
-    let text = cf("Text").map(|_| Expr::Literal(Value::CellFilter(CellFilter::Text)));
+    let all = cf("All").map(|_| CellFilter::All.into_literal());
+    let text = cf("Text").map(|_| CellFilter::Text.into_literal());
 
     // Layout filter
     let layout = middle(
@@ -180,12 +180,12 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     });
 
     // Color filters
-    let fg_color = middle(cf("FgColor("), or!(color(), var()), trim(")"))
+    let fg_color = middle(cf("FgColor("), argument(), trim(")"))
         .map(|color| Expr::CellFilter {
             filter_type: "FgColor",
             arguments: vec![color]
         });
-    let bg_color = middle(cf("BgColor("), or!(color(), var()), trim(")"))
+    let bg_color = middle(cf("BgColor("), argument(), trim(")"))
         .map(|color| Expr::CellFilter {
             filter_type: "BgColor",
             arguments: vec![color]
@@ -205,27 +205,27 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
 
     // Compound filters
     let all_of = middle(
-        cf("AllOf(vec!["),
-        many_to_vec(argument(), true, separator(trim(","), true)),
-        trim("])")
+        right!(cf("AllOf("), trim("vec![")),
+        arguments(),
+        right!(trim("]"), trim(")"))
     ).map(|filters| Expr::CellFilter {
         filter_type: "AllOf",
         arguments: filters
     });
 
     let any_of = middle(
-        cf("AnyOf(vec!["),
-        many_to_vec(argument(), true, separator(trim(","), true)),
-        trim("])")
+        right!(cf("AnyOf("), trim("vec![")),
+        arguments(),
+        right!(trim("]"), trim(")"))
     ).map(|filters| Expr::CellFilter {
         filter_type: "AnyOf",
         arguments: filters
     });
 
     let none_of = middle(
-        cf("NoneOf(vec!["),
-        many_to_vec(argument(), true, separator(trim(","), true)),
-        trim("])")
+        right!(cf("NoneOf("), trim("vec![")),
+        arguments(),
+        right!(trim("]"), trim(")"))
     ).map(|filters| Expr::CellFilter {
         filter_type: "NoneOf",
         arguments: filters
@@ -234,7 +234,7 @@ fn cell_filter<'a>() -> impl StrParser<'a, Expr> {
     let not = middle(
         right!(cf("Not("), trim("Box::new(")),
         argument(),
-        trim("))")
+        right!(trim(")"), trim(")")),
     ).map(|filter| Expr::CellFilter {
         filter_type: "Not",
         arguments: vec![filter]
@@ -352,7 +352,7 @@ fn modifier<'a>() -> impl StrParser<'a, Expr> {
             skip!("HIDDEN").map(|_| Modifier::HIDDEN),
             skip!("CROSSED_OUT").map(|_| Modifier::CROSSED_OUT)
         )
-    ).map(Value::Modifier).map(Expr::Literal)
+    ).map(IntoLiteral::into_literal)
 }
 
 fn constraint<'a>() -> impl StrParser<'a, Expr> {
@@ -392,7 +392,7 @@ fn direction<'a>() -> impl StrParser<'a, Expr> {
             skip!("Horizontal").map(|_| Direction::Horizontal),
             skip!("Vertical").map(|_| Direction::Vertical),
         )
-    ).map(Value::Direction).map(Expr::Literal)
+    ).map(IntoLiteral::into_literal)
 }
 
 fn layout<'a>() -> impl StrParser<'a, Expr> {
@@ -432,20 +432,18 @@ fn parse_u32<'a>() -> impl StrParser<'a, Expr> {
 
     or!(
         right!(skip_whitespace(), or!(hexadecimal, plain))
-            .map(Value::U32)
-            .map(Expr::Literal),
+            .map(IntoLiteral::into_literal),
         var()
     )
 }
 
 fn parse_i32<'a>() -> impl StrParser<'a, Expr> {
     let plain = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator())
-        .map_if(|s: &str| s.parse().ok());
+        .map_if(|s: &str| s.parse::<i32>().map(|v| v.neg()).ok());
 
     or!(
         right!(skip_whitespace(), trim("-"), plain)
-            .map(Value::I32)
-            .map(Expr::Literal),
+            .map(IntoLiteral::into_literal),
         var()
     )
 }
@@ -459,7 +457,7 @@ fn parse_f32<'a>() -> impl StrParser<'a, Expr> {
 
 fn repeat_mode<'a>() -> impl StrParser<'a, Expr> {
     let forever = skip!("RepeatMode::Forever")
-        .map(|_| Expr::Literal(Value::RepeatMode(RepeatMode::Forever)));
+        .map(|_| RepeatMode::Forever.into_literal());
 
     let times = middle(
         trim("RepeatMode::Times("),
@@ -483,7 +481,7 @@ fn effect_timer<'a>() -> impl StrParser<'a, Expr> {
     let from_u32 = parse_u32()
         .map(|ms| fn_call_expr(
             "EffectTimer::from_ms",
-            vec![ms, Expr::Literal(Value::Interpolation(Interpolation::Linear))]
+            vec![ms, Interpolation::Linear.into_literal()]
         ));
 
     let into_duration = or!(
@@ -608,7 +606,7 @@ fn motion<'a>() -> impl StrParser<'a, Expr> {
         "LeftToRight" => Some(Motion::LeftToRight),
         "RightToLeft" => Some(Motion::RightToLeft),
         _             => None,
-    }).map(|motion| Expr::Literal(Value::Motion(motion)));
+    }).map(IntoLiteral::into_literal);
 
     or!(literal, var())
 }
@@ -662,7 +660,7 @@ fn color<'a>() -> impl StrParser<'a, Expr> {
         "LightCyan"    => Some(Color::LightCyan),
         "White"        => Some(Color::White),
         _              => None
-    }).map(|c| Expr::Literal(Value::Color(c)));
+    }).map(IntoLiteral::into_literal);
 
     or!(from_u32, literal, rgb, indexed)
 }
@@ -705,7 +703,7 @@ fn interpolation<'a>() -> impl StrParser<'a, Expr> {
         "SineOut"      => Some(Interpolation::SineOut),
         "SineInOut"    => Some(Interpolation::SineInOut),
         _              => None
-    }).map(|interpolation| Expr::Literal(Value::Interpolation(interpolation)))
+    }).map(IntoLiteral::into_literal)
 }
 
 fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
@@ -715,6 +713,50 @@ fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
 fn fn_call_chained_expr(name: &str, args: Vec<Expr>, self_fns: Vec<FnCallInfo>) -> Expr {
     Expr::FnCall { call: FnCallInfo::new(name, args), self_fns: self_fns.into() }
 }
+
+trait IntoLiteral {
+    fn into_literal(self) -> Expr;
+}
+
+#[macro_export]
+macro_rules! impl_into_literal {
+    // single type implementation
+    ($type:ty => $variant:ident) => {
+        impl IntoLiteral for $type {
+            fn into_literal(self) -> Expr {
+                Expr::Literal(Value::$variant(self))
+            }
+        }
+    };
+
+    // multiple types implementation
+    ($($type:ty => $variant:ident),+ $(,)?) => {
+        $(
+            impl_into_literal!($type => $variant);
+        )+
+    };
+}
+
+impl_into_literal! {
+    CellFilter      => CellFilter,
+    Color           => Color,
+    Constraint      => Constraint,
+    Direction       => Direction,
+    Style           => Style,
+    CompactString   => String,
+    i32             => I32,
+    u32             => U32,
+    f32             => F32,
+    crate::Duration => Duration,
+    EffectTimer     => Timer,
+    Modifier        => Modifier,
+    Motion          => Motion,
+    Rect            => Rect,
+    Margin          => Margin,
+    RepeatMode      => RepeatMode,
+    Interpolation   => Interpolation,
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -915,15 +957,6 @@ mod tests {
             result,
             fn_call_expr("foo", vec![literal(Value::String("bar".into()))])
         );
-
-        // let input = ".bar(10)";
-        // assert_expr_eq(
-        //     parse(super::self_fn_call().map(Expr::SelfFnCall), input),
-        //     Expr::SelfFnCall(FnCallInfo {
-        //         name: "bar".to_compact_string(),
-        //         args: vec![literal(Value::U32(10))]
-        //     })
-        // );
     }
 
     #[test]
