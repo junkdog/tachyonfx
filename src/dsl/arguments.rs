@@ -174,7 +174,7 @@ impl<'dsl> Arguments<'dsl> {
             }),
             Expr::Literal(Value::Constraint(c)) => Ok(c),
             Expr::Var { name, self_fns: _ }     => self.bound_var(name),
-            e               => self.expected_type("constraint", e.type_name().into()),
+            e   => self.expected_type("constraint", e.type_name().into()),
         }
     }
 

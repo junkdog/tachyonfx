@@ -5,8 +5,8 @@ use crate::{CellFilter, EffectTimer, Interpolation, Motion};
 use anpa::combinators::*;
 use anpa::core::{parse, ParserExt, StrParser};
 use anpa::number::float;
-use anpa::parsers::{item_if, item_while};
-use anpa::whitespace::skip_whitespace;
+use anpa::parsers::{item_if, item_while, until};
+use anpa::whitespace::{skip_whitespace, whitespace};
 use anpa::{defer_parser, greedy_or, or, right, skip, take, tuplify};
 use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::layout::{Constraint, Direction, Margin, Rect};
@@ -70,12 +70,12 @@ fn arguments<'a>() -> impl StrParser<'a, Vec<Expr>> {
     many_to_vec(argument(), true, separator(trim(","), true))
 }
 
-fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
-    right!(skip_whitespace(), skip!(prefix), skip_whitespace())
+fn trim_to<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
+    right!(skip_comments_and_whitespace(), skip!(prefix))
 }
 
-fn trim_to<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
-    right!(skip_whitespace(), skip!(prefix))
+fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
+    right!(trim_to(prefix), skip_comments_and_whitespace())
 }
 
 fn effect<'a>() -> impl StrParser<'a, Expr> {
@@ -137,6 +137,20 @@ fn string_literal<'a>() -> impl StrParser<'a, Expr> {
         .map(|s: &str| s.replace("\\\"", "\""))
         .map(|s| s.to_compact_string())
         .map(IntoLiteral::into_literal)
+}
+
+fn skip_comments_and_whitespace<'a>() -> impl StrParser<'a, ()> {
+    let line_comment = right!(skip!("//"), item_while(|c: char| c != '\n'));
+    let block_comment = right!(skip!("/*"), until("*/"));
+
+    let parsers = or!(
+        line_comment.map(|_| ()),
+        block_comment.map(|_| ()),
+        not_empty(whitespace()).map(|_| ())
+    );
+
+    many(parsers, true, no_separator())
+        .map(|_| ())
 }
 
 fn array_ref<'a>() -> impl StrParser<'a, Expr> {
@@ -1211,6 +1225,32 @@ mod tests {
                 literal(Value::U32(30)),
                 literal(Value::U32(40))
             ])
+        );
+    }
+
+    #[test]
+    fn comments_are_discarded_by_parser() {
+        let result = parse(super::argument(), r#"
+            // This is a comment
+            Color::from_u32(0x1d2021) // yolo
+            // also a comment
+        "#);
+        assert_eq!(result.state, "", "Expected parser to consume the entire input");
+        assert_eq!(
+            result.result,
+            Some(fn_call_expr("Color::from_u32", vec![literal(Value::U32(0x1d2021))]))
+        );
+
+        let result = parse(super::argument(), r#"
+            // header comment
+            /* foo */ /*bar*/ Duration::from_millis( /* 1st */ 1000 /* ms */) // yolo
+            // trailing comment
+        "#);
+
+        assert_eq!(result.state, "", "Expected parser to consume the entire input");
+        assert_eq!(
+            result.result,
+            Some(fn_call_expr("Duration::from_millis", vec![literal(Value::U32(1000))]))
         );
     }
 
