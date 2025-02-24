@@ -1243,6 +1243,10 @@ mod tests {
 
         let result = parse(super::argument(), r#"
             // header comment
+            /*
+             * multi-line comment;
+             * spanning two (4?) lines
+             */
             /* foo */ /*bar*/ Duration::from_millis( /* 1st */ 1000 /* ms */) // yolo
             // trailing comment
         "#);
