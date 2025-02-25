@@ -3,7 +3,6 @@ use crate::fx::RepeatMode;
 use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
 use ratatui::layout::{Constraint, Direction, Margin, Rect};
 use ratatui::prelude::{Color, Modifier, Style};
-use crate::color_ext::ToRgbComponents;
 use crate::dsl::DslFormat;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -40,8 +39,6 @@ pub(super) enum Expr {
         arguments: Vec<Expr>,
         self_fns: Vec<FnCallInfo>,
     },
-    InvalidExpr { remaining: String },
-    ParserError(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -88,7 +85,7 @@ impl Expr {
         match self {
             Expr::Var { .. }         => "variable",
             Expr::Fx { .. }          => "effect",
-            Expr::Literal(_)         => "literal",
+            Expr::Literal(v)         => v.type_name(),
             Expr::ArrayRef(_)        => "array_ref",
             Expr::Array(_)           => "array_ref",
             Expr::CellFilter { .. }  => "cell_filter",
@@ -97,8 +94,6 @@ impl Expr {
             Expr::Style(_)           => "style",
             Expr::OptionSome(_)      => "some",
             Expr::FnCall { .. }      => "fn_call",
-            Expr::InvalidExpr { .. } => "invalid",
-            Expr::ParserError(_)     => "parser_error",
             Expr::Layout { .. }      => "layout",
             Expr::LetBinding { .. }  => "let_binding",
         }
@@ -111,8 +106,7 @@ impl Expr {
         let formatted_args = |args: &[Expr]| args.iter()
             .map(|e| e.format(indent + 4, args.len() > 1))
             .collect::<Vec<_>>()
-            // .join_compact(",\n");
-            .join(",\n");
+            .join_compact(",\n");
 
         let chained_fns = |self_fns: &[FnCallInfo]| self_fns.iter()
             .map(|fn_call| {
@@ -189,8 +183,6 @@ impl Expr {
                 format_compact!("{}Style::new(){}", indent_str, inner)
             }
             Expr::OptionSome(v) => format_compact!("{}Some({})", indent_str, v.format(indent, false)),
-            Expr::InvalidExpr { remaining: input } => format_compact!("{}// Invalid expression: {}", indent_str, input),
-            Expr::ParserError(message) => format_compact!("{}// Parser error: {}", indent_str, message), // ?
             Expr::Layout { .. } => "layout(todo)".to_compact_string()
         }
     }
@@ -199,35 +191,47 @@ impl Expr {
 impl Value {
     pub(super) fn format(&self) -> CompactString {
         match self {
-            Value::Color(c) => {
-                let (r, g, b) = c.to_rgb();
-                format_compact!("Color::from_u32(0x{:02x}{:02x}{:02x})", r, g, b)
-            }
-            Value::Duration(d)   => format_compact!("Duration::from_millis({})", d.as_millis()),
-            Value::Motion(m)     => format_compact!("{m:?}"),
-            Value::String(s)     => format_compact!("\"{}\"", s.replace('"', "\\\"")),
-            Value::U32(n)        => n.to_compact_string(),
-            Value::F32(f)        => f.to_compact_string(),
-            Value::I32(i)        => i.to_compact_string(),
-            Value::CellFilter(c) => c.format(),
-            Value::Style(s)      => s.dsl_format(),
-            Value::Timer(t)      => format_compact!(
-                "EffectTimer::from_millis({}, {:?})", t.duration().as_millis(), t.interpolation()),
-            Value::Rect(r) =>
-                format_compact!("Rect::new({}, {}, {}, {})", r.x, r.y, r.width, r.height),
-            Value::Margin(m) =>
-                format_compact!("Margin::new({}, {})", m.horizontal, m.vertical),
-            Value::RepeatMode(RepeatMode::Duration(d)) =>
-                format_compact!("RepeatMode::Duration(Duration::from_millis({}))", d.as_millis()),
-            Value::RepeatMode(RepeatMode::Times(n)) =>
-                format_compact!("RepeatMode::Times({})", n),
-            Value::RepeatMode(RepeatMode::Forever) =>
-                "RepeatMode::Forever".to_compact_string(),
-            Value::Interpolation(i) => format_compact!("{i:?}"),
-            Value::OptionNone => "None".to_compact_string(),
-            Value::Modifier(m) => m.dsl_format(),
-            Value::Constraint(c) => c.to_compact_string(),
-            Value::Direction(dir) => dir.to_compact_string(),
+            Value::Color(c)         => c.dsl_format(),
+            Value::Duration(d)      => d.dsl_format(),
+            Value::Motion(m)        => format_compact!("{m:?}"),
+            Value::String(s)        => format_compact!("\"{}\"", s.replace('"', "\\\"")),
+            Value::U32(n)           => n.to_compact_string(),
+            Value::F32(f)           => f.to_compact_string(),
+            Value::I32(i)           => i.to_compact_string(),
+            Value::CellFilter(c)    => c.dsl_format(),
+            Value::Style(s)         => s.dsl_format(),
+            Value::Timer(t)         => t.dsl_format(),
+            Value::Rect(r)          => r.dsl_format(),
+            Value::Margin(m)        => m.dsl_format(),
+            Value::RepeatMode(r)    => r.dsl_format(),
+            Value::Interpolation(i) => i.dsl_format(),
+            Value::OptionNone       => "None".to_compact_string(),
+            Value::Modifier(m)      => m.dsl_format(),
+            Value::Constraint(c)    => c.dsl_format(),
+            Value::Direction(dir)   => dir.dsl_format(),
+        }
+    }
+
+    fn type_name(&self) -> &'static str {
+        match self {
+            Value::CellFilter(_) => "cell_filter",
+            Value::Color(_)       => "color",
+            Value::Duration(_)    => "duration",
+            Value::Motion(_)      => "motion",
+            Value::String(_)      => "string",
+            Value::U32(_)         => "u32",
+            Value::F32(_)         => "f32",
+            Value::I32(_)         => "i32",
+            Value::Style(_)       => "style",
+            Value::Timer(_)       => "timer",
+            Value::Rect(_)        => "rect",
+            Value::Margin(_)      => "margin",
+            Value::RepeatMode(_)  => "repeat_mode",
+            Value::Interpolation(_)=> "interpolation",
+            Value::OptionNone     => "option",
+            Value::Modifier(_)     => "modifier",
+            Value::Constraint(_)  => "constraint",
+            Value::Direction(_)   => "direction",
         }
     }
 }

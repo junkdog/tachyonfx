@@ -121,7 +121,7 @@ mod tests {
                      Color::from_u32(0),
                      EffectTimer::from_ms(
                          1000,
-                         QuadOut
+                         Interpolation::QuadOut
                      )
                  )"
             }
@@ -146,7 +146,7 @@ mod tests {
                      Color::from_u32(0),
                      EffectTimer::from_ms(
                          1000,
-                         QuadOut
+                         Interpolation::QuadOut
                      )
                  )"
             }
@@ -167,7 +167,7 @@ mod tests {
                      Color::from_u32(0),
                      EffectTimer::from_ms(
                          1000,
-                         QuadOut
+                         Interpolation::QuadOut
                      )
                  )"
             }
@@ -192,7 +192,7 @@ mod tests {
                      Color::from_u32(0),
                      EffectTimer::from_ms(
                          1000,
-                         QuadOut
+                         Interpolation::QuadOut
                      )
                  )"
             }

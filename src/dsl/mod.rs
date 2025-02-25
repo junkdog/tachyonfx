@@ -173,23 +173,23 @@ mod tests {
             "fx::sequence(&[
                 fx::dissolve(EffectTimer::from_ms(
                     100,
-                    Linear
+                    Interpolation::Linear
                 )),
                 fx::parallel(&[
                     fx::dissolve(EffectTimer::from_ms(
                         200,
-                        Linear
+                        Interpolation::Linear
                     )),
                     fx::dissolve(EffectTimer::from_ms(
                         300,
-                        Linear
+                        Interpolation::Linear
                     )),
                     fx::sleep(400)
                 ]),
                 fx::repeat(
                     fx::dissolve(EffectTimer::from_ms(
                         500,
-                        Linear
+                        Interpolation::Linear
                     )),
                     RepeatMode::Forever
                 )

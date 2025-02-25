@@ -55,16 +55,6 @@ impl<'dsl> Arguments<'dsl> {
         Self { args, vars, context, initial_arg_count }
     }
 
-    pub(super) fn extract_with<T>(
-        args: Vec<Expr>,
-        context: &'dsl EffectDsl,
-        vars: &'dsl DslEnv,
-        get: impl Fn(&mut Self) -> Result<T, DslError>
-    ) -> Result<T, DslError> {
-        let mut args = Self::new(args.into(), context, vars);
-        get(&mut args)
-    }
-
     pub(super) fn remaining_args(&self) -> &VecDeque<Expr> {
         &self.args
     }
@@ -140,8 +130,8 @@ impl<'dsl> Arguments<'dsl> {
                     "NoneOf"     => Ok(CellFilter::NoneOf(args.array(Arguments::cell_filter)?)),
                     "Not"        => Ok(CellFilter::Not(Box::new(args.cell_filter()?))),
                     "Layout"     => Ok(CellFilter::Layout(args.layout()?, args.read_u16()?)),
-                    "PositionFn" => Ok(CellFilter::PositionFn(todo!("fn"))),
-                    "EvalCell"   => Ok(CellFilter::EvalCell(todo!("fn"))),
+                    "PositionFn" => Ok(CellFilter::PositionFn(args.any_var()?)),
+                    "EvalCell"   => Ok(CellFilter::EvalCell(args.any_var()?)),
                     _            => Err(DslError::UnknownCellFilter {
                         name: filter_type.to_compact_string(),
                     })?,
@@ -150,6 +140,16 @@ impl<'dsl> Arguments<'dsl> {
             Expr::Literal(Value::CellFilter(f)) => Ok(f),
             Expr::Var { name, self_fns: _ }     => self.bound_var(name),
             e                                   => self.expected_type_expr("cell_filter", e),
+        }
+    }
+
+    /// Consumes the next argument and returns a [`T`].
+    pub fn any_var<T: Clone + 'static>(
+        &mut self,
+    ) -> Result<T, DslError> {
+        match self.next("var")? {
+            Expr::Var { name, self_fns: _ } => self.vars.bound_var(name),
+            e                               => self.expected_type_expr("var", e),
         }
     }
 
@@ -804,25 +804,13 @@ mod tests {
         assert_eq!(args.string(), Err(DslError::WrongArgumentType {
             position: 1,
             expected: "string",
-            actual: "literal".to_compact_string(), // fixme: should be u32?
+            actual: "u32".into()
         }));
         assert_eq!(args.string(), Ok("world".to_compact_string()));
     }
 
     #[test]
     fn test_color_parsing() {
-        let env = DslEnv::new();
-
-        let expr = parse_expr("Color::Rgb(1, 2, 3)");
-        let color = Arguments::extract_with(vec![expr], &EffectDsl::new(), &env, Arguments::color)
-            .expect("expected color");
-        assert_eq!(color, Color::Rgb(1, 2, 3));
-
-        let expr = parse_expr("Color::from_u32(0xffaabb)");
-        let color = Arguments::extract_with(vec![expr], &EffectDsl::new(), &env, Arguments::color)
-            .expect("expected color");
-        assert_eq!(color, Color::from_u32(0xffaabb));
-
         let mut args = prepare_test(vec![
             Expr::Literal(Value::Color(Color::Red)),
             Expr::Literal(Value::Color(Color::Blue)),

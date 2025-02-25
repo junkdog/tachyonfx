@@ -138,7 +138,7 @@ mod tests {
             "fx::prolong_start(
                  EffectTimer::from_ms(
                      100,
-                     Linear
+                     Interpolation::Linear
                  ),
                  fx::consume_tick()
              )"
@@ -156,7 +156,7 @@ mod tests {
             "fx::prolong_end(
                  EffectTimer::from_ms(
                      100,
-                     Linear
+                     Interpolation::Linear
                  ),
                  fx::consume_tick()
              )"

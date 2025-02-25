@@ -207,7 +207,7 @@ mod tests {
                  Color::from_u32(0),
                  EffectTimer::from_ms(
                      1000,
-                     Linear
+                     Interpolation::Linear
                  )
              )"
         });
@@ -232,7 +232,7 @@ mod tests {
                  Color::from_u32(0),
                  EffectTimer::from_ms(
                      1000,
-                     Linear
+                     Interpolation::Linear
                  )
              )"
         });

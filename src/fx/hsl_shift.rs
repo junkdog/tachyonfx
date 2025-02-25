@@ -145,7 +145,7 @@ mod tests {
                 ]),
                 EffectTimer::new(
                     Duration::from_millis(1000),
-                    Linear
+                    Interpolation::Linear
                 )
             )"
         });

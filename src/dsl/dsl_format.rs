@@ -1,8 +1,8 @@
-use compact_str::{format_compact, CompactString, ToCompactString};
-use ratatui::style::{Color, Modifier, Style};
 use crate::fx::RepeatMode;
-use crate::{Duration, EffectTimer, Interpolation, Motion};
-use crate::color_ext::ToRgbComponents;
+use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
+use compact_str::{format_compact, CompactString, CompactStringExt, ToCompactString};
+use ratatui::layout::{Constraint, Direction, Margin, Rect};
+use ratatui::style::{Color, Modifier, Style};
 
 /// A trait for converting types into their DSL (Domain Specific Language) string representation.
 ///
@@ -47,15 +47,20 @@ impl DslFormat for Color {
     }
 }
 
+impl DslFormat for Rect {
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("Rect::new({}, {}, {}, {})",
+            self.x, self.y, self.width, self.height
+        )
+    }
+}
+
 impl DslFormat for RepeatMode {
     fn dsl_format(&self) -> CompactString {
         match self {
-            RepeatMode::Forever =>
-                "RepeatMode::Forever".to_compact_string(),
-            RepeatMode::Times(n) =>
-                format_compact!("RepeatMode::Times({})", n),
-            RepeatMode::Duration(d) =>
-                format_compact!("RepeatMode::Duration(Duration::from_millis({}))", d.as_millis()),
+            RepeatMode::Forever     => "RepeatMode::Forever".to_compact_string(),
+            RepeatMode::Times(n)    => format_compact!("RepeatMode::Times({n})"),
+            RepeatMode::Duration(d) => format_compact!("RepeatMode::Duration({})", d.dsl_format()),
         }
     }
 }
@@ -63,11 +68,11 @@ impl DslFormat for RepeatMode {
 impl DslFormat for Motion {
     fn dsl_format(&self) -> CompactString {
         match self {
-            Motion::LeftToRight => "Motion::LeftToRight".to_compact_string(),
-            Motion::RightToLeft => "Motion::RightToLeft".to_compact_string(),
-            Motion::UpToDown    => "Motion::UpToDown".to_compact_string(),
-            Motion::DownToUp    => "Motion::DownToUp".to_compact_string(),
-        }
+            Motion::LeftToRight => "Motion::LeftToRight",
+            Motion::RightToLeft => "Motion::RightToLeft",
+            Motion::UpToDown    => "Motion::UpToDown",
+            Motion::DownToUp    => "Motion::DownToUp",
+        }.to_compact_string()
     }
 }
 
@@ -152,6 +157,66 @@ impl DslFormat for EffectTimer {
 impl DslFormat for Duration {
     fn dsl_format(&self) -> CompactString {
         format_compact!("Duration::from_millis({})", self.as_millis())
+    }
+}
+
+impl DslFormat for Constraint {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            Constraint::Length(n) => format_compact!("Constraint::Length({n})"),
+            Constraint::Percentage(n) => format_compact!("Constraint::Percentage({n})"),
+            Constraint::Ratio(num, den) => format_compact!("Constraint::Ratio({num}, {den})"),
+            Constraint::Min(n) => format_compact!("Constraint::Min({n})"),
+            Constraint::Max(n) => format_compact!("Constraint::Max({n})"),
+            Constraint::Fill(n) => format_compact!("Constraint::Fill({n})"),
+        }
+    }
+}
+
+impl DslFormat for Direction {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            Direction::Horizontal => "Direction::Horizontal",
+            Direction::Vertical => "Direction::Vertical",
+        }.to_compact_string()
+    }
+}
+
+impl DslFormat for Margin {
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("Margin::new({}, {})", self.horizontal, self.vertical)
+    }
+}
+
+impl DslFormat for CellFilter {
+    fn dsl_format(&self) -> CompactString {
+        use std::borrow::Borrow;
+
+        fn format(filters: &[CellFilter]) -> CompactString {
+            filters.iter()
+                .map(CellFilter::to_string)
+                .collect::<Vec<String>>()
+                .join_compact(", ")
+        }
+
+        match self {
+            CellFilter::All             => "All".to_compact_string(),
+            CellFilter::FgColor(color)  => format_compact!("CellFilter::FgColor({})", color.dsl_format()),
+            CellFilter::BgColor(color)  => format_compact!("CellFilter::BgColor({})", color.dsl_format()),
+            CellFilter::Inner(m)        => format_compact!("CellFilter::Inner({})", m.dsl_format()),
+            CellFilter::Outer(m)        => format_compact!("CellFilter::Outer({})", m.dsl_format()),
+            CellFilter::Text            => "Text".to_compact_string(),
+            CellFilter::AllOf(filters)  => format_compact!("CellFilter::AllOf({})", format(filters)),
+            CellFilter::AnyOf(filters)  => format_compact!("CellFilter::AnyOf({})", format(filters)),
+            CellFilter::NoneOf(filters) => format_compact!("CellFilter::NoneOf({})", format(filters)),
+            CellFilter::Not(filter)     => {
+                let f: &CellFilter = filter.borrow();
+                format_compact!("Not(Box::new({}))", f.dsl_format())
+            },
+            CellFilter::Layout(l, idx)  => format_compact!("CellFilter::Layout({l:#?}, {idx})"),
+            CellFilter::PositionFn(_)   => "CellFilter::PositionFn(fn)".to_compact_string(),
+            CellFilter::EvalCell(_)     => "CellFilter::EvalCell(fn)".to_compact_string(),
+        }
     }
 }
 
@@ -403,9 +468,47 @@ mod tests {
     }
 
     #[test]
-    fn test_roundtrip_format_parse() {
-        // Test round-trip formatting and parsing for various types
-        // This requires access to the DSL parsing functionality which would be tested separately
-        // This is a placeholder for future implementation
+    fn test_constraint_dsl_format() {
+        use ratatui::layout::Constraint;
+
+        // Test all constraint types
+        assert_eq!(
+            Constraint::Length(10).dsl_format(),
+            "Constraint::Length(10)"
+        );
+        assert_eq!(
+            Constraint::Percentage(50).dsl_format(),
+            "Constraint::Percentage(50)"
+        );
+        assert_eq!(
+            Constraint::Ratio(1, 3).dsl_format(),
+            "Constraint::Ratio(1, 3)"
+        );
+        assert_eq!(
+            Constraint::Min(5).dsl_format(),
+            "Constraint::Min(5)"
+        );
+        assert_eq!(
+            Constraint::Max(20).dsl_format(),
+            "Constraint::Max(20)"
+        );
+        assert_eq!(
+            Constraint::Fill(0).dsl_format(),
+            "Constraint::Fill(0)"
+        );
+    }
+
+    #[test]
+    fn test_direction_dsl_format() {
+        use ratatui::layout::Direction;
+
+        assert_eq!(
+            Direction::Horizontal.dsl_format(),
+            "Direction::Horizontal"
+        );
+        assert_eq!(
+            Direction::Vertical.dsl_format(),
+            "Direction::Vertical"
+        );
     }
 }

@@ -133,7 +133,7 @@ mod tests {
             indoc! {
                 "fx::dissolve(EffectTimer::from_ms(
                      1000,
-                     Linear
+                     Interpolation::Linear
                  ))"
             }
         );
@@ -146,7 +146,7 @@ mod tests {
             indoc! {
                 "fx::coalesce(EffectTimer::from_ms(
                      1000,
-                     Linear
+                     Interpolation::Linear
                  ))"
             }
         );
@@ -162,7 +162,7 @@ mod tests {
                      Style::new(),
                      EffectTimer::from_ms(
                          100,
-                         SineOut
+                         Interpolation::SineOut
                      )
                  )"
             }
@@ -178,7 +178,7 @@ mod tests {
                      Style::new(),
                      EffectTimer::from_ms(
                          1000,
-                         Linear
+                         Interpolation::Linear
                      )
                  )"
             }

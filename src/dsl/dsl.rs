@@ -52,11 +52,11 @@ use std::fmt::Formatter;
 ///
 /// ```
 /// use tachyonfx::dsl::EffectDsl;
+/// use tachyonfx::fx;
 ///
 /// let dsl = EffectDsl::new()
 ///     .register("custom_effect", |args| {
-///         // Implement custom effect compilation
-///         # todo!()
+///         fx::sleep(args.duration()?).into()
 ///     });
 /// ```
 #[derive(Debug, Default)]
