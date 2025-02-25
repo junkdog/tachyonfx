@@ -210,7 +210,7 @@ impl Value {
             Value::F32(f)        => f.to_compact_string(),
             Value::I32(i)        => i.to_compact_string(),
             Value::CellFilter(c) => c.format(),
-            Value::Style(_)      => todo!("format style"),
+            Value::Style(s)      => s.dsl_format(),
             Value::Timer(t)      => format_compact!(
                 "EffectTimer::from_millis({}, {:?})", t.duration().as_millis(), t.interpolation()),
             Value::Rect(r) =>
@@ -223,8 +223,7 @@ impl Value {
                 format_compact!("RepeatMode::Times({})", n),
             Value::RepeatMode(RepeatMode::Forever) =>
                 "RepeatMode::Forever".to_compact_string(),
-            Value::Interpolation(i) =>
-                format_compact!("{i:?}"),
+            Value::Interpolation(i) => format_compact!("{i:?}"),
             Value::OptionNone => "None".to_compact_string(),
             Value::Modifier(m) => m.dsl_format(),
             Value::Constraint(c) => c.to_compact_string(),

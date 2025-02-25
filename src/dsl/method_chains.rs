@@ -84,11 +84,12 @@ impl ChainableMethods for Style {
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
         Ok(match name {
-            "clone"        => style.clone(),
-            "fg"           => style.fg(args.color()?),
-            "bg"           => style.bg(args.color()?),
-            "add_modifier" => style.add_modifier(args.modifier()?),
-            _              => Err(DslError::UnknownFunction { name: name.into() })?,
+            "clone"           => style.clone(),
+            "fg"              => style.fg(args.color()?),
+            "bg"              => style.bg(args.color()?),
+            "add_modifier"    => style.add_modifier(args.modifier()?),
+            "remove_modifier" => style.remove_modifier(args.modifier()?),
+            _                 => Err(DslError::UnknownFunction { name: name.into() })?,
         })
     }
 }

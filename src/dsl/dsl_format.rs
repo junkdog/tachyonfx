@@ -23,8 +23,27 @@ pub trait DslFormat {
 
 impl DslFormat for Color {
     fn dsl_format(&self) -> CompactString {
-        let (r, g, b) = self.to_rgb();
-        format_compact!("Color::from_u32(0x{:02x}{:02x}{:02x})", r, g, b)
+        match self {
+            Color::Reset        => "Color::Reset",
+            Color::Black        => "Color::Black",
+            Color::Red          => "Color::Red",
+            Color::Green        => "Color::Green",
+            Color::Yellow       => "Color::Yellow",
+            Color::Blue         => "Color::Blue",
+            Color::Magenta      => "Color::Magenta",
+            Color::Cyan         => "Color::Cyan",
+            Color::Gray         => "Color::Gray",
+            Color::DarkGray     => "Color::DarkGray",
+            Color::LightRed     => "Color::LightRed",
+            Color::LightGreen   => "Color::LightGreen",
+            Color::LightYellow  => "Color::LightYellow",
+            Color::LightBlue    => "Color::LightBlue",
+            Color::LightMagenta => "Color::LightMagenta",
+            Color::LightCyan    => "Color::LightCyan",
+            Color::White        => "Color::White",
+            Color::Indexed(i)   => return format_compact!("Color::Indexed({i})"),
+            Color::Rgb(r, g, b) => return format_compact!("Color::from_u32(0x{r:02x}{g:02x}{b:02x})")
+        }.to_compact_string()
     }
 }
 
@@ -69,7 +88,7 @@ impl DslFormat for Style {
         });
 
         self.sub_modifier.iter().for_each(|m| {
-            methods.push_str(&format_compact!(".sub_modifier({:?})", m));
+            methods.push_str(&format_compact!(".remove_modifier({:?})", m));
         });
 
         format_compact!("Style::new(){}", methods)
@@ -133,5 +152,260 @@ impl DslFormat for EffectTimer {
 impl DslFormat for Duration {
     fn dsl_format(&self) -> CompactString {
         format_compact!("Duration::from_millis({})", self.as_millis())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::dsl::DslFormat;
+    use crate::fx::RepeatMode;
+    use crate::{Duration, EffectTimer, Interpolation, Motion};
+    use ratatui::style::{Color, Modifier, Style};
+
+    #[test]
+    fn test_color_dsl_format() {
+        // Test basic colors
+        assert_eq!(Color::Black.dsl_format(),   "Color::Black");
+        assert_eq!(Color::Red.dsl_format(),     "Color::Red");
+        assert_eq!(Color::Green.dsl_format(),   "Color::Green");
+        assert_eq!(Color::Yellow.dsl_format(),  "Color::Yellow");
+        assert_eq!(Color::Blue.dsl_format(),    "Color::Blue");
+        assert_eq!(Color::Magenta.dsl_format(), "Color::Magenta");
+        assert_eq!(Color::Cyan.dsl_format(),    "Color::Cyan");
+        assert_eq!(Color::White.dsl_format(),   "Color::White");
+
+        // Test RGB colors
+        assert_eq!(Color::Rgb(255, 127, 63).dsl_format(), "Color::from_u32(0xff7f3f)");
+        assert_eq!(Color::Rgb(0, 0, 0).dsl_format(), "Color::from_u32(0x000000)");
+        assert_eq!(Color::Rgb(255, 255, 255).dsl_format(), "Color::from_u32(0xffffff)");
+
+        // Test indexed colors
+        let indexed_color = Color::Indexed(42);
+        assert_eq!(indexed_color.dsl_format(), "Color::Indexed(42)");
+    }
+
+    #[test]
+    fn test_repeat_mode_dsl_format() {
+        // Test Forever mode
+        assert_eq!(RepeatMode::Forever.dsl_format(), "RepeatMode::Forever");
+
+        // Test Times mode
+        assert_eq!(RepeatMode::Times(3).dsl_format(), "RepeatMode::Times(3)");
+        assert_eq!(RepeatMode::Times(1).dsl_format(), "RepeatMode::Times(1)");
+        assert_eq!(RepeatMode::Times(100).dsl_format(), "RepeatMode::Times(100)");
+
+        // Test Duration mode
+        assert_eq!(
+            RepeatMode::Duration(Duration::from_millis(500)).dsl_format(),
+            "RepeatMode::Duration(Duration::from_millis(500))"
+        );
+        assert_eq!(
+            RepeatMode::Duration(Duration::from_millis(0)).dsl_format(),
+            "RepeatMode::Duration(Duration::from_millis(0))"
+        );
+        assert_eq!(
+            RepeatMode::Duration(Duration::from_millis(1000)).dsl_format(),
+            "RepeatMode::Duration(Duration::from_millis(1000))"
+        );
+    }
+
+    #[test]
+    fn test_motion_dsl_format() {
+        // Test all Motion variants
+        assert_eq!(Motion::LeftToRight.dsl_format(), "Motion::LeftToRight");
+        assert_eq!(Motion::RightToLeft.dsl_format(), "Motion::RightToLeft");
+        assert_eq!(Motion::UpToDown.dsl_format(), "Motion::UpToDown");
+        assert_eq!(Motion::DownToUp.dsl_format(), "Motion::DownToUp");
+    }
+
+    #[test]
+    fn test_style_dsl_format() {
+        // Test default style
+        assert_eq!(Style::new().dsl_format(), "Style::new()");
+
+        // Test style with foreground color
+        let style_fg = Style::new().fg(Color::Red);
+        assert_eq!(style_fg.dsl_format(), "Style::new().fg(Color::Red)");
+
+        // Test style with background color
+        let style_bg = Style::new().bg(Color::Blue);
+        assert_eq!(style_bg.dsl_format(), "Style::new().bg(Color::Blue)");
+
+        // Test style with foreground and background colors
+        let style_fg_bg = Style::new().fg(Color::Red).bg(Color::Blue);
+        assert_eq!(
+            style_fg_bg.dsl_format(),
+            "Style::new().fg(Color::Red).bg(Color::Blue)"
+        );
+
+        // Test style with modifiers
+        let style_mod = Style::new().add_modifier(Modifier::BOLD);
+        assert_eq!(style_mod.dsl_format(), "Style::new().add_modifier(BOLD)");
+
+        // Test style with multiple modifiers
+        let style_mods = Style::new().add_modifier(Modifier::BOLD).add_modifier(Modifier::ITALIC);
+        assert_eq!(
+            style_mods.dsl_format(),
+            "Style::new().add_modifier(BOLD).add_modifier(ITALIC)"
+        );
+
+        // Test style with colors and modifiers
+        let style_complex = Style::new()
+            .fg(Color::Red)
+            .bg(Color::Blue)
+            .add_modifier(Modifier::BOLD)
+            .add_modifier(Modifier::UNDERLINED);
+        assert_eq!(
+            style_complex.dsl_format(),
+            "Style::new().fg(Color::Red).bg(Color::Blue).add_modifier(BOLD).add_modifier(UNDERLINED)"
+        );
+
+        // Test style with subtracted modifiers
+        let style_sub = Style::new().remove_modifier(Modifier::BOLD);
+        assert_eq!(style_sub.dsl_format(), "Style::new().remove_modifier(BOLD)");
+    }
+
+    #[test]
+    fn test_modifier_dsl_format() {
+        // Test all modifier variants
+        assert_eq!(Modifier::BOLD.dsl_format(), "BOLD");
+        assert_eq!(Modifier::DIM.dsl_format(), "DIM");
+        assert_eq!(Modifier::ITALIC.dsl_format(), "ITALIC");
+        assert_eq!(Modifier::UNDERLINED.dsl_format(), "UNDERLINED");
+        assert_eq!(Modifier::SLOW_BLINK.dsl_format(), "SLOW_BLINK");
+        assert_eq!(Modifier::RAPID_BLINK.dsl_format(), "RAPID_BLINK");
+        assert_eq!(Modifier::REVERSED.dsl_format(), "REVERSED");
+        assert_eq!(Modifier::HIDDEN.dsl_format(), "HIDDEN");
+        assert_eq!(Modifier::CROSSED_OUT.dsl_format(), "CROSSED_OUT");
+
+        // Test combined modifiers
+        let combined = Modifier::BOLD | Modifier::ITALIC;
+        assert_eq!(combined.dsl_format(), "BOLD | ITALIC");
+    }
+
+    #[test]
+    fn test_interpolation_dsl_format() {
+        // Test all interpolation variants
+        assert_eq!(Interpolation::Linear.dsl_format(), "Interpolation::Linear");
+        assert_eq!(Interpolation::Reverse.dsl_format(), "Interpolation::Reverse");
+
+        // Back family
+        assert_eq!(Interpolation::BackIn.dsl_format(), "Interpolation::BackIn");
+        assert_eq!(Interpolation::BackOut.dsl_format(), "Interpolation::BackOut");
+        assert_eq!(Interpolation::BackInOut.dsl_format(), "Interpolation::BackInOut");
+
+        // Bounce family
+        assert_eq!(Interpolation::BounceIn.dsl_format(), "Interpolation::BounceIn");
+        assert_eq!(Interpolation::BounceOut.dsl_format(), "Interpolation::BounceOut");
+        assert_eq!(Interpolation::BounceInOut.dsl_format(), "Interpolation::BounceInOut");
+
+        // Circ family
+        assert_eq!(Interpolation::CircIn.dsl_format(), "Interpolation::CircIn");
+        assert_eq!(Interpolation::CircOut.dsl_format(), "Interpolation::CircOut");
+        assert_eq!(Interpolation::CircInOut.dsl_format(), "Interpolation::CircInOut");
+
+        // Cubic family
+        assert_eq!(Interpolation::CubicIn.dsl_format(), "Interpolation::CubicIn");
+        assert_eq!(Interpolation::CubicOut.dsl_format(), "Interpolation::CubicOut");
+        assert_eq!(Interpolation::CubicInOut.dsl_format(), "Interpolation::CubicInOut");
+
+        // Elastic family
+        assert_eq!(Interpolation::ElasticIn.dsl_format(), "Interpolation::ElasticIn");
+        assert_eq!(Interpolation::ElasticOut.dsl_format(), "Interpolation::ElasticOut");
+        assert_eq!(Interpolation::ElasticInOut.dsl_format(), "Interpolation::ElasticInOut");
+
+        // Expo family
+        assert_eq!(Interpolation::ExpoIn.dsl_format(), "Interpolation::ExpoIn");
+        assert_eq!(Interpolation::ExpoOut.dsl_format(), "Interpolation::ExpoOut");
+        assert_eq!(Interpolation::ExpoInOut.dsl_format(), "Interpolation::ExpoInOut");
+
+        // Quad family
+        assert_eq!(Interpolation::QuadIn.dsl_format(), "Interpolation::QuadIn");
+        assert_eq!(Interpolation::QuadOut.dsl_format(), "Interpolation::QuadOut");
+        assert_eq!(Interpolation::QuadInOut.dsl_format(), "Interpolation::QuadInOut");
+
+        // Quart family
+        assert_eq!(Interpolation::QuartIn.dsl_format(), "Interpolation::QuartIn");
+        assert_eq!(Interpolation::QuartOut.dsl_format(), "Interpolation::QuartOut");
+        assert_eq!(Interpolation::QuartInOut.dsl_format(), "Interpolation::QuartInOut");
+
+        // Quint family
+        assert_eq!(Interpolation::QuintIn.dsl_format(), "Interpolation::QuintIn");
+        assert_eq!(Interpolation::QuintOut.dsl_format(), "Interpolation::QuintOut");
+        assert_eq!(Interpolation::QuintInOut.dsl_format(), "Interpolation::QuintInOut");
+
+        // Sine family
+        assert_eq!(Interpolation::SineIn.dsl_format(), "Interpolation::SineIn");
+        assert_eq!(Interpolation::SineOut.dsl_format(), "Interpolation::SineOut");
+        assert_eq!(Interpolation::SineInOut.dsl_format(), "Interpolation::SineInOut");
+    }
+
+    #[test]
+    fn test_effect_timer_dsl_format() {
+        // Test with linear interpolation
+        let timer_linear = EffectTimer::from_ms(1000, Interpolation::Linear);
+        assert_eq!(
+            timer_linear.dsl_format(),
+            "EffectTimer::from_ms(1000, Interpolation::Linear)"
+        );
+
+        // Test with different interpolation types
+        let timer_bounce = EffectTimer::from_ms(500, Interpolation::BounceOut);
+        assert_eq!(
+            timer_bounce.dsl_format(),
+            "EffectTimer::from_ms(500, Interpolation::BounceOut)"
+        );
+
+        // Test with different durations
+        let timer_short = EffectTimer::from_ms(100, Interpolation::Linear);
+        assert_eq!(
+            timer_short.dsl_format(),
+            "EffectTimer::from_ms(100, Interpolation::Linear)"
+        );
+
+        let timer_long = EffectTimer::from_ms(5000, Interpolation::Linear);
+        assert_eq!(
+            timer_long.dsl_format(),
+            "EffectTimer::from_ms(5000, Interpolation::Linear)"
+        );
+
+        // Test with zero duration
+        let timer_zero = EffectTimer::from_ms(0, Interpolation::Linear);
+        assert_eq!(
+            timer_zero.dsl_format(),
+            "EffectTimer::from_ms(0, Interpolation::Linear)"
+        );
+    }
+
+    #[test]
+    fn test_duration_dsl_format() {
+        // Test various durations
+        assert_eq!(
+            Duration::from_millis(0).dsl_format(),
+            "Duration::from_millis(0)"
+        );
+        assert_eq!(
+            Duration::from_millis(1).dsl_format(),
+            "Duration::from_millis(1)"
+        );
+        assert_eq!(
+            Duration::from_millis(500).dsl_format(),
+            "Duration::from_millis(500)"
+        );
+        assert_eq!(
+            Duration::from_millis(1000).dsl_format(),
+            "Duration::from_millis(1000)"
+        );
+        assert_eq!(
+            Duration::from_millis(u32::MAX).dsl_format(),
+            format!("Duration::from_millis({})", u32::MAX)
+        );
+    }
+
+    #[test]
+    fn test_roundtrip_format_parse() {
+        // Test round-trip formatting and parsing for various types
+        // This requires access to the DSL parsing functionality which would be tested separately
+        // This is a placeholder for future implementation
     }
 }

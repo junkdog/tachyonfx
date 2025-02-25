@@ -50,7 +50,6 @@ impl DslEnv {
             .ok_or_else(|| DslError::UnknownArgument { name: name.as_ref().into() })
             .and_then(|v| v.downcast_ref().map(|v: &T| v.clone()).ok_or_else(||
                 DslError::NoSuchVariable {
-                    position: 0, // todo: resolve position
                     name: name.as_ref().to_compact_string(),
                     expected: type_name::<T>()
                 }

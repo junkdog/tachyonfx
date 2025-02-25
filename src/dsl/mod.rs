@@ -25,9 +25,8 @@ pub enum DslError {
     #[error("Variable '{name}' not found")]
     UnknownArgument { name: CompactString },
 
-    #[error("Invalid argument type at position {position}. Expected {expected}")]
+    #[error("Invalid argument type '{name}'. Expected {expected}")]
     NoSuchVariable {
-        position: usize,
         name: CompactString,
         expected: &'static str,
     },
