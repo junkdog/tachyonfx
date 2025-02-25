@@ -99,14 +99,43 @@ impl Expr {
         }
     }
 
+    // this is a ugly mess; but stays so until the tokenizaton/parser rework
     pub(super) fn format(&self, indent: usize, indent_arg: bool) -> CompactString {
         let indent_str = " ".repeat(indent);
         let prefix = if indent_arg { &indent_str } else { "" };
 
-        let formatted_args = |args: &[Expr]| args.iter()
-            .map(|e| e.format(indent + 4, args.len() > 1))
-            .collect::<Vec<_>>()
-            .join_compact(",\n");
+        // Determine if an expression is a "simple" value that can be rendered inline
+        let is_simple_expr = |expr: &Expr| -> bool {
+            match expr {
+                Expr::Literal(Value::U32(_)) |
+                Expr::Literal(Value::I32(_)) |
+                Expr::Literal(Value::F32(_)) |
+                Expr::Literal(Value::String(_)) |
+                Expr::Literal(Value::Interpolation(_)) |
+                Expr::Literal(Value::Motion(_)) => true,
+                Expr::Var { self_fns, .. } if self_fns.len() < 2 => true,
+                Expr::Fx { arguments, self_fns, .. } if arguments.is_empty() && self_fns.is_empty() => true,
+                // also consider function calls with no args or simple args to be simple
+                Expr::FnCall { call, self_fns } =>
+                    self_fns.is_empty() && call.args.len() < 2,
+                _ => false,
+            }
+        };
+
+        // Format arguments with appropriate indentation
+        let formatted_args = |args: &[Expr]| {
+            // If just one argument and it's simple, render it inline
+            if args.len() == 1 && is_simple_expr(&args[0]) {
+                args[0].format(indent, false)
+            } else if args.is_empty() {
+                "".to_compact_string()
+            } else {
+                args.iter()
+                    .map(|e| e.format(indent + 4, args.len() > 1))
+                    .collect::<Vec<_>>()
+                    .join_compact(",\n")
+            }
+        };
 
         let chained_fns = |self_fns: &[FnCallInfo]| self_fns.iter()
             .map(|fn_call| {
@@ -132,7 +161,15 @@ impl Expr {
                 let effect = if arguments.is_empty() {
                     format_compact!("{}fx::{}()", prefix, name)
                 } else if arguments.len() == 1 {
-                    format_compact!("{}fx::{}({})", prefix, name, arguments[0].format(indent, false).trim())
+                    // check if it's a simple expression or another effect that should be rendered inline
+                    let arg = &arguments[0];
+                    if is_simple_expr(arg) || matches!(arg, Expr::Fx { .. } | Expr::FnCall { .. }) {
+                        let arg_str = arg.format(indent, false);
+                        format_compact!("{prefix}fx::{name}({})", arg_str.trim())
+                    } else {
+                        let args = formatted_args(arguments);
+                        format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
+                    }
                 } else {
                     let args = formatted_args(arguments);
                     format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
@@ -141,11 +178,15 @@ impl Expr {
                 format_compact!("{effect}{}", chained_fns(self_fns))
             },
             Expr::FnCall { call: FnCallInfo { name, args }, self_fns } => {
-                let args = formatted_args(args);
-                let fn_call = if args.len() <= 1 {
-                    format_compact!("{}{}({})", prefix, name, args)
+                let fn_call = if args.is_empty() {
+                    format_compact!("{}{}()", prefix, name)
+                } else if args.len() == 1 && is_simple_expr(&args[0]) {
+                    // for simple single arguments, keep them on the same line
+                    format_compact!("{}{}({})", prefix, name, args[0].format(indent, false).trim())
                 } else {
-                    format_compact!("{}{}(\n{}\n{})", prefix, name, args, indent_str)
+                    // for multiple or complex arguments, use line breaks with indentation
+                    let args_str = formatted_args(args);
+                    format_compact!("{}{}(\n{}\n{})", prefix, name, args_str, indent_str)
                 };
 
                 // Append chained function calls
@@ -159,28 +200,26 @@ impl Expr {
 
                 format_compact!("{}{}", fn_call, chains)
             },
-            Expr::LetBinding { name, let_expr} => {
-                format_compact!(
-                    "{indent_str}let {name} = {value}",
-                    name = name,
-                    value = let_expr.format(indent, false),
-                )
+            Expr::LetBinding { name, let_expr} => format_compact!(
+                "{indent_str}let {name} = {value}",
+                name = name,
+                value = let_expr.format(indent, false),
+            ),
+            Expr::Sequence { effects, self_fns } => format_compact!(
+                "{indent_str}fx::sequence(&[\n{}\n{indent_str}]){}",
+                formatted_args(effects),
+                chained_fns(self_fns),
+            ),
+            Expr::Parallel { effects, self_fns } => format_compact!(
+                "{indent_str}fx::parallel(&[\n{}\n{indent_str}]){}",
+                formatted_args(effects),
+                chained_fns(self_fns),
+            ),
+            Expr::CellFilter { filter_type, arguments } => {
+
+                let args = formatted_args(arguments);
+                format_compact!("{}CellFilter::{filter_type}({args})", indent_str)
             },
-            Expr::Sequence { effects, self_fns } => {
-                format_compact!(
-                    "{indent_str}fx::sequence(&[\n{}\n{indent_str}]){}",
-                    formatted_args(effects),
-                    chained_fns(self_fns),
-                )
-            },
-            Expr::Parallel { effects, self_fns } => {
-                format_compact!(
-                    "{indent_str}fx::parallel(&[\n{}\n{indent_str}]){}",
-                    formatted_args(effects),
-                    chained_fns(self_fns),
-                )
-            },
-            Expr::CellFilter { .. } => format_compact!("{}// TODO: format cell filter", indent_str),
             Expr::Style(methods) => {
                 let inner = methods.iter()
                     .map(|f| {
