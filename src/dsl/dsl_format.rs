@@ -462,7 +462,7 @@ mod tests {
             "Duration::from_millis(1000)"
         );
         assert_eq!(
-            Duration::from_millis(u32::MAX).dsl_format(),
+            Duration::from_millis(u32::MAX as _).dsl_format(),
             format!("Duration::from_millis({})", u32::MAX)
         );
     }
