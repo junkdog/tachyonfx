@@ -868,7 +868,7 @@ mod tests {
         assert!(matches!(err, DslError::WrongArgumentType {
             position: 0,
             expected: "motion",
-            ref actual
+            actual: _
         }), "{:?}", err);
     }
 

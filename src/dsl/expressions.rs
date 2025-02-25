@@ -114,7 +114,7 @@ impl Expr {
                 Expr::Literal(Value::Interpolation(_)) |
                 Expr::Literal(Value::Motion(_)) => true,
                 Expr::Var { self_fns, .. } if self_fns.len() < 2 => true,
-                Expr::Fx { arguments, self_fns, .. } if arguments.is_empty() && self_fns.is_empty() => true,
+                Expr::Fx { arguments, self_fns, .. } if arguments.len() < 2 && self_fns.is_empty() => true,
                 // also consider function calls with no args or simple args to be simple
                 Expr::FnCall { call, self_fns } =>
                     self_fns.is_empty() && call.args.len() < 2,
@@ -216,7 +216,6 @@ impl Expr {
                 chained_fns(self_fns),
             ),
             Expr::CellFilter { filter_type, arguments } => {
-
                 let args = formatted_args(arguments);
                 format_compact!("{}CellFilter::{filter_type}({args})", indent_str)
             },
@@ -242,7 +241,7 @@ impl Value {
         match self {
             Value::Color(c)         => c.dsl_format(),
             Value::Duration(d)      => d.dsl_format(),
-            Value::Motion(m)        => format_compact!("{m:?}"),
+            Value::Motion(m)        => m.dsl_format(),
             Value::String(s)        => format_compact!("\"{}\"", s.replace('"', "\\\"")),
             Value::U32(n)           => n.to_compact_string(),
             Value::F32(f)           => f.to_compact_string(),

@@ -62,7 +62,7 @@ pub enum DslError {
         to: &'static str,
     },
 
-    #[error("Argument at position {position} is not of expected type {expected}")]
+    #[error("Argument at position {position} is not of expected type {expected}, actual {actual}")]
     WrongArgumentType {
         position: usize,
         expected: &'static str,
