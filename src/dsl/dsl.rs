@@ -813,9 +813,9 @@ mod tests {
             .compiler()
             .bind("base", fx::fade_to_fg(Color::Red, 500))
             .compile(r#"
-                let reversed = base.reversed();
+                let reversed = base.reversed(); // "type-erased" from bind()
                 let filtered = reversed
-                    .with_filter(CellFilter::Not(Box::new(CellFilter::Text)));
+                    .with_filter(Not(Box::new(Text)));
 
                 fx::sequence(&[base.clone(), reversed, filtered])
             "#)
@@ -835,19 +835,17 @@ mod tests {
                 .with_filter(CellFilter::Outer(margin))
         ]);
 
-        let input = r#"
-            let margin = Margin::new(1, 1);
-            let inner_effect = fx::fade_from_fg(Color::Blue, (500, CircOut))
-                .with_filter(CellFilter::Inner(margin));
-            let outer_effect = fx::fade_to_fg(Color::Red, (500, CircOut))
-                .with_filter(CellFilter::Outer(margin));
-
-            fx::parallel(&[inner_effect, outer_effect])
-        "#;
-
         let effect = EffectDsl::new()
             .compiler()
-            .compile(input)
+            .compile(r#"
+                let margin = Margin::new(1, 1);
+                let inner_effect = fx::fade_from_fg(Color::Blue, (500, CircOut))
+                    .with_filter(CellFilter::Inner(margin));
+                let outer_effect = fx::fade_to_fg(Color::Red, (500, CircOut))
+                    .with_filter(CellFilter::Outer(margin));
+
+                fx::parallel(&[inner_effect, outer_effect])
+            "#)
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "parallel");

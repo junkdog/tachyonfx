@@ -33,14 +33,14 @@ pub(super) fn parse_expr(
 pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
     // must defer to avoid recursive opaqueness
     defer_parser! {
-        // `parse_f32` must come after `parse_u32` due to how float() is
-        // implemented, as such we use greedy_or to ensure that `parse_u32`
-        // isn't chosen over `parse_f32`.
-        greedy_or!(
+        or!(
+            container_effect(),
+            effect(),
+            // `parse_f32` must come last due to how float() is implemented,
+            // as such we use greedy_or to ensure that `parse_f32` is not
+            // picked over `parse_i32` or `parse_u32`.
+            greedy_or!(parse_i32(), parse_u32(), parse_f32()),
             string_literal(),
-            parse_i32(),
-            parse_u32(),
-            parse_f32(),
             effect_timer(),
             duration(),
             motion(),
@@ -56,8 +56,6 @@ pub(super) fn argument<'a>() -> impl StrParser<'a, Expr> {
             style(),
             array_ref(), // e.g. &[fx1, fx2, fx3]
             array(),     // e.g. [1, 2, 3]
-            container_effect(),
-            effect(),
             option(),
             cell_filter(),
             var(),
