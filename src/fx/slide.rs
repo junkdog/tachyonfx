@@ -193,7 +193,7 @@ mod tests {
 
         assert_eq!(dsl.to_string(), indoc! {
             "fx::slide_in(
-                 LeftToRight,
+                 Motion::LeftToRight,
                  10,
                  5,
                  Color::from_u32(0),
@@ -218,7 +218,7 @@ mod tests {
 
         assert_eq!(dsl.to_string(), indoc! {
             "fx::slide_out(
-                 UpToDown,
+                 Motion::UpToDown,
                  10,
                  5,
                  Color::from_u32(0),
