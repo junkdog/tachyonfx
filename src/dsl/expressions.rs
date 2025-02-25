@@ -141,13 +141,23 @@ impl Expr {
                 format_compact!("{effect}{}", chained_fns(self_fns))
             },
             Expr::FnCall { call: FnCallInfo { name, args }, self_fns } => {
-                let formatted_args = formatted_args(args);
-
-                if args.len() <= 1 {
-                    format_compact!("{}{}({})", prefix, name, formatted_args)
+                let args = formatted_args(args);
+                let fn_call = if args.len() <= 1 {
+                    format_compact!("{}{}({})", prefix, name, args)
                 } else {
-                    format_compact!("{}{}(\n{}\n{})", prefix, name, formatted_args, indent_str)
-                }
+                    format_compact!("{}{}(\n{}\n{})", prefix, name, args, indent_str)
+                };
+
+                // Append chained function calls
+                let chains = self_fns.iter()
+                    .map(|fn_call| {
+                        let args = formatted_args(&fn_call.args);
+                        format_compact!("\n{}.{}({})", indent_str, fn_call.name, args)
+                    })
+                    .collect::<Vec<_>>()
+                    .join_compact("");
+
+                format_compact!("{}{}", fn_call, chains)
             },
             Expr::LetBinding { name, let_expr} => {
                 format_compact!(
