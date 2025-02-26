@@ -81,8 +81,8 @@ impl Shader for TemporaryEffect {
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
         EffectExpression::parse(&format!("fx::with_duration({}, {})",
             self.timer.duration().dsl_format(),
-            self.effect.to_dsl()?)
-        )
+            self.effect.to_dsl()?
+        ))
     }
 }
 

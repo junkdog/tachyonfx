@@ -95,10 +95,8 @@ impl Shader for HslShift {
             .map(|hsl| format!("Some([{}, {}, {}])", hsl[0], hsl[1], hsl[2]))
             .unwrap_or("None".to_string());
 
-        EffectExpression::parse(&format!("{}({}, {}, {})",
+        EffectExpression::parse(&format!("{}({hsl_mod_fg}, {hsl_mod_bg}, {})",
             self.name(),
-            hsl_mod_fg,
-            hsl_mod_bg,
             self.timer.dsl_format(),
         ))
     }

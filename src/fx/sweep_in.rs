@@ -199,7 +199,7 @@ mod tests {
         ).to_dsl().unwrap().to_string();
 
 
-        assert_eq!(dsl.to_string(), indoc! {
+        assert_eq!(dsl, indoc! {
             "fx::sweep_in(
                  Motion::LeftToRight,
                  10,
@@ -224,7 +224,7 @@ mod tests {
         ).to_dsl().unwrap().to_string();
 
 
-        assert_eq!(dsl.to_string(), indoc! {
+        assert_eq!(dsl, indoc! {
             "fx::sweep_out(
                  Motion::UpToDown,
                  10,
