@@ -5,8 +5,8 @@ use ratatui::{
     Frame, Terminal,
 };
 use std::{error::Error, io, time::{Duration as StdDuration, Instant}};
+use tachyonfx::{dsl::EffectDsl, CenteredShrink, Duration, Effect, EffectRenderer, Shader};
 use tui_textarea::TextArea;
-use tachyonfx::{dsl::{DslError, EffectDsl}, CenteredShrink, Duration, Effect, EffectRenderer, Shader};
 
 // import the gruvbox colors for consistent theming with other examples
 #[path = "common/gruvbox.rs"]
@@ -129,7 +129,7 @@ fn ui(f: &mut Frame, app: &mut App, elapsed: Duration) {
             Constraint::Length(10), // effect preview area
             Constraint::Min(1),     // editor area
         ])
-        .split(f.size());
+        .split(f.area());
 
     // ---  preview area ---
     let preview_area = layout[0];

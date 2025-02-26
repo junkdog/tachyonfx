@@ -42,3 +42,6 @@ pub use simple_rng::*;
 pub use duration::Duration;
 pub use motion::*;
 pub use features::{ref_count, RefCount, ThreadSafetyMarker};
+
+#[cfg(all(feature = "std-duration", feature = "web-time"))]
+compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");
