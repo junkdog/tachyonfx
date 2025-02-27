@@ -34,10 +34,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 struct App<'a> {
     editor: TextArea<'a>,
     dsl: EffectDsl,
-    cursor_position: usize,
     compiled_effect: Option<Effect>,
     compilation_error: Option<String>,
     last_frame: Instant,
+    full_effect_area: Rect,
 }
 
 impl<'a> App<'a> {
@@ -47,20 +47,20 @@ impl<'a> App<'a> {
         Self {
             editor,
             dsl: EffectDsl::new(),
-            cursor_position: DEFAULT_DSL_CODE.char_indices().count(),
             compiled_effect: None,
             compilation_error: None,
             last_frame: Instant::now(),
+            full_effect_area: Rect::default(),
         }
     }
 
     fn update_effect(&mut self) {
-        // create a DSL compiler instance and bind our content and widget areas
+        // create a DSL compiler instance and bind the content and full preview areas
         let dsl_result = self.dsl.compiler()
             // Bind variables that can be used in the DSL code
             .bind("content_area", Rect::new(0, 0, 40, 6)) // the "widget"
-            .bind("widget_area", Rect::new(0, 0, 60, 15)) // the rest of the preview area
-            .compile(&self.editor.lines().join("\n")); // try compiling the effect
+            .bind("full_area", self.full_effect_area)     // the rest of the preview area
+            .compile(&self.editor.lines().join("\n"));    // compile the effect
 
         match dsl_result {
             Ok(effect) => {
@@ -111,7 +111,20 @@ fn tick_app(terminal: &mut Terminal<impl Backend>, app: &mut App) -> io::Result<
     // elapsed time for animations
     let elapsed = app.update_timer();
 
-    terminal.draw(|f| ui(f, app, elapsed))?;
+    terminal.draw(|f| {
+        // define layout with main areas; we persist the full effect
+        // area so that we can bind it the DSL compiler instance
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(10), // effect preview area
+                Constraint::Min(1),     // editor area
+            ])
+            .split(f.area());
+
+        app.full_effect_area = layout[0];
+        ui(f, app, &layout, elapsed)
+    })?;
 
     // poll for events with a short timeout (33 is maybe more prudent)
     if event::poll(StdDuration::from_millis(16))? {
@@ -121,15 +134,7 @@ fn tick_app(terminal: &mut Terminal<impl Backend>, app: &mut App) -> io::Result<
     Ok(true)
 }
 
-fn ui(f: &mut Frame, app: &mut App, elapsed: Duration) {
-    // define layout with main areas
-    let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(10), // effect preview area
-            Constraint::Min(1),     // editor area
-        ])
-        .split(f.area());
+fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
 
     // ---  preview area ---
     let preview_area = layout[0];
