@@ -143,7 +143,7 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    /// Consumes the next argument and returns a [`T`].
+    /// Consumes the next argument and returns a `T`.
     pub fn any_var<T: Clone + 'static>(
         &mut self,
     ) -> Result<T, DslError> {
