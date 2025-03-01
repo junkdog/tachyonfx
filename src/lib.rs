@@ -27,6 +27,7 @@ mod features;
 #[cfg(feature = "dsl")]
 #[doc = include_str!("../docs/dsl.md")]
 pub mod dsl;
+mod effect_manager;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;

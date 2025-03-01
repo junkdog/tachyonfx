@@ -126,6 +126,7 @@ mod sliding_window_alpha;
 mod offscreen_buffer;
 mod prolong;
 mod direction;
+pub(crate) mod unique;
 
 /// Creates a custom effect using a user-defined function.
 ///

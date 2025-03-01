@@ -1,5 +1,7 @@
 # Changelog
 
+## tachyonfx 0.11.0 - UNRELEASED
+
 ### Added
 - New DSL (Domain Specific Language) for effect creation and composition:
   - String-based, rust-like expression syntax for defining effects
@@ -11,6 +13,10 @@
   - Adds DSL capabilities to the library
   - Depends on the [`anpa`](https://github.com/habbbe/anpa-rs) crate for parsing
 - New example: `dsl-playground` for interactive testing of DSL expressions
+- `EffectManager`: New component for managing collections of effects with lifecycle handling
+  - Support for regular effects that run until completion
+  - Support for unique effects that can be cancelled/replaced by new effects with the same ID
+  - Automatic cleanup of completed effects and orphaned contexts
 - New `web-time` feature flag for WebAssembly compatibility (thanks [@orhun] for the contribution)
   - Adds support for using `web_time` crate instead of `std::time` when targeting WASM
 
