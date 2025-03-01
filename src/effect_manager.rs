@@ -1,9 +1,10 @@
+use std::cell::RefMut;
+use crate::fx::unique::{Unique, UniqueContext};
+use crate::{ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
-use crate::{ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng};
-use crate::fx::unique::{Unique, UniqueContext};
 
 /// A stage that manages a collection of terminal UI effects, including uniquely
 /// identified effects that can be replaced/cancelled by new effects with the same ID.
@@ -18,6 +19,7 @@ pub struct EffectManager<K: Clone + Ord + 'static> {
     rng: SimpleRng,
 }
 
+#[allow(dead_code)]
 impl<K: Clone + Debug + Ord> EffectManager<K> {
     /// Creates a unique effect that will cancel any existing effect with the same key.
     /// The effect must be added to the stage using [`add_effect`] to be processed.
@@ -36,7 +38,7 @@ impl<K: Clone + Debug + Ord> EffectManager<K> {
     pub fn unique(&mut self, key: impl Into<K>, fx: Effect) -> Effect {
         let key = key.into();
         let ctx = self.uniques.entry(key.clone())
-            .and_modify(|ctx| ctx.borrow_mut().instance_id = self.rng.gen())
+            .and_modify(|ctx| acquire_mut(ctx).instance_id = self.rng.gen())
             .or_insert_with(|| ref_count(UniqueContext::new(key.clone(), self.rng.gen())))
             .clone();
 
@@ -89,10 +91,24 @@ impl<K: Clone + Debug + Ord> EffectManager<K> {
     }
 }
 
+#[cfg(feature = "sendable")]
+fn acquire_mut<K: Clone>(
+    ctx: &mut RefCount<UniqueContext<K>>,
+) -> std::sync::MutexGuard<'_, UniqueContext<K>> {
+    ctx.lock().unwrap()
+}
+
+#[cfg(not(feature = "sendable"))]
+fn acquire_mut<K: Clone>(
+    ctx: &mut RefCount<UniqueContext<K>>,
+) -> RefMut<'_, UniqueContext<K>> {
+    ctx.borrow_mut()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fx, CellFilter, Shader};
+    use crate::{CellFilter, Shader};
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
     use std::fmt::Debug;
@@ -235,14 +251,11 @@ mod tests {
             None
         }
 
-        fn done(&self) -> bool {
-            self.count >= self.done_after
-        }
-
+        fn done(&self) -> bool { self.count >= self.done_after }
         fn clone_box(&self) -> Box<dyn Shader> { Box::new(self.clone()) }
         fn area(&self) -> Option<Rect> { None }
-        fn set_area(&mut self, area: Rect) {}
-        fn filter(&mut self, filter: CellFilter) {}
+        fn set_area(&mut self, _area: Rect) {}
+        fn filter(&mut self, _filter: CellFilter) {}
     }
 
     fn counter_effect(done_after: usize) -> Effect {

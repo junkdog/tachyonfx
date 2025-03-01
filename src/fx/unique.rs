@@ -83,8 +83,8 @@ impl<K: Clone + Debug + 'static> Shader for Unique<K> {
         self.fx.timer()
     }
 
-    fn cell_selection(&self) -> Option<CellFilter> {
-        self.fx.cell_selection()
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.fx.cell_filter()
     }
 
     fn reset(&mut self) {
