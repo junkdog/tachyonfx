@@ -1,7 +1,17 @@
 # Changelog
 
 ### Added
-- New `web-time` feature flag for WebAssembly compatibility (thanks @orhun for the contribution)
+- New DSL (Domain Specific Language) for effect creation and composition:
+  - String-based, rust-like expression syntax for defining effects
+  - Support for variable binding and method chaining
+  - Serialization of effects to DSL expressions via `Effect::to_dsl`
+  - Support for custom effect registration via `EffectDsl::register`
+  - Comprehensive type safety with detailed error reporting
+- New `dsl` feature flag (enabled by default):
+  - Adds DSL capabilities to the library
+  - Depends on the [`anpa`](https://github.com/habbbe/anpa-rs) crate for parsing
+- New example: `dsl-playground` for interactive testing of DSL expressions
+- New `web-time` feature flag for WebAssembly compatibility (thanks [@orhun] for the contribution)
   - Adds support for using `web_time` crate instead of `std::time` when targeting WASM
 
 ### Changed

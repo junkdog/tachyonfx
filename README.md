@@ -9,7 +9,7 @@ transformations, animations, and complex effect combinations.
 
 ![demo](images/demo-0.6.0.gif)
 
- [ratatui]: https://ratatui.rs/
+[ratatui]: https://ratatui.rs/
 
 ## Installation
 Add tachyonfx to your `Cargo.toml`:
@@ -33,12 +33,12 @@ let mut fade_effect = fx::fade_to_fg(Color::Red, Duration::from_millis(1000));
 
 // In your render loop:
 loop {
-    widget.render(area, buf);
-    
-    // Process the same effect each frame, updating its state
-    fade_effect.process(frame_duration, buf, area);
-    // Or use the helper trait:
-    // frame.render_effect(&mut fade_effect, area, frame_duration);
+widget.render(area, buf);
+
+// Process the same effect each frame, updating its state
+fade_effect.process(frame_duration, buf, area);
+// Or use the helper trait:
+// frame.render_effect(&mut fade_effect, area, frame_duration);
 }
 ```
 
@@ -50,6 +50,37 @@ the typical flow is:
 
 1. Render your widget to the screen
 2. Apply effects to transform the rendered content
+
+### Domain-Specific Language (DSL)
+
+tachyonfx includes a rust-like DSL for defining effects as text expressions that can be compiled at runtime. This enables:
+
+- Fast iteration and prototyping of effects
+- Creating effects from configuration files or user input
+- Storing and serializing effect definitions
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+// Create a DSL compiler and bind variables
+let effect = EffectDsl::new().compiler()
+    .bind("color", Color::Red)
+    .compile("fx::fade_to_fg(color, (1000, QuadOut))")
+    .expect("valid effect");
+
+// Complex compositions
+let expression = r#"
+    fx::sequence(&[
+        fx::fade_from(Color::Black, Color::Red, (500, LinearOut)),
+        fx::dissolve((300, BounceOut))
+    ])
+"#;
+
+let effect = EffectDsl::new().compiler().compile(expression).expect("valid effect");
+```
+
+The DSL supports let bindings, method chaining, and serialization of effects with `Effect::to_dsl`:
+
 
 ### Types of Effects
 
@@ -138,6 +169,7 @@ prolong_start(duration, fx::fade_from(Dark0, Dark0, (320, QuadOut)),
 ```
 
 ### Features
+- `dsl`: Enables the Domain-Specific Language for effect definitions, allowing for runtime compilation of effect expressions.
 - `sendable`: Enables the `Send` trait for effects, shaders, and associated parameters. This allows effects to be
   safely transferred across thread boundaries. Note that enabling this feature requires all `Shader` implementations
   to be `Send`, which may impose additional constraints on custom shader implementations.
@@ -183,10 +215,17 @@ without any effects as part of its rendering. The effects are instead applied af
 cargo run --release --example=fx-chart
 ```
 
+### Example: [dsl-playground](examples/dsl-playground.rs)
+```
+cargo run --release --example=dsl-playground --features=dsl
+```
 
-  [API Badge]: https://docs.rs/tachyonfx/badge.svg
-  [API]: https://docs.rs/tachyonfx
-  [Crate Badge]: https://img.shields.io/crates/v/tachyonfx.svg
-  [Crate]: https://crates.io/crates/tachyonfx
-  [Deps.rs Badge]: https://deps.rs/repo/github/junkdog/tachyonfx/status.svg
-  [Deps.rs]: https://deps.rs/repo/github/junkdog/tachyonfx
+A playground for experimenting with the DSL to create and combine effects interactively.
+
+
+[API Badge]: https://docs.rs/tachyonfx/badge.svg
+[API]: https://docs.rs/tachyonfx
+[Crate Badge]: https://img.shields.io/crates/v/tachyonfx.svg
+[Crate]: https://crates.io/crates/tachyonfx
+[Deps.rs Badge]: https://deps.rs/repo/github/junkdog/tachyonfx/status.svg
+[Deps.rs]: https://deps.rs/repo/github/junkdog/tachyonfx
