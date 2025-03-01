@@ -8,7 +8,6 @@
   - Support for variable binding and method chaining
   - Serialization of effects to DSL expressions via `Effect::to_dsl`
   - Support for custom effect registration via `EffectDsl::register`
-  - Comprehensive type safety with detailed error reporting
 - New `dsl` feature flag (enabled by default):
   - Adds DSL capabilities to the library
   - Depends on the [`anpa`](https://github.com/habbbe/anpa-rs) crate for parsing
