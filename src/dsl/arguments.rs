@@ -148,7 +148,7 @@ impl<'dsl> Arguments<'dsl> {
         &mut self,
     ) -> Result<T, DslError> {
         match self.next("var")? {
-            Expr::Var { name, self_fns: _ } => self.vars.bound_var(name),
+            Expr::Var { name, self_fns: _ } => self.vars.bound_global(name),
             e                               => self.expected_type_expr("var", e),
         }
     }
@@ -494,13 +494,7 @@ impl<'dsl> Arguments<'dsl> {
         &self,
         name: impl Into<CompactString>,
     ) -> Result<T, DslError> {
-        let name = name.into();
-        if let Some(expr) = self.vars.let_expr(name.as_str()) {
-            let mut args = Arguments::new([expr].into(), self.context, self.vars);
-            Ok(FromDslExpr::from_expr(&mut args)?)
-        } else {
-            self.vars.bound_var(name.as_str())
-        }
+        self.vars.bound_var(self.context, name)
     }
 
     fn next(&mut self, type_name: &'static str) -> Result<Expr, DslError> {

@@ -192,6 +192,8 @@ impl EffectDsl {
                 fx::parallel(&effects)
                     .fold_fns(self_fns, &self, env)
             },
+            Expr::Var { name, self_fns } => env.bound_var::<Effect>(self, name)
+                .and_then(|effect| effect.fold_fns(self_fns, self, env)),
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
                 actual: remaining_expr.type_name(),
@@ -817,7 +819,8 @@ mod tests {
                 let filtered = reversed
                     .with_filter(Not(Box::new(Text)));
 
-                fx::sequence(&[base.clone(), reversed, filtered])
+                let effect = fx::sequence(&[base.clone(), reversed, filtered]);
+                effect
             "#)
             .expect("effect to be compiled");
 

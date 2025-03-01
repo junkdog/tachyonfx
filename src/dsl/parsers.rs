@@ -17,7 +17,7 @@ use std::ops::Neg;
 pub(super) fn parse_expr(
     input: &str,
 ) -> Result<Vec<Expr>, DslError> {
-    let main_parser = or!(let_binding(), container_effect(), effect());
+    let main_parser = or!(let_binding(), container_effect(), effect(), var());
     let parsed_expr = parse(many_to_vec(main_parser, true, no_separator()), input);
 
     if !parsed_expr.state.is_empty() {

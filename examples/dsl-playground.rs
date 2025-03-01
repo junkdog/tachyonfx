@@ -5,6 +5,7 @@ use ratatui::{
     Frame, Terminal,
 };
 use std::{error::Error, io, time::{Duration as StdDuration, Instant}};
+use std::cmp::min;
 use tachyonfx::{dsl::EffectDsl, CenteredShrink, Duration, Effect, EffectRenderer, Shader};
 use tui_textarea::TextArea;
 
@@ -126,8 +127,8 @@ fn tick_app(terminal: &mut Terminal<impl Backend>, app: &mut App) -> io::Result<
         ui(f, app, &layout, elapsed)
     })?;
 
-    // poll for events with a short timeout (33 is maybe more prudent)
-    if event::poll(StdDuration::from_millis(16))? {
+    // poll for events at ~30hz
+    if event::poll(StdDuration::from_millis(33))? {
         return Ok(app.handle_event(event::read()?));
     }
 
@@ -139,7 +140,7 @@ fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
     // ---  preview area ---
     let preview_area = layout[0];
     let preview_block = Block::default()
-        .title("Effect Preview (Ctrl+E to compile and run)")
+        .title("Effect Preview (Ctrl+E to compile and run, ESC to exit)")
         .borders(Borders::ALL)
         .border_style(theme_border_style())
         .bg(Gruvbox::Dark0Hard.color());
@@ -193,25 +194,24 @@ fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
 
     // --- display error message if compilation failed ---
     if let Some(error_msg) = &app.compilation_error {
+        let message = error_msg.lines().next().unwrap();
+
         let error_area = Rect::new(
-            editor_area.x + 2,
-            editor_area.y + editor_area.height - 3,
-            editor_area.width - 4,
-            3,
+            editor_area.x + 1,
+            editor_area.y + editor_area.height - 1,
+            editor_area.width - 2,
+            1,
         );
 
         let error_block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(theme_error_style());
+            .style(theme_error_style());
 
         f.render_widget(Clear, error_area);
         f.render_widget(error_block, error_area);
 
-        let paragraph = Paragraph::new(error_msg.as_str())
-            .style(theme_error_style())
-            .wrap(Wrap { trim: true });
-
-        f.render_widget(paragraph, error_area.inner(Margin::new(1, 0)));
+        Line::from(message)
+            .alignment(Alignment::Center)
+            .render(error_area, f.buffer_mut());
     }
 }
 
@@ -240,5 +240,6 @@ fn theme_editor_style() -> Style {
 
 fn theme_error_style() -> Style {
     Style::default()
+        .bg(Gruvbox::Dark1.color())
         .fg(Gruvbox::Red.color())
 }
