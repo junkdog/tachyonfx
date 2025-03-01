@@ -37,6 +37,7 @@ pub use effect::{Effect, IntoEffect};
 pub use effect_timer::EffectTimer;
 pub use rect_ext::CenteredShrink;
 pub use render_effect::EffectRenderer;
+pub use effect_manager::EffectManager;
 pub use shader::Shader;
 pub use interpolation::*;
 pub use buffer_renderer::*;
