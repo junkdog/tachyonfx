@@ -1,11 +1,10 @@
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear},
     Frame, Terminal,
 };
 use std::{error::Error, io, time::{Duration as StdDuration, Instant}};
-use std::cmp::min;
 use tachyonfx::{dsl::EffectDsl, CenteredShrink, Duration, Effect, EffectRenderer, Shader};
 use tui_textarea::TextArea;
 

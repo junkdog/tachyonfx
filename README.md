@@ -28,17 +28,19 @@ Effects in tachyonfx are stateful objects that evolve over time. When you create
 - Configuration (like styling, directions, or interpolation methods)
 
 ```rust
+use tachyonfx::fx::{fade_to_fg, Color};
+
 // Create the effect once
 let mut fade_effect = fx::fade_to_fg(Color::Red, Duration::from_millis(1000));
 
 // In your render loop:
 loop {
-widget.render(area, buf);
+    widget.render(area, buf);
 
-// Process the same effect each frame, updating its state
-fade_effect.process(frame_duration, buf, area);
-// Or use the helper trait:
-// frame.render_effect(&mut fade_effect, area, frame_duration);
+    // Process the same effect each frame, updating its state
+    fade_effect.process(frame_duration, buf, area);
+    // Or use the helper trait:
+    // frame.render_effect(&mut fade_effect, area, frame_duration);
 }
 ```
 
@@ -151,7 +153,7 @@ modifications and animations.
 ```rust
 // only apply to cells with `Light2` foreground color
 fx::sweep_in(Direction::UpToDown, 15, 0, Dark0, timer)
-    .with_cell_selection(CellFilter::FgColor(Light2.into()))
+    .with_filter(CellFilter::FgColor(Light2.into()))
 ```
 
 `CellFilter`s can be combined to form complex selection criteria.
@@ -165,7 +167,7 @@ let border_text = CellFilter::AllOf(&[
 ]);
 
 prolong_start(duration, fx::fade_from(Dark0, Dark0, (320, QuadOut)),
-    .with_cell_selection(border_text)
+    .with_filter(border_text)
 ```
 
 ### Features

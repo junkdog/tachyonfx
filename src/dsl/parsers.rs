@@ -78,6 +78,7 @@ fn trim<'a>(prefix: &str) -> impl StrParser<'a, ()> + use<'a, '_>{
 
 fn effect<'a>() -> impl StrParser<'a, Expr> {
     let name = right!(
+        trim(""),
         succeed(attempt(skip!("fx::"))),
         snake_case_str(),
     );
@@ -95,6 +96,7 @@ fn effect<'a>() -> impl StrParser<'a, Expr> {
 
 fn fx_name<'a>(s: &'static str) -> impl StrParser<'a, &'a str> {
     right!(
+        trim(""),
         succeed(attempt(skip!("fx::"))),
         take!(s),
     )

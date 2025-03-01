@@ -40,7 +40,7 @@ let dissolve_effect = dsl.compiler()
 
 // Compile a more complex fade effect with color
 let fade_effect = dsl.compiler()
-    .compile("fx::fade_to(Color::Red, (1000, QuadOut))")
+    .compile("fx::fade_to_fg(Color::Red, (1000, QuadOut))")
     .expect("Valid effect");
 ```
 
@@ -50,15 +50,15 @@ You can bind variables to use within your DSL expressions, making them more dyna
 
 ```rust
 use tachyonfx::dsl::EffectDsl;
-use tachyonfx::Motion;
+use tachyonfx::{EffectTimer, Motion, Interpolation};
 use ratatui::style::Color;
 
 let dsl = EffectDsl::new();
 let effect = dsl.compiler()
     .bind("motion", Motion::LeftToRight)
     .bind("bg_color", Color::Blue)
-    .bind("duration", 500)
-    .compile("fx::sweep_in(motion, 10, 0, bg_color, duration)")
+    .bind("timer", EffectTimer::from_ms(500, Interpolation::SineInOut))
+    .compile("fx::sweep_in(motion, 10, 0, bg_color, timer)")
     .expect("Valid effect");
 ```
 
@@ -67,6 +67,8 @@ let effect = dsl.compiler()
 You can define variables within the DSL expression itself using `let` bindings:
 
 ```rust
+use tachyonfx::dsl::EffectDsl;
+
 let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(r#"
     let color = Color::from_u32(0xff5500);
@@ -81,6 +83,8 @@ let effect = dsl.compiler().compile(r#"
 Effects can be configured using method chaining, similar to the API:
 
 ```rust
+use tachyonfx::dsl::EffectDsl;
+
 let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(r#"
     fx::dissolve(1000)
@@ -94,23 +98,26 @@ let effect = dsl.compiler().compile(r#"
 The DSL supports both sequence and parallel composition of effects:
 
 ```rust
+use tachyonfx::dsl::EffectDsl;
+
 let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(r#"
-    fx::sequence(&[
-        fx::fade_from(Color::Black, Color::Blue, 500),
-        fx::sleep(200),
+    fx::parallel(&[
         fx::dissolve(300),
-        fx::fade_to(Color::Red, Color::Reset, (400, BounceOut))
+        fx::fade_to(Color::Red, Color::Black, (400, BounceOut))
     ])
 "#).expect("Valid effect");
 ```
 
 ```rust
+use tachyonfx::dsl::EffectDsl;
+use ratatui::style::Color;
+
 let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(r#"
-    fx::parallel(&[
+    fx::sequence(&[
         fx::fade_to_fg(Color::Red, 500).with_filter(CellFilter::Text),
-        fx::fade_to_bg(Color::Blue, 500).with_filter(CellFilter::BgColor(Color::Reset))
+        fx::fade_to_fg(Color::Blue, 500).with_filter(CellFilter::BgColor(Color::Black))
     ])
 "#).expect("Valid effect");
 ```
@@ -157,7 +164,7 @@ You can extend the DSL with custom effects by registering your own compilers:
 use tachyonfx::dsl::{EffectDsl, DslError};
 use tachyonfx::{fx, Effect};
 
-// Create a custom effect that combines existing effects
+// create a custom effect that references a custom effect or combines existing effects
 fn my_custom_effect(duration: u32, color: ratatui::style::Color) -> Effect {
     fx::sequence(&[
         fx::fade_from_fg(color, duration / 2),
@@ -186,11 +193,12 @@ let effect = dsl.compiler().compile(r#"
 
 To enable DSL serialization of your custom effects, implement the `Shader::to_dsl` method. This allows your effects to be converted to DSL expressions:
 
-```rust
+```rust,ignore
 use tachyonfx::{Shader, Effect};
-use tachyonfx::dsl::{DslError, EffectExpression};
+use tachyonfx::dsl::{DslFormat, DslError, EffectExpression};
 use compact_str::ToCompactString;
 
+#[derive(Debug)]
 struct MyCustomShader {
     color: ratatui::style::Color,
     duration: u32,
@@ -222,6 +230,8 @@ impl Shader for MyCustomShader {
 ### Example 1: Creating a Simple Animation Sequence
 
 ```rust
+use tachyonfx::dsl::EffectDsl;
+
 let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(r#"
     let fade_in = fx::fade_from(Color::Black, Color::Reset, (500, QuadOut));
@@ -235,6 +245,8 @@ let effect = dsl.compiler().compile(r#"
 ### Example 2: Complex Layout-Based Effects
 
 ```rust
+use tachyonfx::dsl::EffectDsl;
+
 let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(r#"
     let layout = Layout::horizontal([Percentage(33), Percentage(34), Percentage(33)])
@@ -260,7 +272,8 @@ let effect = dsl.compiler().compile(r#"
 
 ```rust
 use tachyonfx::dsl::{EffectDsl, EffectExpression};
-use tachyonfx::Shader;
+use tachyonfx::{fx, Shader};
+use ratatui::style::Color;
 
 // Create an effect programmatically
 let original_effect = fx::sequence(&[
