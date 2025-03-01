@@ -210,17 +210,14 @@ impl Shader for MyCustomShader {
     
     // Implement to_dsl to enable serialization
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
-        // Use the DSL format method for types that support it
-        let color_expr = self.color.dsl_format();
-        
         // Construct a DSL expression string
         let expr = format!("fx::my_custom_effect({}, {})", 
-            self.duration, 
-            color_expr
-        ).to_compact_string();
+            self.duration.dsl_format(), 
+            self.color.dsl_format()
+        );
         
         // Parse the string into an EffectExpression
-        EffectExpression::parse(&expr)
+        EffectExpression::parse(expr.as_str())
     }
 }
 ```
