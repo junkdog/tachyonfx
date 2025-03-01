@@ -1,6 +1,6 @@
-use std::cell::RefMut;
+use crate::features::acquire_mut;
 use crate::fx::unique::{Unique, UniqueContext};
-use crate::{ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng};
+use crate::{ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng, ThreadSafetyMarker};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use std::collections::BTreeMap;
@@ -13,14 +13,14 @@ use std::fmt::Debug;
 /// Regular effects run until completion, while unique effects can be cancelled when a new effect
 /// with the same identifier is added.
 #[derive(Default)]
-pub struct EffectManager<K: Clone + Ord + 'static> {
+pub struct EffectManager<K: Clone + Ord + ThreadSafetyMarker + 'static> {
     effects: Vec<Effect>,
     uniques: BTreeMap<K, RefCount<UniqueContext<K>>>,
     rng: SimpleRng,
 }
 
 #[allow(dead_code)]
-impl<K: Clone + Debug + Ord> EffectManager<K> {
+impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// Creates a unique effect that will cancel any existing effect with the same key.
     /// The effect must be added to the stage using [`add_effect`] to be processed.
     ///
@@ -89,20 +89,6 @@ impl<K: Clone + Debug + Ord> EffectManager<K> {
         // clear orphaned unique effects;
         self.uniques.retain(|_, ctx| RefCount::strong_count(ctx) > 1);
     }
-}
-
-#[cfg(feature = "sendable")]
-fn acquire_mut<K: Clone>(
-    ctx: &mut RefCount<UniqueContext<K>>,
-) -> std::sync::MutexGuard<'_, UniqueContext<K>> {
-    ctx.lock().unwrap()
-}
-
-#[cfg(not(feature = "sendable"))]
-fn acquire_mut<K: Clone>(
-    ctx: &mut RefCount<UniqueContext<K>>,
-) -> RefMut<'_, UniqueContext<K>> {
-    ctx.borrow_mut()
 }
 
 #[cfg(test)]

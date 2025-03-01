@@ -1,3 +1,8 @@
+pub use sendable::ThreadSafetyMarker;
+pub use sendable::RefCount;
+use crate::fx::unique::UniqueContext;
+
+
 #[cfg(feature = "sendable")]
 mod sendable {
     use std::sync::{Arc, Mutex};
@@ -27,8 +32,34 @@ mod sendable {
     }
 }
 
-pub use sendable::ThreadSafetyMarker;
-pub use sendable::RefCount;
+
+#[cfg(feature = "sendable")]
+pub(crate) fn acquire_mut<K: Clone + ThreadSafetyMarker>(
+    ctx: &mut RefCount<UniqueContext<K>>,
+) -> std::sync::MutexGuard<'_, UniqueContext<K>> {
+    ctx.lock().unwrap()
+}
+
+#[cfg(feature = "sendable")]
+pub(crate) fn acquire_ref<K: Clone + ThreadSafetyMarker>(
+    ctx: &RefCount<UniqueContext<K>>,
+) -> std::sync::MutexGuard<'_, UniqueContext<K>> {
+    ctx.lock().unwrap()
+}
+
+#[cfg(not(feature = "sendable"))]
+pub(crate) fn acquire_mut<K: Clone + ThreadSafetyMarker>(
+    ctx: &mut RefCount<UniqueContext<K>>,
+) -> std::cell::RefMut<'_, UniqueContext<K>> {
+    ctx.borrow_mut()
+}
+
+#[cfg(not(feature = "sendable"))]
+pub(crate) fn acquire_ref<K: Clone + ThreadSafetyMarker>(
+    ctx: &RefCount<UniqueContext<K>>,
+) -> std::cell::Ref<'_, UniqueContext<K>> {
+    ctx.borrow()
+}
 
 /// Wraps a value in a reference-counted smart pointer.
 ///
