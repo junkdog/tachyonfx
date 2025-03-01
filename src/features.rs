@@ -35,7 +35,7 @@ mod sendable {
 
 #[cfg(feature = "sendable")]
 pub(crate) fn acquire_mut<K: Clone + ThreadSafetyMarker>(
-    ctx: &mut RefCount<UniqueContext<K>>,
+    ctx: &RefCount<UniqueContext<K>>,
 ) -> std::sync::MutexGuard<'_, UniqueContext<K>> {
     ctx.lock().unwrap()
 }
@@ -49,7 +49,7 @@ pub(crate) fn acquire_ref<K: Clone + ThreadSafetyMarker>(
 
 #[cfg(not(feature = "sendable"))]
 pub(crate) fn acquire_mut<K: Clone + ThreadSafetyMarker>(
-    ctx: &mut RefCount<UniqueContext<K>>,
+    ctx: &RefCount<UniqueContext<K>>,
 ) -> std::cell::RefMut<'_, UniqueContext<K>> {
     ctx.borrow_mut()
 }
