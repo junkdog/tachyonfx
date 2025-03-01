@@ -17,7 +17,7 @@
   - Support for regular effects that run until completion
   - Support for unique effects that can be cancelled/replaced by new effects with the same ID
   - Automatic cleanup of completed effects and orphaned contexts
-- New `web-time` feature flag for WebAssembly compatibility (thanks [@orhun] for the contribution)
+- New `web-time` feature flag for WebAssembly compatibility (thanks [@orhun](https://github.com/orhun/) for the contribution)
   - Adds support for using `web_time` crate instead of `std::time` when targeting WASM
 
 ### Changed
