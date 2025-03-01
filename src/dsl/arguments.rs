@@ -602,7 +602,6 @@ impl FromDslExpr for [f32; 3] {
     }
 }
 
-#[macro_export]
 macro_rules! impl_from_args {
     ($type:ty, $method:ident) => {
         impl FromDslExpr for $type {

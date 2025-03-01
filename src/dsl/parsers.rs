@@ -712,7 +712,6 @@ trait IntoLiteral {
     fn into_literal(self) -> Expr;
 }
 
-#[macro_export]
 macro_rules! impl_into_literal {
     // single type implementation
     ($type:ty => $variant:ident) => {
