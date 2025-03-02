@@ -1,6 +1,6 @@
 # Changelog
 
-## tachyonfx 0.11.0 - UNRELEASED
+## tachyonfx 0.11.0 - 2025-03-02
 
 ### Added
 - New DSL (Domain Specific Language) for effect creation and composition:
