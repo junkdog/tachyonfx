@@ -1,7 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 use crate::{CellFilter, Duration, EffectTimer};
-use crate::dsl::{DslError, DslFormat, EffectExpression};
 use crate::effect::Effect;
 use crate::widget::EffectSpan;
 use crate::shader::Shader;
@@ -123,9 +122,12 @@ impl Shader for Repeat {
         self.mode = self.original_mode;
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::DslFormat;
+
         let fx = self.fx.to_dsl()?;
-        EffectExpression::parse(&format!("repeat({fx}, {})", self.mode.dsl_format()))
+        crate::dsl::EffectExpression::parse(&format!("repeat({fx}, {})", self.mode.dsl_format()))
     }
 }
 
@@ -137,10 +139,12 @@ pub enum RepeatMode {
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use indoc::indoc;
     use crate::fx::{consume_tick, repeat, RepeatMode};
     use crate::{Duration, Shader};
+    use crate::dsl::{DslError, DslFormat, EffectExpression};
 
     #[test]
     fn to_dsl() {

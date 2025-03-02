@@ -1,5 +1,7 @@
 # Changelog
 
+## tachyonfx 0.11.1 - 2025-03-02
+
 ## tachyonfx 0.11.0 - 2025-03-02
 
 ### Added

@@ -1,13 +1,12 @@
+use crate::shader::Shader;
+use crate::simple_rng::{RangeSampler, SimpleRng};
+use crate::{CellFilter, Duration, EffectTimer};
 use bon::{builder, Builder};
-use std::fmt::Debug;
-use std::ops::Range;
 use compact_str::ToCompactString;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
-use crate::{CellFilter, Duration, EffectTimer};
-use crate::dsl::{DslError, EffectExpression};
-use crate::simple_rng::{RangeSampler, SimpleRng};
-use crate::shader::Shader;
+use std::fmt::Debug;
+use std::ops::Range;
 
 
 /// Type of glitch transformation to apply to a cell.
@@ -184,7 +183,10 @@ impl Shader for Glitch {
         self.glitch_cells.clear();
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::DslError;
+
         Err(DslError::UnsupportedEffect {
             name: self.name().to_compact_string()
         })

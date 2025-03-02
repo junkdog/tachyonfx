@@ -5,7 +5,6 @@ use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::simple_rng::SimpleRng;
 use crate::{CellFilter, Duration};
-use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 #[derive(Clone, Debug, Default)]
 pub struct Dissolve {
@@ -100,7 +99,10 @@ impl Shader for Dissolve {
         Some(self.cell_filter.clone())
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::{DslFormat, EffectExpression};
+
         if self.dissolved_style.is_none() {
             EffectExpression::parse(&format!(
                 "{}({})",
@@ -120,11 +122,13 @@ impl Shader for Dissolve {
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use indoc::indoc;
     use ratatui::style::Style;
     use crate::{fx, EffectTimer, Shader};
     use crate::Interpolation::SineOut;
+    use crate::dsl::{DslError, DslFormat, EffectExpression};
 
     #[test]
     fn dsl_format_dissolve() {

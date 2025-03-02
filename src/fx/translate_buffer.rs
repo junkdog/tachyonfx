@@ -3,7 +3,6 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Rect};
 
 use crate::{BufferRenderer, CellFilter, Duration, EffectTimer, Interpolatable, RefCount, Shader};
-use crate::dsl::{DslError, EffectExpression};
 
 /// Translates the contents of an auxiliary buffer onto the main buffer.
 ///
@@ -97,8 +96,9 @@ impl Shader for TranslateBuffer {
         self.timer.reset();
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
-        Err(DslError::UnsupportedEffect {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        Err(crate::dsl::DslError::UnsupportedEffect {
             name: self.name().to_compact_string(),
         })
     }

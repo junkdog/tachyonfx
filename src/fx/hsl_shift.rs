@@ -7,7 +7,7 @@ use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::{CellFilter, Duration};
 use crate::{ColorMapper, HslConvertable, Interpolatable};
-use crate::dsl::{DslError, DslFormat, EffectExpression};
+
 
 #[derive(Builder, Clone, Default, Debug)]
 pub struct HslShift {
@@ -86,7 +86,10 @@ impl Shader for HslShift {
         Some(self.cell_filter.clone())
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::{DslFormat, EffectExpression};
+
         let hsl_mod_fg = self.hsl_mod_fg
             .map(|hsl| format!("Some([{}, {}, {}])", hsl[0], hsl[1], hsl[2]))
             .unwrap_or("None".to_string());
@@ -103,6 +106,7 @@ impl Shader for HslShift {
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use indoc::indoc;
     use crate::{fx, Effect};

@@ -4,7 +4,6 @@ use crate::shader::Shader;
 use crate::{CellFilter, Duration, EffectTimer};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::dsl::{DslError, EffectExpression};
 
 /// Represents an effect that can be applied to terminal cells.
 /// The `Effect` struct wraps a shader, allowing it to be configured
@@ -158,7 +157,8 @@ impl Shader for Effect {
         self.shader.as_ref().as_effect_span(offset)
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         self.shader.to_dsl()
     }
 }

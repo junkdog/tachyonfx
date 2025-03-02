@@ -5,7 +5,6 @@ use ratatui::layout::Rect;
 
 use crate::widget::EffectSpan;
 use crate::{CellFilter, Duration, ThreadSafetyMarker};
-use crate::dsl::{DslError, EffectExpression};
 use crate::EffectTimer;
 
 
@@ -220,7 +219,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// This default implementation always returns an error with the shader's name,
     /// indicating that DSL conversion is not supported. Shader implementations that
     /// support DSL conversion should override this method.
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::{DslError, EffectExpression};
         Err(DslError::EffectExpressionNotSupported {
             name: self.name(),
         })

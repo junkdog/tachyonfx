@@ -1,7 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use crate::{CellFilter, Duration, EffectTimer};
-use crate::dsl::{DslError, EffectExpression};
 use crate::effect::Effect;
 use crate::widget::EffectSpan;
 use crate::shader::Shader;
@@ -56,16 +55,20 @@ impl Shader for NeverComplete {
         EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)])
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::EffectExpression;
         let nested = self.effect.to_dsl()?;
         EffectExpression::parse(&format!("never_complete({})", nested))
     }
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use crate::fx::{consume_tick, never_complete};
     use crate::Shader;
+    use crate::dsl::{DslError, EffectExpression};
 
     #[test]
     fn to_dsl() {

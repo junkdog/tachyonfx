@@ -1,4 +1,3 @@
-use crate::dsl::{DslError, DslFormat, EffectExpression};
 use crate::widget::EffectSpan;
 use crate::Interpolation::Linear;
 use crate::{CellFilter, Duration, Effect, EffectTimer, Shader};
@@ -109,7 +108,10 @@ impl Shader for Prolong {
         self.inner.reset();
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::{DslFormat, EffectExpression};
+
         let nested = self.inner.to_dsl()?;
         EffectExpression::parse(&format!(
             "{}({}, {})",
@@ -121,8 +123,10 @@ impl Shader for Prolong {
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use crate::fx::consume_tick;
+    use crate::dsl::{DslError, DslFormat, EffectExpression};
     use crate::shader::Shader;
     use indoc::indoc;
     use crate::fx;

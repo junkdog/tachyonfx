@@ -1,7 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use crate::{CellFilter, Duration};
-use crate::dsl::{DslError, DslFormat, EffectExpression};
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::widget::EffectSpan;
@@ -78,7 +77,9 @@ impl Shader for TemporaryEffect {
         self.timer.reset();
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::{DslFormat, EffectExpression};
         EffectExpression::parse(&format!("fx::with_duration({}, {})",
             self.timer.duration().dsl_format(),
             self.effect.to_dsl()?
@@ -98,9 +99,11 @@ impl IntoTemporaryEffect for Effect {
 
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use indoc::indoc;
     use crate::{fx, Duration, Shader};
+    use crate::dsl::{DslError, DslFormat, EffectExpression};
 
     #[test]
     fn to_dsl() {

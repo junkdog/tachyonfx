@@ -11,7 +11,6 @@ use crate::interpolation::{Interpolatable, Interpolation};
 use crate::shader::Shader;
 use crate::CellFilter;
 use crate::{ColorMapper, Duration};
-use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 #[derive(Clone, Debug)]
 pub struct SweepIn {
@@ -156,7 +155,10 @@ impl Shader for SweepIn {
         Some(self.cell_filter.clone())
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::{DslFormat, EffectExpression};
+
         let direction = if self.timer.is_reversed() ^ self.direction.flips_timer()  {
             self.direction.flipped()
         } else {
@@ -183,10 +185,12 @@ fn offset(p: Position, translate: (i16, i16)) -> Position {
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use indoc::indoc;
     use ratatui::prelude::Color;
     use crate::{fx, Motion, Shader};
+    use crate::dsl::{DslError, DslFormat, EffectExpression};
 
     #[test]
     fn to_dsl_slide_in() {

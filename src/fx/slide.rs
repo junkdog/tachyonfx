@@ -4,9 +4,8 @@ use ratatui::layout::{Position, Rect};
 use ratatui::style::Color;
 
 use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
-use crate::{Motion, DirectionalVariance};
 use crate::{CellFilter, Duration, EffectTimer, Shader};
-use crate::dsl::{DslError, DslFormat, EffectExpression};
+use crate::{DirectionalVariance, Motion};
 
 /// A shader that applies a directional sliding effect to terminal cells.
 #[derive(Builder, Clone, Debug)]
@@ -144,7 +143,10 @@ impl Shader for SlideCell {
         Some(self.cell_filter.clone())
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::{DslFormat, EffectExpression};
+
         let direction = if self.timer.is_reversed() ^ self.direction.flips_timer()  {
             self.direction.flipped()
         } else {
@@ -175,10 +177,11 @@ fn offset(p: Position, translate: (i16, i16)) -> Position {
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
+    use crate::{fx, Motion, Shader};
     use indoc::indoc;
     use ratatui::prelude::Color;
-    use crate::{fx, Motion, Shader};
 
     #[test]
     fn to_dsl_slide_in() {

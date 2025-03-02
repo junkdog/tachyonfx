@@ -4,7 +4,6 @@ use ratatui::prelude::Rect;
 
 use crate::bounding_box::BoundingBox;
 use crate::{CellFilter, Duration};
-use crate::dsl::{DslError, EffectExpression};
 use crate::effect::Effect;
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
@@ -118,8 +117,9 @@ impl Shader for Translate {
         }
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
-        Err(DslError::UnsupportedEffect {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        Err(crate::dsl::DslError::UnsupportedEffect {
             name: self.name().to_compact_string(),
         })
     }

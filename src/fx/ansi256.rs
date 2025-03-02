@@ -5,7 +5,6 @@ use crate::Duration;
 use crate::color_ext::AsIndexedColor;
 use crate::color_mapper::ColorMapper;
 use crate::CellFilter;
-use crate::dsl::{DslError, EffectExpression};
 use crate::shader::Shader;
 
 #[derive(Clone, Default, Debug)]
@@ -60,12 +59,14 @@ impl Shader for Ansi256 {
 
     fn reset(&mut self) {}
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
-        EffectExpression::parse("fx::term256_colors()")
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        crate::dsl::EffectExpression::parse("fx::term256_colors()")
     }
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use crate::fx;
 

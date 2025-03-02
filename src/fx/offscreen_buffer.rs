@@ -1,9 +1,8 @@
+use crate::widget::EffectSpan;
+use crate::{CellFilter, Duration, Effect, RefCount, Shader};
 use compact_str::ToCompactString;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::{CellFilter, Duration, Effect, RefCount, Shader};
-use crate::dsl::{DslError, EffectExpression};
-use crate::widget::EffectSpan;
 
 #[derive(Clone, Debug)]
 pub struct OffscreenBuffer {
@@ -75,7 +74,9 @@ impl Shader for OffscreenBuffer {
         EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::DslError;
         Err(DslError::UnsupportedEffect {
             name: self.name().to_compact_string(),
         })

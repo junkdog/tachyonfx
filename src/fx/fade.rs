@@ -7,7 +7,6 @@ use crate::color_mapper::ColorMapper;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::{CellFilter, Duration, Interpolatable};
-use crate::dsl::{DslError, DslFormat, EffectExpression};
 
 #[derive(Builder, Clone, Debug)]
 pub struct FadeColors {
@@ -77,7 +76,10 @@ impl Shader for FadeColors {
         Some(self.cell_filter.clone())
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        use crate::dsl::DslFormat;
+
         let s = if self.bg.is_some() {
             format!(
                 "{}({}, {}, {})",
@@ -94,11 +96,12 @@ impl Shader for FadeColors {
                 self.timer.dsl_format()
             )
         };
-        EffectExpression::parse(&s)
+        crate::dsl::EffectExpression::parse(&s)
     }
 }
 
 #[cfg(test)]
+#[cfg(feature = "dsl")]
 mod tests {
     use indoc::indoc;
     use ratatui::style::Color;
