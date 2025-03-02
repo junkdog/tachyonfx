@@ -53,7 +53,7 @@ the typical flow is:
 1. Render your widget to the screen
 2. Apply effects to transform the rendered content
 
-### Domain-Specific Language (DSL)
+### Effect DSL (Domain-Specific Language)
 
 tachyonfx includes a rust-looking DSL for defining effects as text expressions that can be compiled at runtime.
 This enables:
@@ -178,7 +178,7 @@ prolong_start(duration, fx::fade_from(Dark0, Dark0, (320, QuadOut)),
 ```
 
 ### Features
-- `dsl`: Enables the Domain-Specific Language for effect definitions, allowing for runtime compilation of effect expressions.
+- `dsl`: Enables the Effect DSL, allowing for runtime compilation of effect expressions. Enabled by default.
 - `sendable`: Enables the `Send` trait for effects, shaders, and associated parameters. This allows effects to be
   safely transferred across thread boundaries. Note that enabling this feature requires all `Shader` implementations
   to be `Send`, which may impose additional constraints on custom shader implementations.
