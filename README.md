@@ -55,7 +55,8 @@ the typical flow is:
 
 ### Domain-Specific Language (DSL)
 
-tachyonfx includes a rust-like DSL for defining effects as text expressions that can be compiled at runtime. This enables:
+tachyonfx includes a rust-looking DSL for defining effects as text expressions that can be compiled at runtime.
+This enables:
 
 - Fast iteration and prototyping of effects
 - Creating effects from configuration files or user input
@@ -68,7 +69,7 @@ use tachyonfx::dsl::EffectDsl;
 let effect = EffectDsl::new().compiler()
     .bind("color", Color::Red)
     .compile("fx::fade_to_fg(color, (1000, QuadOut))")
-    .expect("valid effect");
+    .expect("valid effect from dsl");
 
 // Complex compositions
 let expression = r#"
@@ -78,11 +79,17 @@ let expression = r#"
     ])
 "#;
 
-let effect = EffectDsl::new().compiler().compile(expression).expect("valid effect");
+let effect = EffectDsl::new()
+    .compiler()
+    .compile(expression)
+    .expect("valid effect from dsl");
 ```
 
-The DSL supports let bindings, method chaining, and serialization of effects with `Effect::to_dsl`:
+The DSL supports let bindings, [method chaining][docs-supported-types], and serialization of effects
+with `Effect::to_dsl`:
 
+
+ [docs-supported-types]: https://docs.rs/tachyonfx/latest/tachyonfx/dsl/index.html#supported-types-and-methods
 
 ### Types of Effects
 

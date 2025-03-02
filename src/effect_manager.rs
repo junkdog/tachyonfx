@@ -6,8 +6,8 @@ use ratatui::layout::Rect;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
-/// A stage that manages a collection of terminal UI effects, including uniquely
-/// identified effects that can be replaced/cancelled by new effects with the same ID.
+/// Manages a collection of terminal UI effects, including uniquely identified
+/// effects that can be replaced/cancelled by new effects with the same id.
 ///
 /// The `EffectManager` provides lifecycle management for both regular effects and unique effects.
 /// Regular effects run until completion, while unique effects can be cancelled when a new effect
@@ -22,7 +22,7 @@ pub struct EffectManager<K: Clone + Ord + ThreadSafetyMarker + 'static> {
 #[allow(dead_code)]
 impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// Creates a unique effect that will cancel any existing effect with the same key.
-    /// The effect must be added to the stage using [`add_effect`] to be processed.
+    /// The effect must be added to the manager using [`add_effect`] in order to be processed.
     ///
     /// When a new unique effect is created with a key that matches an existing effect,
     /// the existing effect will be marked as complete on the next processing cycle.
@@ -34,7 +34,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     ///
     /// # Returns
     /// A new effect that includes unique identification logic. The effect must still be added
-    /// to the stage to be processed.
+    /// to the manager to be processed.
     pub fn unique(&mut self, key: impl Into<K>, fx: Effect) -> Effect {
         let key = key.into();
         let ctx = self.uniques.entry(key.clone())
@@ -45,17 +45,17 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
         Unique::new(ctx, fx).into_effect()
     }
 
-    /// Adds an effect to be processed by the stage.
+    /// Adds an effect to be processed by the manager.
     ///
     /// The effect will be processed each frame until it is complete.
     ///
     /// # Arguments
-    /// * `effect` - The effect to add to the stage
+    /// * `effect` - The effect to add to the manager
     pub fn add_effect(&mut self, effect: Effect) {
         self.effects.push(effect);
     }
 
-    /// Creates and adds a unique effect to the stage in a single operation.
+    /// Creates and adds a unique effect to the manager in a single operation.
     ///
     /// This is a convenience method that combines [`unique`] and [`add_effect`].
     /// Any existing effect with the same key will be cancelled.
@@ -63,7 +63,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// # Arguments
     /// * `key` - A unique identifier for the effect. If an effect with this key already exists,
     ///           the existing effect will be cancelled.
-    /// * `fx` - The effect to be wrapped with unique identification and added to the stage.
+    /// * `fx` - The effect to be wrapped with unique identification and added to the manager.
     pub fn add_unique_effect(&mut self, key: impl Into<K>, fx: Effect) {
         let fx = self.unique(key, fx);
         self.add_effect(fx);
