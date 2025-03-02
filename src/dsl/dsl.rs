@@ -163,7 +163,7 @@ impl EffectDsl {
                 .ok_or(DslError::UnknownEffect { name })
                 .and_then(|d| {
                     let mut args = Arguments::new(arguments.into(), self, env);
-                    let effect = (d.compile)(&mut args)?.fold_fns(self_fns, &self, env);
+                    let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
 
                     match () {
                         _ if effect.is_err() => effect,
@@ -181,7 +181,7 @@ impl EffectDsl {
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
                 fx::sequence(&effects)
-                    .fold_fns(self_fns, &self, env)
+                    .fold_fns(self_fns, self, env)
             },
             Expr::Parallel { effects, self_fns } => {
                 let mut args = Arguments::new(effects.into(), self, env);
@@ -190,7 +190,7 @@ impl EffectDsl {
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
                 fx::parallel(&effects)
-                    .fold_fns(self_fns, &self, env)
+                    .fold_fns(self_fns, self, env)
             },
             Expr::Var { name, self_fns } => env.bound_var::<Effect>(self, name)
                 .and_then(|effect| effect.fold_fns(self_fns, self, env)),

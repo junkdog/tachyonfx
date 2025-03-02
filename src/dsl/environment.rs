@@ -63,7 +63,7 @@ impl DslEnv {
     {
         self.globals.get(name.as_ref())
             .ok_or_else(|| DslError::UnknownArgument { name: name.as_ref().into() })
-            .and_then(|v| v.downcast_ref().map(|v: &T| v.clone()).ok_or_else(||
+            .and_then(|v| v.downcast_ref().cloned().ok_or_else(||
                 DslError::NoSuchVariable {
                     name: name.as_ref().to_compact_string(),
                     expected: type_name::<T>()

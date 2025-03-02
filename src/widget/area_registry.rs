@@ -14,9 +14,7 @@ impl AreaRegistry {
             .collect();
 
         let pack = |a: &Rect| -> u64 {
-            (a.x as u64) << 48
-                | (a.y as u64) << 32
-                | (a.width as u64) << 16
+            ((a.x as u64) << 48) | ((a.y as u64) << 32) | ((a.width as u64) << 16)
                 | (a.height as u64)
         };
 

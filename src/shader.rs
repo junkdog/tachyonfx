@@ -221,7 +221,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// support DSL conversion should override this method.
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-        use crate::dsl::{DslError, EffectExpression};
+        use crate::dsl::DslError;
         Err(DslError::EffectExpressionNotSupported {
             name: self.name(),
         })

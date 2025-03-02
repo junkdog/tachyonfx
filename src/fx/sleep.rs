@@ -1,10 +1,10 @@
-use ratatui::layout::Rect;
 use crate::Duration;
+use ratatui::layout::Rect;
 
-use crate::CellFilter;
 use crate::effect_timer::EffectTimer;
-use crate::widget::EffectSpan;
 use crate::shader::Shader;
+use crate::widget::EffectSpan;
+use crate::CellFilter;
 
 #[derive(Clone, Debug)]
 pub struct Sleep {
@@ -66,7 +66,6 @@ impl Shader for Sleep {
 #[cfg(feature = "dsl")]
 mod tests {
     use crate::{fx, Shader};
-    use crate::dsl::{DslError, EffectExpression};
 
     #[test]
     fn to_dsl() {

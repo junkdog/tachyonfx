@@ -206,7 +206,7 @@ fn to_dsl(
     name: &'static str,
     effects: &[Effect]
 ) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-    use crate::dsl::{DslError, EffectExpression};
+    use crate::dsl::EffectExpression;
     let effects = effects.iter()
         .map(|e| e.to_dsl())
         .map(|dsl| dsl.map(|e| e.to_string()))

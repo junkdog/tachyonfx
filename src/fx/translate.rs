@@ -71,7 +71,7 @@ impl Shader for Translate {
 
     fn done(&self) -> bool {
         self.timer.done()
-            && self.fx.as_ref().map_or(true, Effect::done)
+            && self.fx.as_ref().is_none_or(Effect::done)
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {

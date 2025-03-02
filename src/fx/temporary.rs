@@ -1,11 +1,11 @@
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use crate::{CellFilter, Duration};
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
-use crate::widget::EffectSpan;
 use crate::interpolation::Interpolation::Linear;
 use crate::shader::Shader;
+use crate::widget::EffectSpan;
+use crate::{CellFilter, Duration};
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
 
 #[derive(Clone, Debug)]
 pub struct TemporaryEffect {
@@ -101,9 +101,8 @@ impl IntoTemporaryEffect for Effect {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use indoc::indoc;
     use crate::{fx, Duration, Shader};
-    use crate::dsl::{DslError, DslFormat, EffectExpression};
+    use indoc::indoc;
 
     #[test]
     fn to_dsl() {

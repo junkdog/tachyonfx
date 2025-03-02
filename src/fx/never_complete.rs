@@ -1,9 +1,9 @@
+use crate::effect::Effect;
+use crate::shader::Shader;
+use crate::widget::EffectSpan;
+use crate::{CellFilter, Duration, EffectTimer};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use crate::{CellFilter, Duration, EffectTimer};
-use crate::effect::Effect;
-use crate::widget::EffectSpan;
-use crate::shader::Shader;
 
 #[derive(Clone, Debug)]
 pub struct NeverComplete {
@@ -68,7 +68,6 @@ impl Shader for NeverComplete {
 mod tests {
     use crate::fx::{consume_tick, never_complete};
     use crate::Shader;
-    use crate::dsl::{DslError, EffectExpression};
 
     #[test]
     fn to_dsl() {

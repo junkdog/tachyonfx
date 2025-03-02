@@ -62,7 +62,7 @@ impl SimpleRng {
     #[cfg(target_pointer_width = "64")]
     fn gen_usize(&mut self) -> usize {
         let mut g = || self.gen() as usize;
-        g() << 32 | g()
+        (g() << 32) | g()
     }
 
     #[cfg(target_pointer_width = "32")]

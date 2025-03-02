@@ -318,7 +318,7 @@ fn style<'a>() -> impl StrParser<'a, Expr> {
 
 fn snake_case_str<'a>() -> impl StrParser<'a, &'a str> {
     not_empty(item_while(|c: char| matches!(c, 'a'..='z' | '0'..='9' | '_')))
-        .map_if(|s: &str| if s.starts_with(|c| matches!(c, 'a'..='z')) { Some(s) } else { None })
+        .map_if(|s: &str| if s.starts_with(|c: char| c.is_ascii_lowercase()) { Some(s) } else { None })
 }
 
 fn fn_call<'a>() -> impl StrParser<'a, FnCallInfo> {
@@ -705,7 +705,7 @@ fn fn_call_expr(name: &str, args: Vec<Expr>) -> Expr {
 }
 
 fn fn_call_chained_expr(name: &str, args: Vec<Expr>, self_fns: Vec<FnCallInfo>) -> Expr {
-    Expr::FnCall { call: FnCallInfo::new(name, args), self_fns: self_fns.into() }
+    Expr::FnCall { call: FnCallInfo::new(name, args), self_fns }
 }
 
 trait IntoLiteral {

@@ -125,11 +125,10 @@ impl Shader for Prolong {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
+    use crate::fx;
     use crate::fx::consume_tick;
-    use crate::dsl::{DslError, DslFormat, EffectExpression};
     use crate::shader::Shader;
     use indoc::indoc;
-    use crate::fx;
 
     #[test]
     fn to_dsl_prolong_start() {

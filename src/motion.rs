@@ -80,7 +80,7 @@ impl DirectionalVariance {
         max: u16
     ) -> Self {
         Self {
-            rng: SimpleRng::new((area.width as u32) << 16 | area.height as u32),
+            rng: SimpleRng::new(((area.width as u32) << 16) | area.height as u32),
             direction,
             max: max as i16,
         }

@@ -84,7 +84,7 @@ impl ChainableMethods for Style {
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
         Ok(match name {
-            "clone"           => style.clone(),
+            "clone"           => style,
             "fg"              => style.fg(args.color()?),
             "bg"              => style.bg(args.color()?),
             "add_modifier"    => style.add_modifier(args.modifier()?),
@@ -101,7 +101,7 @@ impl ChainableMethods for Rect {
         args: &mut Arguments<'_>
     ) -> Result<Self, DslError> {
         Ok(match name {
-            "clone"        => rect.clone(),
+            "clone"        => rect,
             "clamp"        => rect.clamp(args.rect()?),
             "inner"        => rect.inner(args.margin()?),
             "intersection" => rect.intersection(args.rect()?),

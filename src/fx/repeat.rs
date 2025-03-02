@@ -1,9 +1,9 @@
+use crate::effect::Effect;
+use crate::shader::Shader;
+use crate::widget::EffectSpan;
+use crate::{CellFilter, Duration, EffectTimer};
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
-use crate::{CellFilter, Duration, EffectTimer};
-use crate::effect::Effect;
-use crate::widget::EffectSpan;
-use crate::shader::Shader;
 
 #[derive(Clone, Debug)]
 pub struct Repeat {
@@ -141,10 +141,9 @@ pub enum RepeatMode {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use indoc::indoc;
     use crate::fx::{consume_tick, repeat, RepeatMode};
     use crate::{Duration, Shader};
-    use crate::dsl::{DslError, DslFormat, EffectExpression};
+    use indoc::indoc;
 
     #[test]
     fn to_dsl() {
