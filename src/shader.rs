@@ -206,12 +206,27 @@ pub trait Shader: ThreadSafetyMarker + Debug {
         }
     }
 
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, Vec::default())
+    /// Attempts to convert this shader to a DSL effect expression.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing either:
+    /// - `Ok(EffectExpression)` if conversion is successful
+    /// - `Err(DslError::EffectExpressionNotSupported)` containing the shader name if this
+    ///   shader type doesn't support conversion to the DSL format
+    ///
+    /// # Errors
+    ///
+    /// This default implementation always returns an error with the shader's name,
+    /// indicating that DSL conversion is not supported. Shader implementations that
+    /// support DSL conversion should override this method.
+    fn to_dsl(&self) -> Result<EffectExpression, DslError> {
+        Err(DslError::EffectExpressionNotSupported {
+            name: self.name(),
+        })
     }
 
-    fn to_dsl(&self) -> Result<EffectExpression, DslError>
-    {
-        todo!("yolo")
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, Vec::default())
     }
 }

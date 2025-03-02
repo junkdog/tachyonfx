@@ -24,6 +24,10 @@
   - Added `crossterm` feature (enabled by default)
   - Changed ratatui dependency to disable default features
 
+### Deprecated
+- `Shader::set_cell_selection()`: renamed to `Shader::filter()`.
+- `Shader::cell_selection()`: renamed to `Shader::cell_filter()`.
+
 ### Fixed
 - `SimpleRng::gen_usize()`: Fixed panic on 32bit architectures 
 
