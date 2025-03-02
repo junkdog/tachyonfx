@@ -54,16 +54,16 @@ impl EffectTimeline {
         #[builder(default = Style::default().bg(Color::Black))]
         chart_style: Style,
 
-        #[builder(default = Style::default().fg(Color::from_hsl(40.0, 20.0, 35.0)))]
+        #[builder(default = Style::default().fg(Color::from_hsl_f32(40.0, 20.0, 35.0)))]
         area_column_style: Style,
 
-        #[builder(default = Style::default().fg(Color::from_hsl(40.0, 40.0, 47.0)))]
+        #[builder(default = Style::default().fg(Color::from_hsl_f32(40.0, 40.0, 47.0)))]
         area_legend_style: Style,
 
-        #[builder(default = Style::default().fg(Color::from_hsl(170.0, 20.0, 35.0)))]
+        #[builder(default = Style::default().fg(Color::from_hsl_f32(170.0, 20.0, 35.0)))]
         cell_filter_column_style: Style,
 
-        #[builder(default = Style::default().fg(Color::from_hsl(170.0, 40.0, 47.0)))]
+        #[builder(default = Style::default().fg(Color::from_hsl_f32(170.0, 40.0, 47.0)))]
         cell_filter_legend_style: Style,
     ) -> Self {
         let span = effect.as_effect_span(Duration::default());
