@@ -168,9 +168,9 @@ impl Interpolatable<Color> for Color {
             return *target;
         }
         
-        let (h, s, v) = self.to_hsl();
-        let (h2, s2, v2) = target.to_hsl();
-        Color::from_hsl(
+        let (h, s, v) = self.to_hsl_f32();
+        let (h2, s2, v2) = target.to_hsl_f32();
+        Color::from_hsl_f32(
             h.lerp(&h2, alpha),
             s.lerp(&s2, alpha),
             v.lerp(&v2, alpha),
@@ -199,12 +199,12 @@ impl Interpolatable<Offset> for Offset {
 }
 
 pub trait HslConvertable {
-    fn from_hsl(h: f32, s: f32, v: f32) -> Self;
-    fn to_hsl(&self) -> (f32, f32, f32);
+    fn from_hsl_f32(h: f32, s: f32, v: f32) -> Self;
+    fn to_hsl_f32(&self) -> (f32, f32, f32);
 }
 
 impl HslConvertable for Color {
-    fn from_hsl(h: f32, s: f32, v: f32) -> Self {
+    fn from_hsl_f32(h: f32, s: f32, v: f32) -> Self {
         let hsl = colorsys::Hsl::new(h as f64, s as f64, v as f64, None);
         let color: colorsys::Rgb = hsl.as_ref().into();
         
@@ -215,7 +215,7 @@ impl HslConvertable for Color {
         Color::Rgb(red as u8, green as u8, blue as u8)
     }
 
-    fn to_hsl(&self) -> (f32, f32, f32) {
+    fn to_hsl_f32(&self) -> (f32, f32, f32) {
         let (r, g, b) = self.to_rgb();
 
         let rgb = colorsys::Rgb::from([r, g, b]);

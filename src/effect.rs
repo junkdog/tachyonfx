@@ -63,7 +63,7 @@ impl Effect {
     /// use ratatui::style::Color;
     /// use tachyonfx::{Effect, CellFilter, fx, Interpolation, HslConvertable};
     ///
-    /// let color = Color::from_hsl(180.0, 85.0, 62.0);
+    /// let color = Color::from_hsl_f32(180.0, 85.0, 62.0);
     /// let shader = fx::fade_to_fg(color, (300, Interpolation::SineIn))
     ///     .with_filter(CellFilter::Text);
     /// ```

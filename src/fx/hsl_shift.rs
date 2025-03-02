@@ -33,7 +33,7 @@ impl Shader for HslShift {
         let mut bg_mapper = ColorMapper::default();
 
         let hsl_lerp = |c: Color, hsl: [f32; 3]| -> Color {
-            let (h, s, l) = c.to_hsl();
+            let (h, s, l) = c.to_hsl_f32();
 
             let (h, s, l) = (
                 (h + 0.0.lerp(&hsl[0], alpha)) % 360.0,
@@ -41,7 +41,7 @@ impl Shader for HslShift {
                 (l + 0.0.lerp(&hsl[2], alpha)).clamp(0.0, 100.0),
             );
 
-            HslConvertable::from_hsl(h, s, l)
+            HslConvertable::from_hsl_f32(h, s, l)
         };
 
         for (_, cell) in cell_iter {

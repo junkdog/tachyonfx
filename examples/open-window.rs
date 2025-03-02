@@ -276,7 +276,7 @@ fn stylized_window_fx() -> Effect {
     let layout = Layout::vertical([Constraint::Length(1), Constraint::Percentage(100)]);
     let content_area = CellFilter::Layout(layout, 1);
 
-    let cyan = Color::from_hsl(180.0, 100.0, 50.0);
+    let cyan = Color::from_hsl_f32(180.0, 100.0, 50.0);
     repeating(parallel(&[
         // content area
         sequence(&[

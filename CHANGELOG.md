@@ -24,6 +24,13 @@
   - Added `crossterm` feature (enabled by default)
   - Changed ratatui dependency to disable default features
 
+### Breaking Changes
+- Renamed HSL color conversion methods to avoid conflicts with Ratatui's "palette" feature:
+  - `Color::from_hsl(h, s, l)` → `Color::from_hsl_f32(h, s, l)`
+  - `color.to_hsl()` → `color.to_hsl_f32()`
+   
+  This is a short-term fix to prevent name clashes when using tachyonfx with Ratatui's palette feature enabled.
+
 ### Deprecated
 - `Shader::set_cell_selection()`: renamed to `Shader::filter()`.
 - `Shader::cell_selection()`: renamed to `Shader::cell_filter()`.

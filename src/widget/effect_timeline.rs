@@ -491,8 +491,8 @@ impl Widget for EffectTimeline {
 }
 
 fn as_background_area_line(bar: &str, base_color: Color) -> Line<'static> {
-    let (h, s, l) = base_color.to_hsl();
-    let color = Color::from_hsl(h, s * 0.4, l * 0.4);
+    let (h, s, l) = base_color.to_hsl_f32();
+    let color = Color::from_hsl_f32(h, s * 0.4, l * 0.4);
     let first = bar.chars().next().unwrap_or(' ').to_string();
     let last = bar.chars().last().unwrap_or(' ').to_string();
 
@@ -642,7 +642,7 @@ mod tests {
         let layout = Layout::vertical([Constraint::Length(1), Constraint::Percentage(100)]);
         let content_area = CellFilter::Layout(layout, 1);
 
-        let cyan = Color::from_hsl(180.0, 100.0, 50.0);
+        let cyan = Color::from_hsl_f32(180.0, 100.0, 50.0);
         let fx = fx::repeating(
             parallel(&[
                 sequence(&[

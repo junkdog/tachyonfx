@@ -42,7 +42,7 @@ impl ColorResolver {
         let len = effect_identifiers.len();
         let mut colors: Vec<Color> = (0..len)
             .map(|idx| hue.start + hue_range * idx as f64 / len as f64)
-            .map(|hue| Color::from_hsl(hue as _, saturation as _, lightness as _))
+            .map(|hue| Color::from_hsl_f32(hue as _, saturation as _, lightness as _))
             .collect();
 
         let mut lcg = SimpleRng::default();
