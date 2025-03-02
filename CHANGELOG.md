@@ -3,7 +3,7 @@
 ## tachyonfx 0.11.1 - 2025-03-02
 
 ### Fixed
-- Build now works with `--no-default-features` flag. 
+- Build now works with `default-features = false`.
 
 
 ## tachyonfx 0.11.0 - 2025-03-02
