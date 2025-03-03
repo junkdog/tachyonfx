@@ -1,11 +1,10 @@
-use anpa::core::ParserExt;
+use anpa::core::{AnpaResult, ParserExt};
 use std::ops::Range;
-use anpa::combinators::{attempt, count_consumed, get_parsed, many, middle, no_separator, or_diff, right, times};
+use anpa::combinators::{attempt, count_consumed, get_parsed, many, many_to_vec, middle, no_separator, not_empty, or_diff, right, succeed, times};
 use anpa::core::StrParser;
 use anpa::parsers::{item_if, item_while, until};
-use anpa::{or, right, skip};
+use anpa::{greedy_or, or, right, skip, take};
 use anpa::number::float;
-use crate::dsl::expressions::Expr;
 
 /// Represents the type of a token in the DSL
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -68,10 +67,46 @@ impl<'a> Token<'a> {
     }
 }
 
+pub(super) fn tokenize(input: &str) -> Option<Vec<Token>> {
+    let result = anpa::core::parse(tokens(), input);
+
+    assert_eq!(result.state, "", "Failed to parse tokens from input: {}", input);
+
+    result
+        .result
+        .and_then(|tokens| {
+            let mut tokens = tokens;
+            let mut offset = 0;
+            for token in &mut tokens {
+                token.span.start += offset;
+                token.span.end += offset;
+                offset = token.span.end;
+            }
+
+            Some(tokens)
+        })
+}
+
+fn tokens<'a>() -> impl StrParser<'a, Vec<Token<'a>>> {
+    let p = or!(
+        whitespace(),
+        double_colon(),
+        hex_literal(),
+        greedy_or!(int_literal(), float_literal()),
+        structural(),
+        string_literal(),
+        keyword(),
+        line_comment(),
+        block_comment(),
+        identifier(),
+    );
+
+    many_to_vec(p, true, no_separator())
+}
+
 fn snake_case_str<'a>() -> impl StrParser<'a, &'a str>  {
-    let start = item_if(|c: char| c.is_ascii_lowercase() || c == '_');
-    let rest = many(item_if(|c: char| c.is_ascii_alphanumeric() || c == '_'), false, no_separator());
-    get_parsed(right!(start, rest))
+    let p = not_empty(item_while(|c: char| c.is_ascii_alphanumeric() || c == '_'));
+    get_parsed(p)
 }
 
 fn identifier<'a>() -> impl StrParser<'a, Token<'a>> {
@@ -81,26 +116,37 @@ fn identifier<'a>() -> impl StrParser<'a, Token<'a>> {
 fn keyword<'a>() -> impl StrParser<'a, Token<'a>> {
     let p = attempt(snake_case_str()
         .map_if(|s| Some(match s {
-            "let"    => TokenKind::Keyword,
-            "return" => TokenKind::Keyword,
-            _        => None?,
+            "let"      => TokenKind::Keyword,
+            "return"   => TokenKind::Keyword,
+            "if"       => TokenKind::Keyword,
+            "else"     => TokenKind::Keyword,
+            "while"    => TokenKind::Keyword,
+            "for"      => TokenKind::Keyword,
+            "in"       => TokenKind::Keyword,
+            "break"    => TokenKind::Keyword,
+            "continue" => TokenKind::Keyword,
+            "true"     => TokenKind::Keyword,
+            "false"    => TokenKind::Keyword,
+            _          => None?,
         })));
 
     token(TokenKind::Keyword, get_parsed(p))
 }
 
-fn f32_literal<'a>() -> impl StrParser<'a, Token<'a>> {
-    token(TokenKind::FloatLiteral, get_parsed(float::<f32, char, &str, ()>()))
+fn float_literal<'a>() -> impl StrParser<'a, Token<'a>> {
+    let sign = attempt(succeed(or!(skip!('-'), skip!('+'))));
+    let plain = float::<f32, char, &str, ()>();
+    token(TokenKind::FloatLiteral, get_parsed(right!(sign, plain)))
 }
 
 fn int_literal<'a>() -> impl StrParser<'a, Token<'a>> {
-    let sign = or!(skip!('-'), skip!('+'));
+    let sign = attempt(succeed(or!(skip!('-'), skip!('+'))));
     let plain = many(item_if(|c: char| c.is_ascii_digit()), false, no_separator());
     token(TokenKind::IntLiteral, get_parsed(right!(sign, plain)))
 }
 
 fn hex_literal<'a>() -> impl StrParser<'a, Token<'a>> {
-    let hex = right(skip!("0x"), item_while(|c: char| c.is_ascii_hexdigit()));
+    let hex = get_parsed(right(skip!("0x"), item_while(|c: char| c.is_ascii_hexdigit())));
     token(TokenKind::HexLiteral, hex)
 }
 
@@ -115,13 +161,44 @@ fn string_literal<'a>() -> impl StrParser<'a, Token<'a>> {
 }
 
 fn line_comment<'a>() -> impl StrParser<'a, Token<'a>> {
-    let line_comment = right!(skip!("//"), item_while(|c: char| c != '\n'));
+    let line_comment = get_parsed(right!(skip!("//"), item_while(|c: char| c != '\n')));
     token(TokenKind::LineComment, line_comment)
 }
 
 fn block_comment<'a>() -> impl StrParser<'a, Token<'a>> {
-    let block_comment = right!(skip!("/*"), until("*/"));
+    let block_comment = get_parsed(right!(skip!("/*"), until("*/")));
     token(TokenKind::BlockComment, block_comment)
+}
+
+fn double_colon<'a>() -> impl StrParser<'a, Token<'a>> {
+    token(TokenKind::DoubleColon, take!("::"))
+}
+
+fn structural<'a>() -> impl StrParser<'a, Token<'a>> {
+    let p = get_parsed(item_if(|c: char| "()[]{},.:;=&-".contains(c)))
+        .map(|t: &str| match t {
+            "(" => (t, TokenKind::LeftParen),
+            ")" => (t, TokenKind::RightParen),
+            "[" => (t, TokenKind::LeftBracket),
+            "]" => (t, TokenKind::RightBracket),
+            "{" => (t, TokenKind::LeftBrace),
+            "}" => (t, TokenKind::RightBrace),
+            "," => (t, TokenKind::Comma),
+            "." => (t, TokenKind::Dot),
+            ":" => (t, TokenKind::Colon),
+            ";" => (t, TokenKind::Semicolon),
+            "=" => (t, TokenKind::Equals),
+            "&" => (t, TokenKind::Ampersand),
+            "-" => (t, TokenKind::Minus),
+            _ => unreachable!(),
+        });
+
+    count_consumed(p)
+        .map(|(c, (s, kind))| Token::new(kind, s, 0..c))
+}
+
+fn whitespace<'a>() -> impl StrParser<'a, Token<'a>> {
+    token(TokenKind::Whitespace, not_empty(anpa::whitespace::whitespace()))
 }
 
 fn token<'a>(
@@ -130,4 +207,331 @@ fn token<'a>(
 ) -> impl StrParser<'a, Token<'a>> {
     count_consumed(p)
         .map(move |(c, s): (_, &str)| Token::new(kind, s, 0..c))
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use TokenKind::*;
+
+    // Enhanced helper function to test both token kinds and text
+    fn test_tokens(input: &str, expected_tokens: Vec<(TokenKind, &str)>) {
+        let result = tokenize(input);
+        assert!(result.is_some(), "Failed to parse tokens from input: {}", input);
+
+        let tokens = result.unwrap();
+
+        for (token, (expected_kind, expected_text)) in tokens.iter().zip(expected_tokens.iter()) {
+            assert_eq!(
+                token.kind,
+                *expected_kind,
+                "Expected token kind {:?}, but got {:?} for token text: '{}'",
+                expected_kind,
+                token.kind,
+                token.text
+            );
+
+            assert_eq!(
+                token.text,
+                *expected_text,
+                "Expected token text '{}', but got '{}' for token kind: {:?}",
+                expected_text,
+                token.text,
+                token.kind
+            );
+        }
+
+        assert_eq!(
+            tokens.len(),
+            expected_tokens.len(),
+            "Expected {} tokens, but got {} for input: {}",
+            expected_tokens.len(),
+            tokens.len(),
+            input
+        );
+    }
+
+    #[test]
+    fn test_identifiers() {
+        test_tokens(
+            "identifier snake_case_id _leading_underscore",
+            vec![
+                (Identifier, "identifier"),
+                (Whitespace, " "),
+                (Identifier, "snake_case_id"),
+                (Whitespace, " "),
+                (Identifier, "_leading_underscore"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_keywords() {
+        test_tokens(
+            "let if else while for in break continue true false",
+            vec![
+                (Keyword,    "let"),
+                (Whitespace, " "),
+                (Keyword,    "if"),
+                (Whitespace, " "),
+                (Keyword,    "else"),
+                (Whitespace, " "),
+                (Keyword,    "while"),
+                (Whitespace, " "),
+                (Keyword,    "for"),
+                (Whitespace, " "),
+                (Keyword,    "in"),
+                (Whitespace, " "),
+                (Keyword,    "break"),
+                (Whitespace, " "),
+                (Keyword,    "continue"),
+                (Whitespace, " "),
+                (Keyword,    "true"),
+                (Whitespace, " "),
+                (Keyword,    "false"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_literals() {
+        test_tokens(
+            "123 -456 3.14 - -2.718 0x1a2b \"string literal\"",
+            vec![
+                (IntLiteral,    "123"),
+                (Whitespace,    " "),
+                (IntLiteral,    "-456"),
+                (Whitespace,    " "),
+                (FloatLiteral,  "3.14"),
+                (Whitespace,    " "),
+                (Minus,         "-"),
+                (Whitespace,    " "),
+                (FloatLiteral,  "-2.718"),
+                (Whitespace,    " "),
+                (HexLiteral,    "0x1a2b"),
+                (Whitespace,    " "),
+                (StringLiteral, "string literal"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_string_literals_with_escapes() {
+        test_tokens(
+            r#""simple" "with \"escaped quotes\"" "with \\backslash" "with \u1234 unicode""#,
+            vec![
+                (StringLiteral, r#"simple"#),
+                (Whitespace,    " "),
+                (StringLiteral, r#"with \"escaped quotes\""#),
+                (Whitespace,    " "),
+                (StringLiteral, r#"with \\backslash"#),
+                (Whitespace,    " "),
+                (StringLiteral, r#"with \u1234 unicode"#),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_operators_and_punctuation() {
+        test_tokens(
+            "( ) [ ] { } , . : ; = & :: -",
+            vec![
+                (LeftParen,    "("),
+                (Whitespace,   " "),
+                (RightParen,   ")"),
+                (Whitespace,   " "),
+                (LeftBracket,  "["),
+                (Whitespace,   " "),
+                (RightBracket, "]"),
+                (Whitespace,   " "),
+                (LeftBrace,    "{"),
+                (Whitespace,   " "),
+                (RightBrace,   "}"),
+                (Whitespace,   " "),
+                (Comma,        ","),
+                (Whitespace,   " "),
+                (Dot,          "."),
+                (Whitespace,   " "),
+                (Colon,        ":"),
+                (Whitespace,   " "),
+                (Semicolon,    ";"),
+                (Whitespace,   " "),
+                (Equals,       "="),
+                (Whitespace,   " "),
+                (Ampersand,    "&"),
+                (Whitespace,   " "),
+                (DoubleColon,  "::"),
+                (Whitespace,   " "),
+                (Minus,        "-"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_comments() {
+        let line_comment = "// This is a line comment";
+        let block_comment = "/* This is a block comment */";
+        test_tokens(
+            &format!("{}\n{}", line_comment, block_comment),
+            vec![
+                (LineComment, line_comment),
+                (Whitespace, "\n"),
+                (BlockComment, block_comment),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_whitespace() {
+        let ws = "  \t\n\r  ";
+        test_tokens(
+            ws,
+            vec![(Whitespace, ws)]
+        );
+    }
+
+    #[test]
+    fn test_mixed_tokens() {
+        let input = "let x = 42; // assign value\nfn::call(true, 3.14);";
+        test_tokens(
+            input,
+            vec![
+                (Keyword,      "let"),
+                (Whitespace,   " "),
+                (Identifier,   "x"),
+                (Whitespace,   " "),
+                (Equals,       "="),
+                (Whitespace,   " "),
+                (IntLiteral,   "42"),
+                (Semicolon,    ";"),
+                (Whitespace,   " "),
+                (LineComment,  "// assign value"),
+                (Whitespace,   "\n"),
+                (Identifier,   "fn"),
+                (DoubleColon,  "::"),
+                (Identifier,   "call"),
+                (LeftParen,    "("),
+                (Keyword,      "true"),
+                (Comma,        ","),
+                (Whitespace,   " "),
+                (FloatLiteral, "3.14"),
+                (RightParen,   ")"),
+                (Semicolon,    ";"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_token_spans() {
+        let input = "x = 42";
+        let result = tokenize(input);
+        let tokens = result.unwrap();
+
+        assert_eq!(tokens[0].span, 0..1);  // "x"
+        assert_eq!(tokens[1].span, 1..2);  // " "
+        assert_eq!(tokens[2].span, 2..3);  // "="
+        assert_eq!(tokens[3].span, 3..4);  // " "
+        assert_eq!(tokens[4].span, 4..6);  // "42"
+
+        // Check that token text matches the spans
+        for token in &tokens {
+            assert_eq!(token.text, &input[token.span.clone()]);
+        }
+    }
+
+    #[test]
+    fn test_complex_expression() {
+        let input = "fx::fade_to(Color::Red, (500, CircOut))";
+        test_tokens(
+            input,
+            vec![
+                (Identifier,  "fx"),
+                (DoubleColon, "::"),
+                (Identifier,  "fade_to"),
+                (LeftParen,   "("),
+                (Identifier,  "Color"),
+                (DoubleColon, "::"),
+                (Identifier,  "Red"),
+                (Comma,       ","),
+                (Whitespace,  " "),
+                (LeftParen,   "("),
+                (IntLiteral,  "500"),
+                (Comma,       ","),
+                (Whitespace,  " "),
+                (Identifier,  "CircOut"),
+                (RightParen,  ")"),
+                (RightParen,  ")"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_effect_declaration() {
+        let input = r#"let fade /* yolo */ = fx::fade_to_fg(Color::from_u32(0x504945), (1000, CircOut));"#;
+        test_tokens(
+            input,
+            vec![
+                (Keyword,      "let"),
+                (Whitespace,   " "),
+                (Identifier,   "fade"),
+                (Whitespace,   " "),
+                (BlockComment, "/* yolo */"),
+                (Whitespace,   " "),
+                (Equals,       "="),
+                (Whitespace,   " "),
+                (Identifier,   "fx"),
+                (DoubleColon,  "::"),
+                (Identifier,   "fade_to_fg"),
+                (LeftParen,    "("),
+                (Identifier,   "Color"),
+                (DoubleColon,  "::"),
+                (Identifier,   "from_u32"),
+                (LeftParen,    "("),
+                (HexLiteral,   "0x504945"),
+                (RightParen,   ")"),
+                (Comma,        ","),
+                (Whitespace,   " "),
+                (LeftParen,    "("),
+                (IntLiteral,   "1000"),
+                (Comma,        ","),
+                (Whitespace,   " "),
+                (Identifier,   "CircOut"),
+                (RightParen,   ")"),
+                (RightParen,   ")"),
+                (Semicolon,    ";"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        // Empty input
+        let result = tokenize("");
+        assert_eq!(result.unwrap().len(), 0);
+
+        // Only whitespace
+        test_tokens(" \t\n", vec![(Whitespace, " \t\n")]);
+
+        // Only comments
+        let line_comment = "// comment";
+        test_tokens(line_comment, vec![(LineComment, line_comment)]);
+
+        let block_comment = "/* comment */";
+        test_tokens(block_comment, vec![(BlockComment, block_comment)]);
+
+        // Unicode characters in string literals
+        test_tokens(
+            r#""Unicode: \u1234 \u5678""#,
+            vec![(StringLiteral, r#"Unicode: \u1234 \u5678"#)]
+        );
+    }
+
+    #[test]
+    fn test_debug_implementation() {
+        // Verify that TokenKind implements Debug correctly
+        assert_eq!(format!("{:?}", Identifier), "Identifier");
+        assert_eq!(format!("{:?}", StringLiteral), "StringLiteral");
+        assert_eq!(format!("{:?}", LeftBrace), "LeftBrace");
+    }
 }
