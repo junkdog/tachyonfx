@@ -36,11 +36,11 @@ pub(super) enum TokenKind {
     Minus,            // -
 
     // comments
-    LineComment,
-    BlockComment,
+    LineComment,  // discarded
+    BlockComment, // discarded
 
     // special
-    Whitespace,
+    Whitespace,   // discarded
     Unknown,
 }
 
@@ -176,25 +176,25 @@ fn double_colon<'a>() -> impl StrParser<'a, Token<'a>> {
 
 fn structural<'a>() -> impl StrParser<'a, Token<'a>> {
     let p = get_parsed(item_if(|c: char| "()[]{},.:;=&-".contains(c)))
-        .map(|t: &str| match t {
-            "(" => (t, TokenKind::LeftParen),
-            ")" => (t, TokenKind::RightParen),
-            "[" => (t, TokenKind::LeftBracket),
-            "]" => (t, TokenKind::RightBracket),
-            "{" => (t, TokenKind::LeftBrace),
-            "}" => (t, TokenKind::RightBrace),
-            "," => (t, TokenKind::Comma),
-            "." => (t, TokenKind::Dot),
-            ":" => (t, TokenKind::Colon),
-            ";" => (t, TokenKind::Semicolon),
-            "=" => (t, TokenKind::Equals),
-            "&" => (t, TokenKind::Ampersand),
-            "-" => (t, TokenKind::Minus),
+        .map(|t: &str| (t, match t {
+            "(" => TokenKind::LeftParen,
+            ")" => TokenKind::RightParen,
+            "[" => TokenKind::LeftBracket,
+            "]" => TokenKind::RightBracket,
+            "{" => TokenKind::LeftBrace,
+            "}" => TokenKind::RightBrace,
+            "," => TokenKind::Comma,
+            "." => TokenKind::Dot,
+            ":" => TokenKind::Colon,
+            ";" => TokenKind::Semicolon,
+            "=" => TokenKind::Equals,
+            "&" => TokenKind::Ampersand,
+            "-" => TokenKind::Minus,
             _ => unreachable!(),
-        });
+        }));
 
     count_consumed(p)
-        .map(|(c, (s, kind))| Token::new(kind, s, 0..c))
+        .map(|(len, (s, kind))| Token::new(kind, s, 0..len))
 }
 
 fn whitespace<'a>() -> impl StrParser<'a, Token<'a>> {
@@ -206,7 +206,7 @@ fn token<'a>(
     p: impl StrParser<'a, &'a str>,
 ) -> impl StrParser<'a, Token<'a>> {
     count_consumed(p)
-        .map(move |(c, s): (_, &str)| Token::new(kind, s, 0..c))
+        .map(move |(len, s): (_, &str)| Token::new(kind, s, 0..len))
 }
 
 
