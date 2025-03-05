@@ -21,6 +21,9 @@ pub enum DslError {
     #[error("Failed to parse dsl: {0}")]
     ParseError(CompactString),
 
+    #[error("Unknown tokenizer error, please consider submitting a bug report")]
+    BugInTokenizerError,
+
     #[error("Compiler not found for effect '{name}'")]
     UnknownEffect { name: CompactString },
 

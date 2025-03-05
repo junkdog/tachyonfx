@@ -1,10 +1,12 @@
-use anpa::core::{AnpaResult, ParserExt};
-use std::ops::Range;
+use crate::dsl::DslError;
 use anpa::combinators::{attempt, count_consumed, get_parsed, many, many_to_vec, middle, no_separator, not_empty, or_diff, right, succeed, times};
 use anpa::core::StrParser;
+use anpa::core::ParserExt;
+use anpa::number::float;
 use anpa::parsers::{item_if, item_while, until};
 use anpa::{greedy_or, or, right, skip, take};
-use anpa::number::float;
+use compact_str::ToCompactString;
+use std::ops::Range;
 
 /// Represents the type of a token in the DSL
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -67,9 +69,12 @@ impl<'a> Token<'a> {
     }
 }
 
-pub(super) fn tokenize(input: &str) -> Option<Vec<Token>> {
+pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
     let result = anpa::core::parse(tokens(), input);
 
+    if !result.state.is_empty() {
+        return Err(DslError::ParseError(result.state.to_compact_string()));
+    }
     assert_eq!(result.state, "", "Failed to parse tokens from input: {}", input);
 
     result
@@ -84,7 +89,7 @@ pub(super) fn tokenize(input: &str) -> Option<Vec<Token>> {
             }
 
             Some(tokens)
-        })
+        }).ok_or(DslError::BugInTokenizerError)
 }
 
 fn tokens<'a>() -> impl StrParser<'a, Vec<Token<'a>>> {
@@ -218,7 +223,7 @@ mod tests {
     // Enhanced helper function to test both token kinds and text
     fn test_tokens(input: &str, expected_tokens: Vec<(TokenKind, &str)>) {
         let result = tokenize(input);
-        assert!(result.is_some(), "Failed to parse tokens from input: {}", input);
+        assert!(result.is_ok(), "Failed to parse tokens from input: {}", input);
 
         let tokens = result.unwrap();
 
