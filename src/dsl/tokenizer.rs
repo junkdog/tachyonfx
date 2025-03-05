@@ -43,19 +43,18 @@ pub(super) enum TokenKind {
 
     // special
     Whitespace,   // discarded
-    Unknown,
 }
 
 
 /// A token in the DSL with its kind, value, and source position
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub(super) struct Token<'a> {
     /// The type of token
     pub kind: TokenKind,
     /// The text content of the token
     pub text: &'a str,
     /// The byte range in the source text
-    pub span: Range<usize>,
+    pub span: (u32, u32),
 }
 
 impl<'a> Token<'a> {
@@ -65,30 +64,29 @@ impl<'a> Token<'a> {
         text: &'a str,
         span: Range<usize>
     ) -> Self {
-        Self { kind, text, span }
+        Self { kind, text, span: (span.start as _, span.end as _) }
     }
 }
 
 pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
     let result = anpa::core::parse(tokens(), input);
+    const DISCARD: &[TokenKind] = &[TokenKind::Whitespace, TokenKind::LineComment, TokenKind::BlockComment];
 
     if !result.state.is_empty() {
         return Err(DslError::ParseError(result.state.to_compact_string()));
     }
-    assert_eq!(result.state, "", "Failed to parse tokens from input: {}", input);
-
     result
         .result
         .and_then(|tokens| {
             let mut tokens = tokens;
             let mut offset = 0;
             for token in &mut tokens {
-                token.span.start += offset;
-                token.span.end += offset;
-                offset = token.span.end;
+                let (start, end) = token.span;
+                token.span = (start + offset, end + offset);
+                offset = token.span.1;
             }
 
-            Some(tokens)
+            Some(tokens.into_iter().filter(|t| !DISCARD.contains(&t.kind)).collect())
         }).ok_or(DslError::BugInTokenizerError)
 }
 
@@ -433,15 +431,16 @@ mod tests {
         let result = tokenize(input);
         let tokens = result.unwrap();
 
-        assert_eq!(tokens[0].span, 0..1);  // "x"
-        assert_eq!(tokens[1].span, 1..2);  // " "
-        assert_eq!(tokens[2].span, 2..3);  // "="
-        assert_eq!(tokens[3].span, 3..4);  // " "
-        assert_eq!(tokens[4].span, 4..6);  // "42"
+        assert_eq!(tokens[0].span, (0, 1));  // "x"
+        assert_eq!(tokens[1].span, (1, 2));  // " "
+        assert_eq!(tokens[2].span, (2, 3));  // "="
+        assert_eq!(tokens[3].span, (3, 4));  // " "
+        assert_eq!(tokens[4].span, (4, 6));  // "42"
 
         // Check that token text matches the spans
         for token in &tokens {
-            assert_eq!(token.text, &input[token.span.clone()]);
+            let (start, end) = token.span;
+            assert_eq!(token.text, &input[start as _..end as _]);
         }
     }
 
