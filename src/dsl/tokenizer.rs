@@ -74,12 +74,6 @@ pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
         return Err(DslError::ParseError(result.state.to_compact_string()));
     }
 
-    // const DISCARD: &[TokenKind] = &[
-    //     TokenKind::Whitespace,
-    //     TokenKind::LineComment,
-    //     TokenKind::BlockComment
-    // ];
-
     result
         .result
         .map(|tokens| {
@@ -91,9 +85,6 @@ pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
                 offset = token.span.1;
             }
 
-            // tokens.into_iter()
-            //     .filter(|t| !DISCARD.contains(&t.kind))
-            //     .collect()
             tokens
         }).ok_or(DslError::BugInTokenizerError)
 }
