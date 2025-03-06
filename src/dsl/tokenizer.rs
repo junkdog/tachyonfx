@@ -47,7 +47,7 @@ pub(super) enum TokenKind {
 
 
 /// A token in the DSL with its kind, value, and source position
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Token<'a> {
     /// The type of token
     pub kind: TokenKind,
@@ -70,14 +70,19 @@ impl<'a> Token<'a> {
 
 pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
     let result = anpa::core::parse(tokens(), input);
-    const DISCARD: &[TokenKind] = &[TokenKind::Whitespace, TokenKind::LineComment, TokenKind::BlockComment];
-
     if !result.state.is_empty() {
         return Err(DslError::ParseError(result.state.to_compact_string()));
     }
+
+    // const DISCARD: &[TokenKind] = &[
+    //     TokenKind::Whitespace,
+    //     TokenKind::LineComment,
+    //     TokenKind::BlockComment
+    // ];
+
     result
         .result
-        .and_then(|tokens| {
+        .map(|tokens| {
             let mut tokens = tokens;
             let mut offset = 0;
             for token in &mut tokens {
@@ -86,7 +91,10 @@ pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
                 offset = token.span.1;
             }
 
-            Some(tokens.into_iter().filter(|t| !DISCARD.contains(&t.kind)).collect())
+            // tokens.into_iter()
+            //     .filter(|t| !DISCARD.contains(&t.kind))
+            //     .collect()
+            tokens
         }).ok_or(DslError::BugInTokenizerError)
 }
 
@@ -526,8 +534,8 @@ mod tests {
 
         // Unicode characters in string literals
         test_tokens(
-            r#""Unicode: \u1234 \u5678""#,
-            vec![(StringLiteral, r#"Unicode: \u1234 \u5678"#)]
+            "\"Unicode: \u{1234} \u{5678}\"",
+            vec![(StringLiteral, "Unicode: \u{1234} \u{5678}")]
         );
     }
 
