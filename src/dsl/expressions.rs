@@ -23,6 +23,7 @@ pub(super) enum Expr {
     Array(Vec<Expr>),
     CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
     FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo> }, // e.g. foo_bar(area)
+    QualifiedMember(CompactString), // enums, struct fields
     OptionSome(Box<Expr>),
     Layout { expr: Box<Expr>, self_fns: Vec<FnCallInfo> },
     Sequence {
@@ -96,6 +97,7 @@ impl Expr {
             Expr::FnCall { .. }      => "fn_call",
             Expr::Layout { .. }      => "layout",
             Expr::LetBinding { .. }  => "let_binding",
+            Expr::QualifiedMember(_) => "qualified_member",
         }
     }
 
@@ -231,7 +233,8 @@ impl Expr {
                 format_compact!("{}Style::new(){}", indent_str, inner)
             }
             Expr::OptionSome(v) => format_compact!("{}Some({})", indent_str, v.format(indent, false)),
-            Expr::Layout { .. } => "layout(todo)".to_compact_string()
+            Expr::Layout { .. } => "layout(todo)".to_compact_string(),
+            Expr::QualifiedMember(s) => s.to_compact_string(),
         }
     }
 }
