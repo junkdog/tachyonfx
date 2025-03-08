@@ -1,12 +1,38 @@
+use std::fmt::Formatter;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::tokenizer::{Token, TokenKind};
 use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
-use anpa::core::ParserExt;
+use anpa::core::{parse, ParserExt};
 use anpa::parsers::item_if;
 use anpa::{create_parser_trait, or, right, tuplify};
 use compact_str::format_compact;
+use crate::dsl::DslError;
 
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
+
+pub(super) fn parse_ast(input: Vec<Token>) -> Result<Vec<Expr>, DslError> {
+    let statements = many_to_vec(
+        or!(
+            let_binding(),
+            sequence(),
+            parallel(),
+            function_expression(),
+            variable()
+        ),
+        true,
+        separator(token(TokenKind::Semicolon), false)
+    );
+
+    let ast = parse(statements, &input);
+    if !ast.state.is_empty() {
+        return Err(DslError::ParseError(format_compact!("unparsed input: {:?}", ast.state)));
+    };
+
+    match ast.result {
+        Some(exprs) => Ok(exprs),
+        None        => Err(DslError::ParseError(format_compact!("unparsed input: {:?}", ast.state)))
+    }
+}
 
 // main parser //
 fn expression<'a>() -> impl TokenParser<'a, Expr> {

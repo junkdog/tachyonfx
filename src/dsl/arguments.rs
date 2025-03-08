@@ -91,7 +91,7 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns an [`EffectTimer`].
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
                 "EffectTimer::from_ms" => {
                     let mut inner_args = self.nested_args(args, 2)?;
                     let ms = inner_args.read_u32()?;
@@ -104,42 +104,53 @@ impl<'dsl> Arguments<'dsl> {
                     let interpolation = inner_args.interpolation()?;
                     EffectTimer::new(duration, interpolation)
                 },
-                _ => self.expected_type("timer", name)?,
+                _ => self.expected_type("timer", name, span)?,
             }),
-            Expr::Literal(Value::Timer(t))  => Ok(t),
-            Expr::Literal(Value::U32(ms))   => Ok(ms.into()),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("timer", e),
+            Expr::Literal(Value::Timer(t), _)  => Ok(t),
+            Expr::Literal(Value::U32(ms), _)   => Ok(ms.into()),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("timer", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Color`].
     pub fn cell_filter(&mut self) -> Result<CellFilter, DslError> {
         match self.next("cell_filter")? {
-            Expr::CellFilter { filter_type, arguments } => {
-                let mut args = Arguments::new(arguments.into(), self.context, self.vars);
-                match filter_type {
-                    "All"        => Ok(CellFilter::All),
-                    "FgColor"    => Ok(CellFilter::FgColor(args.color()?)),
-                    "BgColor"    => Ok(CellFilter::BgColor(args.color()?)),
-                    "Inner"      => Ok(CellFilter::Inner(args.margin()?)),
-                    "Outer"      => Ok(CellFilter::Outer(args.margin()?)),
-                    "Text"       => Ok(CellFilter::Text),
-                    "AllOf"      => Ok(CellFilter::AllOf(args.array(Arguments::cell_filter)?)),
-                    "AnyOf"      => Ok(CellFilter::AnyOf(args.array(Arguments::cell_filter)?)),
-                    "NoneOf"     => Ok(CellFilter::NoneOf(args.array(Arguments::cell_filter)?)),
-                    "Not"        => Ok(CellFilter::Not(Box::new(args.cell_filter()?))),
-                    "Layout"     => Ok(CellFilter::Layout(args.layout()?, args.read_u16()?)),
-                    "PositionFn" => Ok(CellFilter::PositionFn(args.any_var()?)),
-                    "EvalCell"   => Ok(CellFilter::EvalCell(args.any_var()?)),
-                    _            => Err(DslError::UnknownCellFilter {
-                        name: filter_type.to_compact_string(),
-                    })?,
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => {
+                // Check if it's a cell filter constructor
+                if name.starts_with("CellFilter::") {
+                    let filter_type = name.trim_start_matches("CellFilter::");
+                    let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+
+                    match filter_type {
+                        "FgColor"    => Ok(CellFilter::FgColor(inner_args.color()?)),
+                        "BgColor"    => Ok(CellFilter::BgColor(inner_args.color()?)),
+                        "Inner"      => Ok(CellFilter::Inner(inner_args.margin()?)),
+                        "Outer"      => Ok(CellFilter::Outer(inner_args.margin()?)),
+                        "AllOf"      => Ok(CellFilter::AllOf(inner_args.array(Arguments::cell_filter)?)),
+                        "AnyOf"      => Ok(CellFilter::AnyOf(inner_args.array(Arguments::cell_filter)?)),
+                        "NoneOf"     => Ok(CellFilter::NoneOf(inner_args.array(Arguments::cell_filter)?)),
+                        "Not"        => Ok(CellFilter::Not(Box::new(inner_args.cell_filter()?))),
+                        "Layout"     => Ok(CellFilter::Layout(inner_args.layout()?, inner_args.read_u16()?)),
+                        "PositionFn" => Ok(CellFilter::PositionFn(inner_args.any_var()?)),
+                        "EvalCell"   => Ok(CellFilter::EvalCell(inner_args.any_var()?)),
+                        _            => Err(DslError::UnknownCellFilter {
+                            name: filter_type.to_compact_string(),
+                        })?,
+                    }
+                } else if name == "All" || name == "Text" {
+                    match name.as_str() {
+                        "All" => Ok(CellFilter::All),
+                        "Text" => Ok(CellFilter::Text),
+                        _ => unreachable!() // Already checked above
+                    }
+                } else {
+                    self.expected_type("cell_filter", name, span)?
                 }
             }
-            Expr::Literal(Value::CellFilter(f)) => Ok(f),
-            Expr::Var { name, self_fns: _ }     => self.bound_var(name),
-            e                                   => self.expected_type_expr("cell_filter", e),
+            Expr::Literal(Value::CellFilter(f), _) => Ok(f),
+            Expr::Var { name, .. }                 => self.bound_var(name),
+            e                                      => self.expected_type_expr("cell_filter", e),
         }
     }
 
@@ -148,8 +159,8 @@ impl<'dsl> Arguments<'dsl> {
         &mut self,
     ) -> Result<T, DslError> {
         match self.next("var")? {
-            Expr::Var { name, self_fns: _ } => self.vars.bound_global(name),
-            e                               => self.expected_type_expr("var", e),
+            Expr::Var { name, .. } => self.vars.bound_global(name),
+            e                      => self.expected_type_expr("var", e),
         }
     }
 
@@ -158,7 +169,7 @@ impl<'dsl> Arguments<'dsl> {
         use Constraint::*;
 
         match self.next("constraint")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
                 "Constraint::Min"        => Min(self.extract_nested(args, Arguments::read_u16)?),
                 "Constraint::Max"        => Max(self.extract_nested(args, Arguments::read_u16)?),
                 "Constraint::Length"     => Length(self.extract_nested(args, Arguments::read_u16)?),
@@ -170,71 +181,64 @@ impl<'dsl> Arguments<'dsl> {
                     let b = inner_args.read_u32()?;
                     Ratio(a, b)
                 },
-                _ => self.expected_type("constraint", name)?,
+                _ => self.expected_type("constraint", name, span)?,
             }),
-            Expr::Literal(Value::Constraint(c)) => Ok(c),
-            Expr::Var { name, self_fns: _ }     => self.bound_var(name),
-            e   => self.expected_type("constraint", e.type_name().into()),
+            Expr::Literal(Value::Constraint(c), _) => Ok(c),
+            Expr::Var { name, .. }                 => self.bound_var(name),
+            e   => self.expected_type_expr("constraint", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Direction`].
     pub fn direction(&mut self) -> Result<Direction, DslError> {
         match self.next("direction")? {
-            Expr::Literal(Value::Direction(d)) => Ok(d),
-            Expr::Var { name, self_fns: _ }    => self.bound_var(name),
-            e => self.expected_type("direction", e.type_name().into()),
+            Expr::Literal(Value::Direction(d), _) => Ok(d),
+            Expr::Var { name, .. }                => self.bound_var(name),
+            e => self.expected_type_expr("direction", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Layout`].
     pub fn layout(&mut self) -> Result<Layout, DslError> {
         match self.next("layout")? {
-            Expr::Layout { expr, self_fns } => {
-                let base_layout = match *expr {
-                    Expr::FnCall { call: FnCallInfo { name, args }, .. } => {
-                        match name.as_str() {
-                            "Layout::horizontal" => {
-                                let constraints = self.extract_nested(
-                                    args, |a| a.array(Arguments::constraint))?;
-
-                                Ok(Layout::horizontal(constraints))
-                            },
-                            "Layout::vertical" => {
-                                let constraints = self.extract_nested(
-                                    args, |a| a.array(Arguments::constraint))?;
-                                Ok(Layout::vertical(constraints))
-                            },
-                            "Layout::new" => {
-                                let mut inner_args = self.nested_args(args, 2)?;
-                                let direction = inner_args.direction()?;
-                                let constraints = inner_args.array(Arguments::constraint)?;
-                                Ok(Layout::new(direction, constraints))
-                            },
-                            _ => self.expected_type("layout", name),
-                        }
+            Expr::FnCall { call, self_fns, span } => {
+                let base_layout = match call.name.as_str() {
+                    "Layout::horizontal" => {
+                        let constraints = self.extract_nested(
+                            call.args, |a| a.array(Arguments::constraint))?;
+                        Ok(Layout::horizontal(constraints))
                     },
-                    e => self.expected_type_expr("layout", e),
+                    "Layout::vertical" => {
+                        let constraints = self.extract_nested(
+                            call.args, |a| a.array(Arguments::constraint))?;
+                        Ok(Layout::vertical(constraints))
+                    },
+                    "Layout::new" => {
+                        let mut inner_args = self.nested_args(call.args, 2)?;
+                        let direction = inner_args.direction()?;
+                        let constraints = inner_args.array(Arguments::constraint)?;
+                        Ok(Layout::new(direction, constraints))
+                    },
+                    _ => self.expected_type("layout", call.name.to_compact_string(), span),
                 }?;
 
                 // Apply method chains
-                base_layout
-                    .fold_fns(self_fns, self.context, self.vars)
+                base_layout.fold_fns(self_fns, self.context, self.vars)
             },
 
-            Expr::Var { name, self_fns } => self.bound_var::<Layout>(name)?
+            Expr::Var { name, self_fns, .. } => self.bound_var::<Layout>(name)?
                 .fold_fns(self_fns, self.context, self.vars),
 
-            e               => self.expected_type_expr("layout", e),
+            e => self.expected_type_expr("layout", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Interpolation`].
     pub fn interpolation(&mut self) -> Result<Interpolation, DslError> {
         match self.next("interpolation")? {
-            Expr::Literal(Value::Interpolation(i)) => Ok(i),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("interpolation", e),
+            Expr::Literal(Value::Interpolation(i), _) => Ok(i),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("interpolation", e),
         }
     }
 
@@ -261,46 +265,46 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a `u32`.
     pub fn read_u32(&mut self) -> Result<u32, DslError> {
         match self.next("u32")? {
-            Expr::Literal(Value::U32(u))    => Ok(u),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("u32", e),
+            Expr::Literal(Value::U32(u), _)    => Ok(u),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("u32", e),
         }
     }
 
     pub fn read_i32(&mut self) -> Result<i32, DslError> {
         match self.next("i32")? {
-            Expr::Literal(Value::I32(i))    => Ok(i),
-            Expr::Literal(Value::U32(i))    => Ok(i as _),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("i32", e),
+            Expr::Literal(Value::I32(i), _)    => Ok(i),
+            Expr::Literal(Value::U32(i), _)    => Ok(i as _),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("i32", e),
         }
     }
 
     /// Consumes the next argument and returns a `f32`.
     pub fn read_into_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
-            Expr::Literal(Value::F32(f))    => Ok(f),
-            Expr::Literal(Value::U32(v))    => Ok(v as f32),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("f32", e),
+            Expr::Literal(Value::F32(f), _)    => Ok(f),
+            Expr::Literal(Value::U32(v), _)    => Ok(v as f32),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("f32", e),
         }
     }
 
     /// Consumes the next argument and returns a `f32`.
     pub fn read_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
-            Expr::Literal(Value::F32(f))    => Ok(f),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("f32", e),
+            Expr::Literal(Value::F32(f), _)    => Ok(f),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("f32", e),
         }
     }
 
     /// Consumes the next argument and returns a [`CompactString`].
     pub fn string(&mut self) -> Result<CompactString, DslError> {
         match self.next("string")? {
-            Expr::Literal(Value::String(s)) => Ok(s),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("string", e),
+            Expr::Literal(Value::String(s), _) => Ok(s),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("string", e),
         }
     }
 
@@ -311,27 +315,43 @@ impl<'dsl> Arguments<'dsl> {
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Option<T>, DslError> {
         match self.next("option")? {
-            Expr::Literal(Value::OptionNone) => Ok(None),
-            Expr::OptionSome(expr)     => {
+            Expr::Literal(Value::OptionNone, _) => Ok(None),
+            Expr::OptionSome(expr, _)           => {
                 let mut args = self.nested_args(vec![*expr], 1)?;
                 inner(&mut args).map(Some)
             },
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("option", e),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("option", e),
         }
     }
 
     /// Consumes the next argument and returns an [`Effect`].
     pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
-            Expr::Fx { name, arguments, self_fns } =>
-                self.compile_effect(Expr::Fx { name, arguments, self_fns }),
-            Expr::Sequence { effects, self_fns } =>
-                self.compile_effect(Expr::Sequence { effects, self_fns }),
-            Expr::Parallel { effects, self_fns } =>
-                self.compile_effect(Expr::Parallel { effects, self_fns }),
+            Expr::FnCall { call, self_fns, span } => {
+                // Check if it's an effect constructor with "fx::" prefix
+                if call.name.starts_with("fx::") {
+                    // This is a dedicated effect constructor
+                    let fx_name = call.name.trim_start_matches("fx::").to_compact_string();
+                    let fx_expr = Expr::FnCall {
+                        call: FnCallInfo {
+                            name: call.name,
+                            args: call.args
+                        },
+                        self_fns,
+                        span
+                    };
+                    self.compile_effect(fx_expr)
+                } else {
+                    self.expected_type("effect", call.name.to_compact_string(), span)?
+                }
+            },
+            Expr::Sequence { effects, self_fns, span } =>
+                self.compile_effect(Expr::Sequence { effects, self_fns, span }),
+            Expr::Parallel { effects, self_fns, span } =>
+                self.compile_effect(Expr::Parallel { effects, self_fns, span }),
 
-            Expr::Var { name, self_fns } => self.bound_var::<Effect>(name)?
+            Expr::Var { name, self_fns, span } => self.bound_var::<Effect>(name)?
                 .fold_fns(self_fns, self.context, self.vars),
 
             e => self.expected_type_expr("effect", e),
@@ -341,7 +361,7 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Color`].
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
                 "Color::Rgb" => {
                     let mut inner_args = self.nested_args(args, 3)?;
                     let r = inner_args.read_u8()?;
@@ -355,76 +375,82 @@ impl<'dsl> Arguments<'dsl> {
                 "Color::Indexed" => {
                     Color::Indexed(self.extract_nested(args, Arguments::read_u8)?)
                 }
-                _ => self.expected_type("color", name)?,
+                _ => self.expected_type("color", name, span)?,
             }),
-            Expr::Literal(Value::Color(c))  => Ok(c),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("color", e),
+            Expr::Literal(Value::Color(c), _)  => Ok(c),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("color", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Modifier`].
     pub fn modifier(&mut self) -> Result<Modifier, DslError> {
         match self.next("modifier")? {
-            Expr::Literal(Value::Modifier(m)) => Ok(m),
-            Expr::Var { name, self_fns: _ }   => self.bound_var(name),
-            e                                 => self.expected_type_expr("modifier", e),
+            Expr::Literal(Value::Modifier(m), _) => Ok(m),
+            Expr::Var { name, .. }               => self.bound_var(name),
+            e                                    => self.expected_type_expr("modifier", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Style`].
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
-            Expr::Literal(Value::Style(s)) => Ok(s),
-            Expr::Style(self_fns)          => Style::new()
+            Expr::Literal(Value::Style(s), _) => Ok(s),
+            Expr::FnCall { call, self_fns, span } => {
+                // Handle Style constructors
+                if call.name == "Style::new" || call.name == "Style::default" {
+                    Style::new().fold_fns(self_fns, self.context, self.vars)
+                } else {
+                    self.expected_type("style", call.name.to_compact_string(), span)?
+                }
+            },
+            Expr::Var { name, self_fns, .. }   => self.bound_var::<Style>(name)?
                 .fold_fns(self_fns, self.context, self.vars),
-            Expr::Var { name, self_fns }   => self.bound_var::<Style>(name)?
-                .fold_fns(self_fns, self.context, self.vars),
-            e                              => self.expected_type("style", e.type_name().into()),
+            e                              => self.expected_type_expr("style", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Motion`].
     pub fn motion(&mut self) -> Result<Motion, DslError> {
         match self.next("motion")? {
-            Expr::Literal(Value::Motion(m))  => Ok(m),
-            Expr::Var { name, self_fns: _ }  => self.bound_var(name),
-            e                                => self.expected_type("motion", e.type_name().into()),
+            Expr::Literal(Value::Motion(m), _)  => Ok(m),
+            Expr::Var { name, .. }  => self.bound_var(name),
+            e                       => self.expected_type_expr("motion", e),
         }
     }
 
     /// Consumes the next argument and returns a [`RepeatMode`].
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
                 "RepeatMode::Forever" => RepeatMode::Forever,
                 "RepeatMode::Times"   => RepeatMode::Times(self.extract_nested(args, Arguments::read_u32)?),
-                _                     => self.expected_type("repeat_mode", name)?,
+                "RepeatMode::Duration"=> RepeatMode::Duration(self.extract_nested(args, Arguments::duration)?),
+                _                     => self.expected_type("repeat_mode", name, span)?,
             }),
-            Expr::Literal(Value::RepeatMode(m)) => Ok(m),
-            Expr::Var { name, self_fns: _ }     => self.bound_var(name),
-            e                                   => self.expected_type("repeat_mode", e.type_name().into()),
+            Expr::Literal(Value::RepeatMode(m), _) => Ok(m),
+            Expr::Var { name, .. }                 => self.bound_var(name),
+            e                                      => self.expected_type_expr("repeat_mode", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Margin`].
     pub fn margin(&mut self) -> Result<Margin, DslError> {
-        let yolo = self.next("margin");
-        match yolo? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } if name == "Margin::new" => {
+        match self.next("margin")? {
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } if name == "Margin::new" => {
                 let mut inner_args = self.nested_args(args, 2)?;
                 Ok(Margin::new(inner_args.read_u16()?, inner_args.read_u16()?))
             },
-            Expr::Literal(Value::Margin(m)) => Ok(m),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("margin", e),
+            Expr::Literal(Value::Margin(m), _) => Ok(m),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("margin", e),
         }
     }
 
     /// Consumes the next argument and returns a [`Rect`].
     pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
-            Expr::FnCall { call, self_fns } => match call.name.as_str() {
+            Expr::FnCall { call, self_fns, span } => match call.name.as_str() {
                 "Rect::new" => {
                     let mut inner_args = self.nested_args(call.args, 4)?;
                     let x = inner_args.read_u16()?;
@@ -439,8 +465,8 @@ impl<'dsl> Arguments<'dsl> {
                     name: e.to_compact_string(),
                 }),
             },
-            Expr::Literal(Value::Rect(r)) => Ok(r),
-            Expr::Var { name, self_fns }  => self.bound_var::<Rect>(name)?
+            Expr::Literal(Value::Rect(r), _) => Ok(r),
+            Expr::Var { name, self_fns, .. }  => self.bound_var::<Rect>(name)?
                 .fold_fns(self_fns, self.context, self.vars),
             e                             => self.expected_type_expr("rect", e),
         }
@@ -449,12 +475,12 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a `Offset` tuple.
     pub fn offset(&mut self) -> Result<Offset, DslError> {
         match self.next("offset")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } if name == "Offset" => {
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } if name == "Offset" => {
                 let mut inner_args = self.nested_args(args, 2)?;
                 Ok(Offset { x: inner_args.read_i32()?, y: inner_args.read_i32()? })
             },
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("offset", e),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("offset", e),
         }
     }
 
@@ -465,10 +491,10 @@ impl<'dsl> Arguments<'dsl> {
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
         match self.next("array")? {
-            Expr::Array(exprs)              => self.map_exprs(exprs, inner),
-            Expr::ArrayRef(exprs)           => self.map_exprs(exprs, inner),
-            Expr::Var { name, self_fns: _ } => self.bound_var(name),
-            e                               => self.expected_type_expr("array", e),
+            Expr::Array(exprs, _)              => self.map_exprs(exprs, inner),
+            Expr::ArrayRef(exprs, _)           => self.map_exprs(exprs, inner),
+            Expr::Var { name, .. } => self.bound_var(name),
+            e                      => self.expected_type_expr("array", e),
         }
     }
 
@@ -651,9 +677,9 @@ mod tests {
     use crate::dsl::arguments::Arguments;
     use crate::dsl::dsl::EffectDsl;
     use crate::dsl::environment::DslEnv;
-    use crate::dsl::expressions::{Expr, Value};
-    use crate::dsl::{parsers, DslError};
-    use crate::{Duration, EffectTimer, Interpolation, Motion};
+    use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
+    use crate::dsl::DslError;
+    use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
     use anpa::core::parse;
     use compact_str::ToCompactString;
     use ratatui::layout::{Margin, Offset, Rect};
@@ -691,9 +717,10 @@ mod tests {
 
     #[test]
     fn test_duration_parsing() {
+        let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
-            Expr::Literal(Value::Duration(Duration::from_millis(500))),
-            Expr::Literal(Value::U32(1000)),
+            Expr::Literal(Value::Duration(Duration::from_millis(500)), span),
+            Expr::Literal(Value::U32(1000), span),
         ]);
 
         assert_eq!(args.duration(), Ok(Duration::from_millis(500)));
@@ -706,9 +733,10 @@ mod tests {
 
     #[test]
     fn test_effect_timer_parsing() {
+        let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
-            Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Interpolation::Linear))),
-            Expr::Literal(Value::U32(1000)),
+            Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Interpolation::Linear)), span),
+            Expr::Literal(Value::U32(1000), span),
         ]);
 
         assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(500, Interpolation::Linear)));
@@ -721,9 +749,10 @@ mod tests {
 
     #[test]
     fn test_numeric_parsing() {
+        let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
-            Expr::Literal(Value::U32(42)),
-            Expr::Literal(Value::F32(3.14)),
+            Expr::Literal(Value::U32(42), span),
+            Expr::Literal(Value::F32(3.14), span),
         ]);
 
         assert_eq!(args.read_u32(), Ok(42));
@@ -736,12 +765,13 @@ mod tests {
 
     #[test]
     fn test_array_parsing() {
+        let span = ExprSpan::new(0, 0);
         // test a
         let mut args = prepare_test(vec![
             Expr::ArrayRef(vec![
-                Expr::Literal(Value::F32(10.0)),
-                Expr::Literal(Value::F32(3.14)),
-            ]),
+                Expr::Literal(Value::F32(10.0), span),
+                Expr::Literal(Value::F32(3.14), span),
+            ], span),
         ]);
 
         let floats = args.array(Arguments::read_f32).unwrap();
@@ -750,10 +780,10 @@ mod tests {
         // test b
         let mut args = prepare_test(vec![
             Expr::ArrayRef(vec![
-                Expr::Literal(Value::String("a".into())),
-                Expr::Literal(Value::String("b".into())),
-                Expr::Literal(Value::String("c".into())),
-            ]),
+                Expr::Literal(Value::String("a".into()), span),
+                Expr::Literal(Value::String("b".into()), span),
+                Expr::Literal(Value::String("c".into()), span),
+            ], span),
         ]);
 
         let strings = args.array(Arguments::string).unwrap();
@@ -762,20 +792,21 @@ mod tests {
 
     #[test]
     fn test_option_parsing() {
+        let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
             Expr::OptionSome(Box::new(
                 Expr::Array(vec![
-                    Expr::Literal(Value::U32(1)),
-                    Expr::Literal(Value::U32(2)),
-                    Expr::Literal(Value::U32(3)),
-                ])
-            )),
+                    Expr::Literal(Value::U32(1), span),
+                    Expr::Literal(Value::U32(2), span),
+                    Expr::Literal(Value::U32(3), span),
+                ], span)
+            ), span),
         ]);
 
         let inner_arg = args.option(|args| args.array(Arguments::read_u32)).unwrap();
         assert_eq!(inner_arg, Some(vec![1, 2, 3]));
 
-        let mut args = prepare_test(vec![Expr::Literal(Value::OptionNone)]);
+        let mut args = prepare_test(vec![Expr::Literal(Value::OptionNone, span)]);
         let inner_arg = args.option(Arguments::read_u32).unwrap();
         assert_eq!(inner_arg, None);
     }
@@ -788,15 +819,16 @@ mod tests {
 
     #[test]
     fn test_string_parsing() {
+        let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
-            Expr::Literal(Value::String("hello".to_compact_string())),
-            Expr::Literal(Value::U32(42)), // Wrong type
-            Expr::Literal(Value::String("world".to_compact_string())),
+            Expr::Literal(Value::String("hello".to_compact_string()), span),
+            Expr::Literal(Value::U32(42), span), // Wrong type
+            Expr::Literal(Value::String("world".to_compact_string()), span),
         ]);
 
         assert_eq!(args.string(), Ok("hello".to_compact_string()));
         assert_eq!(args.string(), Err(DslError::WrongArgumentType {
-            position: 1,
+            position: span,
             expected: "string",
             actual: "u32".into()
         }));
@@ -805,9 +837,10 @@ mod tests {
 
     #[test]
     fn test_color_parsing() {
+        let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
-            Expr::Literal(Value::Color(Color::Red)),
-            Expr::Literal(Value::Color(Color::Blue)),
+            Expr::Literal(Value::Color(Color::Red), span),
+            Expr::Literal(Value::Color(Color::Blue), span),
         ]);
 
         assert_eq!(args.color(), Ok(Color::Red));
@@ -820,8 +853,9 @@ mod tests {
 
     #[test]
     fn test_style_parsing() {
+        let span = ExprSpan::new(0, 0);
         let style = Style::default().fg(Color::Red);
-        let mut args = prepare_test(vec![Expr::Literal(Value::Style(style))]);
+        let mut args = prepare_test(vec![Expr::Literal(Value::Style(style), span)]);
 
         assert_eq!(args.style(), Ok(style));
         assert_eq!(args.style(), Err(DslError::MissingArgument {
@@ -832,9 +866,10 @@ mod tests {
 
     #[test]
     fn test_motion_parsing() {
+        let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
-            Expr::Literal(Value::Motion(Motion::LeftToRight)),
-            Expr::Literal(Value::Motion(Motion::UpToDown)),
+            Expr::Literal(Value::Motion(Motion::LeftToRight), span),
+            Expr::Literal(Value::Motion(Motion::UpToDown), span),
         ]);
 
         assert_eq!(args.motion(), Ok(Motion::LeftToRight));
@@ -847,8 +882,9 @@ mod tests {
 
     #[test]
     fn test_margin_parsing() {
+        let span = ExprSpan::new(0, 0);
         let margin = Margin::new(10, 20);
-        let mut args = prepare_test(vec![Expr::Literal(Value::Margin(margin))]);
+        let mut args = prepare_test(vec![Expr::Literal(Value::Margin(margin), span)]);
 
         assert_eq!(args.margin(), Ok(margin));
         assert_eq!(args.margin(), Err(DslError::MissingArgument {
@@ -859,8 +895,9 @@ mod tests {
 
     #[test]
     fn test_rect_parsing() {
+        let span = ExprSpan::new(0, 0);
         let rect = Rect::new(0, 0, 100, 100);
-        let mut args = prepare_test(vec![Expr::Literal(Value::Rect(rect))]);
+        let mut args = prepare_test(vec![Expr::Literal(Value::Rect(rect), span)]);
 
         assert_eq!(args.rect(), Ok(rect));
         assert_eq!(args.rect(), Err(DslError::MissingArgument {
@@ -891,11 +928,16 @@ mod tests {
 
     #[test]
     fn test_effect_parsing() {
+        let span = ExprSpan::new(0, 0);
+        let test_args = vec![Expr::Literal(Value::U32(500), span)];
         let mut args = prepare_test(vec![
-            Expr::Fx {
-                name: "test".to_compact_string(),
-                arguments: vec![Expr::Literal(Value::U32(500))],
+            Expr::FnCall {
+                call: FnCallInfo {
+                    name: "fx::test".to_compact_string(),
+                    args: test_args
+                },
                 self_fns: vec![],
+                span
             },
         ]);
 
@@ -904,18 +946,77 @@ mod tests {
         assert_eq!(
             result.expect_err("expected error"),
             DslError::UnknownEffect {
-                name: "test".to_compact_string(),
+                name: "fx::test".to_compact_string(),
             }
         );
     }
 
     #[test]
-    fn test_mixed_arguments() {
+    fn test_cell_filter_parsing() {
+        let span = ExprSpan::new(0, 0);
+        // Test with a CellFilter constructor function call
         let mut args = prepare_test(vec![
-            Expr::Literal(Value::U32(500)),
-            Expr::Literal(Value::Motion(Motion::LeftToRight)),
-            Expr::Literal(Value::Color(Color::Blue)),
-            Expr::Literal(Value::Timer(EffectTimer::from_ms(1000, Interpolation::Linear))),
+            Expr::FnCall {
+                call: FnCallInfo {
+                    name: "CellFilter::FgColor".to_compact_string(),
+                    args: vec![Expr::Literal(Value::Color(Color::Red), span)]
+                },
+                self_fns: vec![],
+                span
+            },
+        ]);
+
+        let result = args.cell_filter().unwrap();
+        assert!(matches!(result, CellFilter::FgColor(Color::Red)));
+
+        // Test with basic filters
+        let mut args = prepare_test(vec![
+            Expr::FnCall {
+                call: FnCallInfo {
+                    name: "All".to_compact_string(),
+                    args: vec![]
+                },
+                self_fns: vec![],
+                span
+            },
+        ]);
+
+        let result = args.cell_filter().unwrap();
+        assert!(matches!(result, CellFilter::All));
+    }
+
+    #[test]
+    fn test_style_constructor_parsing() {
+        let span = ExprSpan::new(0, 0);
+        // Test with Style constructor
+        let mut args = prepare_test(vec![
+            Expr::FnCall {
+                call: FnCallInfo {
+                    name: "Style::new".to_compact_string(),
+                    args: vec![]
+                },
+                self_fns: vec![
+                    FnCallInfo {
+                        name: "fg".to_compact_string(),
+                        args: vec![Expr::Literal(Value::Color(Color::Red), span)]
+                    }
+                ],
+                span
+            },
+        ]);
+
+        let result = args.style().unwrap();
+        assert_eq!(result.fg, Some(Color::Red));
+    }
+
+    #[test]
+    fn test_mixed_arguments() {
+        let span = ExprSpan::new(0, 0);
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::U32(500), span),
+            Expr::Literal(Value::Motion(Motion::LeftToRight), span),
+            Expr::Literal(Value::Color(Color::Blue), span),
+            Expr::Literal(Value::Timer(EffectTimer::from_ms(1000, Interpolation::Linear)), span),
         ]);
 
         assert_eq!(args.read_u32(), Ok(500));
@@ -930,9 +1031,10 @@ mod tests {
 
     #[test]
     fn test_u16_conversion() {
+        let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
-            Expr::Literal(Value::U32(65535)), // Max u16
-            Expr::Literal(Value::U32(65536)), // Too large for u16
+            Expr::Literal(Value::U32(65535), span), // Max u16
+            Expr::Literal(Value::U32(65536), span), // Too large for u16
         ]);
 
         assert_eq!(args.read_u16(), Ok(65535));

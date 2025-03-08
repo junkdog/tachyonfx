@@ -35,9 +35,12 @@ impl DslEnv {
         expr: Expr,
     ) where K: Into<CompactString> {
         let name = name.into();
+        let span = expr.span();
+
         let expr = Expr::LetBinding {
             name: name.clone(),
             let_expr: Box::new(expr),
+            span
         };
         self.locals.borrow_mut().insert(name, Box::new(expr));
     }

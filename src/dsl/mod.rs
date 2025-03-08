@@ -1,4 +1,3 @@
-mod parsers;
 mod dsl;
 mod arguments;
 mod environment;
@@ -9,13 +8,13 @@ mod tokenizer;
 mod token_parsers;
 
 use crate::dsl::expressions::{Expr, ExprSpan};
-use crate::dsl::parsers::parse_expr;
 use std::fmt;
 use compact_str::CompactString;
 
 pub use arguments::Arguments;
 pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
+use crate::dsl::token_parsers::parse_ast;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
@@ -150,7 +149,7 @@ impl EffectExpression {
     /// - `Ok(EffectExpression)` if parsing was successful
     /// - `Err(DslError)` if the input could not be parsed
     pub fn parse(input: &str) -> Result<Self, DslError> {
-        let expr = parse_expr(input)?;
+        let expr = parse_ast(input)?;
         Ok(Self { expr })
     }
 }
