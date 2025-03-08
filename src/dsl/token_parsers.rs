@@ -1,65 +1,12 @@
-use crate::dsl::expressions::Value;
+use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::tokenizer::{Token, TokenKind};
 use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
 use anpa::core::ParserExt;
 use anpa::parsers::item_if;
 use anpa::{create_parser_trait, or, right, tuplify};
-use compact_str::{format_compact, CompactString};
+use compact_str::format_compact;
 
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
-
-#[derive(Clone, Debug, PartialEq)]
-pub(super) struct ExprSpan {
-    pub start: u32,
-    pub end: u32,
-}
-
-impl ExprSpan {
-    pub(super) fn new(start: u32, end: u32) -> Self {
-        Self { start, end }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(super) enum Expr {
-    Literal(Value, ExprSpan),
-    Var { name: CompactString, self_fns: Vec<FnCallInfo>, span: ExprSpan },
-    LetBinding {
-        name: CompactString,
-        let_expr: Box<Expr>,
-        span: ExprSpan,
-    },
-    ArrayRef(Vec<Expr>, ExprSpan),
-    Array(Vec<Expr>, ExprSpan),
-    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo>, span: ExprSpan },
-    QualifiedMember(CompactString, ExprSpan), // enums, struct fields
-    OptionSome(Box<Expr>, ExprSpan),
-    Sequence {
-        effects: Vec<Expr>,
-        self_fns: Vec<FnCallInfo>,
-        span: ExprSpan,
-    },
-    Parallel {
-        effects: Vec<Expr>,
-        self_fns: Vec<FnCallInfo>,
-        span: ExprSpan,
-    },
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(super) struct FnCallInfo {
-    pub name: CompactString,
-    pub args: Vec<Expr>,
-}
-
-impl FnCallInfo {
-    pub fn new(
-        name: impl Into<CompactString>,
-        args: Vec<Expr>
-    ) -> Self {
-        Self { name: name.into(), args }
-    }
-}
 
 // main parser //
 fn expression<'a>() -> impl TokenParser<'a, Expr> {

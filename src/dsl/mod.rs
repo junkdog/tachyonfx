@@ -8,7 +8,7 @@ mod method_chains;
 mod tokenizer;
 mod token_parsers;
 
-use crate::dsl::expressions::Expr;
+use crate::dsl::expressions::{Expr, ExprSpan};
 use crate::dsl::parsers::parse_expr;
 use std::fmt;
 use compact_str::CompactString;
@@ -68,9 +68,9 @@ pub enum DslError {
         to: &'static str,
     },
 
-    #[error("Argument at position {position} is not of expected type {expected}, actual {actual}")]
+    #[error("Argument at {position} is not of expected type {expected}, actual {actual}")]
     WrongArgumentType {
-        position: usize,
+        position: ExprSpan,
         expected: &'static str,
         actual: CompactString,
     },
