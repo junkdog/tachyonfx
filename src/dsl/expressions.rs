@@ -12,33 +12,29 @@ pub(super) struct FnCallInfo {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(super) enum Expr {
-    Literal(Value),
-    Var { name: CompactString, self_fns: Vec<FnCallInfo> },
+    Literal(Value, ExprSpan),
+    Var { name: CompactString, self_fns: Vec<FnCallInfo>, span: ExprSpan },
     LetBinding {
         name: CompactString,
         let_expr: Box<Expr>,
+        span: ExprSpan,
     },
-    ArrayRef(Vec<Expr>),
-    Array(Vec<Expr>),
-    CellFilter { filter_type: &'static str, arguments: Vec<Expr> },
-    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo> }, // e.g. foo_bar(area)
-    QualifiedMember(CompactString), // enums, struct fields
-    OptionSome(Box<Expr>),
-    Layout { expr: Box<Expr>, self_fns: Vec<FnCallInfo> },
+    ArrayRef(Vec<Expr>, ExprSpan),
+    Array(Vec<Expr>, ExprSpan),
+    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo>, span: ExprSpan },
+    QualifiedMember(CompactString, ExprSpan), // enums, struct fields
+    OptionSome(Box<Expr>, ExprSpan),
     Sequence {
         effects: Vec<Expr>,
-        self_fns: Vec<FnCallInfo>
+        self_fns: Vec<FnCallInfo>,
+        span: ExprSpan,
     },
     Parallel {
         effects: Vec<Expr>,
-        self_fns: Vec<FnCallInfo>
-    },
-    Style(Vec<FnCallInfo>),
-    Fx {
-        name: CompactString,
-        arguments: Vec<Expr>,
         self_fns: Vec<FnCallInfo>,
+        span: ExprSpan,
     },
 }
 
@@ -64,6 +60,18 @@ pub(super) enum Value {
     Interpolation(Interpolation),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct ExprSpan {
+    pub start: u32,
+    pub end: u32,
+}
+
+impl ExprSpan {
+    pub(super) fn new(start: u32, end: u32) -> Self {
+        Self { start, end }
+    }
+}
+
 impl FnCallInfo {
     pub fn new(
         name: impl Into<CompactString>,
@@ -80,24 +88,35 @@ impl From<(&str, Vec<Expr>)> for FnCallInfo {
 }
 
 impl Expr {
+    pub(super) fn span(&self) -> ExprSpan {
+        *match self {
+            Expr::Literal(_, span) => span,
+            Expr::Var { span, .. } => span,
+            Expr::LetBinding { span, .. } => span,
+            Expr::ArrayRef(_, span) => span,
+            Expr::Array(_, span) => span,
+            Expr::FnCall { span, .. } => span,
+            Expr::QualifiedMember(_, span) => span,
+            Expr::OptionSome(_, span) => span,
+            Expr::Sequence { span, .. } => span,
+            Expr::Parallel { span, .. } => span,
+        }
+    }
+
     /// Returns a string representation of the expression's type
     /// Used for error messages
     pub fn type_name(&self) -> &'static str {
         match self {
-            Expr::Var { .. }         => "variable",
-            Expr::Fx { .. }          => "effect",
-            Expr::Literal(v)         => v.type_name(),
-            Expr::ArrayRef(_)        => "array_ref",
-            Expr::Array(_)           => "array_ref",
-            Expr::CellFilter { .. }  => "cell_filter",
-            Expr::Sequence { .. }    => "sequence",
-            Expr::Parallel { .. }    => "parallel",
-            Expr::Style(_)           => "style",
-            Expr::OptionSome(_)      => "some",
-            Expr::FnCall { .. }      => "fn_call",
-            Expr::Layout { .. }      => "layout",
-            Expr::LetBinding { .. }  => "let_binding",
-            Expr::QualifiedMember(_) => "qualified_member",
+            Expr::Var { .. }            => "variable",
+            Expr::Literal(v, _)         => v.type_name(),
+            Expr::ArrayRef(_, _)        => "array_ref",
+            Expr::Array(_, _)           => "array_ref",
+            Expr::Sequence { .. }       => "sequence",
+            Expr::Parallel { .. }       => "parallel",
+            Expr::OptionSome(_, _)      => "some",
+            Expr::FnCall { .. }         => "fn_call",
+            Expr::LetBinding { .. }     => "let_binding",
+            Expr::QualifiedMember(_, _) => "qualified_member",
         }
     }
 
@@ -109,16 +128,15 @@ impl Expr {
         // Determine if an expression is a "simple" value that can be rendered inline
         let is_simple_expr = |expr: &Expr| -> bool {
             match expr {
-                Expr::Literal(Value::U32(_)) |
-                Expr::Literal(Value::I32(_)) |
-                Expr::Literal(Value::F32(_)) |
-                Expr::Literal(Value::String(_)) |
-                Expr::Literal(Value::Interpolation(_)) |
-                Expr::Literal(Value::Motion(_)) => true,
+                Expr::Literal(Value::U32(_), _) |
+                Expr::Literal(Value::I32(_), _) |
+                Expr::Literal(Value::F32(_), _) |
+                Expr::Literal(Value::String(_,), _) |
+                Expr::Literal(Value::Interpolation(_), _) |
+                Expr::Literal(Value::Motion(_), _) => true,
                 Expr::Var { self_fns, .. } if self_fns.len() < 2 => true,
-                Expr::Fx { arguments, self_fns, .. } if arguments.len() < 2 && self_fns.is_empty() => true,
                 // also consider function calls with no args or simple args to be simple
-                Expr::FnCall { call, self_fns } =>
+                Expr::FnCall { call, self_fns, span } =>
                     self_fns.is_empty() && call.args.len() < 2,
                 _ => false,
             }
@@ -148,38 +166,38 @@ impl Expr {
             .join_compact("");
 
         match self {
-            Expr::Literal(value) => format_compact!("{}{}", prefix, value.format()),
-            Expr::Var { name, self_fns } =>
+            Expr::Literal(value, _) => format_compact!("{}{}", prefix, value.format()),
+            Expr::Var { name, self_fns, .. } =>
                 format_compact!("{}{}{}", prefix, name, chained_fns(self_fns)),
-            Expr::ArrayRef(exprs) => {
+            Expr::ArrayRef(exprs, _) => {
                 let inner = formatted_args(exprs);
                 format_compact!("{}&[\n{}\n{}]", prefix, inner, indent_str)
             },
-            Expr::Array(exprs) => {
+            Expr::Array(exprs, _) => {
                 let inner = formatted_args(exprs);
                 format_compact!("{}[\n{}\n{}]", prefix, inner, indent_str)
             },
-            Expr::Fx { name, arguments, self_fns } => {
-                let effect = if arguments.is_empty() {
-                    format_compact!("{}fx::{}()", prefix, name)
-                } else if arguments.len() == 1 {
-                    // check if it's a simple expression or another effect that should be rendered inline
-                    let arg = &arguments[0];
-                    if is_simple_expr(arg) || matches!(arg, Expr::Fx { .. } | Expr::FnCall { .. }) {
-                        let arg_str = arg.format(indent, false);
-                        format_compact!("{prefix}fx::{name}({})", arg_str.trim())
-                    } else {
-                        let args = formatted_args(arguments);
-                        format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
-                    }
-                } else {
-                    let args = formatted_args(arguments);
-                    format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
-                };
-
-                format_compact!("{effect}{}", chained_fns(self_fns))
-            },
-            Expr::FnCall { call: FnCallInfo { name, args }, self_fns } => {
+            // Expr::Fx { name, arguments, self_fns } => {
+            //     let effect = if arguments.is_empty() {
+            //         format_compact!("{}fx::{}()", prefix, name)
+            //     } else if arguments.len() == 1 {
+            //         // check if it's a simple expression or another effect that should be rendered inline
+            //         let arg = &arguments[0];
+            //         if is_simple_expr(arg) || matches!(arg, Expr::Fx { .. } | Expr::FnCall { .. }) {
+            //             let arg_str = arg.format(indent, false);
+            //             format_compact!("{prefix}fx::{name}({})", arg_str.trim())
+            //         } else {
+            //             let args = formatted_args(arguments);
+            //             format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
+            //         }
+            //     } else {
+            //         let args = formatted_args(arguments);
+            //         format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
+            //     };
+            //
+            //     format_compact!("{effect}{}", chained_fns(self_fns))
+            // },
+            Expr::FnCall { call: FnCallInfo { name, args }, self_fns, .. } => {
                 let fn_call = if args.is_empty() {
                     format_compact!("{}{}()", prefix, name)
                 } else if args.len() == 1 && is_simple_expr(&args[0]) {
@@ -202,39 +220,39 @@ impl Expr {
 
                 format_compact!("{}{}", fn_call, chains)
             },
-            Expr::LetBinding { name, let_expr} => format_compact!(
+            Expr::LetBinding { name, let_expr, .. } => format_compact!(
                 "{indent_str}let {name} = {value}",
                 name = name,
                 value = let_expr.format(indent, false),
             ),
-            Expr::Sequence { effects, self_fns } => format_compact!(
+            Expr::Sequence { effects, self_fns, .. } => format_compact!(
                 "{indent_str}fx::sequence(&[\n{}\n{indent_str}]){}",
                 formatted_args(effects),
                 chained_fns(self_fns),
             ),
-            Expr::Parallel { effects, self_fns } => format_compact!(
+            Expr::Parallel { effects, self_fns, .. } => format_compact!(
                 "{indent_str}fx::parallel(&[\n{}\n{indent_str}]){}",
                 formatted_args(effects),
                 chained_fns(self_fns),
             ),
-            Expr::CellFilter { filter_type, arguments } => {
-                let args = formatted_args(arguments);
-                format_compact!("{}CellFilter::{filter_type}({args})", indent_str)
-            },
-            Expr::Style(methods) => {
-                let inner = methods.iter()
-                    .map(|f| {
-                        let args = formatted_args(&f.args);
-                        format!("\n{indent_str}.{}({args})", f.name)
-                    })
-                    .collect::<Vec<_>>()
-                    .join_compact("\n{indent_str}");
-
-                format_compact!("{}Style::new(){}", indent_str, inner)
-            }
-            Expr::OptionSome(v) => format_compact!("{}Some({})", indent_str, v.format(indent, false)),
-            Expr::Layout { .. } => "layout(todo)".to_compact_string(),
-            Expr::QualifiedMember(s) => s.to_compact_string(),
+            // Expr::CellFilter { filter_type, arguments } => {
+            //     let args = formatted_args(arguments);
+            //     format_compact!("{}CellFilter::{filter_type}({args})", indent_str)
+            // },
+            // Expr::Style(methods) => {
+            //     let inner = methods.iter()
+            //         .map(|f| {
+            //             let args = formatted_args(&f.args);
+            //             format!("\n{indent_str}.{}({args})", f.name)
+            //         })
+            //         .collect::<Vec<_>>()
+            //         .join_compact("\n{indent_str}");
+            //
+            //     format_compact!("{}Style::new(){}", indent_str, inner)
+            // }
+            Expr::OptionSome(v, _) => format_compact!("{}Some({})", indent_str, v.format(indent, false)),
+            // Expr::Layout { .. } => "layout(todo)".to_compact_string(),
+            Expr::QualifiedMember(s, _) => s.to_compact_string(),
         }
     }
 }
@@ -265,24 +283,24 @@ impl Value {
 
     fn type_name(&self) -> &'static str {
         match self {
-            Value::CellFilter(_) => "cell_filter",
-            Value::Color(_)       => "color",
-            Value::Duration(_)    => "duration",
-            Value::Motion(_)      => "motion",
-            Value::String(_)      => "string",
-            Value::U32(_)         => "u32",
-            Value::F32(_)         => "f32",
-            Value::I32(_)         => "i32",
-            Value::Style(_)       => "style",
-            Value::Timer(_)       => "timer",
-            Value::Rect(_)        => "rect",
-            Value::Margin(_)      => "margin",
-            Value::RepeatMode(_)  => "repeat_mode",
-            Value::Interpolation(_)=> "interpolation",
-            Value::OptionNone     => "option",
-            Value::Modifier(_)     => "modifier",
-            Value::Constraint(_)  => "constraint",
-            Value::Direction(_)   => "direction",
+            Value::CellFilter(_)    => "cell_filter",
+            Value::Color(_)         => "color",
+            Value::Duration(_)      => "duration",
+            Value::Motion(_)        => "motion",
+            Value::String(_)        => "string",
+            Value::U32(_)           => "u32",
+            Value::F32(_)           => "f32",
+            Value::I32(_)           => "i32",
+            Value::Style(_)         => "style",
+            Value::Timer(_)         => "timer",
+            Value::Rect(_)          => "rect",
+            Value::Margin(_)        => "margin",
+            Value::RepeatMode(_)    => "repeat_mode",
+            Value::Interpolation(_) => "interpolation",
+            Value::OptionNone       => "option",
+            Value::Modifier(_)      => "modifier",
+            Value::Constraint(_)    => "constraint",
+            Value::Direction(_)     => "direction",
         }
     }
 }

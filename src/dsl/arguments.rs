@@ -1,6 +1,6 @@
 use crate::dsl::dsl::EffectDsl;
 use crate::dsl::environment::DslEnv;
-use crate::dsl::expressions::{Expr, FnCallInfo, Value};
+use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::DslError;
 use crate::fx::RepeatMode;
@@ -66,7 +66,7 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Duration`].
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
                 "Duration::from_millis" => {
                     let ms = self.extract_nested(args, Arguments::read_u32)?;
                     Duration::from_millis(ms as _)
@@ -75,12 +75,12 @@ impl<'dsl> Arguments<'dsl> {
                     let seconds = self.extract_nested(args, Arguments::read_f32)?;
                     Duration::from_secs_f32(seconds)
                 },
-                _ => self.expected_type("duration", name)?,
+                _ => self.expected_type("duration", name, span)?,
             }),
-            Expr::Literal(v)  => match v {
+            Expr::Literal(v, span)  => match v {
                 Value::Duration(d)       => Ok(d),
                 Value::U32(ms)           => Ok(Duration::from_millis(ms as _)),
-                e                        => self.expected_type("duration", e.format()),
+                e                        => self.expected_type("duration", e.format(), span),
             },
 
             Expr::Var { name, .. }       => self.bound_var(name),
@@ -509,9 +509,10 @@ impl<'dsl> Arguments<'dsl> {
         &self,
         expected: &'static str,
         actual: CompactString,
+        span: ExprSpan
     ) -> Result<T, DslError>  {
         Err(DslError::WrongArgumentType {
-            position: self.initial_arg_count - self.args.len() - 1,
+            position: span,
             expected,
             actual
         })
@@ -522,7 +523,7 @@ impl<'dsl> Arguments<'dsl> {
         expected: &'static str,
         actual: Expr,
     ) -> Result<T, DslError>  {
-        self.expected_type(expected, actual.type_name().to_compact_string())
+        self.expected_type(expected, actual.type_name().to_compact_string(), actual.span())
     }
 
     fn nested_args(&mut self, exprs: Vec<Expr>, required_arg_count: usize) -> Result<Self, DslError> {
