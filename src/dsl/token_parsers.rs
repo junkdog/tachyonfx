@@ -1,6 +1,6 @@
 use crate::dsl::expressions::Value;
 use crate::dsl::tokenizer::{Token, TokenKind};
-use anpa::combinators::{attempt, many_to_vec, middle, no_separator, separator, succeed};
+use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
 use anpa::core::ParserExt;
 use anpa::parsers::item_if;
 use anpa::{create_parser_trait, or, right, tuplify};
@@ -9,25 +9,40 @@ use compact_str::{format_compact, CompactString};
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
 
 #[derive(Clone, Debug, PartialEq)]
+pub(super) struct ExprSpan {
+    pub start: u32,
+    pub end: u32,
+}
+
+impl ExprSpan {
+    pub(super) fn new(start: u32, end: u32) -> Self {
+        Self { start, end }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(super) enum Expr {
-    Literal(Value),
-    Var { name: CompactString, self_fns: Vec<FnCallInfo> },
+    Literal(Value, ExprSpan),
+    Var { name: CompactString, self_fns: Vec<FnCallInfo>, span: ExprSpan },
     LetBinding {
         name: CompactString,
         let_expr: Box<Expr>,
+        span: ExprSpan,
     },
-    ArrayRef(Vec<Expr>),
-    Array(Vec<Expr>),
-    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo> },
-    QualifiedMember(CompactString), // enums, struct fields
-    OptionSome(Box<Expr>),
+    ArrayRef(Vec<Expr>, ExprSpan),
+    Array(Vec<Expr>, ExprSpan),
+    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo>, span: ExprSpan },
+    QualifiedMember(CompactString, ExprSpan), // enums, struct fields
+    OptionSome(Box<Expr>, ExprSpan),
     Sequence {
         effects: Vec<Expr>,
-        self_fns: Vec<FnCallInfo>
+        self_fns: Vec<FnCallInfo>,
+        span: ExprSpan,
     },
     Parallel {
         effects: Vec<Expr>,
-        self_fns: Vec<FnCallInfo>
+        self_fns: Vec<FnCallInfo>,
+        span: ExprSpan,
     },
 }
 
@@ -62,13 +77,25 @@ fn expression<'a>() -> impl TokenParser<'a, Expr> {
     )
 }
 
+fn yield_consumed<'a, T>(
+    parser: impl TokenParser<'a, T>,
+) -> impl TokenParser<'a, (ExprSpan, T)> {
+    and_parsed(parser).map(|(consumed_tokens, value)| {
+        // Calculate the span from the first and last token
+        let start = consumed_tokens.first().map_or(0, |t| t.span.0);
+        let end = consumed_tokens.last().map_or(start, |t| t.span.1);
+
+        (ExprSpan { start, end }, value)
+    })
+}
+
 fn some<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    tuplify!(
+    yield_consumed(tuplify!(
         id("Some"),
         middle(token(LeftParen), expression(), token(RightParen)),
-    ).map(|(_, expr)| Expr::OptionSome(Box::new(expr)))
+    )).map(|(span, (_, expr))| Expr::OptionSome(Box::new(expr), span))
 }
 
 fn arguments<'a>() -> impl TokenParser<'a, Vec<Expr>> {
@@ -99,23 +126,23 @@ fn maybe_qualified<'a>(owner: &str) ->impl TokenParser<'a, ()> + use<'a, '_> {
 fn sequence<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    tuplify!(
+    yield_consumed(tuplify!(
         maybe_qualified("fx"),
         id("sequence"),
         middle(token(LeftParen), arguments(), token(RightParen)),
         method_chain(),
-    ).map(|(_, _, args, self_fns)| Expr::Sequence { effects: args, self_fns })
+    )).map(|(span, (_, _, args, self_fns))| Expr::Sequence { effects: args, self_fns, span })
 }
 
 fn parallel<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    tuplify!(
+    yield_consumed(tuplify!(
         maybe_qualified("fx"),
         id("parallel"),
         middle(token(LeftParen), arguments(), token(RightParen)),
         method_chain(),
-    ).map(|(_, _, args, self_fns)| Expr::Parallel { effects: args, self_fns })
+    )).map(|(span, (_, _, args, self_fns))| Expr::Parallel { effects: args, self_fns, span })
 }
 
 fn identifier<'a>() -> impl TokenParser<'a, &'a str> {
@@ -130,54 +157,55 @@ fn id<'a>(identifier: &str) -> impl TokenParser<'a, &'a Token<'a>> + use<'a, '_>
 fn literal<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    item_if(|_| true)
-        .map_if(|t: &'a Token<'a>| Some(Expr::Literal(match t.kind {
+    yield_consumed(item_if(|_| true))
+        .map_if(|(span, t): (_, &'a Token<'a>)| Some(Expr::Literal(match t.kind {
             FloatLiteral  => Value::F32(t.text.parse().unwrap()),
             HexLiteral    => Value::I32(i32::from_str_radix(&t.text[2..], 16).unwrap()),
             IntLiteral    => Value::I32(t.text.parse().unwrap()),
             StringLiteral => Value::String(t.text.into()),
             _             => None?,
-        })))
+        }, span)))
 }
 
 fn let_binding<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    tuplify!(
+    yield_consumed(tuplify!(
         keyword("let"),
         identifier(),
         token(Equals),
         expression(),
-    ).map(|(_, name, _, expr)| {
+    )).map(|(span, (_, name, _, expr))| {
         Expr::LetBinding {
             name: name.into(),
             let_expr: Box::new(expr),
+            span
         }
     })
 }
 
 fn variable<'a>() -> impl TokenParser<'a, Expr> {
-    identifier()
-        .map(|t| Expr::Var { name: t.into(), self_fns: vec![] })
+    yield_consumed(identifier())
+        .map(|(span, t)| Expr::Var { name: t.into(), self_fns: vec![], span })
 }
 
 fn qualified_name<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    tuplify!(
+    yield_consumed(tuplify!(
         identifier(),
         token(DoubleColon),
         identifier()
-    ).map(|(owner, _, member)| {
-        Expr::QualifiedMember(format_compact!("{owner}::{member}"))
+    )).map(|(span, (owner, _, member))| {
+        Expr::QualifiedMember(format_compact!("{owner}::{member}"), span)
     })
 }
 
 fn function_expression<'a>() -> impl TokenParser<'a, Expr> {
-    tuplify!(
+    yield_consumed(tuplify!(
         function_call(),
         method_chain()
-    ).map(|(call, self_fns)| Expr::FnCall { call, self_fns })
+    )).map(|(span, (call, self_fns))| Expr::FnCall { call, self_fns, span })
 }
 
 fn function_call<'a>() -> impl TokenParser<'a, FnCallInfo> {
@@ -217,22 +245,22 @@ fn method_chain<'a>() -> impl TokenParser<'a, Vec<FnCallInfo>> {
 fn array<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    tuplify!(
+    yield_consumed(tuplify!(
         token(LeftBracket),
         arguments(),
         token(RightBracket)
-    ).map(|(_, args, _)| Expr::Array(args))
+    )).map(|(span, (_, args, _))| Expr::Array(args, span))
 }
 
 fn array_reference<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    tuplify!(
+    yield_consumed(tuplify!(
         token(Ampersand),
         token(LeftBracket),
         arguments(),
         token(RightBracket),
-    ).map(|(_, _, args, _)| Expr::ArrayRef(args))
+    )).map(|(span, (_, _, args, _))| Expr::ArrayRef(args, span))
 }
 
 
@@ -251,7 +279,8 @@ mod tests {
     ) -> Expr {
         Expr::FnCall {
             call: FnCallInfo::new(name, args),
-            self_fns: vec![]
+            self_fns: vec![],
+            span: ExprSpan { start: 0, end: 0 }
         }
     }
 
@@ -259,8 +288,23 @@ mod tests {
         /// Add chained methods to the expression
         fn with_self_fns(self, self_fns: Vec<FnCallInfo>) -> Self {
             match self {
-                Expr::FnCall { call, .. } => Expr::FnCall { call, self_fns },
+                Expr::FnCall { call, span, .. } => Expr::FnCall { call, self_fns, span },
                 _ => panic!("Expected FnCall expression")
+            }
+        }
+
+        fn with_span(self, start: u32, end: u32) -> Self {
+            match self {
+                Expr::Literal(value, _) => Expr::Literal(value, ExprSpan::new(start, end)),
+                Expr::Var { name, self_fns, .. } => Expr::Var { name, self_fns, span: ExprSpan::new(start, end) },
+                Expr::LetBinding { name, let_expr, .. } => Expr::LetBinding { name, let_expr, span: ExprSpan::new(start, end) },
+                Expr::ArrayRef(args, _) => Expr::ArrayRef(args, ExprSpan::new(start, end)),
+                Expr::Array(args, _) => Expr::Array(args, ExprSpan::new(start, end)),
+                Expr::FnCall { call, self_fns, .. } => Expr::FnCall { call, self_fns, span: ExprSpan::new(start, end) },
+                Expr::QualifiedMember(name, _) => Expr::QualifiedMember(name, ExprSpan::new(start, end)),
+                Expr::OptionSome(expr, _) => Expr::OptionSome(expr, ExprSpan::new(start, end)),
+                Expr::Sequence { effects, self_fns, .. } => Expr::Sequence { effects, self_fns, span: ExprSpan::new(start, end) },
+                Expr::Parallel { effects, self_fns, .. } => Expr::Parallel { effects, self_fns, span: ExprSpan::new(start, end) },
             }
         }
     }
@@ -354,7 +398,7 @@ mod tests {
         with_tokens("\"hello world\"", |tokens| {
             assert_eq!(
                 parse(literal(), tokens).result,
-                Some(Expr::Literal(Value::String("hello world".into())))
+                Some(Expr::Literal(Value::String("hello world".into()), ExprSpan::new(0, 13)))
             );
         });
 
@@ -362,7 +406,7 @@ mod tests {
         with_tokens("42", |tokens| {
             assert_eq!(
                 parse(literal(), tokens).result,
-                Some(Expr::Literal(Value::I32(42)))
+                Some(Expr::Literal(Value::I32(42), ExprSpan::new(0, 2)))
             );
         });
 
@@ -370,7 +414,7 @@ mod tests {
         with_tokens("0x20", |tokens| {
             assert_eq!(
                 parse(literal(), tokens).result,
-                Some(Expr::Literal(Value::I32(32)))
+                Some(Expr::Literal(Value::I32(32), ExprSpan::new(0, 4)))
             );
         });
 
@@ -378,7 +422,7 @@ mod tests {
         with_tokens("3.14", |tokens| {
             assert_eq!(
                 parse(literal(), tokens).result,
-                Some(Expr::Literal(Value::F32(3.14)))
+                Some(Expr::Literal(Value::F32(3.14), ExprSpan::new(0, 4)))
             );
         });
 
@@ -399,7 +443,8 @@ mod tests {
                 parse(variable(), tokens).result,
                 Some(Expr::Var {
                     name: "my_var".into(),
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 6)
                 })
             );
         });
@@ -419,7 +464,7 @@ mod tests {
         with_tokens("Color::Red", |tokens| {
             assert_eq!(
                 parse(qualified_name(), tokens).result,
-                Some(Expr::QualifiedMember("Color::Red".into()))
+                Some(Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(0, 10)))
             );
         });
 
@@ -446,7 +491,7 @@ mod tests {
         with_tokens("42", |tokens| {
             assert_eq!(
                 parse(expression(), tokens).result,
-                Some(Expr::Literal(Value::I32(42)))
+                Some(Expr::Literal(Value::I32(42), ExprSpan::new(0, 2)))
             );
         });
 
@@ -456,7 +501,8 @@ mod tests {
                 parse(expression(), tokens).result,
                 Some(Expr::Var {
                     name: "my_var".into(),
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 6)
                 })
             );
         });
@@ -465,7 +511,7 @@ mod tests {
         with_tokens("Color::Red", |tokens| {
             assert_eq!(
                 parse(expression(), tokens).result,
-                Some(Expr::QualifiedMember("Color::Red".into()))
+                Some(Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(0, 10)))
             );
         });
 
@@ -473,7 +519,7 @@ mod tests {
         with_tokens("fx::fade_to()", |tokens| {
             assert_eq!(
                 parse(expression(), tokens).result,
-                Some(expr_fn_call("fx::fade_to", vec![]))
+                Some(expr_fn_call("fx::fade_to", vec![]).with_span(0, 13))
             );
         });
     }
@@ -492,7 +538,7 @@ mod tests {
         with_tokens("42", |tokens| {
             assert_eq!(
                 parse(arguments(), tokens).result,
-                Some(vec![Expr::Literal(Value::I32(42))])
+                Some(vec![Expr::Literal(Value::I32(42), ExprSpan::new(0, 2))])
             );
         });
 
@@ -501,9 +547,9 @@ mod tests {
             assert_eq!(
                 parse(arguments(), tokens).result,
                 Some(vec![
-                    Expr::Literal(Value::I32(42)),
-                    Expr::Literal(Value::String("hello".into())),
-                    Expr::Var { name: "my_var".into(), self_fns: vec![] }
+                    Expr::Literal(Value::I32(42), ExprSpan::new(0, 2)),
+                    Expr::Literal(Value::String("hello".into()), ExprSpan::new(4, 11)),
+                    Expr::Var { name: "my_var".into(), self_fns: vec![], span: ExprSpan::new(13, 19) }
                 ])
             );
         });
@@ -513,9 +559,11 @@ mod tests {
             assert_eq!(
                 parse(arguments(), tokens).result,
                 Some(vec![
-                    Expr::QualifiedMember("Color::Red".into()),
-                    Expr::Literal(Value::I32(500)),
-                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                    Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(0, 10)),
+                    Expr::Literal(Value::I32(500), ExprSpan::new(12, 15)),
+                    expr_fn_call("fx::dissolve", vec![
+                        Expr::Literal(Value::I32(200), ExprSpan::new(30, 33))
+                    ]).with_span(17, 34)
                 ])
             );
         });
@@ -529,7 +577,8 @@ mod tests {
                 parse(let_binding(), tokens).result,
                 Some(Expr::LetBinding {
                     name: "x".into(),
-                    let_expr: Box::new(Expr::Literal(Value::I32(42)))
+                    let_expr: Box::new(Expr::Literal(Value::I32(42), ExprSpan::new(8, 10))),
+                    span: ExprSpan::new(0, 10)
                 })
             );
         });
@@ -540,7 +589,10 @@ mod tests {
                 parse(let_binding(), tokens).result,
                 Some(Expr::LetBinding {
                     name: "color".into(),
-                    let_expr: Box::new(Expr::QualifiedMember("Color::Red".into()))
+                    let_expr: Box::new(
+                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(12, 22))
+                    ),
+                    span: ExprSpan::new(0, 22)
                 })
             );
         });
@@ -552,9 +604,10 @@ mod tests {
                 Some(Expr::LetBinding {
                     name: "effect".into(),
                     let_expr: Box::new(expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into()),
-                        Expr::Literal(Value::I32(500))
-                    ]))
+                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(25, 35)),
+                        Expr::Literal(Value::I32(500), ExprSpan::new(37, 40))
+                    ]).with_span(13, 41)),
+                    span: ExprSpan::new(0, 41)
                 })
             );
         });
@@ -578,9 +631,9 @@ mod tests {
             assert_eq!(
                 parse(function_call(), tokens).result,
                 Some(fn_info("fx::fade_to", vec![
-                    Expr::Literal(Value::I32(42)),
-                    Expr::Literal(Value::String("hello".into())),
-                    Expr::Var { name: "my_var".into(), self_fns: vec![] }
+                    Expr::Literal(Value::I32(42), ExprSpan::new(12, 14)),
+                    Expr::Literal(Value::String("hello".into()), ExprSpan::new(16, 23)),
+                    Expr::Var { name: "my_var".into(), self_fns: vec![], span: ExprSpan::new(25, 31) }
                 ]))
             );
         });
@@ -590,8 +643,8 @@ mod tests {
             assert_eq!(
                 parse(function_call(), tokens).result,
                 Some(fn_info("fx::fade_to", vec![
-                    Expr::QualifiedMember("Color::Red".into()),
-                    Expr::Literal(Value::I32(500))
+                    Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(12, 22)),
+                    Expr::Literal(Value::I32(500), ExprSpan::new(24, 27))
                 ]))
             );
         });
@@ -601,11 +654,12 @@ mod tests {
             assert_eq!(
                 parse(function_call(), tokens).result,
                 Some(fn_info("fx::sequence", vec![
-                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))])
+                        .with_span(13, 30),
                     expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into()),
-                        Expr::Literal(Value::I32(300))
-                    ])
+                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(44, 54)),
+                        Expr::Literal(Value::I32(300), ExprSpan::new(56, 59))
+                    ]).with_span(32, 60)
                 ]))
             );
         });
@@ -635,7 +689,7 @@ mod tests {
                 Some(vec![
                     FnCallInfo {
                         name: "filter".into(),
-                        args: vec![Expr::QualifiedMember("CellFilter::Text".into())]
+                        args: vec![Expr::QualifiedMember("CellFilter::Text".into(), ExprSpan::new(8, 24))]
                     }
                 ])
             );
@@ -646,14 +700,14 @@ mod tests {
             assert_eq!(
                 parse(method_chain(), tokens).result,
                 Some(vec![
-                    fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())]),
+                    fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into(), ExprSpan::new(8, 24))]),
                     fn_info("with_area", vec![
                         expr_fn_call("Rect::new", vec![
-                            Expr::Literal(Value::I32(0)),
-                            Expr::Literal(Value::I32(0)),
-                            Expr::Literal(Value::I32(10)),
-                            Expr::Literal(Value::I32(10))
-                        ])
+                            Expr::Literal(Value::I32(0), ExprSpan::new(46, 47)),
+                            Expr::Literal(Value::I32(0), ExprSpan::new(49, 50)),
+                            Expr::Literal(Value::I32(10), ExprSpan::new(52, 54)),
+                            Expr::Literal(Value::I32(10), ExprSpan::new(56, 58)),
+                        ]).with_span(36, 59)
                     ])
                 ])
             );
@@ -668,11 +722,13 @@ mod tests {
                 parse(function_expression(), tokens).result,
                 Some(
                     expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into()),
-                        Expr::Literal(Value::I32(500))
+                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(12, 22)),
+                        Expr::Literal(Value::I32(500), ExprSpan::new(24, 27))
                     ]).with_self_fns(vec![
-                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())])
-                    ])
+                        fn_info("filter", vec![
+                            Expr::QualifiedMember("CellFilter::Text".into(), ExprSpan::new(36, 52))
+                        ])
+                    ]).with_span(0, 53)
                 )
             );
         });
@@ -681,18 +737,19 @@ mod tests {
         with_tokens("fx::dissolve(200).filter(CellFilter::Text).with_area(Rect::new(0, 0, 10, 10))", |tokens| {
             assert_eq!(
                 parse(function_expression(), tokens).result,
-                Some(expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                Some(expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200), ExprSpan::new(13, 16))])
                     .with_self_fns(vec![
-                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())]),
+                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into(), ExprSpan::new(25, 41))]),
                         fn_info("with_area", vec![
                             expr_fn_call("Rect::new", vec![
-                                Expr::Literal(Value::I32(0)),
-                                Expr::Literal(Value::I32(0)),
-                                Expr::Literal(Value::I32(10)),
-                                Expr::Literal(Value::I32(10))
-                            ])
+                                Expr::Literal(Value::I32(0), ExprSpan::new(63, 64)),
+                                Expr::Literal(Value::I32(0), ExprSpan::new(66, 67)),
+                                Expr::Literal(Value::I32(10), ExprSpan::new(69, 71)),
+                                Expr::Literal(Value::I32(10), ExprSpan::new(73, 75))
+                            ]).with_span(53, 76)
                         ])
                     ])
+                    .with_span(0, 77)
                 )
             );
         });
@@ -703,14 +760,17 @@ mod tests {
                 parse(function_expression(), tokens).result,
                 Some(
                     expr_fn_call("fx::sequence", vec![
-                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
-                            .with_self_fns(vec![fn_info("reversed", vec![])]),
+                        expr_fn_call("fx::dissolve", vec![
+                            Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))
+                        ]).with_self_fns(vec![fn_info("reversed", vec![])]).with_span(13, 41),
                         expr_fn_call("fx::fade_to", vec![
-                            Expr::QualifiedMember("Color::Red".into()),
-                            Expr::Literal(Value::I32(300))
+                            Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(55, 65)),
+                            Expr::Literal(Value::I32(300), ExprSpan::new(67, 70))
+                        ]).with_span(43, 71)
+                    ]).with_span(0, 97).with_self_fns(vec![
+                        fn_info("filter", vec![
+                            Expr::QualifiedMember("CellFilter::Text".into(), ExprSpan::new(80, 96))
                         ])
-                    ]).with_self_fns(vec![
-                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())])
                     ])
                 )
             );
@@ -723,7 +783,7 @@ mod tests {
         with_tokens("[]", |tokens| {
             assert_eq!(
                 parse(array(), tokens).result,
-                Some(Expr::Array(vec![]))
+                Some(Expr::Array(vec![], ExprSpan::new(0, 2)))
             );
         });
 
@@ -731,7 +791,7 @@ mod tests {
         with_tokens("[42]", |tokens| {
             assert_eq!(
                 parse(array(), tokens).result,
-                Some(Expr::Array(vec![Expr::Literal(Value::I32(42))]))
+                Some(Expr::Array(vec![Expr::Literal(Value::I32(42), ExprSpan::new(1, 3))], ExprSpan::new(0, 4)))
             );
         });
 
@@ -740,10 +800,10 @@ mod tests {
             assert_eq!(
                 parse(array(), tokens).result,
                 Some(Expr::Array(vec![
-                    Expr::Literal(Value::I32(42)),
-                    Expr::Literal(Value::String("hello".into())),
-                    Expr::QualifiedMember("Color::Red".into())
-                ]))
+                    Expr::Literal(Value::I32(42), ExprSpan::new(1, 3)),
+                    Expr::Literal(Value::String("hello".into()), ExprSpan::new(5, 12)),
+                    Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(14, 24))
+                ], ExprSpan::new(0, 25)))
             );
         });
 
@@ -752,12 +812,13 @@ mod tests {
             assert_eq!(
                 parse(array(), tokens).result,
                 Some(Expr::Array(vec![
-                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200), ExprSpan::new(14, 17))])
+                        .with_span(1, 18),
                     expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into()),
-                        Expr::Literal(Value::I32(300))
-                    ])
-                ]))
+                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(32, 42)),
+                        Expr::Literal(Value::I32(300), ExprSpan::new(44, 47))
+                    ]).with_span(20, 48)
+                ], ExprSpan::new(0, 49)))
             );
         });
     }
@@ -768,7 +829,7 @@ mod tests {
         with_tokens("&[]", |tokens| {
             assert_eq!(
                 parse(array_reference(), tokens).result,
-                Some(Expr::ArrayRef(vec![]))
+                Some(Expr::ArrayRef(vec![], ExprSpan::new(0, 3)))
             );
         });
 
@@ -776,7 +837,7 @@ mod tests {
         with_tokens("&[42]", |tokens| {
             assert_eq!(
                 parse(array_reference(), tokens).result,
-                Some(Expr::ArrayRef(vec![Expr::Literal(Value::I32(42))]))
+                Some(Expr::ArrayRef(vec![Expr::Literal(Value::I32(42), ExprSpan::new(2, 4))], ExprSpan::new(0, 5)))
             );
         });
 
@@ -785,10 +846,10 @@ mod tests {
             assert_eq!(
                 parse(array_reference(), tokens).result,
                 Some(Expr::ArrayRef(vec![
-                    Expr::Literal(Value::I32(42)),
-                    Expr::Literal(Value::String("hello".into())),
-                    Expr::QualifiedMember("Color::Red".into())
-                ]))
+                    Expr::Literal(Value::I32(42), ExprSpan::new(2, 4)),
+                    Expr::Literal(Value::String("hello".into()), ExprSpan::new(6, 13)),
+                    Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(15, 25))
+                ], ExprSpan::new(0, 26)))
             );
         });
 
@@ -797,12 +858,13 @@ mod tests {
             assert_eq!(
                 parse(array_reference(), tokens).result,
                 Some(Expr::ArrayRef(vec![
-                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200), ExprSpan::new(15, 18))])
+                        .with_span(2, 19),
                     expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into()),
-                        Expr::Literal(Value::I32(300))
-                    ])
-                ]))
+                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(33, 43)),
+                        Expr::Literal(Value::I32(300), ExprSpan::new(45, 48))
+                    ]).with_span(21, 49)
+                ], ExprSpan::new(0, 50)))
             );
         });
     }
@@ -818,14 +880,14 @@ mod tests {
             let result = anpa_result.result;
 
             let expr = result.unwrap();
-            if let Expr::FnCall { call, self_fns } = expr {
+            if let Expr::FnCall { call, self_fns, .. } = expr {
                 assert_eq!(call.name, "fx::sequence".to_compact_string());
                 assert_eq!(self_fns.len(), 2);
                 assert_eq!(self_fns[0].name, "filter".to_compact_string());
                 assert_eq!(self_fns[1].name, "with_area".to_compact_string());
 
                 // Check the nested Rect with its own method chain
-                if let Expr::FnCall { call: rect_call, self_fns: rect_fns } = &self_fns[1].args[0] {
+                if let Expr::FnCall { call: rect_call, self_fns: rect_fns, .. } = &self_fns[1].args[0] {
                     assert_eq!(rect_call.name, "Rect::new".to_compact_string());
                     assert_eq!(rect_fns.len(), 1);
                     assert_eq!(rect_fns[0].name, "offset".to_compact_string());
@@ -845,7 +907,7 @@ mod tests {
             assert!(result.is_some());
 
             let expr = result.unwrap();
-            if let Expr::FnCall { call, self_fns } = expr {
+            if let Expr::FnCall { call, self_fns, .. } = expr {
                 assert_eq!(call.name, "fx::fade_to".to_compact_string());
                 assert_eq!(self_fns.len(), 4);
                 assert_eq!(self_fns[0].name, "filter".to_compact_string());
@@ -887,7 +949,10 @@ mod tests {
         with_tokens("Some(42)", |tokens| {
             assert_eq!(
                 parse(some(), tokens).result,
-                Some(Expr::OptionSome(Box::new(Expr::Literal(Value::I32(42)))))
+                Some(Expr::OptionSome(
+                    Box::new(Expr::Literal(Value::I32(42), ExprSpan::new(5, 7))),
+                    ExprSpan::new(0, 8)
+                ))
             );
         });
 
@@ -895,7 +960,10 @@ mod tests {
         with_tokens("Some(Color::Red)", |tokens| {
             assert_eq!(
                 parse(some(), tokens).result,
-                Some(Expr::OptionSome(Box::new(Expr::QualifiedMember("Color::Red".into()))))
+                Some(Expr::OptionSome(
+                    Box::new(Expr::QualifiedMember("Color::Red".into(),
+                        ExprSpan::new(5, 15))), ExprSpan::new(0, 16)
+                ))
             );
         });
 
@@ -904,9 +972,11 @@ mod tests {
             assert_eq!(
                 parse(some(), tokens).result,
                 Some(Expr::OptionSome(Box::new(
-                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                    expr_fn_call("fx::dissolve", vec![
+                        Expr::Literal(Value::I32(200), ExprSpan::new(18, 21))
+                    ]).with_span(5, 22)), ExprSpan::new(0, 23))
                 )
-            )));
+            );
         });
     }
 
@@ -918,7 +988,8 @@ mod tests {
                 parse(sequence(), tokens).result,
                 Some(Expr::Sequence {
                     effects: vec![],
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 14)
                 })
             );
         });
@@ -929,9 +1000,12 @@ mod tests {
                 parse(sequence(), tokens).result,
                 Some(Expr::Sequence {
                     effects: vec![
-                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                        expr_fn_call("fx::dissolve", vec![
+                            Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))
+                        ]).with_span(13, 30)
                     ],
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 31)
                 })
             );
         });
@@ -942,13 +1016,16 @@ mod tests {
                 parse(sequence(), tokens).result,
                 Some(Expr::Sequence {
                     effects: vec![
-                        expr_fn_call("dissolve", vec![Expr::Literal(Value::I32(200))]),
+                        expr_fn_call("dissolve", vec![
+                            Expr::Literal(Value::I32(200), ExprSpan::new(22, 25))
+                        ]).with_span(13, 26),
                         expr_fn_call("fx::fade_to", vec![
-                            Expr::QualifiedMember("Color::Red".into()),
-                            Expr::Literal(Value::I32(300))
-                        ])
+                            Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(40, 50)),
+                            Expr::Literal(Value::I32(300), ExprSpan::new(52, 55))
+                        ]).with_span(28, 56)
                     ],
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 57)
                 })
             );
         });
@@ -959,11 +1036,16 @@ mod tests {
                 parse(sequence(), tokens).result,
                 Some(Expr::Sequence {
                     effects: vec![
-                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                        expr_fn_call("fx::dissolve", vec![
+                            Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))
+                        ]).with_span(13, 30),
                     ],
                     self_fns: vec![
-                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())])
-                    ]
+                        fn_info("filter", vec![
+                            Expr::QualifiedMember("CellFilter::Text".into(), ExprSpan::new(39, 55))
+                        ])
+                    ],
+                    span: ExprSpan::new(0, 56)
                 })
             );
         });
@@ -975,14 +1057,17 @@ mod tests {
                 Some(Expr::Sequence {
                     effects: vec![
                         Expr::ArrayRef(vec![
-                            expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                            expr_fn_call("fx::dissolve", vec![
+                                Expr::Literal(Value::I32(200), ExprSpan::new(24, 27))
+                            ]).with_span(11, 28),
                             expr_fn_call("fx::fade_to", vec![
-                                Expr::QualifiedMember("Color::Red".into()),
-                                Expr::Literal(Value::I32(300))
-                            ])
-                        ])
+                                Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(42, 52)),
+                                Expr::Literal(Value::I32(300), ExprSpan::new(54, 57))
+                            ]).with_span(30, 58)
+                        ], ExprSpan::new(9, 59))
                     ],
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 60)
                 })
             );
         });
@@ -996,7 +1081,8 @@ mod tests {
                 parse(parallel(), tokens).result,
                 Some(Expr::Parallel {
                     effects: vec![],
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 14)
                 })
             );
         });
@@ -1007,9 +1093,11 @@ mod tests {
                 parse(parallel(), tokens).result,
                 Some(Expr::Parallel {
                     effects: vec![
-                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))])
+                            .with_span(13, 30)
                     ],
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 31)
                 })
             );
         });
@@ -1020,13 +1108,15 @@ mod tests {
                 parse(parallel(), tokens).result,
                 Some(Expr::Parallel {
                     effects: vec![
-                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))])
+                            .with_span(13, 30),
                         expr_fn_call("fx::fade_to", vec![
-                            Expr::QualifiedMember("Color::Red".into()),
-                            Expr::Literal(Value::I32(300))
-                        ])
+                            Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(44, 54)),
+                            Expr::Literal(Value::I32(300), ExprSpan::new(56, 59))
+                        ]).with_span(32, 60)
                     ],
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 61)
                 })
             );
         });
@@ -1037,11 +1127,16 @@ mod tests {
                 parse(parallel(), tokens).result,
                 Some(Expr::Parallel {
                     effects: vec![
-                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                        expr_fn_call("fx::dissolve", vec![
+                            Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))
+                        ]).with_span(13, 30)
                     ],
                     self_fns: vec![
-                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())])
-                    ]
+                        fn_info("filter", vec![
+                            Expr::QualifiedMember("CellFilter::Text".into(), ExprSpan::new(39, 55))
+                        ])
+                    ],
+                    span: ExprSpan::new(0, 56)
                 })
             );
         });
@@ -1053,14 +1148,17 @@ mod tests {
                 Some(Expr::Parallel {
                     effects: vec![
                         Expr::ArrayRef(vec![
-                            expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                            expr_fn_call("fx::dissolve", vec![
+                                Expr::Literal(Value::I32(200), ExprSpan::new(24, 27))
+                            ]).with_span(11, 28),
                             expr_fn_call("fx::fade_to", vec![
-                                Expr::QualifiedMember("Color::Red".into()),
-                                Expr::Literal(Value::I32(300))
-                            ])
-                        ])
+                                Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(42, 52)),
+                                Expr::Literal(Value::I32(300), ExprSpan::new(54, 57))
+                            ]).with_span(30, 58)
+                        ], ExprSpan::new(9, 59))
                     ],
-                    self_fns: vec![]
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 60)
                 })
             );
         });
@@ -1092,17 +1190,17 @@ mod tests {
             assert!(result.is_some());
 
             match result.unwrap() {
-                Expr::Sequence { effects, self_fns } => {
+                Expr::Sequence { effects, self_fns, .. } => {
                     assert_eq!(
                         effects,
                         vec![
                             expr_fn_call("fx::dissolve", vec![
-                                Expr::Literal(Value::I32(200))
-                            ]),
+                                Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))
+                            ]).with_span(13, 30),
                             expr_fn_call("fx::fade_to", vec![
-                                Expr::QualifiedMember("Color::Red".to_compact_string()),
-                                Expr::Literal(Value::I32(300))
-                            ])
+                                Expr::QualifiedMember("Color::Red".to_compact_string(), ExprSpan::new(44, 54)),
+                                Expr::Literal(Value::I32(300), ExprSpan::new(56, 59))
+                            ]).with_span(32, 60)
                         ]
                     );
                     assert_eq!(self_fns.len(), 0);
@@ -1122,12 +1220,12 @@ mod tests {
                         effects,
                         vec![
                             expr_fn_call("fx::dissolve", vec![
-                                Expr::Literal(Value::I32(200))
-                            ]),
+                                Expr::Literal(Value::I32(200), ExprSpan::new(26, 29))
+                            ]).with_span(13, 30),
                             expr_fn_call("fx::fade_to", vec![
-                                Expr::QualifiedMember("Color::Red".to_compact_string()),
-                                Expr::Literal(Value::I32(300))
-                            ])
+                                Expr::QualifiedMember("Color::Red".to_compact_string(), ExprSpan::new(44, 54)),
+                                Expr::Literal(Value::I32(300), ExprSpan::new(56, 59))
+                            ]).with_span(32, 60)
                         ]
                     ); // Should have two arguments
                 },
@@ -1141,12 +1239,12 @@ mod tests {
             assert!(result.is_some());
 
             match result.unwrap() {
-                Expr::OptionSome(expr) => {
+                Expr::OptionSome(expr, span) => {
                     assert_eq!(
                         expr,
                         Box::new(expr_fn_call("fx::dissolve", vec![
-                            Expr::Literal(Value::I32(200))
-                        ]))
+                            Expr::Literal(Value::I32(200), ExprSpan::new(18, 21))
+                        ]).with_span(5, 22))
                     );
                 },
                 _ => panic!("Expected OptionSome expression")
