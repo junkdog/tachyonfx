@@ -1,25 +1,74 @@
-use crate::dsl::expressions::{Expr, FnCallInfo, Value};
-use crate::dsl::tokenizer::TokenKind::{FloatLiteral, IntLiteral, StringLiteral};
+use crate::dsl::expressions::Value;
 use crate::dsl::tokenizer::{Token, TokenKind};
-use anpa::combinators::{many_to_vec, middle, no_separator, separator};
+use anpa::combinators::{attempt, many_to_vec, middle, no_separator, separator, succeed};
 use anpa::core::ParserExt;
 use anpa::parsers::item_if;
-use anpa::{create_parser_trait, defer_parser, or, right, tuplify};
+use anpa::{create_parser_trait, or, right, tuplify};
 use compact_str::{format_compact, CompactString};
 
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
+
+#[derive(Clone, Debug, PartialEq)]
+pub(super) enum Expr {
+    Literal(Value),
+    Var { name: CompactString, self_fns: Vec<FnCallInfo> },
+    LetBinding {
+        name: CompactString,
+        let_expr: Box<Expr>,
+    },
+    ArrayRef(Vec<Expr>),
+    Array(Vec<Expr>),
+    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo> },
+    QualifiedMember(CompactString), // enums, struct fields
+    OptionSome(Box<Expr>),
+    Sequence {
+        effects: Vec<Expr>,
+        self_fns: Vec<FnCallInfo>
+    },
+    Parallel {
+        effects: Vec<Expr>,
+        self_fns: Vec<FnCallInfo>
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct FnCallInfo {
+    pub name: CompactString,
+    pub args: Vec<Expr>,
+}
+
+impl FnCallInfo {
+    pub fn new(
+        name: impl Into<CompactString>,
+        args: Vec<Expr>
+    ) -> Self {
+        Self { name: name.into(), args }
+    }
+}
 
 // main parser //
 fn expression<'a>() -> impl TokenParser<'a, Expr> {
     or!(
         literal(),
         let_binding(),
+        sequence(),
+        parallel(),
+        some(),
         function_expression(),
         array(),
         array_reference(),
         qualified_name(),
         variable(),
     )
+}
+
+fn some<'a>() -> impl TokenParser<'a, Expr> {
+    use TokenKind::*;
+
+    tuplify!(
+        id("Some"),
+        middle(token(LeftParen), expression(), token(RightParen)),
+    ).map(|(_, expr)| Expr::OptionSome(Box::new(expr)))
 }
 
 fn arguments<'a>() -> impl TokenParser<'a, Vec<Expr>> {
@@ -34,12 +83,48 @@ fn token<'a>(kind: TokenKind) -> impl TokenParser<'a, &'a Token<'a>> {
 }
 
 fn keyword<'a>(id: &str) -> impl TokenParser<'a, &'a Token<'a>> + use<'a, '_> {
-    token(TokenKind::Keyword)
-        .filter(move |t| t.text == id)
+    let p = token(TokenKind::Keyword)
+        .filter(move |t| t.text == id);
+
+    attempt(p)
+}
+
+fn maybe_qualified<'a>(owner: &str) ->impl TokenParser<'a, ()> + use<'a, '_> {
+    use TokenKind::*;
+
+    succeed(attempt(right!(id(owner), token(DoubleColon))))
+        .map(|_| ())
+}
+
+fn sequence<'a>() -> impl TokenParser<'a, Expr> {
+    use TokenKind::*;
+
+    tuplify!(
+        maybe_qualified("fx"),
+        id("sequence"),
+        middle(token(LeftParen), arguments(), token(RightParen)),
+        method_chain(),
+    ).map(|(_, _, args, self_fns)| Expr::Sequence { effects: args, self_fns })
+}
+
+fn parallel<'a>() -> impl TokenParser<'a, Expr> {
+    use TokenKind::*;
+
+    tuplify!(
+        maybe_qualified("fx"),
+        id("parallel"),
+        middle(token(LeftParen), arguments(), token(RightParen)),
+        method_chain(),
+    ).map(|(_, _, args, self_fns)| Expr::Parallel { effects: args, self_fns })
 }
 
 fn identifier<'a>() -> impl TokenParser<'a, &'a str> {
     token(TokenKind::Identifier).map(|t| t.text)
+}
+
+fn id<'a>(identifier: &str) -> impl TokenParser<'a, &'a Token<'a>> + use<'a, '_> {
+    let p = token(TokenKind::Identifier).filter(move |t| t.text == identifier);
+    attempt(p)
 }
 
 fn literal<'a>() -> impl TokenParser<'a, Expr> {
@@ -47,9 +132,10 @@ fn literal<'a>() -> impl TokenParser<'a, Expr> {
 
     item_if(|_| true)
         .map_if(|t: &'a Token<'a>| Some(Expr::Literal(match t.kind {
-            StringLiteral => Value::String(t.text.into()),
             FloatLiteral  => Value::F32(t.text.parse().unwrap()),
+            HexLiteral    => Value::I32(i32::from_str_radix(&t.text[2..], 16).unwrap()),
             IntLiteral    => Value::I32(t.text.parse().unwrap()),
+            StringLiteral => Value::String(t.text.into()),
             _             => None?,
         })))
 }
@@ -97,14 +183,21 @@ fn function_expression<'a>() -> impl TokenParser<'a, Expr> {
 fn function_call<'a>() -> impl TokenParser<'a, FnCallInfo> {
     use TokenKind::*;
 
-    tuplify!(
+    let qualified = tuplify!(
         identifier(),
         token(DoubleColon),
         identifier(),
         middle(token(LeftParen), arguments(), token(RightParen)),
     ).map(|(owner, _, fun, args)| {
         FnCallInfo::new(format_compact!("{owner}::{fun}"), args)
-    })
+    });
+
+    let unqualified = tuplify!(
+        identifier(),
+        middle(token(LeftParen), arguments(), token(RightParen)),
+    ).map(|(fun, args)| FnCallInfo::new(fun, args));
+
+    or!(qualified, unqualified)
 }
 
 fn method_chain<'a>() -> impl TokenParser<'a, Vec<FnCallInfo>> {
@@ -146,13 +239,41 @@ fn array_reference<'a>() -> impl TokenParser<'a, Expr> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dsl::expressions::{Expr, FnCallInfo, Value};
     use crate::dsl::tokenizer::tokenize;
     use anpa::core::parse;
-    use std::fmt::Debug;
     use compact_str::ToCompactString;
 
-    // Helper function to run tests on tokenized input
+
+    // Helper function to create a Expr::FnCall expression
+    fn expr_fn_call(
+        name: &str,
+        args: Vec<Expr>,
+    ) -> Expr {
+        Expr::FnCall {
+            call: FnCallInfo::new(name, args),
+            self_fns: vec![]
+        }
+    }
+
+    impl Expr {
+        /// Add chained methods to the expression
+        fn with_self_fns(self, self_fns: Vec<FnCallInfo>) -> Self {
+            match self {
+                Expr::FnCall { call, .. } => Expr::FnCall { call, self_fns },
+                _ => panic!("Expected FnCall expression")
+            }
+        }
+    }
+
+    /// Helper function to create a FnCallInfo struct
+    fn fn_info(name: &str, args: Vec<Expr>) -> FnCallInfo {
+        FnCallInfo {
+            name: name.into(),
+            args
+        }
+    }
+
+    /// Helper function to run tests on tokenized input
     fn with_tokens(input: &str, f: impl FnOnce(&[Token])) {
         const DISCARD: &[TokenKind] = &[
             TokenKind::Whitespace,
@@ -167,6 +288,8 @@ mod tests {
                     .collect::<Vec<_>>()
             })
             .unwrap();
+
+        println!("{:?}", tokens);
 
         f(&tokens);
     }
@@ -240,6 +363,14 @@ mod tests {
             assert_eq!(
                 parse(literal(), tokens).result,
                 Some(Expr::Literal(Value::I32(42)))
+            );
+        });
+
+        // Test with integer literal
+        with_tokens("0x20", |tokens| {
+            assert_eq!(
+                parse(literal(), tokens).result,
+                Some(Expr::Literal(Value::I32(32)))
             );
         });
 
@@ -342,13 +473,7 @@ mod tests {
         with_tokens("fx::fade_to()", |tokens| {
             assert_eq!(
                 parse(expression(), tokens).result,
-                Some(Expr::FnCall {
-                    call: FnCallInfo {
-                        name: "fx::fade_to".into(),
-                        args: vec![]
-                    },
-                    self_fns: vec![]
-                })
+                Some(expr_fn_call("fx::fade_to", vec![]))
             );
         });
     }
@@ -390,13 +515,7 @@ mod tests {
                 Some(vec![
                     Expr::QualifiedMember("Color::Red".into()),
                     Expr::Literal(Value::I32(500)),
-                    Expr::FnCall {
-                        call: FnCallInfo {
-                            name: "fx::dissolve".into(),
-                            args: vec![Expr::Literal(Value::I32(200))]
-                        },
-                        self_fns: vec![]
-                    }
+                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
                 ])
             );
         });
@@ -432,16 +551,10 @@ mod tests {
                 parse(let_binding(), tokens).result,
                 Some(Expr::LetBinding {
                     name: "effect".into(),
-                    let_expr: Box::new(Expr::FnCall {
-                        call: FnCallInfo {
-                            name: "fx::fade_to".into(),
-                            args: vec![
-                                Expr::QualifiedMember("Color::Red".into()),
-                                Expr::Literal(Value::I32(500))
-                            ]
-                        },
-                        self_fns: vec![]
-                    })
+                    let_expr: Box::new(expr_fn_call("fx::fade_to", vec![
+                        Expr::QualifiedMember("Color::Red".into()),
+                        Expr::Literal(Value::I32(500))
+                    ]))
                 })
             );
         });
@@ -464,14 +577,11 @@ mod tests {
         with_tokens("fx::fade_to(42, \"hello\", my_var)", |tokens| {
             assert_eq!(
                 parse(function_call(), tokens).result,
-                Some(FnCallInfo {
-                    name: "fx::fade_to".into(),
-                    args: vec![
-                        Expr::Literal(Value::I32(42)),
-                        Expr::Literal(Value::String("hello".into())),
-                        Expr::Var { name: "my_var".into(), self_fns: vec![] }
-                    ]
-                })
+                Some(fn_info("fx::fade_to", vec![
+                    Expr::Literal(Value::I32(42)),
+                    Expr::Literal(Value::String("hello".into())),
+                    Expr::Var { name: "my_var".into(), self_fns: vec![] }
+                ]))
             );
         });
 
@@ -479,13 +589,10 @@ mod tests {
         with_tokens("fx::fade_to(Color::Red, 500)", |tokens| {
             assert_eq!(
                 parse(function_call(), tokens).result,
-                Some(FnCallInfo {
-                    name: "fx::fade_to".into(),
-                    args: vec![
-                        Expr::QualifiedMember("Color::Red".into()),
-                        Expr::Literal(Value::I32(500))
-                    ]
-                })
+                Some(fn_info("fx::fade_to", vec![
+                    Expr::QualifiedMember("Color::Red".into()),
+                    Expr::Literal(Value::I32(500))
+                ]))
             );
         });
 
@@ -493,36 +600,20 @@ mod tests {
         with_tokens("fx::sequence(fx::dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
             assert_eq!(
                 parse(function_call(), tokens).result,
-                Some(FnCallInfo {
-                    name: "fx::sequence".into(),
-                    args: vec![
-                        Expr::FnCall {
-                            call: FnCallInfo {
-                                name: "fx::dissolve".into(),
-                                args: vec![Expr::Literal(Value::I32(200))]
-                            },
-                            self_fns: vec![]
-                        },
-                        Expr::FnCall {
-                            call: FnCallInfo {
-                                name: "fx::fade_to".into(),
-                                args: vec![
-                                    Expr::QualifiedMember("Color::Red".into()),
-                                    Expr::Literal(Value::I32(300))
-                                ]
-                            },
-                            self_fns: vec![]
-                        }
-                    ]
-                })
+                Some(fn_info("fx::sequence", vec![
+                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                    expr_fn_call("fx::fade_to", vec![
+                        Expr::QualifiedMember("Color::Red".into()),
+                        Expr::Literal(Value::I32(300))
+                    ])
+                ]))
             );
         });
 
-        // Test with invalid format
         with_tokens("fade_to()", |tokens| {
             assert_eq!(
                 parse(function_call(), tokens).result,
-                None
+                Some(fn_info("fade_to", vec![]))
             );
         });
     }
@@ -555,27 +646,15 @@ mod tests {
             assert_eq!(
                 parse(method_chain(), tokens).result,
                 Some(vec![
-                    FnCallInfo {
-                        name: "filter".into(),
-                        args: vec![Expr::QualifiedMember("CellFilter::Text".into())]
-                    },
-                    FnCallInfo {
-                        name: "with_area".into(),
-                        args: vec![
-                            Expr::FnCall {
-                                call: FnCallInfo {
-                                    name: "Rect::new".into(),
-                                    args: vec![
-                                        Expr::Literal(Value::I32(0)),
-                                        Expr::Literal(Value::I32(0)),
-                                        Expr::Literal(Value::I32(10)),
-                                        Expr::Literal(Value::I32(10))
-                                    ]
-                                },
-                                self_fns: vec![]
-                            }
-                        ]
-                    }
+                    fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())]),
+                    fn_info("with_area", vec![
+                        expr_fn_call("Rect::new", vec![
+                            Expr::Literal(Value::I32(0)),
+                            Expr::Literal(Value::I32(0)),
+                            Expr::Literal(Value::I32(10)),
+                            Expr::Literal(Value::I32(10))
+                        ])
+                    ])
                 ])
             );
         });
@@ -587,21 +666,14 @@ mod tests {
         with_tokens("fx::fade_to(Color::Red, 500).filter(CellFilter::Text)", |tokens| {
             assert_eq!(
                 parse(function_expression(), tokens).result,
-                Some(Expr::FnCall {
-                    call: FnCallInfo {
-                        name: "fx::fade_to".into(),
-                        args: vec![
-                            Expr::QualifiedMember("Color::Red".into()),
-                            Expr::Literal(Value::I32(500))
-                        ]
-                    },
-                    self_fns: vec![
-                        FnCallInfo {
-                            name: "filter".into(),
-                            args: vec![Expr::QualifiedMember("CellFilter::Text".into())]
-                        }
-                    ]
-                })
+                Some(
+                    expr_fn_call("fx::fade_to", vec![
+                        Expr::QualifiedMember("Color::Red".into()),
+                        Expr::Literal(Value::I32(500))
+                    ]).with_self_fns(vec![
+                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())])
+                    ])
+                )
             );
         });
 
@@ -609,35 +681,19 @@ mod tests {
         with_tokens("fx::dissolve(200).filter(CellFilter::Text).with_area(Rect::new(0, 0, 10, 10))", |tokens| {
             assert_eq!(
                 parse(function_expression(), tokens).result,
-                Some(Expr::FnCall {
-                    call: FnCallInfo {
-                        name: "fx::dissolve".into(),
-                        args: vec![Expr::Literal(Value::I32(200))]
-                    },
-                    self_fns: vec![
-                        FnCallInfo {
-                            name: "filter".into(),
-                            args: vec![Expr::QualifiedMember("CellFilter::Text".into())]
-                        },
-                        FnCallInfo {
-                            name: "with_area".into(),
-                            args: vec![
-                                Expr::FnCall {
-                                    call: FnCallInfo {
-                                        name: "Rect::new".into(),
-                                        args: vec![
-                                            Expr::Literal(Value::I32(0)),
-                                            Expr::Literal(Value::I32(0)),
-                                            Expr::Literal(Value::I32(10)),
-                                            Expr::Literal(Value::I32(10))
-                                        ]
-                                    },
-                                    self_fns: vec![]
-                                }
-                            ]
-                        }
-                    ]
-                })
+                Some(expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                    .with_self_fns(vec![
+                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())]),
+                        fn_info("with_area", vec![
+                            expr_fn_call("Rect::new", vec![
+                                Expr::Literal(Value::I32(0)),
+                                Expr::Literal(Value::I32(0)),
+                                Expr::Literal(Value::I32(10)),
+                                Expr::Literal(Value::I32(10))
+                            ])
+                        ])
+                    ])
+                )
             );
         });
 
@@ -645,41 +701,18 @@ mod tests {
         with_tokens("fx::sequence(fx::dissolve(200).reversed(), fx::fade_to(Color::Red, 300)).filter(CellFilter::Text)", |tokens| {
             assert_eq!(
                 parse(function_expression(), tokens).result,
-                Some(Expr::FnCall {
-                    call: FnCallInfo {
-                        name: "fx::sequence".into(),
-                        args: vec![
-                            Expr::FnCall {
-                                call: FnCallInfo {
-                                    name: "fx::dissolve".into(),
-                                    args: vec![Expr::Literal(Value::I32(200))]
-                                },
-                                self_fns: vec![
-                                    FnCallInfo {
-                                        name: "reversed".into(),
-                                        args: vec![]
-                                    }
-                                ]
-                            },
-                            Expr::FnCall {
-                                call: FnCallInfo {
-                                    name: "fx::fade_to".into(),
-                                    args: vec![
-                                        Expr::QualifiedMember("Color::Red".into()),
-                                        Expr::Literal(Value::I32(300))
-                                    ]
-                                },
-                                self_fns: vec![]
-                            }
-                        ]
-                    },
-                    self_fns: vec![
-                        FnCallInfo {
-                            name: "filter".into(),
-                            args: vec![Expr::QualifiedMember("CellFilter::Text".into())]
-                        }
-                    ]
-                })
+                Some(
+                    expr_fn_call("fx::sequence", vec![
+                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                            .with_self_fns(vec![fn_info("reversed", vec![])]),
+                        expr_fn_call("fx::fade_to", vec![
+                            Expr::QualifiedMember("Color::Red".into()),
+                            Expr::Literal(Value::I32(300))
+                        ])
+                    ]).with_self_fns(vec![
+                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())])
+                    ])
+                )
             );
         });
     }
@@ -719,23 +752,11 @@ mod tests {
             assert_eq!(
                 parse(array(), tokens).result,
                 Some(Expr::Array(vec![
-                    Expr::FnCall {
-                        call: FnCallInfo {
-                            name: "fx::dissolve".into(),
-                            args: vec![Expr::Literal(Value::I32(200))]
-                        },
-                        self_fns: vec![]
-                    },
-                    Expr::FnCall {
-                        call: FnCallInfo {
-                            name: "fx::fade_to".into(),
-                            args: vec![
-                                Expr::QualifiedMember("Color::Red".into()),
-                                Expr::Literal(Value::I32(300))
-                            ]
-                        },
-                        self_fns: vec![]
-                    }
+                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                    expr_fn_call("fx::fade_to", vec![
+                        Expr::QualifiedMember("Color::Red".into()),
+                        Expr::Literal(Value::I32(300))
+                    ])
                 ]))
             );
         });
@@ -776,23 +797,11 @@ mod tests {
             assert_eq!(
                 parse(array_reference(), tokens).result,
                 Some(Expr::ArrayRef(vec![
-                    Expr::FnCall {
-                        call: FnCallInfo {
-                            name: "fx::dissolve".into(),
-                            args: vec![Expr::Literal(Value::I32(200))]
-                        },
-                        self_fns: vec![]
-                    },
-                    Expr::FnCall {
-                        call: FnCallInfo {
-                            name: "fx::fade_to".into(),
-                            args: vec![
-                                Expr::QualifiedMember("Color::Red".into()),
-                                Expr::Literal(Value::I32(300))
-                            ]
-                        },
-                        self_fns: vec![]
-                    }
+                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                    expr_fn_call("fx::fade_to", vec![
+                        Expr::QualifiedMember("Color::Red".into()),
+                        Expr::Literal(Value::I32(300))
+                    ])
                 ]))
             );
         });
@@ -849,6 +858,298 @@ mod tests {
                 assert_eq!(self_fns[3].args.len(), 0);
             } else {
                 panic!("Expected FnCall expression");
+            }
+        });
+    }
+
+    #[test]
+    fn test_maybe_qualified_parser() {
+        // Test with qualified identifier
+        with_tokens("fx::", |tokens| {
+            assert_eq!(
+                parse(maybe_qualified("fx"), tokens).result,
+                Some(())
+            );
+        });
+
+        // Test with non-matching qualified identifier; should always succeed
+        with_tokens("color::", |tokens| {
+            assert_eq!(
+                parse(maybe_qualified("fx"), tokens).result,
+                Some(())
+            );
+        });
+    }
+
+    #[test]
+    fn test_some_parser() {
+        // Test with a simple value
+        with_tokens("Some(42)", |tokens| {
+            assert_eq!(
+                parse(some(), tokens).result,
+                Some(Expr::OptionSome(Box::new(Expr::Literal(Value::I32(42)))))
+            );
+        });
+
+        // Test with a complex expression
+        with_tokens("Some(Color::Red)", |tokens| {
+            assert_eq!(
+                parse(some(), tokens).result,
+                Some(Expr::OptionSome(Box::new(Expr::QualifiedMember("Color::Red".into()))))
+            );
+        });
+
+        // Test with a nested function call
+        with_tokens("Some(fx::dissolve(200))", |tokens| {
+            assert_eq!(
+                parse(some(), tokens).result,
+                Some(Expr::OptionSome(Box::new(
+                    expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                )
+            )));
+        });
+    }
+
+    #[test]
+    fn test_sequence_parser() {
+        // Test with empty sequence
+        with_tokens("fx::sequence()", |tokens| {
+            assert_eq!(
+                parse(sequence(), tokens).result,
+                Some(Expr::Sequence {
+                    effects: vec![],
+                    self_fns: vec![]
+                })
+            );
+        });
+
+        // Test with single effect
+        with_tokens("fx::sequence(fx::dissolve(200))", |tokens| {
+            assert_eq!(
+                parse(sequence(), tokens).result,
+                Some(Expr::Sequence {
+                    effects: vec![
+                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                    ],
+                    self_fns: vec![]
+                })
+            );
+        });
+
+        // Test with multiple effects
+        with_tokens("fx::sequence(dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
+            assert_eq!(
+                parse(sequence(), tokens).result,
+                Some(Expr::Sequence {
+                    effects: vec![
+                        expr_fn_call("dissolve", vec![Expr::Literal(Value::I32(200))]),
+                        expr_fn_call("fx::fade_to", vec![
+                            Expr::QualifiedMember("Color::Red".into()),
+                            Expr::Literal(Value::I32(300))
+                        ])
+                    ],
+                    self_fns: vec![]
+                })
+            );
+        });
+
+        // Test with method chaining
+        with_tokens("fx::sequence(fx::dissolve(200)).filter(CellFilter::Text)", |tokens| {
+            assert_eq!(
+                parse(sequence(), tokens).result,
+                Some(Expr::Sequence {
+                    effects: vec![
+                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                    ],
+                    self_fns: vec![
+                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())])
+                    ]
+                })
+            );
+        });
+
+        // Test with array reference
+        with_tokens("sequence(&[fx::dissolve(200), fx::fade_to(Color::Red, 300)])", |tokens| {
+            assert_eq!(
+                parse(sequence(), tokens).result,
+                Some(Expr::Sequence {
+                    effects: vec![
+                        Expr::ArrayRef(vec![
+                            expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                            expr_fn_call("fx::fade_to", vec![
+                                Expr::QualifiedMember("Color::Red".into()),
+                                Expr::Literal(Value::I32(300))
+                            ])
+                        ])
+                    ],
+                    self_fns: vec![]
+                })
+            );
+        });
+    }
+
+    #[test]
+    fn test_parallel_parser() {
+        // Test with empty parallel
+        with_tokens("fx::parallel()", |tokens| {
+            assert_eq!(
+                parse(parallel(), tokens).result,
+                Some(Expr::Parallel {
+                    effects: vec![],
+                    self_fns: vec![]
+                })
+            );
+        });
+
+        // Test with single effect
+        with_tokens("fx::parallel(fx::dissolve(200))", |tokens| {
+            assert_eq!(
+                parse(parallel(), tokens).result,
+                Some(Expr::Parallel {
+                    effects: vec![
+                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                    ],
+                    self_fns: vec![]
+                })
+            );
+        });
+
+        // Test with multiple effects
+        with_tokens("fx::parallel(fx::dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
+            assert_eq!(
+                parse(parallel(), tokens).result,
+                Some(Expr::Parallel {
+                    effects: vec![
+                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                        expr_fn_call("fx::fade_to", vec![
+                            Expr::QualifiedMember("Color::Red".into()),
+                            Expr::Literal(Value::I32(300))
+                        ])
+                    ],
+                    self_fns: vec![]
+                })
+            );
+        });
+
+        // Test with method chaining
+        with_tokens("fx::parallel(fx::dissolve(200)).filter(CellFilter::Text)", |tokens| {
+            assert_eq!(
+                parse(parallel(), tokens).result,
+                Some(Expr::Parallel {
+                    effects: vec![
+                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))])
+                    ],
+                    self_fns: vec![
+                        fn_info("filter", vec![Expr::QualifiedMember("CellFilter::Text".into())])
+                    ]
+                })
+            );
+        });
+
+        // Test with array reference
+        with_tokens("parallel(&[fx::dissolve(200), fx::fade_to(Color::Red, 300)])", |tokens| {
+            assert_eq!(
+                parse(parallel(), tokens).result,
+                Some(Expr::Parallel {
+                    effects: vec![
+                        Expr::ArrayRef(vec![
+                            expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::I32(200))]),
+                            expr_fn_call("fx::fade_to", vec![
+                                Expr::QualifiedMember("Color::Red".into()),
+                                Expr::Literal(Value::I32(300))
+                            ])
+                        ])
+                    ],
+                    self_fns: vec![]
+                })
+            );
+        });
+    }
+
+    #[test]
+    fn test_id_parser() {
+        // Test with matching identifier
+        with_tokens("test", |tokens| {
+            assert!(parse(id("test"), tokens).result.is_some());
+        });
+
+        // Test with non-matching identifier
+        with_tokens("other", |tokens| {
+            assert_eq!(parse(id("test"), tokens).result, None);
+        });
+
+        // Test with non-identifier token
+        with_tokens("123", |tokens| {
+            assert_eq!(parse(id("test"), tokens).result, None);
+        });
+    }
+
+    #[test]
+    fn test_expression_integration() {
+        // Test sequence expression via main expression parser
+        with_tokens("fx::sequence(fx::dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
+            let result = parse(expression(), tokens).result;
+            assert!(result.is_some());
+
+            match result.unwrap() {
+                Expr::Sequence { effects, self_fns } => {
+                    assert_eq!(
+                        effects,
+                        vec![
+                            expr_fn_call("fx::dissolve", vec![
+                                Expr::Literal(Value::I32(200))
+                            ]),
+                            expr_fn_call("fx::fade_to", vec![
+                                Expr::QualifiedMember("Color::Red".to_compact_string()),
+                                Expr::Literal(Value::I32(300))
+                            ])
+                        ]
+                    );
+                    assert_eq!(self_fns.len(), 0);
+                },
+                e => panic!("Expected FnCall expression, got {:?}", e)
+            }
+        });
+
+        // Test parallel expression via main expression parser
+        with_tokens("fx::parallel(fx::dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
+            let result = parse(expression(), tokens).result;
+            assert!(result.is_some());
+
+            match result.unwrap() {
+                Expr::Parallel { effects, .. } => {
+                    assert_eq!(
+                        effects,
+                        vec![
+                            expr_fn_call("fx::dissolve", vec![
+                                Expr::Literal(Value::I32(200))
+                            ]),
+                            expr_fn_call("fx::fade_to", vec![
+                                Expr::QualifiedMember("Color::Red".to_compact_string()),
+                                Expr::Literal(Value::I32(300))
+                            ])
+                        ]
+                    ); // Should have two arguments
+                },
+                e => panic!("Expected Parallel expression, got {:?}", e)
+            }
+        });
+
+        // Test Some option via main expression parser
+        with_tokens("Some(fx::dissolve(200))", |tokens| {
+            let result = parse(expression(), tokens).result;
+            assert!(result.is_some());
+
+            match result.unwrap() {
+                Expr::OptionSome(expr) => {
+                    assert_eq!(
+                        expr,
+                        Box::new(expr_fn_call("fx::dissolve", vec![
+                            Expr::Literal(Value::I32(200))
+                        ]))
+                    );
+                },
+                _ => panic!("Expected OptionSome expression")
             }
         });
     }
