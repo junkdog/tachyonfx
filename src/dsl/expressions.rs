@@ -12,7 +12,6 @@ pub(super) struct FnCallInfo {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[derive(Clone, Debug, PartialEq)]
 pub(super) enum Expr {
     Literal(Value, ExprSpan),
     Var { name: CompactString, self_fns: Vec<FnCallInfo>, span: ExprSpan },
@@ -67,7 +66,7 @@ pub(super) struct ExprSpan {
 }
 
 impl ExprSpan {
-    pub(super) fn new(start: u32, end: u32) -> Self {
+    pub(super) const fn new(start: u32, end: u32) -> Self {
         Self { start, end }
     }
 }
@@ -254,6 +253,12 @@ impl Expr {
             // Expr::Layout { .. } => "layout(todo)".to_compact_string(),
             Expr::QualifiedMember(s, _) => s.to_compact_string(),
         }
+    }
+}
+
+impl std::fmt::Display for ExprSpan {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}..{})", self.start, self.end)
     }
 }
 

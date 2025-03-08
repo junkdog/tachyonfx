@@ -1,3 +1,4 @@
+use std::fmt::Formatter;
 use crate::dsl::DslError;
 use anpa::combinators::{attempt, count_consumed, get_parsed, many, many_to_vec, middle, no_separator, not_empty, or_diff, right, succeed, times};
 use anpa::core::StrParser;
@@ -66,6 +67,18 @@ impl<'a> Token<'a> {
     ) -> Self {
         Self { kind, text, span: (span.start as _, span.end as _) }
     }
+}
+
+pub(super) fn sanitize_tokens(tokens: Vec<Token>) -> Vec<Token> {
+    const DISCARD: &[TokenKind] = &[
+        TokenKind::Whitespace,
+        TokenKind::LineComment,
+        TokenKind::BlockComment
+    ];
+
+    tokens.into_iter()
+        .filter(|t| !DISCARD.contains(&t.kind))
+        .collect::<Vec<_>>()
 }
 
 pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
@@ -211,6 +224,11 @@ fn token<'a>(
         .map(move |(len, s): (_, &str)| Token::new(kind, s, 0..len))
 }
 
+impl std::fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?} ", self.text)
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -1,14 +1,15 @@
 use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
-use crate::dsl::expressions::Expr;
+use crate::dsl::expressions::{Expr, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
-use crate::dsl::parsers::parse_expr;
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
-use compact_str::CompactString;
+use compact_str::{CompactString, ToCompactString};
 use std::fmt;
 use std::fmt::Formatter;
+use crate::dsl::token_parsers::parse_ast;
+use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
 /// A compiler and registry for tachyonfx effect DSL expressions.
 ///
@@ -157,24 +158,36 @@ impl EffectDsl {
         let remaining_expr = self.compile_let_bindings(input, env)?;
 
         match remaining_expr {
-            Expr::Fx { name, arguments, self_fns } => self.compilers
-                .iter()
-                .find(|d| d.effect_name == name.as_str())
-                .ok_or(DslError::UnknownEffect { name })
-                .and_then(|d| {
-                    let mut args = Arguments::new(arguments.into(), self, env);
-                    let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
+            Expr::FnCall { call: FnCallInfo { name, args }, self_fns, span } => {
+                // Check if it's an effect constructor (starts with fx::)
+                if name.starts_with("fx::") {
+                    let effect_name = name.trim_start_matches("fx::").to_compact_string();
 
-                    match () {
-                        _ if effect.is_err() => effect,
-                        _ if !args.remaining_args().is_empty() => Err(DslError::InvalidArgumentLength {
-                            expected: args.original_arg_count() - args.remaining_args().len(),
-                            actual: args.original_arg_count(),
-                        }),
-                        _ => effect,
-                    }
-                }),
-            Expr::Sequence { effects, self_fns } => {
+                    self.compilers
+                        .iter()
+                        .find(|d| d.effect_name == effect_name)
+                        .ok_or(DslError::UnknownEffect { name: effect_name })
+                        .and_then(|d| {
+                            let mut args = Arguments::new(args.into(), self, env);
+                            let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
+
+                            match () {
+                                _ if effect.is_err() => effect,
+                                _ if !args.remaining_args().is_empty() => Err(DslError::InvalidArgumentLength {
+                                    expected: args.original_arg_count() - args.remaining_args().len(),
+                                    actual: args.original_arg_count(),
+                                }),
+                                _ => effect,
+                            }
+                        })
+                } else {
+                    Err(DslError::InvalidExpression {
+                        expected: "effect",
+                        actual: "function call",
+                    })
+                }
+            },
+            Expr::Sequence { effects, self_fns, span } => {
                 let mut args = Arguments::new(effects.into(), self, env);
                 let effects = (0..args.remaining_arg_count())
                     .map(|_| args.effect())
@@ -183,7 +196,7 @@ impl EffectDsl {
                 fx::sequence(&effects)
                     .fold_fns(self_fns, self, env)
             },
-            Expr::Parallel { effects, self_fns } => {
+            Expr::Parallel { effects, self_fns, span } => {
                 let mut args = Arguments::new(effects.into(), self, env);
                 let effects = (0..args.remaining_arg_count())
                     .map(|_| args.effect())
@@ -192,7 +205,7 @@ impl EffectDsl {
                 fx::parallel(&effects)
                     .fold_fns(self_fns, self, env)
             },
-            Expr::Var { name, self_fns } => env.bound_var::<Effect>(self, name)
+            Expr::Var { name, self_fns, span } => env.bound_var::<Effect>(self, name)
                 .and_then(|effect| effect.fold_fns(self_fns, self, env)),
             _ => Err(DslError::InvalidExpression {
                 expected: "effect",
@@ -210,7 +223,7 @@ impl EffectDsl {
         let final_effect_expr = expr.remove(expr.len() - 1);
 
         let err = expr.into_iter().map(|e| match e {
-            Expr::LetBinding { name, let_expr } => {
+            Expr::LetBinding { name, let_expr, span } => {
                 env.bind_local(name.clone(), *let_expr);
                 None
             }
@@ -225,7 +238,6 @@ impl EffectDsl {
         } else {
             Ok(final_effect_expr) // effect expr
         }
-
     }
 }
 
@@ -286,8 +298,10 @@ impl DslCompiler<'_> {
     ///     .unwrap();
     /// ```
     pub fn compile(self, input: &str) -> Result<Effect, DslError> {
-        parse_expr(input)
-            .and_then(|expr| self.dsl.compile(&self.environment, expr))
+        tokenize(input)
+            .map(sanitize_tokens)
+            .and_then(parse_ast)
+            .and_then(|ast| self.dsl.compile(&self.environment, ast))
     }
 }
 
@@ -518,7 +532,7 @@ mod tests {
     use crate::dsl::arguments::Arguments;
     use crate::dsl::dsl::{compilers, EffectDsl};
     use crate::dsl::environment::DslEnv;
-    use crate::dsl::expressions::{Expr, Value};
+    use crate::dsl::expressions::{Expr, ExprSpan, Value};
     use crate::dsl::DslError;
     use crate::fx::RepeatMode;
     use crate::Interpolation::{CircOut, QuadOut};
@@ -869,7 +883,7 @@ mod tests {
         let ctx = EffectDsl::new();
         let err = ctx.compiler().compile(input).unwrap_err();
         assert!(matches!(err, DslError::WrongArgumentType {
-            position: 0,
+            position: _,
             expected: "motion",
             actual: _
         }), "{:?}", err);
@@ -905,8 +919,8 @@ mod tests {
     fn test_compiler_wrong_argument_type() {
         let dsl = EffectDsl::new();
         let exprs = vec![
-            Expr::Literal(Value::String("wrong".to_compact_string())),
-            Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)))
+            Expr::Literal(Value::String("wrong".to_compact_string()), ExprSpan::new(0, 0)),
+            Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Linear)), ExprSpan::new(0, 0))
         ];
         let env = DslEnv::new();
         let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
