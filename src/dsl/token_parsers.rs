@@ -11,7 +11,7 @@ use crate::dsl::expr_promotion::maybe_promote;
 
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
 
-// === main parsers === //
+// region main parsers with pub(super) visibility
 
 pub(super) fn parse_ast(input: Vec<Token>) -> Result<Vec<Expr>, DslError> {
     let statements = many_to_vec(
@@ -19,8 +19,8 @@ pub(super) fn parse_ast(input: Vec<Token>) -> Result<Vec<Expr>, DslError> {
             let_binding(),
             sequence(),
             parallel(),
-            function_expression(),
-            variable()
+            function_expression().map(maybe_promote),
+            variable().map(maybe_promote)
         ),
         true,
         separator(token(TokenKind::Semicolon), false)
@@ -49,10 +49,13 @@ pub(super) fn expression<'a>() -> impl TokenParser<'a, Expr> {
         struct_instantiation(),
         qualified_name().map(maybe_promote),
         variable().map(maybe_promote),
+        tuple(),
     )
 }
 
-// === supporting parsers === //
+// endregion
+
+// region supporting parsers
 
 fn yield_consumed<'a, T>(
     parser: impl TokenParser<'a, T>,
@@ -78,7 +81,47 @@ fn identifier<'a>() -> impl TokenParser<'a, &'a str> {
     token(TokenKind::Identifier).map(|t| t.text)
 }
 
-// === token parsers === //
+fn function_call<'a>() -> impl TokenParser<'a, FnCallInfo> {
+    use TokenKind::*;
+
+    let qualified = tuplify!(
+        identifier(),
+        token(DoubleColon),
+        identifier(),
+        within(LeftParen, arguments(), RightParen),
+    ).map(|(owner, _, fun, args)| {
+        FnCallInfo::new(format_compact!("{owner}::{fun}"), args)
+    });
+
+    let unqualified = tuplify!(
+        identifier(),
+        within(LeftParen, arguments(), RightParen),
+    ).map(|(fun, args)| FnCallInfo::new(fun, args));
+
+    or!(qualified, unqualified)
+        .map(|f| {
+            println!("{:?}", f);
+            f
+        })
+}
+
+fn method_chain<'a>() -> impl TokenParser<'a, Vec<FnCallInfo>> {
+    use TokenKind::*;
+
+    let chained_fn = //right!(token(TokenKind::Dot), defer_parser!(fn_call()));
+
+        tuplify!(
+        token(Dot),
+        identifier(),
+        within(LeftParen, arguments(), RightParen),
+    ).map(|(_, fun, args)| FnCallInfo::new(fun, args));
+
+    many_to_vec(chained_fn, true, no_separator())
+}
+
+// endregion
+
+// region token parsers
 
 fn id<'a>(identifier: &str) -> impl TokenParser<'a, &'a Token<'a>> + use<'a, '_> {
     let p = token(TokenKind::Identifier).filter(move |t| t.text == identifier);
@@ -97,7 +140,9 @@ fn keyword<'a>(id: &str) -> impl TokenParser<'a, &'a Token<'a>> + use<'a, '_> {
     attempt(p)
 }
 
-// === expr parsers === //
+// endregion
+
+// region Expr parsers
 
 fn some<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
@@ -112,6 +157,14 @@ fn arguments<'a>() -> impl TokenParser<'a, Vec<Expr>> {
     use TokenKind::*;
 
     many_to_vec(expression(), true, separator(token(Comma), true))
+}
+
+fn tuple<'a>() -> impl TokenParser<'a, Expr> {
+    use TokenKind::*;
+
+    yield_consumed(tuplify!(
+        within(LeftParen, arguments(), RightParen),
+    )).map(|(span, args)| Expr::Tuple(args, span))
 }
 
 fn sequence<'a>() -> impl TokenParser<'a, Expr> {
@@ -191,40 +244,6 @@ fn function_expression<'a>() -> impl TokenParser<'a, Expr> {
     )).map(|(span, (call, self_fns))| Expr::FnCall { call, self_fns, span })
 }
 
-fn function_call<'a>() -> impl TokenParser<'a, FnCallInfo> {
-    use TokenKind::*;
-
-    let qualified = tuplify!(
-        identifier(),
-        token(DoubleColon),
-        identifier(),
-        within(LeftParen, arguments(), RightParen),
-    ).map(|(owner, _, fun, args)| {
-        FnCallInfo::new(format_compact!("{owner}::{fun}"), args)
-    });
-
-    let unqualified = tuplify!(
-        identifier(),
-        within(LeftParen, arguments(), RightParen),
-    ).map(|(fun, args)| FnCallInfo::new(fun, args));
-
-    or!(qualified, unqualified)
-}
-
-fn method_chain<'a>() -> impl TokenParser<'a, Vec<FnCallInfo>> {
-    use TokenKind::*;
-
-    let chained_fn = //right!(token(TokenKind::Dot), defer_parser!(fn_call()));
-
-    tuplify!(
-        token(Dot),
-        identifier(),
-        within(LeftParen, arguments(), RightParen),
-    ).map(|(_, fun, args)| FnCallInfo::new(fun, args));
-
-    many_to_vec(chained_fn, true, no_separator())
-}
-
 fn array<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
@@ -267,6 +286,7 @@ fn within<'a, T>(
     )).map(|(span, args)| args)
 }
 
+// endregion
 
 #[cfg(test)]
 mod tests {
@@ -313,6 +333,7 @@ mod tests {
                 Sequence { effects, self_fns, .. } => Sequence { effects, self_fns, span },
                 Parallel { effects, self_fns, .. } => Parallel { effects, self_fns, span },
                 StructInit { name, fields, .. }    => StructInit { name, fields, span },
+                Tuple(exprs, _)                    => Tuple(exprs, span),
             }
         }
     }
