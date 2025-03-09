@@ -1,14 +1,13 @@
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::tokenizer::{Token, TokenKind};
 use crate::dsl::DslError;
-use crate::{CellFilter, Interpolation, Motion};
+use crate::CellFilter;
 use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
 use anpa::core::{parse, ParserExt};
 use anpa::parsers::item_if;
-use anpa::{create_parser_trait, or, right, tuplify};
-use compact_str::format_compact;
-use ratatui::layout::Direction;
-use ratatui::style::Modifier;
+use anpa::{create_parser_trait, defer_parser, or, right, tuplify};
+use compact_str::{format_compact, ToCompactString};
+use crate::dsl::expr_promotion::maybe_promote;
 
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
 
@@ -48,6 +47,7 @@ pub(super) fn expression<'a>() -> impl TokenParser<'a, Expr> {
         function_expression().map(maybe_promote),
         array(),
         array_reference(),
+        struct_instantiation(),
         qualified_name().map(maybe_promote),
         variable().map(maybe_promote),
     )
@@ -115,8 +115,6 @@ fn arguments<'a>() -> impl TokenParser<'a, Vec<Expr>> {
     many_to_vec(expression(), true, separator(token(Comma), true))
 }
 
-
-
 fn sequence<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
@@ -137,124 +135,6 @@ fn parallel<'a>() -> impl TokenParser<'a, Expr> {
         middle(token(LeftParen), arguments(), token(RightParen)),
         method_chain(),
     )).map(|(span, (_, _, args, self_fns))| Expr::Parallel { effects: args, self_fns, span })
-}
-
-
-fn maybe_promote<'a>(expr: Expr) -> Expr {
-    fn strip_prefix<'a>(prefix: &'static str, text: &'a str) -> &'a str {
-        if text.starts_with(prefix) {
-            &text[prefix.len()..]
-        } else {
-            text
-        }
-    }
-
-    fn motion(text: &str) -> Option<Value> {
-        Some(match strip_prefix("Motion::", text) {
-            "LeftToRight" => Motion::LeftToRight,
-            "RightToLeft" => Motion::RightToLeft,
-            "UpToDown"    => Motion::UpToDown,
-            "DownToUp"    => Motion::DownToUp,
-            _             => None?,
-        }).map(Value::Motion)
-    }
-
-    fn cell_filter(text: &str) -> Option<Value> {
-        match strip_prefix("CellFilter::", text) {
-            "All"        => Some(CellFilter::All),
-            "Text"       => Some(CellFilter::Text),
-            _            => None?,
-        }.map(Value::CellFilter)
-    }
-
-    fn direction(text: &str) -> Option<Value> {
-        match strip_prefix("Direction::", text) {
-            "Horizontal" => Some(Direction::Horizontal),
-            "Vertical"   => Some(Direction::Vertical),
-            _            => None,
-        }.map(Value::Direction)
-    }
-
-    fn modifier(text: &str) -> Option<Value> {
-        Some(match strip_prefix("Modifier::", text) {
-            "BOLD"        => Modifier::BOLD,
-            "DIM"         => Modifier::DIM,
-            "ITALIC"      => Modifier::ITALIC,
-            "UNDERLINED"  => Modifier::UNDERLINED,
-            "SLOW_BLINK"  => Modifier::SLOW_BLINK,
-            "RAPID_BLINK" => Modifier::RAPID_BLINK,
-            "REVERSED"    => Modifier::REVERSED,
-            "HIDDEN"      => Modifier::HIDDEN,
-            "CROSSED_OUT" => Modifier::CROSSED_OUT,
-            _             => None?,
-        }).map(Value::Modifier)
-    }
-
-    fn interpolation(text: &str) -> Option<Value> {
-        Some(match strip_prefix("Interpolation::", text) {
-            "BackIn"       => Interpolation::BackIn,
-            "BackOut"      => Interpolation::BackOut,
-            "BackInOut"    => Interpolation::BackInOut,
-
-            "BounceIn"     => Interpolation::BounceIn,
-            "BounceOut"    => Interpolation::BounceOut,
-            "BounceInOut"  => Interpolation::BounceInOut,
-
-            "CircIn"       => Interpolation::CircIn,
-            "CircOut"      => Interpolation::CircOut,
-            "CircInOut"    => Interpolation::CircInOut,
-
-            "CubicIn"      => Interpolation::CubicIn,
-            "CubicOut"     => Interpolation::CubicOut,
-            "CubicInOut"   => Interpolation::CubicInOut,
-
-            "ElasticIn"    => Interpolation::ElasticIn,
-            "ElasticOut"   => Interpolation::ElasticOut,
-            "ElasticInOut" => Interpolation::ElasticInOut,
-
-            "ExpoIn"       => Interpolation::ExpoIn,
-            "ExpoOut"      => Interpolation::ExpoOut,
-            "ExpoInOut"    => Interpolation::ExpoInOut,
-
-            "Linear"       => Interpolation::Linear,
-
-            "QuadIn"       => Interpolation::QuadIn,
-            "QuadOut"      => Interpolation::QuadOut,
-            "QuadInOut"    => Interpolation::QuadInOut,
-
-            "QuartIn"      => Interpolation::QuartIn,
-            "QuartOut"     => Interpolation::QuartOut,
-            "QuartInOut"   => Interpolation::QuartInOut,
-
-            "QuintIn"      => Interpolation::QuintIn,
-            "QuintOut"     => Interpolation::QuintOut,
-            "QuintInOut"   => Interpolation::QuintInOut,
-
-            "Reverse"      => Interpolation::Reverse,
-
-            "SineIn"       => Interpolation::SineIn,
-            "SineOut"      => Interpolation::SineOut,
-            "SineInOut"    => Interpolation::SineInOut,
-
-            _             => None?,
-        }).map(Value::Interpolation)
-    }
-
-    fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
-        motion(text)
-            .or_else(|| direction(text))
-            .or_else(|| cell_filter(text))
-            .or_else(|| modifier(text))
-            .or_else(|| interpolation(text))
-            .map(|v| Expr::Literal(v, *span))
-    }
-
-    match &expr {
-        Expr::Literal(Value::String(s), span) => promote(s, span),
-        Expr::FnCall { call, self_fns, span } => promote(&call.name, span),
-        Expr::QualifiedMember(s, span)        => promote(s, span),
-        _                                     => None
-    }.unwrap_or(expr)
 }
 
 fn literal<'a>() -> impl TokenParser<'a, Expr> {
@@ -367,6 +247,23 @@ fn array_reference<'a>() -> impl TokenParser<'a, Expr> {
     )).map(|(span, (_, _, args, _))| Expr::ArrayRef(args, span))
 }
 
+fn struct_instantiation<'a>() -> impl TokenParser<'a, Expr> {
+    use TokenKind::*;
+
+    let field = tuplify!(
+        identifier(),
+        token(Colon),
+        defer_parser!(expression()),
+    ).map(|(name, _, value)| (name.to_compact_string(), value));
+
+    let fields = many_to_vec(field, true, separator(token(Comma), true));
+
+    yield_consumed(tuplify!(
+        identifier(),
+        middle(token(LeftBrace), fields, token(RightBrace)),
+    )).map(|(span, (name, fields))| Expr::StructInit { name: name.into(), fields, span })
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -398,17 +295,21 @@ mod tests {
         }
 
         fn with_span(self, start: u32, end: u32) -> Self {
+            use Expr::*;
+
+            let span = ExprSpan::new(start, end);
             match self {
-                Expr::Literal(value, _) => Expr::Literal(value, ExprSpan::new(start, end)),
-                Expr::Var { name, self_fns, .. } => Expr::Var { name, self_fns, span: ExprSpan::new(start, end) },
-                Expr::LetBinding { name, let_expr, .. } => Expr::LetBinding { name, let_expr, span: ExprSpan::new(start, end) },
-                Expr::ArrayRef(args, _) => Expr::ArrayRef(args, ExprSpan::new(start, end)),
-                Expr::Array(args, _) => Expr::Array(args, ExprSpan::new(start, end)),
-                Expr::FnCall { call, self_fns, .. } => Expr::FnCall { call, self_fns, span: ExprSpan::new(start, end) },
-                Expr::QualifiedMember(name, _) => Expr::QualifiedMember(name, ExprSpan::new(start, end)),
-                Expr::OptionSome(expr, _) => Expr::OptionSome(expr, ExprSpan::new(start, end)),
-                Expr::Sequence { effects, self_fns, .. } => Expr::Sequence { effects, self_fns, span: ExprSpan::new(start, end) },
-                Expr::Parallel { effects, self_fns, .. } => Expr::Parallel { effects, self_fns, span: ExprSpan::new(start, end) },
+                Literal(value, _)                  => Literal(value, span),
+                Var { name, self_fns, .. }         => Var { name, self_fns, span },
+                LetBinding { name, let_expr, .. }  => LetBinding { name, let_expr, span },
+                ArrayRef(args, _)                  => ArrayRef(args, span),
+                Array(args, _)                     => Array(args, span),
+                FnCall { call, self_fns, .. }      => FnCall { call, self_fns, span },
+                QualifiedMember(name, _)           => QualifiedMember(name, span),
+                OptionSome(expr, _)                => OptionSome(expr, span),
+                Sequence { effects, self_fns, .. } => Sequence { effects, self_fns, span },
+                Parallel { effects, self_fns, .. } => Parallel { effects, self_fns, span },
+                StructInit { name, fields, .. }    => StructInit { name, fields, span },
             }
         }
     }
@@ -1343,6 +1244,164 @@ mod tests {
                 },
                 _ => panic!("Expected OptionSome expression")
             }
+        });
+    }
+
+    #[test]
+    fn test_struct_instantiation_parser() {
+        // Test with empty struct
+        with_tokens("Point {}", |tokens| {
+            let result = parse(struct_instantiation(), tokens).result;
+            assert_eq!(
+                result,
+                Some(Expr::StructInit {
+                    name: "Point".to_compact_string(),
+                    fields: vec![],
+                    span: ExprSpan::new(0, 8)
+                })
+            );
+        });
+
+        // Test with single field
+        with_tokens("Point { x: 10 }", |tokens| {
+            let result = parse(struct_instantiation(), tokens).result;
+            assert_eq!(
+                result,
+                Some(Expr::StructInit {
+                    name: "Point".to_compact_string(),
+                    fields: vec![
+                        ("x".to_compact_string(), Expr::Literal(Value::U32(10), ExprSpan::new(11, 13)))
+                    ],
+                    span: ExprSpan::new(0, 15)
+                })
+            );
+        });
+
+        // Test with multiple fields
+        with_tokens("Rectangle { width: 100, height: 200 }", |tokens| {
+            let result = parse(struct_instantiation(), tokens).result;
+            assert_eq!(
+                result,
+                Some(Expr::StructInit {
+                    name: "Rectangle".to_compact_string(),
+                    fields: vec![
+                        ("width".to_compact_string(), Expr::Literal(Value::U32(100), ExprSpan::new(19, 22))),
+                        ("height".to_compact_string(), Expr::Literal(Value::U32(200), ExprSpan::new(32, 35)))
+                    ],
+                    span: ExprSpan::new(0, 37)
+                })
+            );
+        });
+
+        // Test with complex field values
+        with_tokens("Color { r: 255, g: 128, b: 64 }", |tokens| {
+            let result = parse(struct_instantiation(), tokens).result;
+            assert_eq!(
+                result,
+                Some(Expr::StructInit {
+                    name: "Color".to_compact_string(),
+                    fields: vec![
+                        ("r".to_compact_string(), Expr::Literal(Value::U32(255), ExprSpan::new(11, 14))),
+                        ("g".to_compact_string(), Expr::Literal(Value::U32(128), ExprSpan::new(19, 22))),
+                        ("b".to_compact_string(), Expr::Literal(Value::U32(64), ExprSpan::new(27, 29)))
+                    ],
+                    span: ExprSpan::new(0, 31)
+                })
+            );
+        });
+
+        // Test with nested structs
+        with_tokens("Outer { inner: Inner { value: 42 }, name: \"test\" }", |tokens| {
+            let result = parse(struct_instantiation(), tokens).result;
+
+            if let Some(Expr::StructInit { name, fields, span }) = result {
+                assert_eq!(name, "Outer");
+                assert_eq!(fields.len(), 2);
+                assert_eq!(fields[0].0, "inner");
+
+                // Check nested struct
+                if let Expr::StructInit { name, fields, .. } = &fields[0].1 {
+                    assert_eq!(name, "Inner");
+                    assert_eq!(fields.len(), 1);
+                    assert_eq!(fields[0].0, "value");
+                    assert_eq!(fields[0].1, Expr::Literal(Value::U32(42), ExprSpan::new(30, 32)));
+                } else {
+                    panic!("Expected nested StructInit expression");
+                }
+
+                assert_eq!(fields[1].0, "name");
+                assert_eq!(fields[1].1, Expr::Literal(Value::String("test".to_compact_string()), ExprSpan::new(42, 48)));
+            } else {
+                panic!("Expected StructInit expression");
+            }
+        });
+
+        // Test with variable references in fields
+        with_tokens("Point { x: x_var, y: y_var }", |tokens| {
+            let result = parse(struct_instantiation(), tokens).result;
+            assert_eq!(
+                result,
+                Some(Expr::StructInit {
+                    name: "Point".to_compact_string(),
+                    fields: vec![
+                        ("x".to_compact_string(), Expr::Var {
+                            name: "x_var".to_compact_string(),
+                            self_fns: vec![],
+                            span: ExprSpan::new(11, 16)
+                        }),
+                        ("y".to_compact_string(), Expr::Var {
+                            name: "y_var".to_compact_string(),
+                            self_fns: vec![],
+                            span: ExprSpan::new(21, 26)
+                        })
+                    ],
+                    span: ExprSpan::new(0, 28)
+                })
+            );
+        });
+
+        // Test with function calls in fields
+        with_tokens("Config { color: Color::new(255, 0, 0), size: calculate_size() }", |tokens| {
+            let result = parse(struct_instantiation(), tokens).result;
+
+            if let Some(Expr::StructInit { name, fields, span }) = result {
+                assert_eq!(name, "Config");
+                assert_eq!(fields.len(), 2);
+                assert_eq!(fields[0].0, "color");
+
+                if let Expr::FnCall { call, .. } = &fields[0].1 {
+                    assert_eq!(call.name, "Color::new");
+                    assert_eq!(call.args.len(), 3);
+                } else {
+                    panic!("Expected function call");
+                }
+
+                assert_eq!(fields[1].0, "size");
+                if let Expr::FnCall { call, .. } = &fields[1].1 {
+                    assert_eq!(call.name, "calculate_size");
+                    assert_eq!(call.args.len(), 0);
+                } else {
+                    panic!("Expected function call");
+                }
+            } else {
+                panic!("Expected StructInit expression");
+            }
+        });
+
+        // Test with trailing comma
+        with_tokens("Point { x: 10, y: 20, }", |tokens| {
+            let result = parse(struct_instantiation(), tokens).result;
+            assert_eq!(
+                result,
+                Some(Expr::StructInit {
+                    name: "Point".to_compact_string(),
+                    fields: vec![
+                        ("x".to_compact_string(), Expr::Literal(Value::U32(10), ExprSpan::new(11, 13))),
+                        ("y".to_compact_string(), Expr::Literal(Value::U32(20), ExprSpan::new(18, 20)))
+                    ],
+                    span: ExprSpan::new(0, 23)
+                })
+            );
         });
     }
 }

@@ -35,6 +35,11 @@ pub(super) enum Expr {
         self_fns: Vec<FnCallInfo>,
         span: ExprSpan,
     },
+    StructInit {
+        name: CompactString,
+        fields: Vec<(CompactString, Expr)>,
+        span: ExprSpan,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -99,6 +104,7 @@ impl Expr {
             Expr::OptionSome(_, span) => span,
             Expr::Sequence { span, .. } => span,
             Expr::Parallel { span, .. } => span,
+            Expr::StructInit { span, .. } => span,
         }
     }
 
@@ -116,6 +122,7 @@ impl Expr {
             Expr::FnCall { .. }         => "fn_call",
             Expr::LetBinding { .. }     => "let_binding",
             Expr::QualifiedMember(_, _) => "qualified_member",
+            Expr::StructInit { .. }     => "struct"
         }
     }
 
@@ -252,6 +259,16 @@ impl Expr {
             Expr::OptionSome(v, _) => format_compact!("{}Some({})", indent_str, v.format(indent, false)),
             // Expr::Layout { .. } => "layout(todo)".to_compact_string(),
             Expr::QualifiedMember(s, _) => s.to_compact_string(),
+            Expr::StructInit { name, fields, .. } => {
+                let inner = fields.iter()
+                    .map(|(name, expr)| {
+                        format_compact!("{indent_str}{name}: {expr}", name = name, expr = expr.format(indent + 4, true))
+                    })
+                    .collect::<Vec<_>>()
+                    .join_compact(",\n");
+
+                format_compact!("{indent_str}{name} {{\n{inner}\n{indent_str}}}", name = name, inner = inner)
+            }
         }
     }
 }
