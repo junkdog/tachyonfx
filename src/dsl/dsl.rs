@@ -301,6 +301,10 @@ impl DslCompiler<'_> {
         tokenize(input)
             .map(sanitize_tokens)
             .and_then(parse_ast)
+            .map(|ast| {
+                println!("{:#?}", ast);
+                ast
+            })
             .and_then(|ast| self.dsl.compile(&self.environment, ast))
     }
 }

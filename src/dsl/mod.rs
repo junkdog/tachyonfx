@@ -15,6 +15,7 @@ pub use arguments::Arguments;
 pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
 use crate::dsl::token_parsers::parse_ast;
+use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
@@ -149,7 +150,10 @@ impl EffectExpression {
     /// - `Ok(EffectExpression)` if parsing was successful
     /// - `Err(DslError)` if the input could not be parsed
     pub fn parse(input: &str) -> Result<Self, DslError> {
-        let expr = parse_ast(input)?;
+        let expr = tokenize(input)
+            .map(sanitize_tokens)
+            .and_then(parse_ast)?;
+
         Ok(Self { expr })
     }
 }
