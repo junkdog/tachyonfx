@@ -2,13 +2,28 @@ use ratatui::layout::Direction;
 use ratatui::prelude::Modifier;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::{CellFilter, Interpolation, Motion};
-use crate::dsl::strip_prefix;
 
+/// Attempts to convert qualified identifiers like `Motion::LeftToRight` or
+/// `Interpolation::Linear` into their corresponding literal values.
+///
+/// Supported types for promotion:
+/// - Motion enum variants
+/// - Direction enum variants
+/// - CellFilter enum variants
+/// - Modifier enum variants
+/// - Interpolation enum variants
+///
+/// # Arguments
+/// * `expr` - The expression to potentially promote
+///
+/// # Returns
+/// The promoted expression if a match was found, or the original expression unchanged
 pub(super) fn maybe_promote<'a>(expr: Expr) -> Expr {
     match &expr {
-        Expr::Literal(Value::String(s), span) => promote(s, span),
         Expr::QualifiedMember(s, span)        => promote(s, span),
         Expr::FnCall { call, self_fns, span } => promote(&call.name, span)
+            .map(|f| f.self_fns(self_fns.clone())),
+        Expr::Var { name, self_fns, span }    => promote(name, span)
             .map(|f| f.self_fns(self_fns.clone())),
         _                                     => None
     }.unwrap_or(expr)
@@ -24,7 +39,7 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
 }
 
 fn motion(text: &str) -> Option<Value> {
-    Some(match strip_prefix("Motion::", text) {
+    Some(match text.strip_prefix("Motion::").unwrap_or(text) {
         "LeftToRight" => Motion::LeftToRight,
         "RightToLeft" => Motion::RightToLeft,
         "UpToDown"    => Motion::UpToDown,
@@ -34,7 +49,7 @@ fn motion(text: &str) -> Option<Value> {
 }
 
 fn cell_filter(text: &str) -> Option<Value> {
-    match strip_prefix("CellFilter::", text) {
+    match text.strip_prefix("CellFilter::").unwrap_or(text) {
         "All"        => Some(CellFilter::All),
         "Text"       => Some(CellFilter::Text),
         _            => None?,
@@ -42,7 +57,7 @@ fn cell_filter(text: &str) -> Option<Value> {
 }
 
 fn direction(text: &str) -> Option<Value> {
-    match strip_prefix("Direction::", text) {
+    match text.strip_prefix("Direction::").unwrap_or(text) {
         "Horizontal" => Some(Direction::Horizontal),
         "Vertical"   => Some(Direction::Vertical),
         _            => None,
@@ -50,7 +65,7 @@ fn direction(text: &str) -> Option<Value> {
 }
 
 fn modifier(text: &str) -> Option<Value> {
-    Some(match strip_prefix("Modifier::", text) {
+    Some(match text.strip_prefix("Modifier::").unwrap_or(text) {
         "BOLD"        => Modifier::BOLD,
         "DIM"         => Modifier::DIM,
         "ITALIC"      => Modifier::ITALIC,
@@ -65,7 +80,7 @@ fn modifier(text: &str) -> Option<Value> {
 }
 
 fn interpolation(text: &str) -> Option<Value> {
-    Some(match strip_prefix("Interpolation::", text) {
+    Some(match text.strip_prefix("Interpolation::").unwrap_or(text) {
         "BackIn"       => Interpolation::BackIn,
         "BackOut"      => Interpolation::BackOut,
         "BackInOut"    => Interpolation::BackInOut,

@@ -2,7 +2,7 @@ use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
 use crate::dsl::expressions::{Expr, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
-use crate::dsl::{strip_prefix, DslError};
+use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
 use compact_str::{CompactString, ToCompactString};
@@ -160,11 +160,11 @@ impl EffectDsl {
         match remaining_expr {
             Expr::FnCall { call: FnCallInfo { name, args }, self_fns, span } => {
 
-                let effect_name = strip_prefix("fx::", &name).to_compact_string();
+                let effect_name = name.strip_prefix("fx::").unwrap_or(&name);
                 self.compilers
                     .iter()
                     .find(|d| d.effect_name == effect_name)
-                    .ok_or(DslError::UnknownEffect { name: effect_name })
+                    .ok_or(DslError::UnknownEffect { name: effect_name.into() })
                     .and_then(|d| {
                         let mut args = Arguments::new(args.into(), self, env);
                         let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
@@ -293,6 +293,11 @@ impl DslCompiler<'_> {
         tokenize(input)
             .map(sanitize_tokens)
             .and_then(parse_ast)
+            .map(|ast| {
+                println!("{:#?}", ast);
+
+                ast
+            })
             .and_then(|ast| self.dsl.compile(&self.environment, ast))
     }
 }
@@ -686,7 +691,6 @@ mod tests {
             .compiler()
             .compile(input)
             .expect("effect to be compiled");
-
 
         assert_eq!(effect.name(), "sweep_in");
         assert_eq!(format!("{effect:#?}"), format!("{expected:#?}"));

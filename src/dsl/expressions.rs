@@ -40,6 +40,7 @@ pub(super) enum Expr {
         fields: Vec<(CompactString, Expr)>,
         span: ExprSpan,
     },
+    Tuple(Vec<Expr>, ExprSpan),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -105,6 +106,7 @@ impl Expr {
             Expr::Sequence { span, .. } => span,
             Expr::Parallel { span, .. } => span,
             Expr::StructInit { span, .. } => span,
+            Expr::Tuple(_, span) => span,
         }
     }
 
@@ -121,8 +123,9 @@ impl Expr {
             Expr::OptionSome(_, _)      => "some",
             Expr::FnCall { .. }         => "fn_call",
             Expr::LetBinding { .. }     => "let_binding",
-            Expr::QualifiedMember(_, _) => "qualified_member",
-            Expr::StructInit { .. }     => "struct"
+            Expr::QualifiedMember(_, _) => "qualified_name",
+            Expr::StructInit { .. }     => "struct",
+            Expr::Tuple(_, _)           => "tuple",
         }
     }
 
@@ -268,6 +271,10 @@ impl Expr {
                     .join_compact(",\n");
 
                 format_compact!("{indent_str}{name} {{\n{inner}\n{indent_str}}}", name = name, inner = inner)
+            }
+            Expr::Tuple(exprs, _) => {
+                let inner = formatted_args(exprs);
+                format_compact!("{}({})", prefix, inner)
             }
         }
     }

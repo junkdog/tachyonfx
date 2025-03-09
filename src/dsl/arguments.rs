@@ -108,6 +108,12 @@ impl<'dsl> Arguments<'dsl> {
             }),
             Expr::Literal(Value::Timer(t), _)  => Ok(t),
             Expr::Literal(Value::U32(ms), _)   => Ok(ms.into()),
+            Expr::Tuple(exprs, _) => {
+                let mut args = self.all_inner_args(exprs);
+                let duration = args.duration()?;
+                let interpolation = args.interpolation()?;
+                Ok(EffectTimer::new(duration, interpolation))
+            },
             Expr::Var { name, .. } => self.bound_var(name),
             e                      => self.expected_type_expr("timer", e),
         }
@@ -330,21 +336,18 @@ impl<'dsl> Arguments<'dsl> {
         match self.next("effect")? {
             Expr::FnCall { call, self_fns, span } => {
                 // Check if it's an effect constructor with "fx::" prefix
-                if call.name.starts_with("fx::") {
+                let fx_name = call.name.strip_prefix("fx::").unwrap_or(&call.name);
+
                     // This is a dedicated effect constructor
-                    let fx_name = call.name.trim_start_matches("fx::").to_compact_string();
                     let fx_expr = Expr::FnCall {
                         call: FnCallInfo {
-                            name: call.name,
+                            name: fx_name.to_compact_string(),
                             args: call.args
                         },
                         self_fns,
                         span
                     };
                     self.compile_effect(fx_expr)
-                } else {
-                    self.expected_type("effect", call.name.to_compact_string(), span)?
-                }
             },
             Expr::Sequence { effects, self_fns, span } =>
                 self.compile_effect(Expr::Sequence { effects, self_fns, span }),
