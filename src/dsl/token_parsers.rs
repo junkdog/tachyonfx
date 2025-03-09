@@ -46,7 +46,6 @@ pub(super) fn expression<'a>() -> impl TokenParser<'a, Expr> {
         some(),
         function_expression().map(maybe_promote),
         array(),
-        array_reference(),
         struct_instantiation(),
         qualified_name().map(maybe_promote),
         variable().map(maybe_promote),
@@ -105,7 +104,7 @@ fn some<'a>() -> impl TokenParser<'a, Expr> {
 
     yield_consumed(tuplify!(
         id("Some"),
-        middle(token(LeftParen), expression(), token(RightParen)),
+        within(LeftParen, expression(), RightParen),
     )).map(|(span, (_, expr))| Expr::OptionSome(Box::new(expr), span))
 }
 
@@ -121,7 +120,7 @@ fn sequence<'a>() -> impl TokenParser<'a, Expr> {
     yield_consumed(tuplify!(
         maybe_qualified("fx"),
         id("sequence"),
-        middle(token(LeftParen), arguments(), token(RightParen)),
+        within(LeftParen, arguments(), RightParen),
         method_chain(),
     )).map(|(span, (_, _, args, self_fns))| Expr::Sequence { effects: args, self_fns, span })
 }
@@ -132,7 +131,7 @@ fn parallel<'a>() -> impl TokenParser<'a, Expr> {
     yield_consumed(tuplify!(
         maybe_qualified("fx"),
         id("parallel"),
-        middle(token(LeftParen), arguments(), token(RightParen)),
+        within(LeftParen, arguments(), RightParen),
         method_chain(),
     )).map(|(span, (_, _, args, self_fns))| Expr::Parallel { effects: args, self_fns, span })
 }
@@ -199,14 +198,14 @@ fn function_call<'a>() -> impl TokenParser<'a, FnCallInfo> {
         identifier(),
         token(DoubleColon),
         identifier(),
-        middle(token(LeftParen), arguments(), token(RightParen)),
+        within(LeftParen, arguments(), RightParen),
     ).map(|(owner, _, fun, args)| {
         FnCallInfo::new(format_compact!("{owner}::{fun}"), args)
     });
 
     let unqualified = tuplify!(
         identifier(),
-        middle(token(LeftParen), arguments(), token(RightParen)),
+        within(LeftParen, arguments(), RightParen),
     ).map(|(fun, args)| FnCallInfo::new(fun, args));
 
     or!(qualified, unqualified)
@@ -220,7 +219,7 @@ fn method_chain<'a>() -> impl TokenParser<'a, Vec<FnCallInfo>> {
     tuplify!(
         token(Dot),
         identifier(),
-        middle(token(LeftParen), arguments(), token(RightParen)),
+        within(LeftParen, arguments(), RightParen),
     ).map(|(_, fun, args)| FnCallInfo::new(fun, args));
 
     many_to_vec(chained_fn, true, no_separator())
@@ -229,22 +228,14 @@ fn method_chain<'a>() -> impl TokenParser<'a, Vec<FnCallInfo>> {
 fn array<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    yield_consumed(tuplify!(
-        token(LeftBracket),
-        arguments(),
-        token(RightBracket)
-    )).map(|(span, (_, args, _))| Expr::Array(args, span))
-}
-
-fn array_reference<'a>() -> impl TokenParser<'a, Expr> {
-    use TokenKind::*;
+    let nop = succeed(item_if(|_| false));
 
     yield_consumed(tuplify!(
-        token(Ampersand),
-        token(LeftBracket),
-        arguments(),
-        token(RightBracket),
-    )).map(|(span, (_, _, args, _))| Expr::ArrayRef(args, span))
+        or!(token(Ampersand).map(|_| true), nop.map(|_| false)),
+        within(LeftBracket, arguments(), RightBracket)
+    )).map(|(span, (is_ref, args))| {
+        if is_ref { Expr::ArrayRef(args, span) } else { Expr::Array(args, span) }
+    })
 }
 
 fn struct_instantiation<'a>() -> impl TokenParser<'a, Expr> {
@@ -260,8 +251,20 @@ fn struct_instantiation<'a>() -> impl TokenParser<'a, Expr> {
 
     yield_consumed(tuplify!(
         identifier(),
-        middle(token(LeftBrace), fields, token(RightBrace)),
+        within(LeftBrace, fields, RightBrace),
     )).map(|(span, (name, fields))| Expr::StructInit { name: name.into(), fields, span })
+}
+
+fn within<'a, T>(
+    start: TokenKind,
+    inner_parser: impl TokenParser<'a, T>,
+    end: TokenKind,
+) -> impl TokenParser<'a, T> {
+    use TokenKind::*;
+
+    yield_consumed(tuplify!(
+        middle(token(start), inner_parser, token(end)),
+    )).map(|(span, args)| args)
 }
 
 
@@ -823,7 +826,7 @@ mod tests {
         // Test empty array reference
         with_tokens("&[]", |tokens| {
             assert_eq!(
-                parse(array_reference(), tokens).result,
+                parse(array(), tokens).result,
                 Some(Expr::ArrayRef(vec![], ExprSpan::new(0, 3)))
             );
         });
@@ -831,7 +834,7 @@ mod tests {
         // Test array reference with single element
         with_tokens("&[42]", |tokens| {
             assert_eq!(
-                parse(array_reference(), tokens).result,
+                parse(array(), tokens).result,
                 Some(Expr::ArrayRef(vec![Expr::Literal(Value::U32(42), ExprSpan::new(2, 4))], ExprSpan::new(0, 5)))
             );
         });
@@ -839,7 +842,7 @@ mod tests {
         // Test array reference with multiple elements
         with_tokens("&[42, \"hello\", Color::Red]", |tokens| {
             assert_eq!(
-                parse(array_reference(), tokens).result,
+                parse(array(), tokens).result,
                 Some(Expr::ArrayRef(vec![
                     Expr::Literal(Value::U32(42), ExprSpan::new(2, 4)),
                     Expr::Literal(Value::String("hello".into()), ExprSpan::new(6, 13)),
@@ -851,7 +854,7 @@ mod tests {
         // Test array reference with function calls
         with_tokens("&[fx::dissolve(200), fx::fade_to(Color::Red, 300)]", |tokens| {
             assert_eq!(
-                parse(array_reference(), tokens).result,
+                parse(array(), tokens).result,
                 Some(Expr::ArrayRef(vec![
                     expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::U32(200), ExprSpan::new(15, 18))])
                         .with_span(2, 19),
