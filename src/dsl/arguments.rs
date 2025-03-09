@@ -9,7 +9,7 @@ use compact_str::{CompactString, ToCompactString};
 use ratatui::layout::{Constraint, Direction, Layout, Margin, Offset, Rect};
 use ratatui::prelude::{Color, Style};
 use ratatui::style::Modifier;
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
 use std::fmt::Formatter;
 
@@ -475,10 +475,20 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a `Offset` tuple.
     pub fn offset(&mut self) -> Result<Offset, DslError> {
         match self.next("offset")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } if name == "Offset" => {
-                let mut inner_args = self.nested_args(args, 2)?;
-                Ok(Offset { x: inner_args.read_i32()?, y: inner_args.read_i32()? })
-            },
+            Expr::StructInit { name, fields, span } => {
+                if name == "Offset" {
+                    let fields = struct_fields("Offset", &["x", "y"], fields)?;
+                    Ok(Offset {
+                        x: self.extract_field("x", &fields, Arguments::read_i32)?,
+                        y: self.extract_field("y", &fields, Arguments::read_i32)?,
+                    })
+                } else {
+                    Err(DslError::UnknownStruct {
+                        name: name.to_compact_string(),
+                        location: span,
+                    })
+                }
+            }
             Expr::Var { name, .. } => self.bound_var(name),
             e                      => self.expected_type_expr("offset", e),
         }
@@ -572,9 +582,47 @@ impl<'dsl> Arguments<'dsl> {
         inner(&mut args)
     }
 
+    pub(super) fn extract_field<T>(
+        &mut self,
+        key: &'static str,
+        exprs: &BTreeMap<&'static str, Expr>,
+        inner: impl FnOnce(&mut Self) -> Result<T, DslError>
+    ) -> Result<T, DslError> {
+        let field_expr = exprs.get(key).expect("key to already be validated").clone();
+        let mut args = self.nested_args(vec![field_expr], 1)?;
+        inner(&mut args)
+    }
+
     fn all_inner_args(&mut self, exprs: Vec<Expr>) -> Self {
         Self::new(exprs.into(), self.context, self.vars)
     }
+}
+
+fn struct_fields(
+    struct_name: &'static str,
+    required: &[&'static str],
+    fields: Vec<(CompactString, Expr)>
+) -> Result<BTreeMap<&'static str, Expr>, DslError> {
+    let mut field_values = BTreeMap::new();
+
+    for field_name in required {
+        let field_expr = fields.iter()
+            .find(|(name, _)| name == field_name)
+            .map(|(_, expr)| expr.clone());
+
+        match field_expr {
+            Some(expr) => {
+                field_values.insert(*field_name, expr);
+            },
+            None       => Err(DslError::MissingField {
+                field: *field_name,
+                struct_name: struct_name.into(),
+                location: ExprSpan::new(0, 0),
+            })?,
+        }
+    }
+
+    Ok(field_values)
 }
 
 impl fmt::Display for Arguments<'_> {
@@ -678,16 +726,15 @@ mod tests {
     use crate::dsl::dsl::EffectDsl;
     use crate::dsl::environment::DslEnv;
     use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
-    use crate::dsl::{token_parsers, DslError};
+    use crate::dsl::token_parsers::parse_ast;
+    use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
+    use crate::dsl::DslError;
     use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
-    use anpa::core::parse;
     use compact_str::ToCompactString;
     use ratatui::layout::{Margin, Offset, Rect};
     use ratatui::prelude::{Color, Style};
     use std::collections::VecDeque;
     use std::fmt::Debug;
-    use crate::dsl::token_parsers::parse_ast;
-    use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
     fn prepare_test<'a>(args: impl Into<VecDeque<Expr>>) -> Arguments<'a> {
         // leaking, but it's fine for tests as it reduces boilerplate

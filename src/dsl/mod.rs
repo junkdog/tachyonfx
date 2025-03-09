@@ -47,6 +47,23 @@ pub enum DslError {
     #[error("Unknown function '{name}'")]
     UnknownFunction { name: CompactString },
 
+    #[error("Unknown struct '{name}'")]
+    UnknownStruct { name: CompactString, location: ExprSpan },
+
+    #[error("Unknown field '{field}' in object '{struct_name}'")]
+    UnknownField {
+        struct_name: CompactString,
+        field: CompactString,
+        location: ExprSpan,
+    },
+
+    #[error("Missing field '{field}' in object '{struct_name}'")]
+    MissingField {
+        struct_name: CompactString,
+        field: &'static str,
+        location: ExprSpan,
+    },
+
     #[error("Invalid argument length. Expected {expected}, got {actual}")]
     InvalidArgumentLength {
         expected: usize,
