@@ -6,6 +6,7 @@ mod dsl_format;
 mod method_chains;
 mod tokenizer;
 mod token_parsers;
+mod expr_promotion;
 
 use crate::dsl::expressions::{Expr, ExprSpan};
 use std::fmt;
