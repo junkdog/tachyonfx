@@ -678,7 +678,7 @@ mod tests {
     use crate::dsl::dsl::EffectDsl;
     use crate::dsl::environment::DslEnv;
     use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
-    use crate::dsl::DslError;
+    use crate::dsl::{token_parsers, DslError};
     use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
     use anpa::core::parse;
     use compact_str::ToCompactString;
@@ -686,6 +686,8 @@ mod tests {
     use ratatui::prelude::{Color, Style};
     use std::collections::VecDeque;
     use std::fmt::Debug;
+    use crate::dsl::token_parsers::parse_ast;
+    use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
     fn prepare_test<'a>(args: impl Into<VecDeque<Expr>>) -> Arguments<'a> {
         // leaking, but it's fine for tests as it reduces boilerplate
@@ -812,9 +814,13 @@ mod tests {
     }
 
     fn parse_expr(input: &str) -> Expr {
-        let parsing_result = parse(parsers::argument(), input);
-        assert_eq!(parsing_result.state, "");
-        parsing_result.result.unwrap()
+        tokenize(input)
+            .map(sanitize_tokens)
+            .and_then(parse_ast)
+            .unwrap()
+            .last()
+            .unwrap()
+            .clone()
     }
 
     #[test]
@@ -923,6 +929,7 @@ mod tests {
             .offset(Offset { x: 20, y: 30 })
         "#;
 
+        // fixme: parse structs with fields (Offset, Rect, etc)
         assert_result(input, expected, Arguments::rect);
     }
 
