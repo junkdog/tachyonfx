@@ -1000,7 +1000,7 @@ mod tests {
         assert_eq!(
             result.expect_err("expected error"),
             DslError::UnknownEffect {
-                name: "fx::test".to_compact_string(),
+                name: "test".to_compact_string(),
             }
         );
     }

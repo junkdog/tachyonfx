@@ -2,7 +2,7 @@ use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
 use crate::dsl::expressions::{Expr, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
-use crate::dsl::DslError;
+use crate::dsl::{strip_prefix, DslError};
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
 use compact_str::{CompactString, ToCompactString};
@@ -159,33 +159,25 @@ impl EffectDsl {
 
         match remaining_expr {
             Expr::FnCall { call: FnCallInfo { name, args }, self_fns, span } => {
-                // Check if it's an effect constructor (starts with fx::)
-                if name.starts_with("fx::") {
-                    let effect_name = name.trim_start_matches("fx::").to_compact_string();
 
-                    self.compilers
-                        .iter()
-                        .find(|d| d.effect_name == effect_name)
-                        .ok_or(DslError::UnknownEffect { name: effect_name })
-                        .and_then(|d| {
-                            let mut args = Arguments::new(args.into(), self, env);
-                            let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
+                let effect_name = strip_prefix("fx::", &name).to_compact_string();
+                self.compilers
+                    .iter()
+                    .find(|d| d.effect_name == effect_name)
+                    .ok_or(DslError::UnknownEffect { name: effect_name })
+                    .and_then(|d| {
+                        let mut args = Arguments::new(args.into(), self, env);
+                        let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
 
-                            match () {
-                                _ if effect.is_err() => effect,
-                                _ if !args.remaining_args().is_empty() => Err(DslError::InvalidArgumentLength {
-                                    expected: args.original_arg_count() - args.remaining_args().len(),
-                                    actual: args.original_arg_count(),
-                                }),
-                                _ => effect,
-                            }
-                        })
-                } else {
-                    Err(DslError::InvalidExpression {
-                        expected: "effect",
-                        actual: "function call",
+                        match () {
+                            _ if effect.is_err() => effect,
+                            _ if !args.remaining_args().is_empty() => Err(DslError::InvalidArgumentLength {
+                                expected: args.original_arg_count() - args.remaining_args().len(),
+                                actual: args.original_arg_count(),
+                            }),
+                            _ => effect,
+                        }
                     })
-                }
             },
             Expr::Sequence { effects, self_fns, span } => {
                 let mut args = Arguments::new(effects.into(), self, env);
@@ -301,10 +293,6 @@ impl DslCompiler<'_> {
         tokenize(input)
             .map(sanitize_tokens)
             .and_then(parse_ast)
-            .map(|ast| {
-                println!("{:#?}", ast);
-                ast
-            })
             .and_then(|ast| self.dsl.compile(&self.environment, ast))
     }
 }

@@ -236,3 +236,12 @@ mod tests {
         assert_eq!(expr.to_string(), expected);
     }
 }
+
+
+pub(super) fn strip_prefix<'a>(prefix: &'static str, text: &'a str) -> &'a str {
+    if text.starts_with(prefix) {
+        &text[prefix.len()..]
+    } else {
+        text
+    }
+}

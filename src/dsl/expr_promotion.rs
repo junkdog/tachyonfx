@@ -2,6 +2,7 @@ use ratatui::layout::Direction;
 use ratatui::prelude::Modifier;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::{CellFilter, Interpolation, Motion};
+use crate::dsl::strip_prefix;
 
 pub(super) fn maybe_promote<'a>(expr: Expr) -> Expr {
     match &expr {
@@ -20,14 +21,6 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
         .or_else(|| modifier(text))
         .or_else(|| interpolation(text))
         .map(|v| Expr::Literal(v, *span))
-}
-
-fn strip_prefix<'a>(prefix: &'static str, text: &'a str) -> &'a str {
-    if text.starts_with(prefix) {
-        &text[prefix.len()..]
-    } else {
-        text
-    }
 }
 
 fn motion(text: &str) -> Option<Value> {
