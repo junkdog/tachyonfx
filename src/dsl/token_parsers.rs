@@ -294,7 +294,7 @@ mod tests {
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
     use anpa::core::parse;
     use compact_str::ToCompactString;
-
+    use ratatui::prelude::Color;
 
     // Helper function to create a Expr::FnCall expression
     fn expr_fn_call(
@@ -530,7 +530,7 @@ mod tests {
         with_tokens("Color::Red", |tokens| {
             assert_eq!(
                 parse(expression(), tokens).result,
-                Some(Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(0, 10)))
+                Some(Expr::Literal(Value::Color(Color::Red), ExprSpan::new(0, 10)))
             );
         });
 
@@ -578,7 +578,7 @@ mod tests {
             assert_eq!(
                 parse(arguments(), tokens).result,
                 Some(vec![
-                    Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(0, 10)),
+                    Expr::Literal(Value::Color(Color::Red), ExprSpan::new(0, 10)),
                     Expr::Literal(Value::U32(500), ExprSpan::new(12, 15)),
                     expr_fn_call("fx::dissolve", vec![
                         Expr::Literal(Value::U32(200), ExprSpan::new(30, 33))
@@ -609,7 +609,7 @@ mod tests {
                 Some(Expr::LetBinding {
                     name: "color".into(),
                     let_expr: Box::new(
-                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(12, 22))
+                        Expr::Literal(Value::Color(Color::Red), ExprSpan::new(12, 22))
                     ),
                     span: ExprSpan::new(0, 22)
                 })
@@ -623,7 +623,7 @@ mod tests {
                 Some(Expr::LetBinding {
                     name: "effect".into(),
                     let_expr: Box::new(expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(25, 35)),
+                        Expr::Literal(Value::Color(Color::Red), ExprSpan::new(25, 35)),
                         Expr::Literal(Value::U32(500), ExprSpan::new(37, 40))
                     ]).with_span(13, 41)),
                     span: ExprSpan::new(0, 41)
@@ -662,7 +662,7 @@ mod tests {
             assert_eq!(
                 parse(function_call(), tokens).result,
                 Some(fn_info("fx::fade_to", vec![
-                    Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(12, 22)),
+                    Expr::Literal(Value::Color(Color::Red), ExprSpan::new(12, 22)),
                     Expr::Literal(Value::U32(500), ExprSpan::new(24, 27))
                 ]))
             );
@@ -676,7 +676,7 @@ mod tests {
                     expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))])
                         .with_span(13, 30),
                     expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(44, 54)),
+                        Expr::Literal(Value::Color(Color::Red), ExprSpan::new(44, 54)),
                         Expr::Literal(Value::U32(300), ExprSpan::new(56, 59))
                     ]).with_span(32, 60)
                 ]))
@@ -741,7 +741,7 @@ mod tests {
                 parse(function_expression(), tokens).result,
                 Some(
                     expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(12, 22)),
+                        Expr::Literal(Value::Color(Color::Red), ExprSpan::new(12, 22)),
                         Expr::Literal(Value::U32(500), ExprSpan::new(24, 27))
                     ]).with_self_fns(vec![
                         fn_info("filter", vec![
@@ -783,7 +783,7 @@ mod tests {
                             Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))
                         ]).with_self_fns(vec![fn_info("reversed", vec![])]).with_span(13, 41),
                         expr_fn_call("fx::fade_to", vec![
-                            Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(55, 65)),
+                            Expr::Literal(Value::Color(Color::Red), ExprSpan::new(55, 65)),
                             Expr::Literal(Value::U32(300), ExprSpan::new(67, 70))
                         ]).with_span(43, 71)
                     ]).with_span(0, 97).with_self_fns(vec![
@@ -821,7 +821,7 @@ mod tests {
                 Some(Expr::Array(vec![
                     Expr::Literal(Value::U32(42), ExprSpan::new(1, 3)),
                     Expr::Literal(Value::String("hello".into()), ExprSpan::new(5, 12)),
-                    Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(14, 24))
+                    Expr::Literal(Value::Color(Color::Red), ExprSpan::new(14, 24))
                 ], ExprSpan::new(0, 25)))
             );
         });
@@ -834,7 +834,7 @@ mod tests {
                     expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::U32(200), ExprSpan::new(14, 17))])
                         .with_span(1, 18),
                     expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(32, 42)),
+                        Expr::Literal(Value::Color(Color::Red), ExprSpan::new(32, 42)),
                         Expr::Literal(Value::U32(300), ExprSpan::new(44, 47))
                     ]).with_span(20, 48)
                 ], ExprSpan::new(0, 49)))
@@ -867,7 +867,7 @@ mod tests {
                 Some(Expr::ArrayRef(vec![
                     Expr::Literal(Value::U32(42), ExprSpan::new(2, 4)),
                     Expr::Literal(Value::String("hello".into()), ExprSpan::new(6, 13)),
-                    Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(15, 25))
+                    Expr::Literal(Value::Color(Color::Red), ExprSpan::new(15, 25))
                 ], ExprSpan::new(0, 26)))
             );
         });
@@ -880,7 +880,7 @@ mod tests {
                     expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::U32(200), ExprSpan::new(15, 18))])
                         .with_span(2, 19),
                     expr_fn_call("fx::fade_to", vec![
-                        Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(33, 43)),
+                        Expr::Literal(Value::Color(Color::Red), ExprSpan::new(33, 43)),
                         Expr::Literal(Value::U32(300), ExprSpan::new(45, 48))
                     ]).with_span(21, 49)
                 ], ExprSpan::new(0, 50)))
@@ -980,8 +980,8 @@ mod tests {
             assert_eq!(
                 parse(some(), tokens).result,
                 Some(Expr::OptionSome(
-                    Box::new(Expr::QualifiedMember("Color::Red".into(),
-                        ExprSpan::new(5, 15))), ExprSpan::new(0, 16)
+                    Box::new(Expr::Literal(Value::Color(Color::Red), ExprSpan::new(5, 15))),
+                    ExprSpan::new(0, 16)
                 ))
             );
         });
@@ -1039,7 +1039,7 @@ mod tests {
                             Expr::Literal(Value::U32(200), ExprSpan::new(22, 25))
                         ]).with_span(13, 26),
                         expr_fn_call("fx::fade_to", vec![
-                            Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(40, 50)),
+                            Expr::Literal(Value::Color(Color::Red), ExprSpan::new(40, 50)),
                             Expr::Literal(Value::U32(300), ExprSpan::new(52, 55))
                         ]).with_span(28, 56)
                     ],
@@ -1080,7 +1080,7 @@ mod tests {
                                 Expr::Literal(Value::U32(200), ExprSpan::new(24, 27))
                             ]).with_span(11, 28),
                             expr_fn_call("fx::fade_to", vec![
-                                Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(42, 52)),
+                                Expr::Literal(Value::Color(Color::Red), ExprSpan::new(42, 52)),
                                 Expr::Literal(Value::U32(300), ExprSpan::new(54, 57))
                             ]).with_span(30, 58)
                         ], ExprSpan::new(9, 59))
@@ -1130,7 +1130,7 @@ mod tests {
                         expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))])
                             .with_span(13, 30),
                         expr_fn_call("fx::fade_to", vec![
-                            Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(44, 54)),
+                            Expr::Literal(Value::Color(Color::Red), ExprSpan::new(44, 54)),
                             Expr::Literal(Value::U32(300), ExprSpan::new(56, 59))
                         ]).with_span(32, 60)
                     ],
@@ -1171,7 +1171,7 @@ mod tests {
                                 Expr::Literal(Value::U32(200), ExprSpan::new(24, 27))
                             ]).with_span(11, 28),
                             expr_fn_call("fx::fade_to", vec![
-                                Expr::QualifiedMember("Color::Red".into(), ExprSpan::new(42, 52)),
+                                Expr::Literal(Value::Color(Color::Red), ExprSpan::new(42, 52)),
                                 Expr::Literal(Value::U32(300), ExprSpan::new(54, 57))
                             ]).with_span(30, 58)
                         ], ExprSpan::new(9, 59))
@@ -1217,7 +1217,7 @@ mod tests {
                                 Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))
                             ]).with_span(13, 30),
                             expr_fn_call("fx::fade_to", vec![
-                                Expr::QualifiedMember("Color::Red".to_compact_string(), ExprSpan::new(44, 54)),
+                                Expr::Literal(Value::Color(Color::Red), ExprSpan::new(44, 54)),
                                 Expr::Literal(Value::U32(300), ExprSpan::new(56, 59))
                             ]).with_span(32, 60)
                         ]
@@ -1242,7 +1242,7 @@ mod tests {
                                 Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))
                             ]).with_span(13, 30),
                             expr_fn_call("fx::fade_to", vec![
-                                Expr::QualifiedMember("Color::Red".to_compact_string(), ExprSpan::new(44, 54)),
+                                Expr::Literal(Value::Color(Color::Red), ExprSpan::new(44, 54)),
                                 Expr::Literal(Value::U32(300), ExprSpan::new(56, 59))
                             ]).with_span(32, 60)
                         ]

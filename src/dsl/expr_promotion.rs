@@ -1,5 +1,6 @@
 use ratatui::layout::Direction;
 use ratatui::prelude::Modifier;
+use ratatui::style::Color;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::{CellFilter, Interpolation, Motion};
 
@@ -35,6 +36,7 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
         .or_else(|| cell_filter(text))
         .or_else(|| modifier(text))
         .or_else(|| interpolation(text))
+        .or_else(|| color(text))
         .map(|v| Expr::Literal(v, *span))
 }
 
@@ -127,6 +129,29 @@ fn interpolation(text: &str) -> Option<Value> {
 
         _             => None?,
     }).map(Value::Interpolation)
+}
+
+fn color(text: &str) -> Option<Value> {
+    Some(match text.strip_prefix("Color::").unwrap_or(text) {
+        "Reset"        => Color::Reset,
+        "Black"        => Color::Black,
+        "Red"          => Color::Red,
+        "Green"        => Color::Green,
+        "Yellow"       => Color::Yellow,
+        "Blue"         => Color::Blue,
+        "Magenta"      => Color::Magenta,
+        "Cyan"         => Color::Cyan,
+        "Gray"         => Color::Gray,
+        "DarkGray"     => Color::DarkGray,
+        "LightRed"     => Color::LightRed,
+        "LightGreen"   => Color::LightGreen,
+        "LightYellow"  => Color::LightYellow,
+        "LightBlue"    => Color::LightBlue,
+        "LightMagenta" => Color::LightMagenta,
+        "LightCyan"    => Color::LightCyan,
+        "White"        => Color::White,
+        _              => None?,
+    }).map(Value::Color)
 }
 
 impl Expr {

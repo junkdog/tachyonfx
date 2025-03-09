@@ -609,7 +609,7 @@ mod tests {
             10,
             0,
             Color::from_u32(0x1d2021),
-            (Duration::from_millis(1000), QuadOut)
+            (1000, QuadOut)
         )"#;
 
         let expected = fx::sweep_in(
