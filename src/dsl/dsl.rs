@@ -588,7 +588,7 @@ mod tests {
             fx::ping_pong(fx::dissolve((1000, Linear))),
             fx::prolong_end((1000, Linear), fx::dissolve((1000, Linear))),
             fx::prolong_start((1000, Linear), fx::dissolve((1000, Linear))),
-            fx::repeat(fx::dissolve((1000, Linear)), RepeatMode::Forever),
+            fx::repeat(fx::dissolve((1000, Linear)), RepeatMode::Times(3)),
             fx::repeating(fx::dissolve((1000, Linear))),
             fx::sleep((1000, Linear)),
             fx::slide_in(Motion::LeftToRight, 10, 5, color, (1000, Linear)),
@@ -825,7 +825,7 @@ mod tests {
             .compiler()
             .bind("base", fx::fade_to_fg(Color::Red, 500))
             .compile(r#"
-                let reversed = base.reversed(); // "type-erased" from bind()
+                let reversed = base.reversed();
                 let filtered = reversed
                     .with_filter(Not(Box::new(Text)));
 
