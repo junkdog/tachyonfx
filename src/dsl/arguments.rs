@@ -123,35 +123,24 @@ impl<'dsl> Arguments<'dsl> {
     pub fn cell_filter(&mut self) -> Result<CellFilter, DslError> {
         match self.next("cell_filter")? {
             Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => {
-                // Check if it's a cell filter constructor
-                if name.starts_with("CellFilter::") {
-                    let filter_type = name.trim_start_matches("CellFilter::");
-                    let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let filter_type = name.trim_start_matches("CellFilter::");
+                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
 
-                    match filter_type {
-                        "FgColor"    => Ok(CellFilter::FgColor(inner_args.color()?)),
-                        "BgColor"    => Ok(CellFilter::BgColor(inner_args.color()?)),
-                        "Inner"      => Ok(CellFilter::Inner(inner_args.margin()?)),
-                        "Outer"      => Ok(CellFilter::Outer(inner_args.margin()?)),
-                        "AllOf"      => Ok(CellFilter::AllOf(inner_args.array(Arguments::cell_filter)?)),
-                        "AnyOf"      => Ok(CellFilter::AnyOf(inner_args.array(Arguments::cell_filter)?)),
-                        "NoneOf"     => Ok(CellFilter::NoneOf(inner_args.array(Arguments::cell_filter)?)),
-                        "Not"        => Ok(CellFilter::Not(Box::new(inner_args.cell_filter()?))),
-                        "Layout"     => Ok(CellFilter::Layout(inner_args.layout()?, inner_args.read_u16()?)),
-                        "PositionFn" => Ok(CellFilter::PositionFn(inner_args.any_var()?)),
-                        "EvalCell"   => Ok(CellFilter::EvalCell(inner_args.any_var()?)),
-                        _            => Err(DslError::UnknownCellFilter {
-                            name: filter_type.to_compact_string(),
-                        })?,
-                    }
-                } else if name == "All" || name == "Text" {
-                    match name.as_str() {
-                        "All" => Ok(CellFilter::All),
-                        "Text" => Ok(CellFilter::Text),
-                        _ => unreachable!() // Already checked above
-                    }
-                } else {
-                    self.expected_type("cell_filter", name, span)?
+                match filter_type {
+                    "FgColor"    => Ok(CellFilter::FgColor(inner_args.color()?)),
+                    "BgColor"    => Ok(CellFilter::BgColor(inner_args.color()?)),
+                    "Inner"      => Ok(CellFilter::Inner(inner_args.margin()?)),
+                    "Outer"      => Ok(CellFilter::Outer(inner_args.margin()?)),
+                    "AllOf"      => Ok(CellFilter::AllOf(inner_args.array(Arguments::cell_filter)?)),
+                    "AnyOf"      => Ok(CellFilter::AnyOf(inner_args.array(Arguments::cell_filter)?)),
+                    "NoneOf"     => Ok(CellFilter::NoneOf(inner_args.array(Arguments::cell_filter)?)),
+                    "Not"        => Ok(CellFilter::Not(inner_args.boxed(Arguments::cell_filter)?)),
+                    "Layout"     => Ok(CellFilter::Layout(inner_args.layout()?, inner_args.read_u16()?)),
+                    "PositionFn" => Ok(CellFilter::PositionFn(inner_args.any_var()?)),
+                    "EvalCell"   => Ok(CellFilter::EvalCell(inner_args.any_var()?)),
+                    e            => Err(DslError::UnknownCellFilter {
+                        name: e.to_compact_string(),
+                    })?,
                 }
             }
             Expr::Literal(Value::CellFilter(f), _) => Ok(f),
@@ -176,12 +165,17 @@ impl<'dsl> Arguments<'dsl> {
 
         match self.next("constraint")? {
             Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
-                "Constraint::Min"        => Min(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Max"        => Max(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Length"     => Length(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Percentage" => Percentage(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Fill"       => Fill(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Ratio"      => {
+                "Constraint::Min"| "Min" =>
+                    Min(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Max" | "Max" =>
+                    Max(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Length" | "Length" =>
+                    Length(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Percentage" | "Percentage" =>
+                    Percentage(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Fill" | "Fill" =>
+                    Fill(self.extract_nested(args, Arguments::read_u16)?),
+                "Constraint::Ratio"  | "Ratio" => {
                     let mut inner_args = self.nested_args(args, 2)?;
                     let a = inner_args.read_u32()?;
                     let b = inner_args.read_u32()?;
@@ -504,10 +498,23 @@ impl<'dsl> Arguments<'dsl> {
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
         match self.next("array")? {
-            Expr::Array(exprs, _)              => self.map_exprs(exprs, inner),
-            Expr::ArrayRef(exprs, _)           => self.map_exprs(exprs, inner),
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("array", e),
+            Expr::Array(exprs, _)     => self.map_exprs(exprs, inner),
+            Expr::ArrayRef(exprs, _)  => self.map_exprs(exprs, inner),
+            Expr::Var { name, .. }    => self.bound_var(name),
+            e                         => self.expected_type_expr("array", e),
+        }
+    }
+
+    pub fn boxed<T: Clone + FromDslExpr + 'static>(
+        &mut self,
+        inner: impl Fn(&mut Self) -> Result<T, DslError>
+    ) -> Result<Box<T>, DslError> {
+        match self.next("box")? {
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } if name == "Box::new" => {
+                let mut inner_args = self.nested_args(args, 1)?;
+                inner(&mut inner_args).map(Box::new)
+            },
+            e => self.expected_type_expr("box", e),
         }
     }
 
@@ -1025,21 +1032,6 @@ mod tests {
 
         let result = args.cell_filter().unwrap();
         assert!(matches!(result, CellFilter::FgColor(Color::Red)));
-
-        // Test with basic filters
-        let mut args = prepare_test(vec![
-            Expr::FnCall {
-                call: FnCallInfo {
-                    name: "All".to_compact_string(),
-                    args: vec![]
-                },
-                self_fns: vec![],
-                span
-            },
-        ]);
-
-        let result = args.cell_filter().unwrap();
-        assert!(matches!(result, CellFilter::All));
     }
 
     #[test]

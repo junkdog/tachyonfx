@@ -3,6 +3,7 @@ use ratatui::prelude::Modifier;
 use ratatui::style::Color;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::{CellFilter, Interpolation, Motion};
+use crate::fx::RepeatMode;
 
 /// Attempts to convert qualified identifiers like `Motion::LeftToRight` or
 /// `Interpolation::Linear` into their corresponding literal values.
@@ -37,11 +38,13 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
         .or_else(|| modifier(text))
         .or_else(|| interpolation(text))
         .or_else(|| color(text))
+        .or_else(|| repeat_mode(text))
+        .or_else(|| none(text))
         .map(|v| Expr::Literal(v, *span))
 }
 
 fn motion(text: &str) -> Option<Value> {
-    Some(match text.strip_prefix("Motion::").unwrap_or(text) {
+    Some(match strip("Motion::", text) {
         "LeftToRight" => Motion::LeftToRight,
         "RightToLeft" => Motion::RightToLeft,
         "UpToDown"    => Motion::UpToDown,
@@ -51,7 +54,7 @@ fn motion(text: &str) -> Option<Value> {
 }
 
 fn cell_filter(text: &str) -> Option<Value> {
-    match text.strip_prefix("CellFilter::").unwrap_or(text) {
+    match strip("CellFilter::", text) {
         "All"        => Some(CellFilter::All),
         "Text"       => Some(CellFilter::Text),
         _            => None?,
@@ -59,7 +62,7 @@ fn cell_filter(text: &str) -> Option<Value> {
 }
 
 fn direction(text: &str) -> Option<Value> {
-    match text.strip_prefix("Direction::").unwrap_or(text) {
+    match strip("Direction::", text) {
         "Horizontal" => Some(Direction::Horizontal),
         "Vertical"   => Some(Direction::Vertical),
         _            => None,
@@ -67,7 +70,7 @@ fn direction(text: &str) -> Option<Value> {
 }
 
 fn modifier(text: &str) -> Option<Value> {
-    Some(match text.strip_prefix("Modifier::").unwrap_or(text) {
+    Some(match strip("Modifier::", text) {
         "BOLD"        => Modifier::BOLD,
         "DIM"         => Modifier::DIM,
         "ITALIC"      => Modifier::ITALIC,
@@ -82,7 +85,7 @@ fn modifier(text: &str) -> Option<Value> {
 }
 
 fn interpolation(text: &str) -> Option<Value> {
-    Some(match text.strip_prefix("Interpolation::").unwrap_or(text) {
+    Some(match strip("Interpolation::", text) {
         "BackIn"       => Interpolation::BackIn,
         "BackOut"      => Interpolation::BackOut,
         "BackInOut"    => Interpolation::BackInOut,
@@ -132,7 +135,7 @@ fn interpolation(text: &str) -> Option<Value> {
 }
 
 fn color(text: &str) -> Option<Value> {
-    Some(match text.strip_prefix("Color::").unwrap_or(text) {
+    Some(match strip("Color::", text) {
         "Reset"        => Color::Reset,
         "Black"        => Color::Black,
         "Red"          => Color::Red,
@@ -152,6 +155,21 @@ fn color(text: &str) -> Option<Value> {
         "White"        => Color::White,
         _              => None?,
     }).map(Value::Color)
+}
+
+fn repeat_mode(text: &str) -> Option<Value> {
+    matches!(strip("RepeatMode::", text), "Forever")
+        .then(|| RepeatMode::Forever)
+        .map(Value::RepeatMode)
+}
+
+fn none(text: &str) -> Option<Value> {
+    matches!(text, "None")
+        .then(|| Value::OptionNone)
+}
+
+fn strip<'a>(prefix: &'static str, text: &'a str) -> &'a str {
+    text.strip_prefix(prefix).unwrap_or(text)
 }
 
 impl Expr {

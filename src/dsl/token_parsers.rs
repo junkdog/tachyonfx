@@ -2,10 +2,10 @@ use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::tokenizer::{Token, TokenKind};
 use crate::dsl::DslError;
 use crate::CellFilter;
-use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
+use anpa::combinators::{and_parsed, attempt, many_to_vec, map, middle, no_separator, separator, succeed};
 use anpa::core::{parse, ParserExt};
 use anpa::parsers::item_if;
-use anpa::{create_parser_trait, defer_parser, or, right, tuplify};
+use anpa::{create_parser_trait, defer_parser, map, or, right, tuplify};
 use compact_str::{format_compact, ToCompactString};
 use crate::dsl::expr_promotion::maybe_promote;
 
@@ -170,10 +170,21 @@ fn tuple<'a>() -> impl TokenParser<'a, Expr> {
 fn sequence<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
+    let arr_effects = array().map_if(|a| match a {
+        Expr::Array(args, _)    => Some(args),
+        Expr::ArrayRef(args, _) => Some(args),
+        _                       => Some(vec![])
+    });
+
+    let effects = or!(
+        arr_effects,
+        succeed(item_if(|_| false)).map(|_| vec![])
+    );
+
     yield_consumed(tuplify!(
         maybe_qualified("fx"),
         id("sequence"),
-        within(LeftParen, arguments(), RightParen),
+        within(LeftParen, effects, RightParen),
         method_chain(),
     )).map(|(span, (_, _, args, self_fns))| Expr::Sequence { effects: args, self_fns, span })
 }
@@ -181,10 +192,19 @@ fn sequence<'a>() -> impl TokenParser<'a, Expr> {
 fn parallel<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
+    let arguments = or!(
+        array().map_if(|a| match a {
+            Expr::Array(args, _)    => Some(args),
+            Expr::ArrayRef(args, _) => Some(args),
+            _                       => Some(vec![])
+        }),
+        succeed(item_if(|_| false)).map(|_| vec![])
+    );
+
     yield_consumed(tuplify!(
         maybe_qualified("fx"),
         id("parallel"),
-        within(LeftParen, arguments(), RightParen),
+        within(LeftParen, arguments, RightParen),
         method_chain(),
     )).map(|(span, (_, _, args, self_fns))| Expr::Parallel { effects: args, self_fns, span })
 }
@@ -221,8 +241,8 @@ fn let_binding<'a>() -> impl TokenParser<'a, Expr> {
 }
 
 fn variable<'a>() -> impl TokenParser<'a, Expr> {
-    yield_consumed(identifier())
-        .map(|(span, t)| Expr::Var { name: t.into(), self_fns: vec![], span })
+    yield_consumed(tuplify!(identifier(), method_chain()))
+        .map(|(span, (t, self_fns))| Expr::Var { name: t.into(), self_fns, span })
 }
 
 fn qualified_name<'a>() -> impl TokenParser<'a, Expr> {
@@ -260,10 +280,11 @@ fn array<'a>() -> impl TokenParser<'a, Expr> {
 fn struct_instantiation<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
+    // todo: support shorthand syntax for fields
     let field = tuplify!(
         identifier(),
         token(Colon),
-        defer_parser!(expression()),
+        expression(),
     ).map(|(name, _, value)| (name.to_compact_string(), value));
 
     let fields = many_to_vec(field, true, separator(token(Comma), true));
@@ -271,7 +292,11 @@ fn struct_instantiation<'a>() -> impl TokenParser<'a, Expr> {
     yield_consumed(tuplify!(
         identifier(),
         within(LeftBrace, fields, RightBrace),
-    )).map(|(span, (name, fields))| Expr::StructInit { name: name.into(), fields, span })
+    )).map(|(span, (name, fields))| Expr::StructInit {
+        name: name.into(),
+        fields,
+        span,
+    })
 }
 
 fn within<'a, T>(
@@ -283,7 +308,7 @@ fn within<'a, T>(
 
     yield_consumed(tuplify!(
         middle(token(start), inner_parser, token(end)),
-    )).map(|(span, args)| args)
+    )).map(move |(span, args)| args)
 }
 
 // endregion
@@ -352,7 +377,7 @@ mod tests {
             .map(sanitize_tokens)
             .unwrap();
 
-        println!("{:?}", tokens);
+        println!("{:#?}", tokens);
 
         f(&tokens);
     }
@@ -1014,57 +1039,57 @@ mod tests {
         });
 
         // Test with single effect
-        with_tokens("fx::sequence(fx::dissolve(200))", |tokens| {
+        with_tokens("fx::sequence(&[fx::dissolve(200)])", |tokens| {
             assert_eq!(
                 parse(sequence(), tokens).result,
                 Some(Expr::Sequence {
                     effects: vec![
                         expr_fn_call("fx::dissolve", vec![
-                            Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))
-                        ]).with_span(13, 30)
+                            Expr::Literal(Value::U32(200), ExprSpan::new(28, 31))
+                        ]).with_span(15, 32)
                     ],
                     self_fns: vec![],
-                    span: ExprSpan::new(0, 31)
+                    span: ExprSpan::new(0, 34)
                 })
             );
         });
 
         // Test with multiple effects
-        with_tokens("fx::sequence(dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
+        with_tokens("fx::sequence(&[dissolve(200), fx::fade_to(Color::Red, 300)])", |tokens| {
             assert_eq!(
                 parse(sequence(), tokens).result,
                 Some(Expr::Sequence {
                     effects: vec![
                         expr_fn_call("dissolve", vec![
-                            Expr::Literal(Value::U32(200), ExprSpan::new(22, 25))
-                        ]).with_span(13, 26),
+                            Expr::Literal(Value::U32(200), ExprSpan::new(24, 27))
+                        ]).with_span(15, 28),
                         expr_fn_call("fx::fade_to", vec![
-                            Expr::Literal(Value::Color(Color::Red), ExprSpan::new(40, 50)),
-                            Expr::Literal(Value::U32(300), ExprSpan::new(52, 55))
-                        ]).with_span(28, 56)
+                            Expr::Literal(Value::Color(Color::Red), ExprSpan::new(42, 52)),
+                            Expr::Literal(Value::U32(300), ExprSpan::new(54, 57))
+                        ]).with_span(30, 58)
                     ],
                     self_fns: vec![],
-                    span: ExprSpan::new(0, 57)
+                    span: ExprSpan::new(0, 60)
                 })
             );
         });
 
         // Test with method chaining
-        with_tokens("fx::sequence(fx::dissolve(200)).filter(CellFilter::Text)", |tokens| {
+        with_tokens("fx::sequence(&[fx::dissolve(200)]).filter(CellFilter::Text)", |tokens| {
             assert_eq!(
                 parse(sequence(), tokens).result,
                 Some(Expr::Sequence {
                     effects: vec![
                         expr_fn_call("fx::dissolve", vec![
-                            Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))
-                        ]).with_span(13, 30),
+                            Expr::Literal(Value::U32(200), ExprSpan::new(28, 31))
+                        ]).with_span(15, 32),
                     ],
                     self_fns: vec![
                         fn_info("filter", vec![
-                            Expr::Literal(Value::CellFilter(CellFilter::Text), ExprSpan::new(39, 55))
+                            Expr::Literal(Value::CellFilter(CellFilter::Text), ExprSpan::new(42, 58))
                         ])
                     ],
-                    span: ExprSpan::new(0, 56)
+                    span: ExprSpan::new(0, 59)
                 })
             );
         });
@@ -1075,15 +1100,13 @@ mod tests {
                 parse(sequence(), tokens).result,
                 Some(Expr::Sequence {
                     effects: vec![
-                        Expr::ArrayRef(vec![
-                            expr_fn_call("fx::dissolve", vec![
-                                Expr::Literal(Value::U32(200), ExprSpan::new(24, 27))
-                            ]).with_span(11, 28),
-                            expr_fn_call("fx::fade_to", vec![
-                                Expr::Literal(Value::Color(Color::Red), ExprSpan::new(42, 52)),
-                                Expr::Literal(Value::U32(300), ExprSpan::new(54, 57))
-                            ]).with_span(30, 58)
-                        ], ExprSpan::new(9, 59))
+                        expr_fn_call("fx::dissolve", vec![
+                            Expr::Literal(Value::U32(200), ExprSpan::new(24, 27))
+                        ]).with_span(11, 28),
+                        expr_fn_call("fx::fade_to", vec![
+                            Expr::Literal(Value::Color(Color::Red), ExprSpan::new(42, 52)),
+                            Expr::Literal(Value::U32(300), ExprSpan::new(54, 57))
+                        ]).with_span(30, 58)
                     ],
                     self_fns: vec![],
                     span: ExprSpan::new(0, 60)
@@ -1106,75 +1129,19 @@ mod tests {
             );
         });
 
-        // Test with single effect
-        with_tokens("fx::parallel(fx::dissolve(200))", |tokens| {
-            assert_eq!(
-                parse(parallel(), tokens).result,
-                Some(Expr::Parallel {
-                    effects: vec![
-                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))])
-                            .with_span(13, 30)
-                    ],
-                    self_fns: vec![],
-                    span: ExprSpan::new(0, 31)
-                })
-            );
-        });
-
-        // Test with multiple effects
-        with_tokens("fx::parallel(fx::dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
-            assert_eq!(
-                parse(parallel(), tokens).result,
-                Some(Expr::Parallel {
-                    effects: vec![
-                        expr_fn_call("fx::dissolve", vec![Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))])
-                            .with_span(13, 30),
-                        expr_fn_call("fx::fade_to", vec![
-                            Expr::Literal(Value::Color(Color::Red), ExprSpan::new(44, 54)),
-                            Expr::Literal(Value::U32(300), ExprSpan::new(56, 59))
-                        ]).with_span(32, 60)
-                    ],
-                    self_fns: vec![],
-                    span: ExprSpan::new(0, 61)
-                })
-            );
-        });
-
-        // Test with method chaining
-        with_tokens("fx::parallel(fx::dissolve(200)).filter(CellFilter::Text)", |tokens| {
-            assert_eq!(
-                parse(parallel(), tokens).result,
-                Some(Expr::Parallel {
-                    effects: vec![
-                        expr_fn_call("fx::dissolve", vec![
-                            Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))
-                        ]).with_span(13, 30)
-                    ],
-                    self_fns: vec![
-                        fn_info("filter", vec![
-                            Expr::Literal(Value::CellFilter(CellFilter::Text), ExprSpan::new(39, 55))
-                        ])
-                    ],
-                    span: ExprSpan::new(0, 56)
-                })
-            );
-        });
-
         // Test with array reference
         with_tokens("parallel(&[fx::dissolve(200), fx::fade_to(Color::Red, 300)])", |tokens| {
             assert_eq!(
                 parse(parallel(), tokens).result,
                 Some(Expr::Parallel {
                     effects: vec![
-                        Expr::ArrayRef(vec![
-                            expr_fn_call("fx::dissolve", vec![
-                                Expr::Literal(Value::U32(200), ExprSpan::new(24, 27))
-                            ]).with_span(11, 28),
-                            expr_fn_call("fx::fade_to", vec![
-                                Expr::Literal(Value::Color(Color::Red), ExprSpan::new(42, 52)),
-                                Expr::Literal(Value::U32(300), ExprSpan::new(54, 57))
-                            ]).with_span(30, 58)
-                        ], ExprSpan::new(9, 59))
+                        expr_fn_call("fx::dissolve", vec![
+                            Expr::Literal(Value::U32(200), ExprSpan::new(24, 27))
+                        ]).with_span(11, 28),
+                        expr_fn_call("fx::fade_to", vec![
+                            Expr::Literal(Value::Color(Color::Red), ExprSpan::new(42, 52)),
+                            Expr::Literal(Value::U32(300), ExprSpan::new(54, 57))
+                        ]).with_span(30, 58)
                     ],
                     self_fns: vec![],
                     span: ExprSpan::new(0, 60)
@@ -1203,55 +1170,6 @@ mod tests {
 
     #[test]
     fn test_expression_integration() {
-        // Test sequence expression via main expression parser
-        with_tokens("fx::sequence(fx::dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
-            let result = parse(expression(), tokens).result;
-            assert!(result.is_some());
-
-            match result.unwrap() {
-                Expr::Sequence { effects, self_fns, .. } => {
-                    assert_eq!(
-                        effects,
-                        vec![
-                            expr_fn_call("fx::dissolve", vec![
-                                Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))
-                            ]).with_span(13, 30),
-                            expr_fn_call("fx::fade_to", vec![
-                                Expr::Literal(Value::Color(Color::Red), ExprSpan::new(44, 54)),
-                                Expr::Literal(Value::U32(300), ExprSpan::new(56, 59))
-                            ]).with_span(32, 60)
-                        ]
-                    );
-                    assert_eq!(self_fns.len(), 0);
-                },
-                e => panic!("Expected FnCall expression, got {:?}", e)
-            }
-        });
-
-        // Test parallel expression via main expression parser
-        with_tokens("fx::parallel(fx::dissolve(200), fx::fade_to(Color::Red, 300))", |tokens| {
-            let result = parse(expression(), tokens).result;
-            assert!(result.is_some());
-
-            match result.unwrap() {
-                Expr::Parallel { effects, .. } => {
-                    assert_eq!(
-                        effects,
-                        vec![
-                            expr_fn_call("fx::dissolve", vec![
-                                Expr::Literal(Value::U32(200), ExprSpan::new(26, 29))
-                            ]).with_span(13, 30),
-                            expr_fn_call("fx::fade_to", vec![
-                                Expr::Literal(Value::Color(Color::Red), ExprSpan::new(44, 54)),
-                                Expr::Literal(Value::U32(300), ExprSpan::new(56, 59))
-                            ]).with_span(32, 60)
-                        ]
-                    ); // Should have two arguments
-                },
-                e => panic!("Expected Parallel expression, got {:?}", e)
-            }
-        });
-
         // Test Some option via main expression parser
         with_tokens("Some(fx::dissolve(200))", |tokens| {
             let result = parse(expression(), tokens).result;
