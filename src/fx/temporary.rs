@@ -112,10 +112,7 @@ mod tests {
             .to_string();
 
         assert_eq!(dsl.to_string(), indoc! {
-            "fx::with_duration(
-                Duration::from_millis(1000),
-                fx::sleep(100)
-            )"
+            "fx::with_duration(Duration::from_millis(1000), fx::sleep(100))"
         });
     }
 }

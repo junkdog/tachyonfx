@@ -77,14 +77,11 @@ impl<'dsl> Arguments<'dsl> {
                 },
                 _ => self.expected_type("duration", name, span)?,
             }),
-            Expr::Literal(v, span)  => match v {
-                Value::Duration(d)       => Ok(d),
-                Value::U32(ms)           => Ok(Duration::from_millis(ms as _)),
-                e                        => self.expected_type("duration", e.format(), span),
-            },
-
-            Expr::Var { name, .. }       => self.bound_var(name),
-            e                            => self.expected_type_expr("duration", e),
+            Expr::Literal(Value::Duration(d), _) => Ok(d),
+            Expr::Literal(Value::U32(ms), _)     => Ok(Duration::from_millis(ms as _)),
+            Expr::Literal(v, span)               => self.expected_type("duration", v.format(), span),
+            Expr::Var { name, .. }               => self.bound_var(name),
+            e                                    => self.expected_type_expr("duration", e),
         }
     }
 
@@ -109,7 +106,7 @@ impl<'dsl> Arguments<'dsl> {
             Expr::Literal(Value::Timer(t), _)  => Ok(t),
             Expr::Literal(Value::U32(ms), _)   => Ok(ms.into()),
             Expr::Tuple(exprs, _) => {
-                let mut args = self.all_inner_args(exprs);
+                let mut args = self.nested_args(exprs, 2)?;
                 let duration = args.duration()?;
                 let interpolation = args.interpolation()?;
                 Ok(EffectTimer::new(duration, interpolation))
@@ -164,25 +161,21 @@ impl<'dsl> Arguments<'dsl> {
         use Constraint::*;
 
         match self.next("constraint")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
-                "Constraint::Min"| "Min" =>
-                    Min(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Max" | "Max" =>
-                    Max(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Length" | "Length" =>
-                    Length(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Percentage" | "Percentage" =>
-                    Percentage(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Fill" | "Fill" =>
-                    Fill(self.extract_nested(args, Arguments::read_u16)?),
-                "Constraint::Ratio"  | "Ratio" => {
-                    let mut inner_args = self.nested_args(args, 2)?;
-                    let a = inner_args.read_u32()?;
-                    let b = inner_args.read_u32()?;
-                    Ratio(a, b)
-                },
-                _ => self.expected_type("constraint", name, span)?,
-            }),
+            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } =>
+                Ok(match name.trim_start_matches("Constraint::") {
+                    "Min"        => Min(self.extract_nested(args, Arguments::read_u16)?),
+                    "Max"        => Max(self.extract_nested(args, Arguments::read_u16)?),
+                    "Length"     => Length(self.extract_nested(args, Arguments::read_u16)?),
+                    "Percentage" => Percentage(self.extract_nested(args, Arguments::read_u16)?),
+                    "Fill"       => Fill(self.extract_nested(args, Arguments::read_u16)?),
+                    "Ratio" => {
+                        let mut inner_args = self.nested_args(args, 2)?;
+                        let a = inner_args.read_u32()?;
+                        let b = inner_args.read_u32()?;
+                        Ratio(a, b)
+                    },
+                    _ => self.expected_type("constraint", name, span)?,
+                }),
             Expr::Literal(Value::Constraint(c), _) => Ok(c),
             Expr::Var { name, .. }                 => self.bound_var(name),
             e   => self.expected_type_expr("constraint", e),
@@ -462,6 +455,22 @@ impl<'dsl> Arguments<'dsl> {
                     name: e.to_compact_string(),
                 }),
             },
+            Expr::StructInit { name, fields, span } => {
+                if name == "Rect" {
+                    let fields = struct_fields("Rect", &["x", "y", "width", "height"], fields)?;
+                    Ok(Rect {
+                        x: self.extract_field("x", &fields, Arguments::read_u16)?,
+                        y: self.extract_field("y", &fields, Arguments::read_u16)?,
+                        width: self.extract_field("width", &fields, Arguments::read_u16)?,
+                        height: self.extract_field("height", &fields, Arguments::read_u16)?,
+                    })
+                } else {
+                    Err(DslError::UnknownStruct {
+                        name: name.to_compact_string(),
+                        location: span,
+                    })
+                }
+            },
             Expr::Literal(Value::Rect(r), _) => Ok(r),
             Expr::Var { name, self_fns, .. }  => self.bound_var::<Rect>(name)?
                 .fold_fns(self_fns, self.context, self.vars),
@@ -469,7 +478,7 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    /// Consumes the next argument and returns a `Offset` tuple.
+    /// Consumes the next argument and returns an `Offset` tuple.
     pub fn offset(&mut self) -> Result<Offset, DslError> {
         match self.next("offset")? {
             Expr::StructInit { name, fields, span } => {
@@ -648,7 +657,7 @@ impl fmt::Display for Arguments<'_> {
 
 /// An internal trait for types that can be compiled from let
 /// expressions in the DSL.
-pub(super) trait FromDslExpr where Self: Sized {
+pub trait FromDslExpr where Self: Sized {
     /// Attempts to compile a value of type `Self` from a let expression.
     ///
     /// # Arguments
@@ -676,11 +685,11 @@ impl<T: Clone + FromDslExpr + 'static> FromDslExpr for Vec<T> {
     }
 }
 
-impl FromDslExpr for [f32; 3] {
+impl<const N: usize> FromDslExpr for [f32; N] {
     fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
         args.array(FromDslExpr::from_expr)
             .map(|v| {
-                let mut arr = [0.0; 3];
+                let mut arr = [0.0; N];
                 arr.copy_from_slice(&v);
                 arr
             })

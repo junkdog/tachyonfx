@@ -1,12 +1,12 @@
-use std::fmt::Formatter;
 use crate::dsl::DslError;
 use anpa::combinators::{attempt, count_consumed, get_parsed, many, many_to_vec, middle, no_separator, not_empty, or_diff, right, succeed, times};
-use anpa::core::StrParser;
 use anpa::core::ParserExt;
+use anpa::core::StrParser;
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while, until};
 use anpa::{greedy_or, or, right, skip, take};
 use compact_str::ToCompactString;
+use std::fmt::Formatter;
 use std::ops::Range;
 
 /// Represents the type of a token in the DSL

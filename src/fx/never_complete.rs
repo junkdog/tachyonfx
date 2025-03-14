@@ -59,7 +59,7 @@ impl Shader for NeverComplete {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::EffectExpression;
         let nested = self.effect.to_dsl()?;
-        EffectExpression::parse(&format!("never_complete({})", nested))
+        EffectExpression::parse(&format!("fx::never_complete({})", nested))
     }
 }
 

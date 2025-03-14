@@ -1,9 +1,9 @@
+use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
+use crate::fx::RepeatMode;
+use crate::{CellFilter, Interpolation, Motion};
 use ratatui::layout::Direction;
 use ratatui::prelude::Modifier;
 use ratatui::style::Color;
-use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
-use crate::{CellFilter, Interpolation, Motion};
-use crate::fx::RepeatMode;
 
 /// Attempts to convert qualified identifiers like `Motion::LeftToRight` or
 /// `Interpolation::Linear` into their corresponding literal values.
@@ -23,8 +23,6 @@ use crate::fx::RepeatMode;
 pub(super) fn maybe_promote<'a>(expr: Expr) -> Expr {
     match &expr {
         Expr::QualifiedMember(s, span)        => promote(s, span),
-        Expr::FnCall { call, self_fns, span } => promote(&call.name, span)
-            .map(|f| f.self_fns(self_fns.clone())),
         Expr::Var { name, self_fns, span }    => promote(name, span)
             .map(|f| f.self_fns(self_fns.clone())),
         _                                     => None
@@ -44,7 +42,7 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
 }
 
 fn motion(text: &str) -> Option<Value> {
-    Some(match strip("Motion::", text) {
+    Some(match text.trim_start_matches("Motion::") {
         "LeftToRight" => Motion::LeftToRight,
         "RightToLeft" => Motion::RightToLeft,
         "UpToDown"    => Motion::UpToDown,
@@ -54,23 +52,23 @@ fn motion(text: &str) -> Option<Value> {
 }
 
 fn cell_filter(text: &str) -> Option<Value> {
-    match strip("CellFilter::", text) {
-        "All"        => Some(CellFilter::All),
-        "Text"       => Some(CellFilter::Text),
+    Some(match text.trim_start_matches("CellFilter::") {
+        "All"        => CellFilter::All,
+        "Text"       => CellFilter::Text,
         _            => None?,
-    }.map(Value::CellFilter)
+    }).map(Value::CellFilter)
 }
 
 fn direction(text: &str) -> Option<Value> {
-    match strip("Direction::", text) {
-        "Horizontal" => Some(Direction::Horizontal),
-        "Vertical"   => Some(Direction::Vertical),
-        _            => None,
-    }.map(Value::Direction)
+    Some(match text.trim_start_matches("Direction::") {
+        "Horizontal" => Direction::Horizontal,
+        "Vertical"   => Direction::Vertical,
+        _            => None?,
+    }).map(Value::Direction)
 }
 
 fn modifier(text: &str) -> Option<Value> {
-    Some(match strip("Modifier::", text) {
+    Some(match text.trim_start_matches("Modifier::") {
         "BOLD"        => Modifier::BOLD,
         "DIM"         => Modifier::DIM,
         "ITALIC"      => Modifier::ITALIC,
@@ -85,7 +83,7 @@ fn modifier(text: &str) -> Option<Value> {
 }
 
 fn interpolation(text: &str) -> Option<Value> {
-    Some(match strip("Interpolation::", text) {
+    Some(match text.trim_start_matches("Interpolation::") {
         "BackIn"       => Interpolation::BackIn,
         "BackOut"      => Interpolation::BackOut,
         "BackInOut"    => Interpolation::BackInOut,
@@ -135,7 +133,7 @@ fn interpolation(text: &str) -> Option<Value> {
 }
 
 fn color(text: &str) -> Option<Value> {
-    Some(match strip("Color::", text) {
+    Some(match text.trim_start_matches("Color::") {
         "Reset"        => Color::Reset,
         "Black"        => Color::Black,
         "Red"          => Color::Red,
@@ -158,7 +156,7 @@ fn color(text: &str) -> Option<Value> {
 }
 
 fn repeat_mode(text: &str) -> Option<Value> {
-    matches!(strip("RepeatMode::", text), "Forever")
+    matches!(text.trim_start_matches("RepeatMode::"), "Forever")
         .then(|| RepeatMode::Forever)
         .map(Value::RepeatMode)
 }
@@ -168,14 +166,10 @@ fn none(text: &str) -> Option<Value> {
         .then(|| Value::OptionNone)
 }
 
-fn strip<'a>(prefix: &'static str, text: &'a str) -> &'a str {
-    text.strip_prefix(prefix).unwrap_or(text)
-}
-
 impl Expr {
     fn self_fns(self, self_fns: Vec<FnCallInfo>) -> Expr {
         match self {
-            Expr::FnCall { call, span, .. } => Expr::FnCall { call, self_fns, span },
+            Expr::Var { name, span, .. }    => Expr::Var { name, self_fns, span },
             _                               => self
         }
     }

@@ -200,12 +200,12 @@ impl DslFormat for CellFilter {
         }
 
         match self {
-            CellFilter::All             => "All".to_compact_string(),
+            CellFilter::All             => CompactString::const_new("CellFilter::All"),
             CellFilter::FgColor(color)  => format_compact!("CellFilter::FgColor({})", color.dsl_format()),
             CellFilter::BgColor(color)  => format_compact!("CellFilter::BgColor({})", color.dsl_format()),
             CellFilter::Inner(m)        => format_compact!("CellFilter::Inner({})", m.dsl_format()),
             CellFilter::Outer(m)        => format_compact!("CellFilter::Outer({})", m.dsl_format()),
-            CellFilter::Text            => "Text".to_compact_string(),
+            CellFilter::Text            => CompactString::const_new("CellFilter::Text"),
             CellFilter::AllOf(filters)  => format_compact!("CellFilter::AllOf({})", format(filters)),
             CellFilter::AnyOf(filters)  => format_compact!("CellFilter::AnyOf({})", format(filters)),
             CellFilter::NoneOf(filters) => format_compact!("CellFilter::NoneOf({})", format(filters)),

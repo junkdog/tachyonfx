@@ -135,20 +135,9 @@ mod tests {
         let result = EffectExpression::parse(input).unwrap();
         assert_eq!(format!("{result}"), indoc! {
             "fx::hsl_shift(
-                Some([
-                    1.0,
-                    2.0,
-                    3.0
-                ]),
-                Some([
-                    1.0,
-                    2.0,
-                    3.0
-                ]),
-                EffectTimer::new(
-                    Duration::from_millis(1000),
-                    Interpolation::Linear
-                )
+                Some([1.0, 2.0, 3.0]),
+                Some([1.0, 2.0, 3.0]),
+                (1000, Interpolation::Linear)
             )"
         });
     }

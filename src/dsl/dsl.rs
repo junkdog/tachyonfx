@@ -2,14 +2,14 @@ use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
 use crate::dsl::expressions::{Expr, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
+use crate::dsl::token_parsers::parse_ast;
+use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
 use compact_str::{CompactString, ToCompactString};
 use std::fmt;
 use std::fmt::Formatter;
-use crate::dsl::token_parsers::parse_ast;
-use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
 /// A compiler and registry for tachyonfx effect DSL expressions.
 ///
@@ -293,11 +293,6 @@ impl DslCompiler<'_> {
         tokenize(input)
             .map(sanitize_tokens)
             .and_then(parse_ast)
-            .map(|ast| {
-                println!("{:#?}", ast);
-
-                ast
-            })
             .and_then(|ast| self.dsl.compile(&self.environment, ast))
     }
 }

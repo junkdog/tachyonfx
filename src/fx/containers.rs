@@ -229,10 +229,7 @@ mod tests {
             .to_string();
 
         assert_eq!(dsl, indoc! {
-            "fx::parallel(&[
-                 fx::consume_tick(),
-                 fx::consume_tick()
-             ])"
+            "fx::parallel(&[fx::consume_tick(), fx::consume_tick()])"
         });
     }
 
@@ -244,10 +241,7 @@ mod tests {
             .to_string();
 
         assert_eq!(dsl, indoc! {
-            "fx::sequence(&[
-                 fx::consume_tick(),
-                 fx::consume_tick()
-             ])"
+            "fx::sequence(&[fx::consume_tick(), fx::consume_tick()])"
         });
     }
 }
