@@ -14,6 +14,9 @@ use ratatui::style::Color;
 /// - CellFilter enum variants
 /// - Modifier enum variants
 /// - Interpolation enum variants
+/// - Color enum variants
+/// - RepeatMode enum variants
+/// - None
 ///
 /// # Arguments
 /// * `expr` - The expression to potentially promote
@@ -42,33 +45,33 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
 }
 
 fn motion(text: &str) -> Option<Value> {
-    Some(match text.trim_start_matches("Motion::") {
+    Some(Value::Motion(match text.trim_start_matches("Motion::") {
         "LeftToRight" => Motion::LeftToRight,
         "RightToLeft" => Motion::RightToLeft,
         "UpToDown"    => Motion::UpToDown,
         "DownToUp"    => Motion::DownToUp,
         _             => None?,
-    }).map(Value::Motion)
+    }))
 }
 
 fn cell_filter(text: &str) -> Option<Value> {
-    Some(match text.trim_start_matches("CellFilter::") {
+    Some(Value::CellFilter(match text.trim_start_matches("CellFilter::") {
         "All"        => CellFilter::All,
         "Text"       => CellFilter::Text,
         _            => None?,
-    }).map(Value::CellFilter)
+    }))
 }
 
 fn direction(text: &str) -> Option<Value> {
-    Some(match text.trim_start_matches("Direction::") {
+    Some(Value::Direction(match text.trim_start_matches("Direction::") {
         "Horizontal" => Direction::Horizontal,
         "Vertical"   => Direction::Vertical,
         _            => None?,
-    }).map(Value::Direction)
+    }))
 }
 
 fn modifier(text: &str) -> Option<Value> {
-    Some(match text.trim_start_matches("Modifier::") {
+    Some(Value::Modifier(match text.trim_start_matches("Modifier::") {
         "BOLD"        => Modifier::BOLD,
         "DIM"         => Modifier::DIM,
         "ITALIC"      => Modifier::ITALIC,
@@ -79,11 +82,11 @@ fn modifier(text: &str) -> Option<Value> {
         "HIDDEN"      => Modifier::HIDDEN,
         "CROSSED_OUT" => Modifier::CROSSED_OUT,
         _             => None?,
-    }).map(Value::Modifier)
+    }))
 }
 
 fn interpolation(text: &str) -> Option<Value> {
-    Some(match text.trim_start_matches("Interpolation::") {
+    Some(Value::Interpolation(match text.trim_start_matches("Interpolation::") {
         "BackIn"       => Interpolation::BackIn,
         "BackOut"      => Interpolation::BackOut,
         "BackInOut"    => Interpolation::BackInOut,
@@ -129,11 +132,11 @@ fn interpolation(text: &str) -> Option<Value> {
         "SineInOut"    => Interpolation::SineInOut,
 
         _             => None?,
-    }).map(Value::Interpolation)
+    }))
 }
 
 fn color(text: &str) -> Option<Value> {
-    Some(match text.trim_start_matches("Color::") {
+    Some(Value::Color(match text.trim_start_matches("Color::") {
         "Reset"        => Color::Reset,
         "Black"        => Color::Black,
         "Red"          => Color::Red,
@@ -152,7 +155,7 @@ fn color(text: &str) -> Option<Value> {
         "LightCyan"    => Color::LightCyan,
         "White"        => Color::White,
         _              => None?,
-    }).map(Value::Color)
+    }))
 }
 
 fn repeat_mode(text: &str) -> Option<Value> {

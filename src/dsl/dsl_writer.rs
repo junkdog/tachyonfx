@@ -1,7 +1,5 @@
 use crate::dsl::expressions::{Expr, FnCallInfo, Value};
-use crate::dsl::DslFormat;
-use compact_str::{CompactString, ToCompactString};
-use std::fmt::Write;
+use compact_str::CompactString;
 
 /// A writer for formatting DSL expressions with smart formatting decisions.
 ///
@@ -60,7 +58,7 @@ impl DslWriter {
             Expr::ArrayRef(exprs, _) => self.write_array_ref(exprs),
             Expr::Array(exprs, _) => self.write_array(exprs),
             Expr::FnCall { call, self_fns, .. } => self.write_fn_call(call, self_fns),
-            Expr::QualifiedMember(name, _) => self.write(&name),
+            Expr::QualifiedMember(name, _) => self.write(name),
             Expr::OptionSome(expr, _) => self.write_option_some(expr),
             Expr::Sequence { effects, self_fns, .. } => self.write_sequence(effects, self_fns),
             Expr::Parallel { effects, self_fns, .. } => self.write_parallel(effects, self_fns),
