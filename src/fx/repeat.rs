@@ -127,7 +127,7 @@ impl Shader for Repeat {
         use crate::dsl::DslFormat;
 
         let fx = self.fx.to_dsl()?;
-        crate::dsl::EffectExpression::parse(&format!("repeat({fx}, {})", self.mode.dsl_format()))
+        crate::dsl::EffectExpression::parse(&format!("fx::repeat({fx}, {})", self.mode.dsl_format()))
     }
 }
 
@@ -153,10 +153,7 @@ mod tests {
             .to_string();
 
         assert_eq!(dsl, indoc! {
-            "fx::repeat(
-                 fx::consume_tick(),
-                 RepeatMode::Forever
-             )"}
+            "fx::repeat(fx::consume_tick(), RepeatMode::Forever)"}
         );
 
         let dsl = repeat(consume_tick(), RepeatMode::Times(2))
@@ -165,10 +162,7 @@ mod tests {
             .to_string();
 
         assert_eq!(dsl, indoc! {
-            "fx::repeat(
-                 fx::consume_tick(),
-                 RepeatMode::Times(2)
-             )"}
+            "fx::repeat(fx::consume_tick(), RepeatMode::Times(2))"}
         );
 
         let dsl = repeat(consume_tick(), RepeatMode::Duration(Duration::from_millis(1)))
@@ -177,10 +171,7 @@ mod tests {
             .to_string();
 
         assert_eq!(dsl, indoc! {
-            "fx::repeat(
-                 fx::consume_tick(),
-                 RepeatMode::Duration(Duration::from_millis(1))
-             )"}
-        );
+            "fx::repeat(fx::consume_tick(), RepeatMode::Duration(Duration::from_millis(1)))"
+        });
     }
 }

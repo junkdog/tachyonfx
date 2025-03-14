@@ -112,12 +112,11 @@ impl Shader for Prolong {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
 
-        let nested = self.inner.to_dsl()?;
         EffectExpression::parse(&format!(
-            "{}({}, {})",
+            "fx::{}({}, {})",
             self.name(),
             self.timer.dsl_format(),
-            nested
+            self.inner.to_dsl()?
         ))
     }
 }
@@ -138,13 +137,7 @@ mod tests {
         .to_string();
 
         assert_eq!(dsl, indoc! {
-            "fx::prolong_start(
-                 EffectTimer::from_ms(
-                     100,
-                     Interpolation::Linear
-                 ),
-                 fx::consume_tick()
-             )"
+            "fx::prolong_start(EffectTimer::from_ms(100, Interpolation::Linear), fx::consume_tick())"
         });
     }
 
@@ -156,13 +149,7 @@ mod tests {
         .to_string();
 
         assert_eq!(dsl, indoc! {
-            "fx::prolong_end(
-                 EffectTimer::from_ms(
-                     100,
-                     Interpolation::Linear
-                 ),
-                 fx::consume_tick()
-             )"
+            "fx::prolong_end(EffectTimer::from_ms(100, Interpolation::Linear), fx::consume_tick())"
         });
     }
 }

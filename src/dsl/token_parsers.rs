@@ -1,13 +1,13 @@
+use crate::dsl::expr_promotion::maybe_promote;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::tokenizer::{Token, TokenKind};
 use crate::dsl::DslError;
 use crate::CellFilter;
-use anpa::combinators::{and_parsed, attempt, many_to_vec, map, middle, no_separator, separator, succeed};
+use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
 use anpa::core::{parse, ParserExt};
 use anpa::parsers::item_if;
-use anpa::{create_parser_trait, defer_parser, map, or, right, tuplify};
+use anpa::{create_parser_trait, or, right, tuplify};
 use compact_str::{format_compact, ToCompactString};
-use crate::dsl::expr_promotion::maybe_promote;
 
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
 
@@ -19,7 +19,8 @@ pub(super) fn parse_ast(input: Vec<Token>) -> Result<Vec<Expr>, DslError> {
             let_binding(),
             sequence(),
             parallel(),
-            function_expression().map(maybe_promote),
+            function_expression(),
+            struct_instantiation(),
             variable().map(maybe_promote)
         ),
         true,
@@ -44,7 +45,7 @@ pub(super) fn expression<'a>() -> impl TokenParser<'a, Expr> {
         sequence(),
         parallel(),
         some(),
-        function_expression().map(maybe_promote),
+        function_expression(),
         array(),
         struct_instantiation(),
         qualified_name().map(maybe_promote),
@@ -99,10 +100,6 @@ fn function_call<'a>() -> impl TokenParser<'a, FnCallInfo> {
     ).map(|(fun, args)| FnCallInfo::new(fun, args));
 
     or!(qualified, unqualified)
-        .map(|f| {
-            println!("{:?}", f);
-            f
-        })
 }
 
 fn method_chain<'a>() -> impl TokenParser<'a, Vec<FnCallInfo>> {
@@ -377,7 +374,7 @@ mod tests {
             .map(sanitize_tokens)
             .unwrap();
 
-        println!("{:#?}", tokens);
+        // println!("{:#?}", tokens);
 
         f(&tokens);
     }

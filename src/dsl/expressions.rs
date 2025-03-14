@@ -1,9 +1,9 @@
-use compact_str::{format_compact, CompactString, CompactStringExt, ToCompactString};
+use crate::dsl::DslFormat;
 use crate::fx::RepeatMode;
 use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
+use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::layout::{Constraint, Direction, Margin, Rect};
 use ratatui::prelude::{Color, Modifier, Style};
-use crate::dsl::DslFormat;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct FnCallInfo {
@@ -126,156 +126,6 @@ impl Expr {
             Expr::QualifiedMember(_, _) => "qualified_name",
             Expr::StructInit { .. }     => "struct",
             Expr::Tuple(_, _)           => "tuple",
-        }
-    }
-
-    // this is a ugly mess; but stays so until the tokenizaton/parser rework
-    pub(super) fn format(&self, indent: usize, indent_arg: bool) -> CompactString {
-        let indent_str = " ".repeat(indent);
-        let prefix = if indent_arg { &indent_str } else { "" };
-
-        // Determine if an expression is a "simple" value that can be rendered inline
-        let is_simple_expr = |expr: &Expr| -> bool {
-            match expr {
-                Expr::Literal(Value::U32(_), _) |
-                Expr::Literal(Value::I32(_), _) |
-                Expr::Literal(Value::F32(_), _) |
-                Expr::Literal(Value::String(_,), _) |
-                Expr::Literal(Value::Interpolation(_), _) |
-                Expr::Literal(Value::Motion(_), _) => true,
-                Expr::Var { self_fns, .. } if self_fns.len() < 2 => true,
-                // also consider function calls with no args or simple args to be simple
-                Expr::FnCall { call, self_fns, span } =>
-                    self_fns.is_empty() && call.args.len() < 2,
-                _ => false,
-            }
-        };
-
-        // Format arguments with appropriate indentation
-        let formatted_args = |args: &[Expr]| {
-            // If just one argument and it's simple, render it inline
-            if args.len() == 1 && is_simple_expr(&args[0]) {
-                args[0].format(indent, false)
-            } else if args.is_empty() {
-                "".to_compact_string()
-            } else {
-                args.iter()
-                    .map(|e| e.format(indent + 4, args.len() > 1))
-                    .collect::<Vec<_>>()
-                    .join_compact(",\n")
-            }
-        };
-
-        let chained_fns = |self_fns: &[FnCallInfo]| self_fns.iter()
-            .map(|fn_call| {
-                let args = formatted_args(&fn_call.args);
-                format_compact!("\n{prefix}.{}({args})", fn_call.name)
-            })
-            .collect::<Vec<_>>()
-            .join_compact("");
-
-        match self {
-            Expr::Literal(value, _) => format_compact!("{}{}", prefix, value.format()),
-            Expr::Var { name, self_fns, .. } =>
-                format_compact!("{}{}{}", prefix, name, chained_fns(self_fns)),
-            Expr::ArrayRef(exprs, _) => {
-                let inner = formatted_args(exprs);
-                format_compact!("{}&[\n{}\n{}]", prefix, inner, indent_str)
-            },
-            Expr::Array(exprs, _) => {
-                let inner = formatted_args(exprs);
-                format_compact!("{}[\n{}\n{}]", prefix, inner, indent_str)
-            },
-            // Expr::Fx { name, arguments, self_fns } => {
-            //     let effect = if arguments.is_empty() {
-            //         format_compact!("{}fx::{}()", prefix, name)
-            //     } else if arguments.len() == 1 {
-            //         // check if it's a simple expression or another effect that should be rendered inline
-            //         let arg = &arguments[0];
-            //         if is_simple_expr(arg) || matches!(arg, Expr::Fx { .. } | Expr::FnCall { .. }) {
-            //             let arg_str = arg.format(indent, false);
-            //             format_compact!("{prefix}fx::{name}({})", arg_str.trim())
-            //         } else {
-            //             let args = formatted_args(arguments);
-            //             format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
-            //         }
-            //     } else {
-            //         let args = formatted_args(arguments);
-            //         format_compact!("{}fx::{}(\n{}\n{})", prefix, name, args, indent_str)
-            //     };
-            //
-            //     format_compact!("{effect}{}", chained_fns(self_fns))
-            // },
-            Expr::FnCall { call: FnCallInfo { name, args }, self_fns, .. } => {
-                let fn_call = if args.is_empty() {
-                    format_compact!("{}{}()", prefix, name)
-                } else if args.len() == 1 && is_simple_expr(&args[0]) {
-                    // for simple single arguments, keep them on the same line
-                    format_compact!("{}{}({})", prefix, name, args[0].format(indent, false).trim())
-                } else {
-                    // for multiple or complex arguments, use line breaks with indentation
-                    let args_str = formatted_args(args);
-                    format_compact!("{}{}(\n{}\n{})", prefix, name, args_str, indent_str)
-                };
-
-                // Append chained function calls
-                let chains = self_fns.iter()
-                    .map(|fn_call| {
-                        let args = formatted_args(&fn_call.args);
-                        format_compact!("\n{}.{}({})", indent_str, fn_call.name, args)
-                    })
-                    .collect::<Vec<_>>()
-                    .join_compact("");
-
-                format_compact!("{}{}", fn_call, chains)
-            },
-            Expr::LetBinding { name, let_expr, .. } => format_compact!(
-                "{indent_str}let {name} = {value}",
-                name = name,
-                value = let_expr.format(indent, false),
-            ),
-            Expr::Sequence { effects, self_fns, .. } => format_compact!(
-                "{indent_str}fx::sequence(&[\n{}\n{indent_str}]){}",
-                formatted_args(effects),
-                chained_fns(self_fns),
-            ),
-            Expr::Parallel { effects, self_fns, .. } => format_compact!(
-                "{indent_str}fx::parallel(&[\n{}\n{indent_str}]){}",
-                formatted_args(effects),
-                chained_fns(self_fns),
-            ),
-            // Expr::CellFilter { filter_type, arguments } => {
-            //     let args = formatted_args(arguments);
-            //     format_compact!("{}CellFilter::{filter_type}({args})", indent_str)
-            // },
-            // Expr::Style(methods) => {
-            //     let inner = methods.iter()
-            //         .map(|f| {
-            //             let args = formatted_args(&f.args);
-            //             format!("\n{indent_str}.{}({args})", f.name)
-            //         })
-            //         .collect::<Vec<_>>()
-            //         .join_compact("\n{indent_str}");
-            //
-            //     format_compact!("{}Style::new(){}", indent_str, inner)
-            // }
-            Expr::OptionSome(v, _) => format_compact!("{}Some({})", indent_str, v.format(indent, false)),
-            // Expr::Layout { .. } => "layout(todo)".to_compact_string(),
-            Expr::QualifiedMember(s, _) => s.to_compact_string(),
-            Expr::StructInit { name, fields, .. } => {
-                let inner = fields.iter()
-                    .map(|(name, expr)| {
-                        format_compact!("{indent_str}{name}: {expr}", name = name, expr = expr.format(indent + 4, true))
-                    })
-                    .collect::<Vec<_>>()
-                    .join_compact(",\n");
-
-                format_compact!("{indent_str}{name} {{\n{inner}\n{indent_str}}}", name = name, inner = inner)
-            }
-            Expr::Tuple(exprs, _) => {
-                let inner = formatted_args(exprs);
-                format_compact!("{}({})", prefix, inner)
-            }
         }
     }
 }

@@ -105,14 +105,14 @@ impl Shader for Dissolve {
 
         if self.dissolved_style.is_none() {
             EffectExpression::parse(&format!(
-                "{}({})",
+                "fx::{}({})",
                 self.name(),
                 self.timer.dsl_format(),
             ))
         } else {
             let style = self.dissolved_style.as_ref().unwrap().dsl_format();
             EffectExpression::parse(&format!(
-                "{}({}, {})",
+                "fx::{}({}, {})",
                 self.name(),
                 style,
                 self.timer.dsl_format(),
@@ -134,10 +134,7 @@ mod tests {
         assert_eq!(
             fx::dissolve(1000).to_dsl().unwrap().to_string(),
             indoc! {
-                "fx::dissolve(EffectTimer::from_ms(
-                     1000,
-                     Interpolation::Linear
-                 ))"
+                "fx::dissolve(EffectTimer::from_ms(1000, Interpolation::Linear))"
             }
         );
     }
@@ -147,10 +144,7 @@ mod tests {
         assert_eq!(
             fx::coalesce(1000).to_dsl().unwrap().to_string(),
             indoc! {
-                "fx::coalesce(EffectTimer::from_ms(
-                     1000,
-                     Interpolation::Linear
-                 ))"
+                "fx::coalesce(EffectTimer::from_ms(1000, Interpolation::Linear))"
             }
         );
     }
@@ -161,13 +155,7 @@ mod tests {
         assert_eq!(
             dissolve.to_string(),
             indoc! {
-                "fx::dissolve_to(
-                     Style::new(),
-                     EffectTimer::from_ms(
-                         100,
-                         Interpolation::SineOut
-                     )
-                 )"
+                "fx::dissolve_to(Style::new(), EffectTimer::from_ms(100, Interpolation::SineOut))"
             }
         );
     }
@@ -177,13 +165,7 @@ mod tests {
         assert_eq!(
             fx::coalesce_from(Style::default(), 1000).to_dsl().unwrap().to_string(),
             indoc! {
-                "fx::coalesce_from(
-                     Style::new(),
-                     EffectTimer::from_ms(
-                         1000,
-                         Interpolation::Linear
-                     )
-                 )"
+                "fx::coalesce_from(Style::new(), EffectTimer::from_ms(1000, Interpolation::Linear))"
             }
         );
     }

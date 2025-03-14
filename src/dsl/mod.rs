@@ -7,16 +7,19 @@ mod method_chains;
 mod tokenizer;
 mod token_parsers;
 mod expr_promotion;
+mod dsl_writer;
 
 use crate::dsl::expressions::{Expr, ExprSpan};
-use std::fmt;
 use compact_str::CompactString;
+use std::fmt;
 
-pub use arguments::Arguments;
-pub use dsl::{DslCompiler, EffectDsl};
-pub use dsl_format::DslFormat;
 use crate::dsl::token_parsers::parse_ast;
 use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
+pub use arguments::Arguments;
+pub(super) use arguments::FromDslExpr;
+pub use dsl::{DslCompiler, EffectDsl};
+pub use dsl_format::DslFormat;
+use dsl_writer::DslWriter;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
@@ -179,9 +182,9 @@ impl EffectExpression {
 impl fmt::Display for EffectExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let dsl = self.expr.iter()
-            .map(|e| e.format(0, false))
+            .map(DslWriter::format)
             .collect::<Vec<_>>()
-            .join(",\n");
+            .join("\n");
 
         write!(f, "{}", dsl)
     }
@@ -189,35 +192,23 @@ impl fmt::Display for EffectExpression {
 
 #[cfg(test)]
 mod tests {
+    use crate::fx;
     use crate::fx::RepeatMode;
     use crate::Shader;
-    use crate::fx;
     use indoc::indoc;
 
     #[test]
     fn to_dsl_format_complex_tree() {
         let expected = indoc! {
             "fx::sequence(&[
-                fx::dissolve(EffectTimer::from_ms(
-                    100,
-                    Interpolation::Linear
-                )),
+                fx::dissolve(EffectTimer::from_ms(100, Interpolation::Linear)),
                 fx::parallel(&[
-                    fx::dissolve(EffectTimer::from_ms(
-                        200,
-                        Interpolation::Linear
-                    )),
-                    fx::dissolve(EffectTimer::from_ms(
-                        300,
-                        Interpolation::Linear
-                    )),
+                    fx::dissolve(EffectTimer::from_ms(200, Interpolation::Linear)),
+                    fx::dissolve(EffectTimer::from_ms(300, Interpolation::Linear)),
                     fx::sleep(400)
                 ]),
                 fx::repeat(
-                    fx::dissolve(EffectTimer::from_ms(
-                        500,
-                        Interpolation::Linear
-                    )),
+                    fx::dissolve(EffectTimer::from_ms(500, Interpolation::Linear)),
                     RepeatMode::Forever
                 )
             ])"

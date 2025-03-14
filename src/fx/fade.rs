@@ -82,7 +82,7 @@ impl Shader for FadeColors {
 
         let s = if self.bg.is_some() {
             format!(
-                "{}({}, {}, {})",
+                "fx::{}({}, {}, {})",
                 self.name(),
                 self.fg.unwrap().dsl_format(),
                 self.bg.unwrap().dsl_format(),
@@ -90,7 +90,7 @@ impl Shader for FadeColors {
             )
         } else {
             format!(
-                "{}_fg({}, {})",
+                "fx::{}_fg({}, {})",
                 self.name(),
                 self.fg.unwrap().dsl_format(),
                 self.timer.dsl_format()
@@ -120,13 +120,7 @@ mod tests {
         assert_eq!(
             dsl,
             indoc! {
-                "fx::fade_to_fg(
-                     Color::from_u32(0),
-                     EffectTimer::from_ms(
-                         1000,
-                         Interpolation::QuadOut
-                     )
-                 )"
+                "fx::fade_to_fg(Color::from_u32(0), EffectTimer::from_ms(1000, Interpolation::QuadOut))"
             }
         );
     }
@@ -147,10 +141,7 @@ mod tests {
                 "fx::fade_to(
                      Color::from_u32(0),
                      Color::from_u32(0),
-                     EffectTimer::from_ms(
-                         1000,
-                         Interpolation::QuadOut
-                     )
+                     EffectTimer::from_ms(1000, Interpolation::QuadOut)
                  )"
             }
         );
@@ -166,13 +157,7 @@ mod tests {
         assert_eq!(
             dsl,
             indoc! {
-                "fx::fade_from_fg(
-                     Color::from_u32(0),
-                     EffectTimer::from_ms(
-                         1000,
-                         Interpolation::QuadOut
-                     )
-                 )"
+                "fx::fade_from_fg(Color::from_u32(0), EffectTimer::from_ms(1000, Interpolation::QuadOut))"
             }
         );
     }
@@ -193,10 +178,7 @@ mod tests {
                 "fx::fade_from(
                      Color::from_u32(0),
                      Color::from_u32(0),
-                     EffectTimer::from_ms(
-                         1000,
-                         Interpolation::QuadOut
-                     )
+                     EffectTimer::from_ms(1000, Interpolation::QuadOut)
                  )"
             }
         );
