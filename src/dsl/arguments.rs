@@ -634,7 +634,7 @@ fn struct_fields(
                 field_values.insert(*field_name, expr);
             },
             None       => Err(DslError::MissingField {
-                field: *field_name,
+                field: field_name,
                 struct_name: struct_name.into(),
                 location: ExprSpan::new(0, 0),
             })?,

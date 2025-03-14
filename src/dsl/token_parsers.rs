@@ -2,7 +2,6 @@ use crate::dsl::expr_promotion::maybe_promote;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::tokenizer::{Token, TokenKind};
 use crate::dsl::DslError;
-use crate::CellFilter;
 use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
 use anpa::core::{parse, ParserExt};
 use anpa::parsers::item_if;
@@ -301,7 +300,7 @@ fn within<'a, T>(
     inner_parser: impl TokenParser<'a, T>,
     end: TokenKind,
 ) -> impl TokenParser<'a, T> {
-    use TokenKind::*;
+    
 
     yield_consumed(tuplify!(
         middle(token(start), inner_parser, token(end)),
@@ -317,6 +316,7 @@ mod tests {
     use anpa::core::parse;
     use compact_str::ToCompactString;
     use ratatui::prelude::Color;
+    use crate::CellFilter;
 
     // Helper function to create a Expr::FnCall expression
     fn expr_fn_call(
