@@ -878,6 +878,7 @@ mod tests {
         let input = r#"fx::sweep_in("wrong", 10, 0, Color::from_u32(0x1d2021), 1000)"#;
         let ctx = EffectDsl::new();
         let err = ctx.compiler().compile(input).unwrap_err();
+        println!("{:}", err);
         assert!(matches!(err.source, DslError::WrongArgumentType {
             location: _,
             expected: "motion",

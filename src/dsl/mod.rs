@@ -20,56 +20,14 @@ pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
 use dsl_writer::DslWriter;
 
-#[derive(Debug, thiserror::Error, PartialEq)]
+/// Provides detailed information about errors that occurred while parsing or compiling
+/// DSL expressions, including location information and context.
+#[derive(Debug)]
 pub struct EffectDslError {
     source: DslError,
-    expression: String,
-    error_on_line: u32,
-    error_on_column: u32,
-}
-
-impl EffectDslError {
-    pub(super) fn new(
-        input: &str,
-        cause: DslError,
-    ) -> Self {
-        let span = cause.span();
-
-        if let Some(span) = span {
-            Self {
-                source: cause,
-                expression: input[span.start as  _ .. span.end as usize].to_string(),
-                error_on_line: input[0 ..span.end as usize].lines().count() as u32,
-                error_on_column: span.start - input[0 .. span.end as usize]
-                    .rfind("\n")
-                    .map_or_else(|| 0, |pos| pos + 1) as u32,
-            }
-        } else {
-            Self {
-                source: cause,
-                expression: input.to_string(),
-                error_on_line: 0,
-                error_on_column: 0,
-            }
-        }
-    }
-}
-
-impl fmt::Display for EffectDslError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let line_str = format!("line {}", self.error_on_line);
-        let col_str = format!("column {}", self.error_on_column);
-        let location = format!("at {} {}", line_str, col_str);
-
-        writeln!(f, "Error in DSL expression {}: {}", location, self.source)?;
-
-        // Show the expression with the error marked
-        writeln!(f, "Expression: {}", self.expression)?;
-
-        // Create a pointer line to highlight the error position
-        let pointer_padding = " ".repeat(self.error_on_column as usize);
-        writeln!(f, "{}^", pointer_padding)
-    }
+    pub expression: String,
+    pub error_on_line: u32,
+    pub error_on_column: u32,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -143,7 +101,7 @@ pub enum DslError {
         location: ExprSpan,
     },
 
-    #[error("Argument at {location} is not of expected type {expected}, actual {actual}")]
+    #[error("Argument is not of expected type '{expected}', actual type '{actual}'")]
     WrongArgumentType {
         expected: &'static str,
         actual: CompactString,
@@ -179,6 +137,47 @@ pub enum DslError {
         name: CompactString,
         location: ExprSpan,
     },
+}
+
+
+impl EffectDslError {
+    pub(super) fn new(
+        input: &str,
+        cause: DslError,
+    ) -> Self {
+        let span = cause.span();
+
+        if let Some(span) = span {
+            Self {
+                source: cause,
+                expression: input[span.start as  _ .. span.end as usize].to_string(),
+                error_on_line: input[0 ..span.end as usize].lines().count() as u32,
+                error_on_column: span.start - input[0 .. span.end as usize]
+                    .rfind("\n")
+                    .map_or_else(|| 0, |pos| pos + 1) as u32,
+            }
+        } else {
+            Self {
+                source: cause,
+                expression: input.to_string(),
+                error_on_line: 0,
+                error_on_column: 0,
+            }
+        }
+    }
+}
+
+impl fmt::Display for EffectDslError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let line_str = format!("line {}", self.error_on_line);
+        let col_str = format!("column {}", self.error_on_column);
+        let location = format!("at {} {}", line_str, col_str);
+
+        writeln!(f, "Error in DSL expression {}: {}", location, self.source)?;
+
+        // Show the expression with the error marked
+        writeln!(f, "Expression: {}", self.expression)
+    }
 }
 
 
