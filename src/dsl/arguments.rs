@@ -820,7 +820,7 @@ mod tests {
     use crate::dsl::token_parsers::parse_ast;
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
     use crate::dsl::DslError;
-    use crate::{CellFilter, EffectTimer, Interpolation, Motion};
+    use crate::{CellFilter, Motion};
     use compact_str::ToCompactString;
     use ratatui::layout::{Margin, Offset, Rect};
     use ratatui::prelude::Color;

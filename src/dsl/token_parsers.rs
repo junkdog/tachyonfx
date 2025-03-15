@@ -1251,7 +1251,7 @@ mod tests {
         with_tokens("Outer { inner: Inner { value: 42 }, name: \"test\" }", |tokens| {
             let result = parse(struct_instantiation(), tokens).result;
 
-            if let Some(Expr::StructInit { name, fields, span }) = result {
+            if let Some(Expr::StructInit { name, fields, .. }) = result {
                 assert_eq!(name, "Outer");
                 assert_eq!(fields.len(), 2);
                 assert_eq!(fields[0].0, "inner");
