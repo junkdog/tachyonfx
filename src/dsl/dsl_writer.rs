@@ -41,18 +41,18 @@ impl DslWriter {
     /// Write an expression to the output.
     fn write_expr(&mut self, expr: &Expr) {
         match expr {
-            Expr::Literal(value, _) => self.write_literal(value),
-            Expr::Var { name, self_fns, .. } => self.write_var(name, self_fns),
-            Expr::LetBinding { name, let_expr, .. } => self.write_let_binding(name, let_expr),
-            Expr::ArrayRef(exprs, _) => self.write_array_ref(exprs),
-            Expr::Array(exprs, _) => self.write_array(exprs),
-            Expr::FnCall { call, self_fns, .. } => self.write_fn_call(call, self_fns),
-            Expr::QualifiedMember(name, _) => self.write(name),
-            Expr::OptionSome(expr, _) => self.write_option_some(expr),
+            Expr::Literal(value, _)                  => self.write_literal(value),
+            Expr::Var { name, self_fns, .. }         => self.write_var(name, self_fns),
+            Expr::LetBinding { name, let_expr, .. }  => self.write_let_binding(name, let_expr),
+            Expr::ArrayRef(exprs, _)                 => self.write_array_ref(exprs),
+            Expr::Array(exprs, _)                    => self.write_array(exprs),
+            Expr::FnCall { call, self_fns, .. }      => self.write_fn_call(call, self_fns),
+            Expr::QualifiedMember(name, _)           => self.write(name),
+            Expr::OptionSome(expr, _)                => self.write_option_some(expr),
             Expr::Sequence { effects, self_fns, .. } => self.write_sequence(effects, self_fns),
             Expr::Parallel { effects, self_fns, .. } => self.write_parallel(effects, self_fns),
-            Expr::StructInit { name, fields, .. } => self.write_struct_init(name, fields),
-            Expr::Tuple(exprs, _) => self.write_tuple(exprs),
+            Expr::StructInit { name, fields, .. }    => self.write_struct_init(name, fields),
+            Expr::Tuple(exprs, _)                    => self.write_tuple(exprs),
         }
     }
 
