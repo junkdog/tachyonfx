@@ -36,7 +36,7 @@ impl DslWriter {
         let mut writer = Self::new();
         writer.write_expr(expr);
         writer.output
-    }gga 
+    }
 
     /// Write an expression to the output.
     fn write_expr(&mut self, expr: &Expr) {
