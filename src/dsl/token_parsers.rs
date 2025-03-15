@@ -104,9 +104,7 @@ fn function_call<'a>() -> impl TokenParser<'a, FnCallInfo> {
 fn method_chain<'a>() -> impl TokenParser<'a, Vec<FnCallInfo>> {
     use TokenKind::*;
 
-    let chained_fn = //right!(token(TokenKind::Dot), defer_parser!(fn_call()));
-
-        tuplify!(
+    let chained_fn = tuplify!(
         token(Dot),
         identifier(),
         within(LeftParen, arguments(), RightParen),
@@ -304,7 +302,7 @@ fn within<'a, T>(
 
     yield_consumed(tuplify!(
         middle(token(start), inner_parser, token(end)),
-    )).map(move |(span, args)| args)
+    )).map(move |(_, args)| args)
 }
 
 // endregion
@@ -1173,7 +1171,7 @@ mod tests {
             assert!(result.is_some());
 
             match result.unwrap() {
-                Expr::OptionSome(expr, span) => {
+                Expr::OptionSome(expr, _) => {
                     assert_eq!(
                         expr,
                         Box::new(expr_fn_call("fx::dissolve", vec![
@@ -1303,7 +1301,7 @@ mod tests {
         with_tokens("Config { color: Color::new(255, 0, 0), size: calculate_size() }", |tokens| {
             let result = parse(struct_instantiation(), tokens).result;
 
-            if let Some(Expr::StructInit { name, fields, span }) = result {
+            if let Some(Expr::StructInit { name, fields, .. }) = result {
                 assert_eq!(name, "Config");
                 assert_eq!(fields.len(), 2);
                 assert_eq!(fields[0].0, "color");

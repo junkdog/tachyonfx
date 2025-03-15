@@ -1,9 +1,9 @@
 use crate::dsl::DslFormat;
 use crate::fx::RepeatMode;
-use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
+use crate::{CellFilter, Interpolation, Motion};
 use compact_str::{format_compact, CompactString, ToCompactString};
-use ratatui::layout::{Constraint, Direction, Margin, Rect};
-use ratatui::prelude::{Color, Modifier, Style};
+use ratatui::layout::Direction;
+use ratatui::prelude::{Color, Modifier};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct FnCallInfo {
@@ -47,26 +47,20 @@ pub(super) enum Expr {
 pub(super) enum Value {
     CellFilter(CellFilter),
     Color(Color),
-    Constraint(Constraint),
     Direction(Direction),
-    Style(Style),
     String(CompactString),
     I32(i32),
     U32(u32),
     F32(f32),
     OptionNone,
-    Duration(Duration),
-    Timer(EffectTimer),
     Modifier(Modifier),
     Motion(Motion),
-    Rect(Rect),
-    Margin(Margin),
     RepeatMode(RepeatMode),
     Interpolation(Interpolation),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) struct ExprSpan {
+#[derive(Clone, Copy, Default, Debug, PartialEq)]
+pub struct ExprSpan {
     pub start: u32,
     pub end: u32,
 }
@@ -140,22 +134,16 @@ impl Value {
     pub(super) fn format(&self) -> CompactString {
         match self {
             Value::Color(c)         => c.dsl_format(),
-            Value::Duration(d)      => d.dsl_format(),
             Value::Motion(m)        => m.dsl_format(),
             Value::String(s)        => format_compact!("\"{}\"", s.replace('"', "\\\"")),
             Value::U32(n)           => n.to_compact_string(),
             Value::F32(f)           => f.to_compact_string(),
             Value::I32(i)           => i.to_compact_string(),
             Value::CellFilter(c)    => c.dsl_format(),
-            Value::Style(s)         => s.dsl_format(),
-            Value::Timer(t)         => t.dsl_format(),
-            Value::Rect(r)          => r.dsl_format(),
-            Value::Margin(m)        => m.dsl_format(),
             Value::RepeatMode(r)    => r.dsl_format(),
             Value::Interpolation(i) => i.dsl_format(),
             Value::OptionNone       => "None".to_compact_string(),
             Value::Modifier(m)      => m.dsl_format(),
-            Value::Constraint(c)    => c.dsl_format(),
             Value::Direction(dir)   => dir.dsl_format(),
         }
     }
@@ -164,21 +152,15 @@ impl Value {
         match self {
             Value::CellFilter(_)    => "cell_filter",
             Value::Color(_)         => "color",
-            Value::Duration(_)      => "duration",
             Value::Motion(_)        => "motion",
             Value::String(_)        => "string",
             Value::U32(_)           => "u32",
             Value::F32(_)           => "f32",
             Value::I32(_)           => "i32",
-            Value::Style(_)         => "style",
-            Value::Timer(_)         => "timer",
-            Value::Rect(_)          => "rect",
-            Value::Margin(_)        => "margin",
             Value::RepeatMode(_)    => "repeat_mode",
             Value::Interpolation(_) => "interpolation",
             Value::OptionNone       => "option",
             Value::Modifier(_)      => "modifier",
-            Value::Constraint(_)    => "constraint",
             Value::Direction(_)     => "direction",
         }
     }

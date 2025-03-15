@@ -16,10 +16,61 @@ use std::fmt;
 use crate::dsl::token_parsers::parse_ast;
 use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 pub use arguments::Arguments;
-pub(super) use arguments::FromDslExpr;
 pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
 use dsl_writer::DslWriter;
+
+#[derive(Debug, thiserror::Error, PartialEq)]
+pub struct EffectDslError {
+    source: DslError,
+    expression: String,
+    error_on_line: u32,
+    error_on_column: u32,
+}
+
+impl EffectDslError {
+    pub(super) fn new(
+        input: &str,
+        cause: DslError,
+    ) -> Self {
+        let span = cause.span();
+
+        if let Some(span) = span {
+            Self {
+                source: cause,
+                expression: input[span.start as  _ .. span.end as usize].to_string(),
+                error_on_line: input[0 ..span.end as usize].lines().count() as u32,
+                error_on_column: span.start - input[0 .. span.end as usize]
+                    .rfind("\n")
+                    .map_or_else(|| 0, |pos| pos + 1) as u32,
+            }
+        } else {
+            Self {
+                source: cause,
+                expression: input.to_string(),
+                error_on_line: 0,
+                error_on_column: 0,
+            }
+        }
+    }
+}
+
+impl fmt::Display for EffectDslError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let line_str = format!("line {}", self.error_on_line);
+        let col_str = format!("column {}", self.error_on_column);
+        let location = format!("at {} {}", line_str, col_str);
+
+        writeln!(f, "Error in DSL expression {}: {}", location, self.source)?;
+
+        // Show the expression with the error marked
+        writeln!(f, "Expression: {}", self.expression)?;
+
+        // Create a pointer line to highlight the error position
+        let pointer_padding = " ".repeat(self.error_on_column as usize);
+        writeln!(f, "{}^", pointer_padding)
+    }
+}
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
@@ -45,10 +96,14 @@ pub enum DslError {
     MissingArgument {
         position: usize,
         name: &'static str,
+        location: ExprSpan,
     },
 
     #[error("Unknown function '{name}'")]
-    UnknownFunction { name: CompactString },
+    UnknownFunction {
+        name: CompactString,
+        location: ExprSpan,
+    },
 
     #[error("Unknown struct '{name}'")]
     UnknownStruct { name: CompactString, location: ExprSpan },
@@ -71,44 +126,44 @@ pub enum DslError {
     InvalidArgumentLength {
         expected: usize,
         actual: usize,
+        location: ExprSpan,
     },
-
-    #[error("Failed to compile effect: {0}")]
-    CompilationError(CompactString),
 
     #[error("Invalid expression. Expected {expected}, got {actual}")]
     InvalidExpression {
         expected: &'static str,
         actual: &'static str,
+        location: ExprSpan,
     },
 
     #[error("Failed to cast {from} to expected type {to}")]
     CastOverflow {
-        position: usize,
         from: &'static str,
         to: &'static str,
+        location: ExprSpan,
     },
 
-    #[error("Argument at {position} is not of expected type {expected}, actual {actual}")]
+    #[error("Argument at {location} is not of expected type {expected}, actual {actual}")]
     WrongArgumentType {
-        position: ExprSpan,
         expected: &'static str,
         actual: CompactString,
+        location: ExprSpan,
     },
 
     #[error("Too many arguments for function '{name}'. Expected {count}")]
     TooManyArguments {
         name: CompactString,
         count: usize,
+        location: ExprSpan
     },
 
     #[error("{name} does not provide a to_dsl() implementation")]
-    EffectExpressionNotSupported {
+    EffectExpressionNotSupported { // fixme: consider moving elsewhere
         name: &'static str,
     },
 
     #[error("{name} is not supported by the dsl")]
-    UnsupportedEffect {
+    UnsupportedEffect { // fixme: consider moving elsewhere
         name: CompactString,
     },
 
@@ -116,11 +171,16 @@ pub enum DslError {
     ArrayLengthMismatch {
         expected: usize,
         actual: usize,
+        location: ExprSpan,
     },
 
     #[error("Unknown cell filter '{name}'")]
-    UnknownCellFilter { name: CompactString },
+    UnknownCellFilter {
+        name: CompactString,
+        location: ExprSpan,
+    },
 }
+
 
 /// A parsed representation of a tachyonfx effect expression.
 ///
