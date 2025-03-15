@@ -40,6 +40,7 @@ use std::fmt::Formatter;
 #[derive(Debug)]
 pub struct Arguments<'dsl> {
     args: VecDeque<Expr>,
+    span: ExprSpan,
     vars: &'dsl DslEnv,
     context: &'dsl EffectDsl,
     initial_arg_count: usize,
@@ -52,7 +53,9 @@ impl<'dsl> Arguments<'dsl> {
         vars: &'dsl DslEnv
     ) -> Self {
         let initial_arg_count = args.len();
-        Self { args, vars, context, initial_arg_count }
+        let mut span = args.front().map_or_else(ExprSpan::default, |e| e.span());
+        span.end = args.back().map_or(span.end, |e| e.span().end);
+        Self { args, span, vars, context, initial_arg_count }
     }
 
     pub(super) fn remaining_args(&self) -> &VecDeque<Expr> {
@@ -77,7 +80,6 @@ impl<'dsl> Arguments<'dsl> {
                 },
                 _ => self.expected_type("duration", name, span)?,
             }),
-            Expr::Literal(Value::Duration(d), _) => Ok(d),
             Expr::Literal(Value::U32(ms), _)     => Ok(Duration::from_millis(ms as _)),
             Expr::Literal(v, span)               => self.expected_type("duration", v.format(), span),
             Expr::Var { name, .. }               => self.bound_var(name),
@@ -103,7 +105,6 @@ impl<'dsl> Arguments<'dsl> {
                 },
                 _ => self.expected_type("timer", name, span)?,
             }),
-            Expr::Literal(Value::Timer(t), _)  => Ok(t),
             Expr::Literal(Value::U32(ms), _)   => Ok(ms.into()),
             Expr::Tuple(exprs, _) => {
                 let mut args = self.nested_args(exprs, 2)?;
@@ -137,6 +138,7 @@ impl<'dsl> Arguments<'dsl> {
                     "EvalCell"   => Ok(CellFilter::EvalCell(inner_args.any_var()?)),
                     e            => Err(DslError::UnknownCellFilter {
                         name: e.to_compact_string(),
+                        location: span,
                     })?,
                 }
             }
@@ -176,7 +178,6 @@ impl<'dsl> Arguments<'dsl> {
                     },
                     _ => self.expected_type("constraint", name, span)?,
                 }),
-            Expr::Literal(Value::Constraint(c), _) => Ok(c),
             Expr::Var { name, .. }                 => self.bound_var(name),
             e   => self.expected_type_expr("constraint", e),
         }
@@ -237,9 +238,10 @@ impl<'dsl> Arguments<'dsl> {
 
     /// Consumes the next argument and returns a `u8`.
     pub fn read_u8(&mut self) -> Result<u8, DslError> {
+        let span = self.peek().map(|expr| expr.span());
         u8::try_from(self.read_u32()?)
             .map_err(|_| DslError::CastOverflow {
-                position: self.initial_arg_count - self.args.len() - 1, // -1 for the current argument
+                location: span.unwrap(),
                 from: "u32",
                 to: "u8",
             })
@@ -247,9 +249,10 @@ impl<'dsl> Arguments<'dsl> {
 
     /// Consumes the next argument and returns a `u16`.
     pub fn read_u16(&mut self) -> Result<u16, DslError> {
+        let span = self.peek().map(|expr| expr.span());
         u16::try_from(self.read_u32()?)
             .map_err(|_| DslError::CastOverflow {
-                position: self.initial_arg_count - self.args.len() - 1, // -1 for the current argument
+                location: span.unwrap(),
                 from: "u32",
                 to: "u16",
             })
@@ -341,7 +344,7 @@ impl<'dsl> Arguments<'dsl> {
             Expr::Parallel { effects, self_fns, span } =>
                 self.compile_effect(Expr::Parallel { effects, self_fns, span }),
 
-            Expr::Var { name, self_fns, span } => self.bound_var::<Effect>(name)?
+            Expr::Var { name, self_fns, .. } => self.bound_var::<Effect>(name)?
                 .fold_fns(self_fns, self.context, self.vars),
 
             e => self.expected_type_expr("effect", e),
@@ -385,7 +388,6 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Style`].
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
-            Expr::Literal(Value::Style(s), _) => Ok(s),
             Expr::FnCall { call, self_fns, span } => {
                 // Handle Style constructors
                 if call.name == "Style::new" || call.name == "Style::default" {
@@ -427,11 +429,10 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Margin`].
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } if name == "Margin::new" => {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } if name == "Margin::new" => {
                 let mut inner_args = self.nested_args(args, 2)?;
                 Ok(Margin::new(inner_args.read_u16()?, inner_args.read_u16()?))
             },
-            Expr::Literal(Value::Margin(m), _) => Ok(m),
             Expr::Var { name, .. } => self.bound_var(name),
             e                      => self.expected_type_expr("margin", e),
         }
@@ -453,11 +454,13 @@ impl<'dsl> Arguments<'dsl> {
                 },
                 e => Err(DslError::UnknownFunction {
                     name: e.to_compact_string(),
+                    location: span,
                 }),
             },
             Expr::StructInit { name, fields, span } => {
                 if name == "Rect" {
-                    let fields = struct_fields("Rect", &["x", "y", "width", "height"], fields)?;
+                    let fields = struct_fields("Rect", &["x", "y", "width", "height"], fields)
+                        .map_err(|e| e.with_span(span))?;
                     Ok(Rect {
                         x: self.extract_field("x", &fields, Arguments::read_u16)?,
                         y: self.extract_field("y", &fields, Arguments::read_u16)?,
@@ -471,10 +474,10 @@ impl<'dsl> Arguments<'dsl> {
                     })
                 }
             },
-            Expr::Literal(Value::Rect(r), _) => Ok(r),
-            Expr::Var { name, self_fns, .. }  => self.bound_var::<Rect>(name)?
+            Expr::Var { name, self_fns, .. } => self.bound_var::<Rect>(name)?
                 .fold_fns(self_fns, self.context, self.vars),
-            e                             => self.expected_type_expr("rect", e),
+
+            e => self.expected_type_expr("rect", e),
         }
     }
 
@@ -519,7 +522,7 @@ impl<'dsl> Arguments<'dsl> {
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Box<T>, DslError> {
         match self.next("box")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } if name == "Box::new" => {
+            Expr::FnCall { call: FnCallInfo { name, args }, .. } if name == "Box::new" => {
                 let mut inner_args = self.nested_args(args, 1)?;
                 inner(&mut inner_args).map(Box::new)
             },
@@ -529,6 +532,10 @@ impl<'dsl> Arguments<'dsl> {
 
     pub(super) fn original_arg_count(&self) -> usize {
         self.initial_arg_count
+    }
+
+    pub(super) fn span(&self) -> ExprSpan {
+        self.span
     }
 
     fn map_exprs<T: Clone>(
@@ -557,7 +564,12 @@ impl<'dsl> Arguments<'dsl> {
             .ok_or(DslError::MissingArgument {
                 position: self.initial_arg_count - self.args.len(),
                 name: type_name,
+                location: self.span
             })
+    }
+
+    fn peek(&self) -> Option<&Expr> {
+        self.args.front()
     }
 
     fn expected_type<T>(
@@ -567,7 +579,7 @@ impl<'dsl> Arguments<'dsl> {
         span: ExprSpan
     ) -> Result<T, DslError>  {
         Err(DslError::WrongArgumentType {
-            position: span,
+            location: span,
             expected,
             actual
         })
@@ -583,9 +595,12 @@ impl<'dsl> Arguments<'dsl> {
 
     fn nested_args(&mut self, exprs: Vec<Expr>, required_arg_count: usize) -> Result<Self, DslError> {
         if exprs.len() != required_arg_count {
+            let start = exprs.iter().map(|e| e.span().start).min().unwrap_or_default();
+            let end = exprs.iter().map(|e| e.span().end).max().unwrap_or_default();
             return Err(DslError::InvalidArgumentLength {
                 expected: required_arg_count,
                 actual: exprs.len(),
+                location: ExprSpan::new(start, end),
             });
         }
 
@@ -624,7 +639,9 @@ fn struct_fields(
 ) -> Result<BTreeMap<&'static str, Expr>, DslError> {
     let mut field_values = BTreeMap::new();
 
+    // todo: validate that all fields are used
     for field_name in required {
+
         let field_expr = fields.iter()
             .find(|(name, _)| name == field_name)
             .map(|(_, expr)| expr.clone());
@@ -633,15 +650,70 @@ fn struct_fields(
             Some(expr) => {
                 field_values.insert(*field_name, expr);
             },
-            None       => Err(DslError::MissingField {
+            None => Err(DslError::MissingField {
                 field: field_name,
                 struct_name: struct_name.into(),
-                location: ExprSpan::new(0, 0),
+                location: ExprSpan::default(), // span updated by the caller
             })?,
         }
     }
 
     Ok(field_values)
+}
+
+
+impl DslError {
+    pub(super) fn with_span(self, span: ExprSpan) -> Self {
+        match self {
+            DslError::CastOverflow { to, from, .. } => {
+                DslError::CastOverflow { to, from, location: span }
+            }
+            DslError::InvalidArgumentLength { expected, actual, .. } => {
+                DslError::InvalidArgumentLength { location: span, expected, actual }
+            }
+            DslError::InvalidExpression {expected, actual, .. } => {
+                DslError::InvalidExpression { location: span, expected, actual }
+            }
+            DslError::MissingArgument { position, name, .. } => {
+                DslError::MissingArgument { position, name, location: span }
+            }
+            DslError::MissingField { struct_name, field, .. } => {
+                DslError::MissingField { struct_name, field, location: span }
+            }
+            DslError::TooManyArguments { name, count, .. } => {
+                DslError::TooManyArguments { name, count, location: span }
+            }
+            DslError::UnknownField { struct_name, field, .. } => {
+                DslError::UnknownField { struct_name, field, location: span }
+            }
+            DslError::UnknownFunction { name, .. } => {
+                DslError::UnknownFunction { name, location: span }
+            }
+            DslError::UnknownStruct { name, .. } => {
+                DslError::UnknownStruct { name, location: span }
+            }
+            DslError::WrongArgumentType { expected, actual, .. } => {
+                DslError::WrongArgumentType { location: span, expected, actual }
+            }
+            e => e
+        }
+    }
+
+    pub(super) fn span(&self) -> Option<ExprSpan> {
+        Some(match self {
+            DslError::CastOverflow { location, .. } => *location,
+            DslError::InvalidArgumentLength { location, .. } => *location,
+            DslError::InvalidExpression { location, .. } => *location,
+            DslError::MissingArgument { location, .. } => *location,
+            DslError::MissingField { location, .. } => *location,
+            DslError::TooManyArguments { location, .. } => *location,
+            DslError::UnknownField { location, .. } => *location,
+            DslError::UnknownFunction { location, .. } => *location,
+            DslError::UnknownStruct { location, .. } => *location,
+            DslError::WrongArgumentType { location, .. } => *location,
+            _ => None?
+        })
+    }
 }
 
 impl fmt::Display for Arguments<'_> {
@@ -748,10 +820,10 @@ mod tests {
     use crate::dsl::token_parsers::parse_ast;
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
     use crate::dsl::DslError;
-    use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
+    use crate::{CellFilter, EffectTimer, Interpolation, Motion};
     use compact_str::ToCompactString;
     use ratatui::layout::{Margin, Offset, Rect};
-    use ratatui::prelude::{Color, Style};
+    use ratatui::prelude::Color;
     use std::collections::VecDeque;
     use std::fmt::Debug;
 
@@ -784,38 +856,6 @@ mod tests {
     }
 
     #[test]
-    fn test_duration_parsing() {
-        let span = ExprSpan::new(0, 0);
-        let mut args = prepare_test(vec![
-            Expr::Literal(Value::Duration(Duration::from_millis(500)), span),
-            Expr::Literal(Value::U32(1000), span),
-        ]);
-
-        assert_eq!(args.duration(), Ok(Duration::from_millis(500)));
-        assert_eq!(args.duration(), Ok(Duration::from_millis(1000)));
-        assert_eq!(args.duration(), Err(DslError::MissingArgument {
-            position: 2,
-            name: "duration",
-        }));
-    }
-
-    #[test]
-    fn test_effect_timer_parsing() {
-        let span = ExprSpan::new(0, 0);
-        let mut args = prepare_test(vec![
-            Expr::Literal(Value::Timer(EffectTimer::from_ms(500, Interpolation::Linear)), span),
-            Expr::Literal(Value::U32(1000), span),
-        ]);
-
-        assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(500, Interpolation::Linear)));
-        assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::Linear)));
-        assert_eq!(args.effect_timer(), Err(DslError::MissingArgument {
-            position: 2,
-            name: "timer",
-        }));
-    }
-
-    #[test]
     fn test_numeric_parsing() {
         let span = ExprSpan::new(0, 0);
         let mut args = prepare_test(vec![
@@ -828,6 +868,7 @@ mod tests {
         assert_eq!(args.read_u32(), Err(DslError::MissingArgument {
             position: 2,
             name: "u32",
+            location: span,
         }));
     }
 
@@ -900,7 +941,7 @@ mod tests {
 
         assert_eq!(args.string(), Ok("hello".to_compact_string()));
         assert_eq!(args.string(), Err(DslError::WrongArgumentType {
-            position: span,
+            location: span,
             expected: "string",
             actual: "u32".into()
         }));
@@ -920,19 +961,7 @@ mod tests {
         assert_eq!(args.color(), Err(DslError::MissingArgument {
             position: 2,
             name: "color",
-        }));
-    }
-
-    #[test]
-    fn test_style_parsing() {
-        let span = ExprSpan::new(0, 0);
-        let style = Style::default().fg(Color::Red);
-        let mut args = prepare_test(vec![Expr::Literal(Value::Style(style), span)]);
-
-        assert_eq!(args.style(), Ok(style));
-        assert_eq!(args.style(), Err(DslError::MissingArgument {
-            position: 1,
-            name: "style",
+            location: span,
         }));
     }
 
@@ -949,32 +978,7 @@ mod tests {
         assert_eq!(args.motion(), Err(DslError::MissingArgument {
             position: 2,
             name: "motion",
-        }));
-    }
-
-    #[test]
-    fn test_margin_parsing() {
-        let span = ExprSpan::new(0, 0);
-        let margin = Margin::new(10, 20);
-        let mut args = prepare_test(vec![Expr::Literal(Value::Margin(margin), span)]);
-
-        assert_eq!(args.margin(), Ok(margin));
-        assert_eq!(args.margin(), Err(DslError::MissingArgument {
-            position: 1,
-            name: "margin",
-        }));
-    }
-
-    #[test]
-    fn test_rect_parsing() {
-        let span = ExprSpan::new(0, 0);
-        let rect = Rect::new(0, 0, 100, 100);
-        let mut args = prepare_test(vec![Expr::Literal(Value::Rect(rect), span)]);
-
-        assert_eq!(args.rect(), Ok(rect));
-        assert_eq!(args.rect(), Err(DslError::MissingArgument {
-            position: 1,
-            name: "rect",
+            location: span,
         }));
     }
 
@@ -1074,16 +1078,15 @@ mod tests {
             Expr::Literal(Value::U32(500), span),
             Expr::Literal(Value::Motion(Motion::LeftToRight), span),
             Expr::Literal(Value::Color(Color::Blue), span),
-            Expr::Literal(Value::Timer(EffectTimer::from_ms(1000, Interpolation::Linear)), span),
         ]);
 
         assert_eq!(args.read_u32(), Ok(500));
         assert_eq!(args.motion(), Ok(Motion::LeftToRight));
         assert_eq!(args.color(), Ok(Color::Blue));
-        assert_eq!(args.effect_timer(), Ok(EffectTimer::from_ms(1000, Interpolation::Linear)));
         assert_eq!(args.read_u32(), Err(DslError::MissingArgument {
-            position: 4,
+            position: 3,
             name: "u32",
+            location: span,
         }));
     }
 
@@ -1097,7 +1100,7 @@ mod tests {
 
         assert_eq!(args.read_u16(), Ok(65535));
         assert_eq!(args.read_u16(), Err(DslError::CastOverflow {
-            position: 1,
+            location: span,
             from: "u32",
             to: "u16",
         })); // Truncated
@@ -1110,6 +1113,7 @@ mod tests {
         let missing = |idx, name| Err(DslError::MissingArgument {
             position: idx,
             name,
+            location: ExprSpan::default(),
         });
 
         assert_eq!(args.duration(), missing(0, "duration"));

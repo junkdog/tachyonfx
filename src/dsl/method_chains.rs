@@ -29,7 +29,11 @@ pub(super) trait ChainableMethods where Self: Sized {
             let mut args = Arguments::new(f.args.into(), context, vars);
             let result = Self::apply_fn(this, name.as_str(), &mut args);
             if args.remaining_arg_count() > 0 {
-                Err(DslError::TooManyArguments { name, count: args.remaining_arg_count() })
+                Err(DslError::TooManyArguments {
+                    name,
+                    count: args.remaining_arg_count(),
+                    location: args.span()
+                })
             } else {
                 result
             }
@@ -54,7 +58,10 @@ impl ChainableMethods for Effect {
             "reversed"               => effect.reversed(),
             "with_area"              => effect.with_area(args.rect()?),
             "with_filter" | "filter" => effect.with_filter(args.cell_filter()?),
-            _                        => Err(DslError::UnknownFunction { name: name.into() })?,
+            _                        => Err(DslError::UnknownFunction {
+                name: name.into(),
+                location: args.span()
+            })?,
         })
     }
 }
@@ -72,7 +79,10 @@ impl ChainableMethods for Layout {
             "horizontal_margin" => layout.horizontal_margin(args.read_u16()?),
             "vertical_margin"   => layout.vertical_margin(args.read_u16()?),
             "spacing"           => layout.spacing(args.read_u16()?),
-            _                   => Err(DslError::UnknownFunction { name: name.into() })?,
+            _                   => Err(DslError::UnknownFunction {
+                name: name.into(),
+                location: args.span()
+            })?,
         })
     }
 }
@@ -89,7 +99,10 @@ impl ChainableMethods for Style {
             "bg"              => style.bg(args.color()?),
             "add_modifier"    => style.add_modifier(args.modifier()?),
             "remove_modifier" => style.remove_modifier(args.modifier()?),
-            _                 => Err(DslError::UnknownFunction { name: name.into() })?,
+            _                 => Err(DslError::UnknownFunction {
+                name: name.into(),
+                location: args.span()
+            })?,
         })
     }
 }
@@ -107,7 +120,10 @@ impl ChainableMethods for Rect {
             "intersection" => rect.intersection(args.rect()?),
             "union"        => rect.union(args.rect()?),
             "offset"       => rect.offset(args.offset()?),
-            _              => Err(DslError::UnknownFunction { name: name.into() })?,
+            _              => Err(DslError::UnknownFunction {
+                name: name.into(),
+                location: args.span()
+            })?,
         })
     }
 }

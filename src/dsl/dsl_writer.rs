@@ -31,23 +31,12 @@ impl DslWriter {
         }
     }
 
-    /// Creates a new `DslWriter` with custom settings.
-    pub(super) fn with_options(indent_step: usize, max_line_length: usize) -> Self {
-        Self {
-            indent: 0,
-            indent_step,
-            max_line_length,
-            output: CompactString::default(),
-            current_line_length: 0,
-        }
-    }
-
     /// Formats an expression tree to a string.
     pub(super) fn format(expr: &Expr) -> CompactString {
         let mut writer = Self::new();
         writer.write_expr(expr);
         writer.output
-    }
+    }gga 
 
     /// Write an expression to the output.
     fn write_expr(&mut self, expr: &Expr) {
@@ -361,7 +350,7 @@ impl DslWriter {
             // Function calls with many or complex arguments are complex
             Expr::FnCall { call, self_fns, .. } => {
                 !self_fns.is_empty() ||
-                    call.args.len() > 3 ||
+                    call.args.len() > 2 ||
                     call.args.iter().any(|arg| self.is_complex_expr(arg))
             },
 
@@ -381,6 +370,7 @@ impl DslWriter {
     }
 
     /// Estimate the length of an expression when formatted as a string.
+    // todo: take current indentation into account + estimate shorter representations for complex expressions
     fn estimate_expr_length(&self, expr: &Expr) -> usize {
         match expr {
             Expr::Literal(value, _) => value.format().len(),
