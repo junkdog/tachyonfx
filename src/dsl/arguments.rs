@@ -82,7 +82,7 @@ impl<'dsl> Arguments<'dsl> {
             }),
             Expr::Literal(Value::U32(ms), _)     => Ok(Duration::from_millis(ms as _)),
             Expr::Literal(v, span)               => self.expected_type("duration", v.format(), span),
-            Expr::Var { name, .. }               => self.bound_var(name),
+            Expr::Var { name, span, .. }         => self.bound_var(name, span),
             e                                    => self.expected_type_expr("duration", e),
         }
     }
@@ -112,8 +112,8 @@ impl<'dsl> Arguments<'dsl> {
                 let interpolation = args.interpolation()?;
                 Ok(EffectTimer::new(duration, interpolation))
             },
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("timer", e),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e                            => self.expected_type_expr("timer", e),
         }
     }
 
@@ -143,7 +143,7 @@ impl<'dsl> Arguments<'dsl> {
                 }
             }
             Expr::Literal(Value::CellFilter(f), _) => Ok(f),
-            Expr::Var { name, .. }                 => self.bound_var(name),
+            Expr::Var { name, span, .. }           => self.bound_var(name, span),
             e                                      => self.expected_type_expr("cell_filter", e),
         }
     }
@@ -153,8 +153,8 @@ impl<'dsl> Arguments<'dsl> {
         &mut self,
     ) -> Result<T, DslError> {
         match self.next("var")? {
-            Expr::Var { name, .. } => self.vars.bound_global(name),
-            e                      => self.expected_type_expr("var", e),
+            Expr::Var { name, span, .. } => self.vars.bound_global(name, span),
+            e                            => self.expected_type_expr("var", e),
         }
     }
 
@@ -178,8 +178,8 @@ impl<'dsl> Arguments<'dsl> {
                     },
                     _ => self.expected_type("constraint", name, span)?,
                 }),
-            Expr::Var { name, .. }                 => self.bound_var(name),
-            e   => self.expected_type_expr("constraint", e),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("constraint", e),
         }
     }
 
@@ -187,7 +187,7 @@ impl<'dsl> Arguments<'dsl> {
     pub fn direction(&mut self) -> Result<Direction, DslError> {
         match self.next("direction")? {
             Expr::Literal(Value::Direction(d), _) => Ok(d),
-            Expr::Var { name, .. }                => self.bound_var(name),
+            Expr::Var { name, span, .. }          => self.bound_var(name, span),
             e => self.expected_type_expr("direction", e),
         }
     }
@@ -220,7 +220,7 @@ impl<'dsl> Arguments<'dsl> {
                 base_layout.fold_fns(self_fns, self.context, self.vars)
             },
 
-            Expr::Var { name, self_fns, .. } => self.bound_var::<Layout>(name)?
+            Expr::Var { name, self_fns, span } => self.bound_var::<Layout>(name, span)?
                 .fold_fns(self_fns, self.context, self.vars),
 
             e => self.expected_type_expr("layout", e),
@@ -231,8 +231,8 @@ impl<'dsl> Arguments<'dsl> {
     pub fn interpolation(&mut self) -> Result<Interpolation, DslError> {
         match self.next("interpolation")? {
             Expr::Literal(Value::Interpolation(i), _) => Ok(i),
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("interpolation", e),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e                            => self.expected_type_expr("interpolation", e),
         }
     }
 
@@ -261,37 +261,37 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a `u32`.
     pub fn read_u32(&mut self) -> Result<u32, DslError> {
         match self.next("u32")? {
-            Expr::Literal(Value::U32(u), _)    => Ok(u),
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("u32", e),
+            Expr::Literal(Value::U32(u), _) => Ok(u),
+            Expr::Var { name, span, .. }    => self.bound_var(name, span),
+            e                               => self.expected_type_expr("u32", e),
         }
     }
 
     pub fn read_i32(&mut self) -> Result<i32, DslError> {
         match self.next("i32")? {
-            Expr::Literal(Value::I32(i), _)    => Ok(i),
-            Expr::Literal(Value::U32(i), _)    => Ok(i as _),
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("i32", e),
+            Expr::Literal(Value::I32(i), _) => Ok(i),
+            Expr::Literal(Value::U32(i), _) => Ok(i as _),
+            Expr::Var { name, span, .. }    => self.bound_var(name, span),
+            e                               => self.expected_type_expr("i32", e),
         }
     }
 
     /// Consumes the next argument and returns a `f32`.
     pub fn read_into_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
-            Expr::Literal(Value::F32(f), _)    => Ok(f),
-            Expr::Literal(Value::U32(v), _)    => Ok(v as f32),
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("f32", e),
+            Expr::Literal(Value::F32(f), _) => Ok(f),
+            Expr::Literal(Value::U32(v), _) => Ok(v as f32),
+            Expr::Var { name, span, .. }    => self.bound_var(name, span),
+            e                               => self.expected_type_expr("f32", e),
         }
     }
 
     /// Consumes the next argument and returns a `f32`.
     pub fn read_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
-            Expr::Literal(Value::F32(f), _)    => Ok(f),
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("f32", e),
+            Expr::Literal(Value::F32(f), _) => Ok(f),
+            Expr::Var { name, span, .. }    => self.bound_var(name, span),
+            e                               => self.expected_type_expr("f32", e),
         }
     }
 
@@ -299,8 +299,8 @@ impl<'dsl> Arguments<'dsl> {
     pub fn string(&mut self) -> Result<CompactString, DslError> {
         match self.next("string")? {
             Expr::Literal(Value::String(s), _) => Ok(s),
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("string", e),
+            Expr::Var { name, span, .. }       => self.bound_var(name, span),
+            e                                  => self.expected_type_expr("string", e),
         }
     }
 
@@ -316,7 +316,7 @@ impl<'dsl> Arguments<'dsl> {
                 let mut args = self.nested_args(vec![*expr], 1)?;
                 inner(&mut args).map(Some)
             },
-            Expr::Var { name, .. } => self.bound_var(name),
+            Expr::Var { name, span, .. }         => self.bound_var(name, span),
             e                      => self.expected_type_expr("option", e),
         }
     }
@@ -344,7 +344,7 @@ impl<'dsl> Arguments<'dsl> {
             Expr::Parallel { effects, self_fns, span } =>
                 self.compile_effect(Expr::Parallel { effects, self_fns, span }),
 
-            Expr::Var { name, self_fns, .. } => self.bound_var::<Effect>(name)?
+            Expr::Var { name, self_fns, span } => self.bound_var::<Effect>(name, span)?
                 .fold_fns(self_fns, self.context, self.vars),
 
             e => self.expected_type_expr("effect", e),
@@ -370,9 +370,9 @@ impl<'dsl> Arguments<'dsl> {
                 }
                 _ => self.expected_type("color", name, span)?,
             }),
-            Expr::Literal(Value::Color(c), _)  => Ok(c),
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("color", e),
+            Expr::Literal(Value::Color(c), _) => Ok(c),
+            Expr::Var { name, span, .. }      => self.bound_var(name, span),
+            e                                 => self.expected_type_expr("color", e),
         }
     }
 
@@ -380,7 +380,7 @@ impl<'dsl> Arguments<'dsl> {
     pub fn modifier(&mut self) -> Result<Modifier, DslError> {
         match self.next("modifier")? {
             Expr::Literal(Value::Modifier(m), _) => Ok(m),
-            Expr::Var { name, .. }               => self.bound_var(name),
+            Expr::Var { name, span, .. }         => self.bound_var(name, span),
             e                                    => self.expected_type_expr("modifier", e),
         }
     }
@@ -396,7 +396,7 @@ impl<'dsl> Arguments<'dsl> {
                     self.expected_type("style", call.name.to_compact_string(), span)?
                 }
             },
-            Expr::Var { name, self_fns, .. }   => self.bound_var::<Style>(name)?
+            Expr::Var { name, self_fns, span } => self.bound_var::<Style>(name, span)?
                 .fold_fns(self_fns, self.context, self.vars),
             e                              => self.expected_type_expr("style", e),
         }
@@ -405,9 +405,9 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Motion`].
     pub fn motion(&mut self) -> Result<Motion, DslError> {
         match self.next("motion")? {
-            Expr::Literal(Value::Motion(m), _)  => Ok(m),
-            Expr::Var { name, .. }  => self.bound_var(name),
-            e                       => self.expected_type_expr("motion", e),
+            Expr::Literal(Value::Motion(m), _) => Ok(m),
+            Expr::Var { name, span, .. }       => self.bound_var(name, span),
+            e                                  => self.expected_type_expr("motion", e),
         }
     }
 
@@ -421,7 +421,7 @@ impl<'dsl> Arguments<'dsl> {
                 _                     => self.expected_type("repeat_mode", name, span)?,
             }),
             Expr::Literal(Value::RepeatMode(m), _) => Ok(m),
-            Expr::Var { name, .. }                 => self.bound_var(name),
+            Expr::Var { name, span, .. }           => self.bound_var(name, span),
             e                                      => self.expected_type_expr("repeat_mode", e),
         }
     }
@@ -433,8 +433,8 @@ impl<'dsl> Arguments<'dsl> {
                 let mut inner_args = self.nested_args(args, 2)?;
                 Ok(Margin::new(inner_args.read_u16()?, inner_args.read_u16()?))
             },
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("margin", e),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e                            => self.expected_type_expr("margin", e),
         }
     }
 
@@ -474,7 +474,7 @@ impl<'dsl> Arguments<'dsl> {
                     })
                 }
             },
-            Expr::Var { name, self_fns, .. } => self.bound_var::<Rect>(name)?
+            Expr::Var { name, self_fns, span } => self.bound_var::<Rect>(name, span)?
                 .fold_fns(self_fns, self.context, self.vars),
 
             e => self.expected_type_expr("rect", e),
@@ -498,8 +498,8 @@ impl<'dsl> Arguments<'dsl> {
                     })
                 }
             }
-            Expr::Var { name, .. } => self.bound_var(name),
-            e                      => self.expected_type_expr("offset", e),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e                            => self.expected_type_expr("offset", e),
         }
     }
 
@@ -510,10 +510,10 @@ impl<'dsl> Arguments<'dsl> {
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
         match self.next("array")? {
-            Expr::Array(exprs, _)     => self.map_exprs(exprs, inner),
-            Expr::ArrayRef(exprs, _)  => self.map_exprs(exprs, inner),
-            Expr::Var { name, .. }    => self.bound_var(name),
-            e                         => self.expected_type_expr("array", e),
+            Expr::Array(exprs, _)        => self.map_exprs(exprs, inner),
+            Expr::ArrayRef(exprs, _)     => self.map_exprs(exprs, inner),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e                            => self.expected_type_expr("array", e),
         }
     }
 
@@ -555,8 +555,9 @@ impl<'dsl> Arguments<'dsl> {
     fn bound_var<T: Clone + FromDslExpr + 'static>(
         &self,
         name: impl Into<CompactString>,
+        span: ExprSpan,
     ) -> Result<T, DslError> {
-        self.vars.bound_var(self.context, name)
+        self.vars.bound_var(self.context, name, span)
     }
 
     fn next(&mut self, type_name: &'static str) -> Result<Expr, DslError> {
@@ -680,6 +681,12 @@ impl DslError {
             DslError::MissingField { struct_name, field, .. } => {
                 DslError::MissingField { struct_name, field, location: span }
             }
+            DslError::NoSuchVariable { name, expected, .. } => {
+                DslError::NoSuchVariable { name, expected, location: span }
+            }
+            DslError::UnknownArgument { name, .. } => {
+                DslError::UnknownArgument { name, location: span }
+            }
             DslError::TooManyArguments { name, count, .. } => {
                 DslError::TooManyArguments { name, count, location: span }
             }
@@ -695,23 +702,49 @@ impl DslError {
             DslError::WrongArgumentType { expected, actual, .. } => {
                 DslError::WrongArgumentType { location: span, expected, actual }
             }
-            e => e
+            DslError::TokenizationError { .. } => {
+                DslError::TokenizationError { location: span }
+            }
+            DslError::TokenParseError { .. } => {
+                DslError::TokenParseError { location: span }
+            }
+            DslError::OhNoError => DslError::OhNoError,
+            DslError::UnknownEffect { name, .. } => DslError::UnknownEffect { name, location: span },
+            // DslError::EffectExpressionNotSupported(name)
+            // DslError::UnsupportedEffect { name, .. }
+            DslError::ArrayLengthMismatch { expected, actual, .. } => {
+                DslError::ArrayLengthMismatch { location: span, expected, actual }
+            }
+            DslError::UnknownCellFilter { name, .. } => {
+                DslError::UnknownCellFilter { name, location: span }
+            }
+            _ => self,
         }
     }
 
     pub(super) fn span(&self) -> Option<ExprSpan> {
         Some(match self {
+            DslError::ArrayLengthMismatch { location, .. } => *location,
             DslError::CastOverflow { location, .. } => *location,
             DslError::InvalidArgumentLength { location, .. } => *location,
             DslError::InvalidExpression { location, .. } => *location,
             DslError::MissingArgument { location, .. } => *location,
             DslError::MissingField { location, .. } => *location,
+            DslError::NoSuchVariable { location, .. } => *location,
+            DslError::TokenParseError { location, .. } => *location,
+            DslError::TokenizationError { location, .. } => *location,
             DslError::TooManyArguments { location, .. } => *location,
+            DslError::UnknownArgument { location, .. } => *location,
+            DslError::UnknownCellFilter { location, .. } => *location,
+            DslError::UnknownEffect { location, .. } => *location,
             DslError::UnknownField { location, .. } => *location,
             DslError::UnknownFunction { location, .. } => *location,
             DslError::UnknownStruct { location, .. } => *location,
             DslError::WrongArgumentType { location, .. } => *location,
-            _ => None?
+
+            DslError::EffectExpressionNotSupported { .. } => None?,
+            DslError::OhNoError => None?,
+            DslError::UnsupportedEffect { .. } => None?,
         })
     }
 }
@@ -1024,6 +1057,7 @@ mod tests {
             result.expect_err("expected error"),
             DslError::UnknownEffect {
                 name: "test".to_compact_string(),
+                location: span
             }
         );
     }

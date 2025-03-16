@@ -1,5 +1,5 @@
 use crate::dsl::arguments::FromDslExpr;
-use crate::dsl::expressions::Expr;
+use crate::dsl::expressions::{Expr, ExprSpan};
 use crate::dsl::{Arguments, DslError, EffectDsl};
 use compact_str::{CompactString, ToCompactString};
 use std::any::{type_name, Any};
@@ -49,27 +49,32 @@ impl DslEnv {
         &'dsl self,
         dsl: &'dsl EffectDsl,
         name: impl Into<CompactString>,
+        span: ExprSpan,
     ) -> Result<T, DslError> {
         let name = name.into();
         if let Some(expr) = self.let_expr(name.as_str()) {
             let mut args = Arguments::new([expr].into(), dsl, self);
             Ok(FromDslExpr::from_expr(&mut args)?)
         } else {
-            self.bound_global(name.as_str())
+            self.bound_global(name.as_str(), span)
         }
     }
 
-    pub(super) fn bound_global<K, T>(&self, name: K) -> Result<T, DslError>
+    pub(super) fn bound_global<K, T>(&self, name: K, span: ExprSpan) -> Result<T, DslError>
     where
         K: AsRef<str>,
         T: Clone + 'static,
     {
         self.globals.get(name.as_ref())
-            .ok_or_else(|| DslError::UnknownArgument { name: name.as_ref().into() })
+            .ok_or_else(|| DslError::UnknownArgument {
+                name: name.as_ref().into(),
+                location: span
+            })
             .and_then(|v| v.downcast_ref().cloned().ok_or_else(||
                 DslError::NoSuchVariable {
                     name: name.as_ref().to_compact_string(),
-                    expected: type_name::<T>()
+                    expected: type_name::<T>(),
+                    location: span
                 }
             ))
     }

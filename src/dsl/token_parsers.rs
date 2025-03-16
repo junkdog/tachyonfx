@@ -28,12 +28,17 @@ pub(super) fn parse_ast(input: Vec<Token>) -> Result<Vec<Expr>, DslError> {
 
     let ast = parse(statements, &input);
     if !ast.state.is_empty() {
-        return Err(DslError::ParseError(format_compact!("unparsed input: {:?}", ast.state)));
+        return Err(DslError::TokenParseError {
+            location: ast.state
+                .first()
+                .map(|t| ExprSpan::new(t.span.0, t.span.1))
+                .unwrap_or(ExprSpan::default())
+        });
     };
 
     match ast.result {
         Some(exprs) => Ok(exprs),
-        None        => Err(DslError::ParseError(format_compact!("unparsed input: {:?}", ast.state)))
+        None        => Err(DslError::OhNoError)
     }
 }
 
