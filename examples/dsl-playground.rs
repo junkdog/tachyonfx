@@ -240,5 +240,5 @@ fn theme_editor_style() -> Style {
 fn theme_error_style() -> Style {
     Style::default()
         .bg(Gruvbox::Dark1.color())
-        .fg(Gruvbox::Red.color())
+        .fg(Gruvbox::Light3.color())
 }
