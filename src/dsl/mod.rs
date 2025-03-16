@@ -114,7 +114,7 @@ pub enum DslError {
     },
 
     #[error("{name} does not provide a to_dsl() implementation")]
-    EffectExpressionNotSupported { 
+    EffectExpressionNotSupported {
         name: &'static str,
     },
 

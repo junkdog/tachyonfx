@@ -1,5 +1,40 @@
 # Changelog
 
+## tachyonfx 0.12.0 - 2025-0....
+
+### DSL Improvements
+
+#### Enhanced Error Handling and Diagnostics
+
+- **Improved Error Reporting**: Added source location tracking for DSL errors, making it easier to identify and fix issues in DSL expressions
+  - New `DslParseError` type provides detailed context including:
+    - Line and column numbers where errors occur
+    - Visual context of the problematic code
+    - Underlined error locations in the original source
+  - `DslCompiler::compile()` now returns `Result<Effect, DslParseError>` instead of `Result<Effect, DslError>`
+
+- **Source Position Tracking**: Added `ExprSpan` to track source locations throughout the parsing pipeline
+  - Each expression node now includes its source position for accurate error reporting
+  - Enables pinpointing specific tokens in error messages
+  - Note that this feature has room for further improvements in future releases. It will occasionally point to the wrong
+    token, depending on where and which category of parser intercepts the failure.
+
+#### Internal Parser Improvements
+
+- **Tokenization Pipeline**: Separated lexical analysis (tokenization) from syntax analysis (parsing).
+- **Simplified AST**: Streamlined internal Abstract Syntax Tree representation
+- **Source Position Tracking**: Added source position tracking to all AST nodes
+- **Expression Promotion**: Converts qualified identifiers like `Motion::LeftToRight` to corresponding literal values.
+- **DSL Serialization**: Improved DSL serialization with better formatting and source position tracking
+
+#### Other Changes
+
+- **Improved DSL Writer**: Enhanced DSL serialization with smarter line breaking and indentation.
+
+
+### Breaking Changes
+- **Error Handling**: The error type for `DslCompiler::compile` has changed from `DslError` to `DslParseError`. 
+
 ## tachyonfx 0.11.1 - 2025-03-02
 
 ### Fixed
