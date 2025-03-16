@@ -78,9 +78,7 @@ impl DslParseError {
 
 impl fmt::Display for DslParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let location = format!("at line {} column {}", self.line(), self.column());
-
-        writeln!(f, "Error in DSL expression {}: {}", location, self.source)?;
+        writeln!(f, "Error at line {} column {}: {}", self.line(), self.column(), self.source)?;
 
         let pointer_padding = " ".repeat(self.column() as usize - 1);
         if self.context_line.lines().count() == 1 {

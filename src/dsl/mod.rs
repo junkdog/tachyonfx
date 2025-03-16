@@ -99,7 +99,7 @@ pub enum DslError {
         location: ExprSpan,
     },
 
-    #[error("Argument is not of expected type '{expected}', actual type '{actual}'")]
+    #[error("Expected '{expected}' but found '{actual}'")]
     WrongArgumentType {
         expected: &'static str,
         actual: CompactString,

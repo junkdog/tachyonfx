@@ -69,7 +69,7 @@ impl<'a> App<'a> {
             }
             Err(err) => {
                 self.compiled_effect = None;
-                self.compilation_error = Some(format!("Error: {}", err));
+                self.compilation_error = Some(format!("{}", err));
             }
         }
     }
