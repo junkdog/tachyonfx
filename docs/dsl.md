@@ -1,52 +1,61 @@
-# tachyonfx DSL documentation
+# tachyonfx Effect DSL Documentation
 
 ## Overview
 
-The tachyonfx DSL provides a high-level, declarative way to create, combine, and manipulate terminal effects.
-It offers a text-based representation that's both human-readable and machine-parseable, enabling rapid effect
-prototyping, configuration, and serialization.
+The tachyonfx Effect DSL (Domain Specific Language) provides a text-based way to create, combine, and manipulate
+terminal effects. It mirrors regular Rust syntax while focusing specifically on effect creation and manipulation.
+
+Valid tachyonfx Effect DSL code is valid Rust code with the appropriate imports. This intentional
+design choice makes the DSL immediately familiar and enables flexible development workflows.
 
 ## Purpose
 
-The TachyonFX DSL serves two primary purposes:
+The tachyonfx Effect DSL serves several key purposes:
 
-1. **Rapid Iteration**: The DSL is intentionally designed to look and feel like idiomatic Rust code, providing several key benefits:
-  - **Familiar Syntax**: Anyone familiar with Rust can immediately understand and write DSL expressions
-  - **Live Reloading**: Effects can be loaded from configuration files and reloaded at runtime without recompiling your application
-  - **Interactive Development**: Modify effects in real-time while your application is running
-  - **Rapid Prototyping**: Experiment with different parameters, timings, and combinations without code changes
-  - **Visual Scripting**: Create a visual editor that generates DSL expressions
-  - **User Customization**: Allow end-users to customize effects without modifying source code
+1. **Runtime Configuration**: Define effects in config files that can be loaded, parsed, and applied without
+   recompilation
+2. **Live Reloading**: Update effects while your application is running
+3. **Serialization**: Convert effects to/from string representations for storage or transmission
+4. **Rapid Prototyping**: Experiment with different effect combinations through text editing
+5. **User Customization**: Allow end-users to define their own effects without modifying your codebase
 
-2. **Serialization Format**: Store and exchange effect definitions between applications. Effects can be saved to configuration files, sent over network connections, or generated programmatically.
+## Basic Usage
 
-## Using the DSL
-
-The entry point to the DSL is the `EffectDsl` struct, which manages a registry of effect compilers. Each compiler knows how to transform a specific DSL expression into a concrete effect instance.
-
-### Basic Usage
+The entry point to using the Effect DSL is the `EffectDsl` struct, which manages a registry of effect compilers:
 
 ```rust
 use tachyonfx::dsl::EffectDsl;
 use ratatui::style::Color;
+use tachyonfx::Interpolation;
 
 // Create a new DSL compiler with all standard effects registered
 let dsl = EffectDsl::new();
 
 // Compile a simple dissolve effect
-let dissolve_effect = dsl.compiler()
+let effect = dsl.compiler()
     .compile("fx::dissolve(500)")
     .expect("Valid effect");
+```
 
-// Compile a more complex fade effect with color
-let fade_effect = dsl.compiler()
-    .compile("fx::fade_to_fg(Color::Red, (1000, QuadOut))")
-    .expect("Valid effect");
+### DSL Expressions Are Valid Rust Code
+
+Any valid tachyonfx Effect DSL expression is also valid Rust code when the appropriate types are imported:
+
+```rust
+// This Rust code:
+use tachyonfx::fx;
+use tachyonfx::Interpolation;
+use ratatui::style::{Color, Style};
+
+let effect = fx::fade_to_fg(Color::Red, (1000, Interpolation::QuadOut));
+
+// Is equivalent to this DSL expression:
+// "fx::fade_to_fg(Color::Red, (1000, QuadOut))"
 ```
 
 ### Variable Binding
 
-You can bind variables to use within your DSL expressions, making them more dynamic and reusable:
+You can bind variables to use within your DSL expressions:
 
 ```rust
 use tachyonfx::dsl::EffectDsl;
@@ -71,16 +80,18 @@ use tachyonfx::dsl::EffectDsl;
 
 let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(r#"
+    // These bindings work just like in Rust
     let color = Color::from_u32(0xff5500);
     let timer = (500, CircOut);
     
+    // Use the bound variables in the effect
     fx::fade_to_fg(color, timer)
 "#).expect("Valid effect");
 ```
 
 ### Method Chaining
 
-Effects can be configured using method chaining, similar to the API:
+Effects can be configured using method chaining, just like in regular Rust code:
 
 ```rust
 use tachyonfx::dsl::EffectDsl;
@@ -95,7 +106,20 @@ let effect = dsl.compiler().compile(r#"
 
 ### Composing Effects
 
-The DSL supports both sequence and parallel composition of effects:
+The Effect DSL supports both sequence and parallel composition of effects:
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+let effect = dsl.compiler().compile(r#"
+    fx::sequence(&[
+        fx::dissolve(300),
+        fx::fade_to_fg(Color::Red, 500),
+        fx::fade_to_fg(Color::Blue, 500)
+    ])
+"#).expect("Valid effect");
+```
 
 ```rust
 use tachyonfx::dsl::EffectDsl;
@@ -109,209 +133,270 @@ let effect = dsl.compiler().compile(r#"
 "#).expect("Valid effect");
 ```
 
-```rust
-use tachyonfx::dsl::EffectDsl;
-use ratatui::style::Color;
-
-let dsl = EffectDsl::new();
-let effect = dsl.compiler().compile(r#"
-    fx::sequence(&[
-        fx::fade_to_fg(Color::Red, 500).with_filter(CellFilter::Text),
-        fx::fade_to_fg(Color::Blue, 500).with_filter(CellFilter::BgColor(Color::Black))
-    ])
-"#).expect("Valid effect");
-```
-
 ## Supported Types and Methods
 
-The DSL supports a wide range of types and methods that mirror the TachyonFX API:
+The Effect DSL supports all the types and methods needed to create tachyonfx effects:
 
 ### Basic Types
-- **Numbers**: `u32`, `i32`, `f32` (e.g., `42`, `-5`, `3.14`)
-- **Color**: `Color::Red`, `Color::from_u32(0xff5500)`, `Color::Rgb(255, 0, 0)`, `Color::Indexed(16)`
-- **Duration**: `Duration::from_millis(500)`, `Duration::from_secs_f32(0.5)`
-- **String**: `"hello world"`
 
-### Effect-Related Types
-- **EffectTimer**: `EffectTimer::from_ms(500, Interpolation::Linear)`, `(500, QuadOut)` (shorthand)
-- **Motion**: `Motion::LeftToRight` and other variants
-- **Interpolation**: All interpolation types (e.g., `Interpolation::Linear`, `Interpolation::BounceOut`)
-- **RepeatMode**: `RepeatMode::Forever`, `RepeatMode::Times(n)`, `RepeatMode::Duration(d)`
-
-### Layout Types
-- **Rect**: `Rect::new(x, y, width, height)` with methods like `.inner()`, `.intersection()`, `.union()`, `.offset()`
-- **Margin**: `Margin::new(horizontal, vertical)`
-- **Layout**: `Layout::horizontal(constraints)`, `Layout::vertical(constraints)` with methods including `.spacing()`, `.margin()`, `.direction()`
-- **Constraint**: `Constraint::Length()`, `Constraint::Percentage()`, `Constraint::Ratio()`, etc.
-- **Direction**: `Direction::Horizontal`, `Direction::Vertical`
-
-### Cell Filters
-- **CellFilter**: All variants including `Text`, `All`, `FgColor()`, `BgColor()`, `Inner()`, `Outer()`, `Layout()`, and compound filters (`AllOf()`, `AnyOf()`, `NoneOf()`, `Not()`)
-
-### Style
-- **Style**: `Style::new()` or `Style::default()` with chaining methods:
-    - `.fg(color)`, `.bg(color)`
-    - `.add_modifier(modifier)`, `.remove_modifier(modifier)`
-
-### Modifier
-- **Modifier**: `Modifier::BOLD`, `Modifier::ITALIC`, etc.
-
-## Registering Custom Effects
-
-You can extend the DSL with custom effects by registering your own compilers:
+In the Effect DSL, these types work exactly like their Rust counterparts:
 
 ```rust
-use tachyonfx::dsl::{EffectDsl, DslError};
-use tachyonfx::{fx, Effect};
+use tachyonfx::Duration;
+use ratatui::style::Color;
 
-// create a custom effect that references a custom effect or combines existing effects
-fn my_custom_effect(duration: u32, color: ratatui::style::Color) -> Effect {
+// Numbers
+let n1 = 42;        // u32
+let n2 = -5;        // i32
+let n3 = 3.14;      // f32
+
+// Colors
+let c1 = Color::Red;
+let c2 = Color::from_u32(0xff5500);
+let c3 = Color::Rgb(255, 0, 0);
+let c4 = Color::Indexed(16);
+
+// Duration
+let d1 = Duration::from_millis(500);
+let d2 = Duration::from_secs_f32(0.5);
+
+// Strings
+let s = "hello world";
+```
+
+### Effect-Related Types
+
+The Effect DSL support all tachyonfx effect-related types:
+
+```rust
+use ratatui::style::Color;
+use tachyonfx::{Duration, EffectTimer, Interpolation, Interpolation::QuadOut, fx::RepeatMode, Motion};
+
+// EffectTimer (with shorthand syntax)
+let t1 = EffectTimer::from_ms(500, Interpolation::Linear);
+let t2 = (500, QuadOut);  // Shorthand for EffectTimer
+
+// Motion
+let m = Motion::LeftToRight;  // Also: RightToLeft, UpToDown, DownToUp
+
+// Interpolation - All types are supported
+let i1 = Interpolation::Linear;
+let i2 = Interpolation::BounceOut;
+let i3 = Interpolation::CubicInOut;
+// ...and many more
+
+// RepeatMode
+let r1 = RepeatMode::Forever;
+let r2 = RepeatMode::Times(3);
+let r3 = RepeatMode::Duration(Duration::from_millis(1000));
+```
+
+### Layout Types
+
+ratatui layout types work the same in the Effect DSL:
+
+```rust
+use ratatui::prelude::{Constraint, Margin, Layout, Rect};
+
+// Rect
+let rect = Rect::new(0, 0, 10, 10);
+let inner = rect.inner(Margin::new(1, 1));
+
+// Layout
+let layout = Layout::horizontal([
+    Constraint::Percentage(50),
+    Constraint::Percentage(50)
+]).spacing(1);
+
+// Margin
+let margin = Margin::new(1, 1);
+```
+
+### Cell Filters
+
+All CellFilter variants are supported in the Effect DSL:
+
+```rust
+use tachyonfx::{CellFilter, Duration};
+use ratatui::prelude::{Color, Margin};
+
+// Basic filters
+let f1 = CellFilter::Text;
+let f2 = CellFilter::All;
+let f3 = CellFilter::FgColor(Color::Red);
+let f4 = CellFilter::BgColor(Color::Blue);
+let f5 = CellFilter::Inner(Margin::new(1, 1));
+let f6 = CellFilter::Outer(Margin::new(1, 1));
+
+// Compound filters
+let f7 = CellFilter::AllOf(vec![CellFilter::Text, CellFilter::FgColor(Color::Red)]);
+let f8 = CellFilter::AnyOf(vec![CellFilter::Text, CellFilter::BgColor(Color::Blue)]);
+let f9 = CellFilter::Not(Box::new(CellFilter::Text));
+```
+
+### Style and Modifiers
+
+Style and Modifier types are fully supported:
+
+```rust
+use ratatui::style::{Style, Color, Modifier};
+
+// Style
+let style = Style::new()
+    .fg(Color::Red)
+    .bg(Color::Blue)
+    .add_modifier(Modifier::BOLD);
+
+// Modifiers
+let m1 = Modifier::BOLD;
+let m2 = Modifier::ITALIC;
+```
+
+## Converting Between Code and DSL
+
+You can convert between programmatic effect creation and DSL expressions:
+
+### From Code to DSL
+
+```rust
+use tachyonfx::fx;
+use ratatui::style::Color;
+use tachyonfx::{Effect, Shader};
+
+// Create an effect programmatically
+let effect = fx::sequence( & [
+    fx::fade_from(Color::Black, Color::Reset, 500),
+    fx::dissolve(300)
+]);
+
+// Convert it to a DSL expression string
+let expression = effect.to_dsl().expect("Valid DSL expression");
+let expression_str = expression.to_string();
+println!("{}", expression_str);
+// Output:
+// fx::sequence(&[
+//     fx::fade_from(Color::Black, Color::Reset, 500),
+//     fx::dissolve(300)
+// ])
+```
+
+### From DSL to Code
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+// Parse a DSL expression into an effect
+let dsl = EffectDsl::new();
+let effect = dsl.compiler()
+    .compile("fx::sequence(&[fx::fade_from(Color::Black, Color::Reset, 500), fx::dissolve(300)])")
+    .expect("Valid effect");
+```
+
+## Extending the Effect DSL
+
+You can extend the Effect DSL with custom effects by registering your own compilers:
+
+```rust
+use tachyonfx::dsl::{EffectDsl, Arguments, DslError};
+use tachyonfx::{fx, Effect, Shader};
+use ratatui::style::Color;
+
+// Create a custom effect function
+fn pulse_effect(color: Color, duration: u32) -> Effect {
     fx::sequence(&[
         fx::fade_from_fg(color, duration / 2),
-        fx::dissolve(duration / 2)
+        fx::fade_to_fg(color, duration / 2)
     ])
 }
 
 // Register the custom effect with the DSL
 let dsl = EffectDsl::new()
-    .register("my_custom_effect", |args| {
+    .register("pulse", | args: & mut Arguments| {
         // Parse arguments from the DSL expression
-        let duration = args.read_u32()?;
         let color = args.color()?;
+        let duration = args.read_u32()?;
         
         // Return the custom effect
-        Ok(my_custom_effect(duration, color))
+        Ok(pulse_effect(color, duration))
     });
 
 // Now you can use your custom effect in DSL expressions
 let effect = dsl.compiler().compile(r#"
-    fx::my_custom_effect(1000, Color::Blue)
+    fx::pulse(Color::Blue, 1000)
 "#).expect("Valid effect");
 ```
 
-## Implementing `Shader::to_dsl`
+## Implementing `to_dsl` for Custom Effects
 
-To enable DSL serialization of your custom effects, implement the `Shader::to_dsl` method. This allows your effects to be converted to DSL expressions:
+To enable DSL serialization of your custom effects, implement the `Shader::to_dsl` method:
 
 ```rust,ignore
-use tachyonfx::{Shader, Effect};
-use tachyonfx::dsl::{DslFormat, DslError, EffectExpression};
-use compact_str::ToCompactString;
+use tachyonfx::{Shader, Effect, Duration, EffectTimer};
+use tachyonfx::dsl::{DslFormat, DslError, EffectExpression, Shader};
+use ratatui::style::Color;
 
 #[derive(Debug)]
-struct MyCustomShader {
-    color: ratatui::style::Color,
-    duration: u32,
+struct PulseShader {
+    color: Color,
+    timer: EffectTimer,
     // other fields...
 }
 
-impl Shader for MyCustomShader {
+impl Shader for PulseShader {
     // Implement other Shader methods...
-    
-    // Implement to_dsl to enable serialization
+
     fn to_dsl(&self) -> Result<EffectExpression, DslError> {
-        // Construct a DSL expression string
-        let expr = format!("fx::my_custom_effect({}, {})", 
-            self.duration.dsl_format(), 
-            self.color.dsl_format()
+        // Use DslFormat trait to get the DSL representation of color and duration
+        let expr = format!("fx::pulse({}, {})",
+            self.color.dsl_format(),
+            self.timer.duration().as_millis()
         );
-        
+
         // Parse the string into an EffectExpression
-        EffectExpression::parse(expr.as_str())
+        EffectExpression::parse(&expr)
     }
 }
 ```
 
-## Examples
+## Complete Example: Building a Complex Animation
 
-### Example 1: Creating a Simple Animation Sequence
-
-```rust
-use tachyonfx::dsl::EffectDsl;
-
-let dsl = EffectDsl::new();
-let effect = dsl.compiler().compile(r#"
-    let fade_in = fx::fade_from(Color::Black, Color::Reset, (500, QuadOut));
-    let wiggle = fx::ping_pong(fx::hsl_shift_fg([10.0, 0.0, 0.0], (300, SineInOut)));
-    let fade_out = fx::fade_to(Color::Reset, Color::Black, (500, QuadIn));
-    
-    fx::sequence(&[fade_in, wiggle, fade_out])
-"#).expect("Valid effect");
-```
-
-### Example 2: Complex Layout-Based Effects
+Here's a complete example showing how to build a complex animation with the Effect DSL:
 
 ```rust
-use tachyonfx::dsl::EffectDsl;
+use tachyonfx::{Effect, dsl::EffectDsl};
 
-let dsl = EffectDsl::new();
-let effect = dsl.compiler().compile(r#"
-    let layout = Layout::horizontal([Percentage(33), Percentage(34), Percentage(33)])
-        .spacing(1)
-        .margin(1);
-    
-    let left_section = CellFilter::Layout(layout, 0);
-    let middle_section = CellFilter::Layout(layout, 1);
-    let right_section = CellFilter::Layout(layout, 2);
-    
+let animation_dsl = r#"
+    // Define variables for reuse
+    let timer = (1000, QuadOut);
+    let color = Color::from_u32(0x3366ff);
+
+    // Create a parallel sequenece of effects
     fx::parallel(&[
-        fx::slide_in(Motion::LeftToRight, 5, 0, Color::Reset, (700, BackOut))
-            .with_filter(left_section),
-        fx::dissolve((500, Linear))
-            .with_filter(middle_section),
-        fx::slide_in(Motion::RightToLeft, 5, 0, Color::Reset, (700, BackOut))
-            .with_filter(right_section)
+        // Fade in text
+        fx::fade_from_fg(Color::Black, timer)
+            .with_filter(CellFilter::Text),
+
+        // Add some color shifting 
+        fx::hsl_shift_fg([30.0, 0.0, 0.0], (500, SineInOut)),
+
+        // After 1s, fade everything out
+        fx::prolong_start(1000, fx::fade_to(Color::Black, Color::Black, timer))
     ])
-"#).expect("Valid effect");
-```
+"#;
 
-### Example 3: Serializing and Deserializing Effects
-
-```rust
-use tachyonfx::dsl::{EffectDsl, EffectExpression};
-use tachyonfx::{fx, Shader};
-use ratatui::style::Color;
-
-// Create an effect programmatically
-let original_effect = fx::sequence(&[
-    fx::fade_from(Color::Black, Color::Reset, 500),
-    fx::dissolve(300)
-]);
-
-// Convert it to a DSL expression
-let expression = original_effect.to_dsl().expect("Valid DSL expression");
-let expression_str = expression.to_string();
-
-// Save the expression to a file, config, etc.
-// ...
-
-// Later, recreate the effect from the expression
+// Compile the DSL expression into an effect
 let dsl = EffectDsl::new();
-let recreated_effect = dsl.compiler()
-    .compile(&expression_str)
-    .expect("Valid effect");
+let effect = dsl.compiler().compile(animation_dsl).expect("Valid effect");
 ```
 
-### Limitations and Considerations
+## Limitations and Considerations
 
-When working with the DSL, be aware of the following limitations:
+When working with the Effect DSL, be aware of the following limitations:
 
-- **No Mutable Variables:** The DSL does not support the mut keyword or mutable variables. All bindings are immutable,
-  following a declarative paradigm rather than an imperative one.
-- **Layout Serialization:** While Layout objects can be created and used within the DSL, they cannot be converted back
-  to DSL format via the `to_dsl()` method. If your effect includes layout-dependent components, these will need special
-  handling when serializing.
-- **Function Support:** The DSL primarily supports method calls and object construction. It does not support defining
-  custom functions or closures within the DSL itself.
-- **Limited Control Flow:** The DSL does not support standard Rust control flow constructs such as if, match, loop, or
-  other procedural programming features.
-- **No Type Inference:** Unlike full Rust, the DSL requires explicit type information in many cases and cannot infer types
-  in the same way the Rust compiler does.
-- **Custom Shaders:** When implementing to_dsl() for custom shaders, be aware that some complex shader behaviors might
-  not be perfectly representable in the DSL. You may need to approximate or simplify certain aspects of your shader's behavior.
-- **Error Handling:** The DSL does not support Rust's error handling mechanisms like Result or ? within expressions. Error
-  handling happens at the compilation level.
-- **Comments:** While the DSL parser does recognize and skip comments (both line comments `//` and block comments `/* */`),
-  they are not preserved when serializing effects back to DSL.
-- **Performance:** Parsing and compiling DSL expressions incurs a runtime cost. For performance-critical code paths,
-  compile expressions once and reuse the resulting effects.
+- **No Mutable Variables:** The Effect DSL only supports immutable variables.
+- **Limited Function Support:** The Effect DSL primarily supports method calls and object construction, not defining
+  custom functions internally.
+- **No Control Flow:** The Effect DSL does not support if/else, match, or loop constructs.
+- **Comments:** Both line comments `//` and block comments `/* */` are supported in the Effect DSL but are not preserved
+  when serializing back to DSL.
+
