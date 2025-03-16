@@ -23,20 +23,20 @@ impl DslParseError {
         input: &str,
         cause: DslError,
     ) -> Self {
-        let span = cause.span();
-
-        if let Some(span) = span {
+        if let Some(span) = cause.span() {
             let line_start_offset = input[0..span.start as usize]
                 .rfind('\n')
                 .map_or(0, |pos| pos + 1);
-            let line_end_offset = input[span.start as usize..] // only consider current line
+            let line_end_offset = input[line_start_offset..]
                 .find('\n')
-                .map_or(input.len(), |pos| span.end as usize + pos - 1);
+                .map_or(input.len(), |pos| line_start_offset + pos);
 
             let context_line = input[line_start_offset..line_end_offset].to_string();
             let error_start = span.start as usize - line_start_offset;
             let error_end = span.end as usize - line_start_offset;
             let error_range = error_start..error_end;
+
+            debug_assert!(!context_line.contains('\n'), "Error line contains newline: \n'{}'", context_line);
 
             Self {
                 source: cause,

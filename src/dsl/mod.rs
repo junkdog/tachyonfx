@@ -114,12 +114,12 @@ pub enum DslError {
     },
 
     #[error("{name} does not provide a to_dsl() implementation")]
-    EffectExpressionNotSupported { // fixme: consider moving elsewhere
+    EffectExpressionNotSupported { 
         name: &'static str,
     },
 
     #[error("{name} is not supported by the dsl")]
-    UnsupportedEffect { // fixme: consider moving elsewhere
+    UnsupportedEffect {
         name: CompactString,
     },
 
