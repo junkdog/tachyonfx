@@ -899,7 +899,7 @@ mod tests {
         assert_eq!(args.read_u32(), Ok(42));
         assert_eq!(args.read_f32(), Ok(3.14));
         assert_eq!(args.read_u32(), Err(DslError::MissingArgument {
-            position: 2,
+            position: 3,
             name: "u32",
             location: span,
         }));
@@ -992,7 +992,7 @@ mod tests {
         assert_eq!(args.color(), Ok(Color::Red));
         assert_eq!(args.color(), Ok(Color::Blue));
         assert_eq!(args.color(), Err(DslError::MissingArgument {
-            position: 2,
+            position: 3,
             name: "color",
             location: span,
         }));
@@ -1009,7 +1009,7 @@ mod tests {
         assert_eq!(args.motion(), Ok(Motion::LeftToRight));
         assert_eq!(args.motion(), Ok(Motion::UpToDown));
         assert_eq!(args.motion(), Err(DslError::MissingArgument {
-            position: 2,
+            position: 3,
             name: "motion",
             location: span,
         }));
@@ -1118,7 +1118,7 @@ mod tests {
         assert_eq!(args.motion(), Ok(Motion::LeftToRight));
         assert_eq!(args.color(), Ok(Color::Blue));
         assert_eq!(args.read_u32(), Err(DslError::MissingArgument {
-            position: 3,
+            position: 4,
             name: "u32",
             location: span,
         }));
@@ -1150,6 +1150,6 @@ mod tests {
             location: ExprSpan::default(),
         });
 
-        assert_eq!(args.duration(), missing(0, "duration"));
+        assert_eq!(args.duration(), missing(1, "duration"));
     }
 }
