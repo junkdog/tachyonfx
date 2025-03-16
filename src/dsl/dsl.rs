@@ -4,12 +4,13 @@ use crate::dsl::expressions::{Expr, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::token_parsers::parse_ast;
 use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
-use crate::dsl::{DslError, EffectDslError};
+use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
 use compact_str::CompactString;
 use std::fmt;
 use std::fmt::Formatter;
+use crate::dsl::parse_error::DslParseError;
 
 /// A compiler and registry for tachyonfx effect DSL expressions.
 ///
@@ -292,12 +293,12 @@ impl DslCompiler<'_> {
     ///     .compile("fx::dissolve(500)")
     ///     .unwrap();
     /// ```
-    pub fn compile(self, input: &str) -> Result<Effect, EffectDslError> {
+    pub fn compile(self, input: &str) -> Result<Effect, DslParseError> {
         tokenize(input)
             .map(sanitize_tokens)
             .and_then(parse_ast)
             .and_then(|ast| self.dsl.compile(&self.environment, ast))
-            .map_err(|e| EffectDslError::new(input, e))
+            .map_err(|e| DslParseError::new(input, e))
     }
 }
 
@@ -870,6 +871,7 @@ mod tests {
         let input = r#"fx::nonexistent()"#;
         let ctx = EffectDsl::new();
         let err = ctx.compiler().compile(input).unwrap_err();
+        println!("{:}", err);
         assert!(matches!(err.source, DslError::UnknownEffect { .. }));
     }
 
