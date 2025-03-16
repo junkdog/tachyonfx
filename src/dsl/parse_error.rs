@@ -29,9 +29,9 @@ impl DslParseError {
             let line_start_offset = input[0..span.start as usize]
                 .rfind('\n')
                 .map_or(0, |pos| pos + 1);
-            let line_end_offset = input[span.end as usize..]
+            let line_end_offset = input[span.start as usize..] // only consider current line
                 .find('\n')
-                .map_or(input.len(), |pos| span.end as usize + pos);
+                .map_or(input.len(), |pos| span.end as usize + pos - 1);
 
             let context_line = input[line_start_offset..line_end_offset].to_string();
             let error_start = span.start as usize - line_start_offset;
@@ -42,7 +42,7 @@ impl DslParseError {
                 source: cause,
                 context_line,
                 error_range,
-                line_number: input[0..span.end as usize].lines().count() as u32,
+                line_number: input[0..span.start as usize].lines().count() as u32,
             }
         } else {
             Self {
@@ -86,10 +86,10 @@ impl fmt::Display for DslParseError {
         if self.context_line.lines().count() == 1 {
             // If error spans multiple characters, underline the whole range
             let underline = "^".repeat(self.error_range.len().max(1));
-            writeln!(f, "\n{}\n{}{}", self.context_line, pointer_padding, underline)
+            writeln!(f, "\n{}\n{pointer_padding}{underline}", self.context_line)
         } else {
             // For multi-line errors, just point to the start
-            writeln!(f, "\n{}\n{}^", self.context_line, pointer_padding)
+            writeln!(f, "\n{}\n{pointer_padding}^", self.context_line)
         }
     }
 }

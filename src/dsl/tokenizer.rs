@@ -5,9 +5,9 @@ use anpa::core::StrParser;
 use anpa::number::float;
 use anpa::parsers::{item_if, item_while, until};
 use anpa::{greedy_or, or, right, skip, take};
-use compact_str::ToCompactString;
 use std::fmt::Formatter;
 use std::ops::Range;
+use crate::dsl::expressions::ExprSpan;
 
 /// Represents the type of a token in the DSL
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -84,8 +84,11 @@ pub(super) fn sanitize_tokens(tokens: Vec<Token>) -> Vec<Token> {
 pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
     let result = anpa::core::parse(tokens(), input);
     if !result.state.is_empty() {
-        return Err(DslError::ParseError(result.state.to_compact_string()));
-    }
+        let consumed = input.len() - result.state.len();
+        return Err(DslError::TokenizationError {
+            location: ExprSpan::new(consumed.saturating_sub(1) as _, input.len() as _),
+        });
+    };
 
     result
         .result
@@ -99,7 +102,7 @@ pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
             }
 
             tokens
-        }).ok_or(DslError::BugInTokenizerError)
+        }).ok_or(DslError::OhNoError)
 }
 
 fn tokens<'a>() -> impl StrParser<'a, Vec<Token<'a>>> {

@@ -24,22 +24,28 @@ use dsl_writer::DslWriter;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
-    #[error("Failed to parse dsl: {0}")]
-    ParseError(CompactString),
+    #[error("Failed to tokenize DSL")]
+    TokenizationError {
+        location: ExprSpan,
+    },
 
-    #[error("Unknown tokenizer error, please consider submitting a bug report")]
-    BugInTokenizerError,
+    #[error("Failed to parse token")]
+    TokenParseError { location: ExprSpan },
+
+    #[error("Unknown tokenization or parsing error, please consider submitting a bug report")]
+    OhNoError,
 
     #[error("Compiler not found for effect '{name}'")]
-    UnknownEffect { name: CompactString },
+    UnknownEffect { name: CompactString, location: ExprSpan },
 
     #[error("Variable '{name}' not found")]
-    UnknownArgument { name: CompactString },
+    UnknownArgument { name: CompactString, location: ExprSpan },
 
     #[error("Invalid argument type '{name}'. Expected {expected}")]
     NoSuchVariable {
         name: CompactString,
         expected: &'static str,
+        location: ExprSpan,
     },
 
     #[error("Missing required argument '{name}' at position {position}")]

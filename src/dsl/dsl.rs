@@ -1,6 +1,6 @@
 use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
-use crate::dsl::expressions::{Expr, FnCallInfo};
+use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::token_parsers::parse_ast;
 use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
@@ -136,11 +136,11 @@ impl EffectDsl {
     ///
     /// let dsl = EffectDsl::new();
     /// let compiler = dsl.compiler()
-    ///     .bind("bg_color", Color::Blue);
+    ///     .bind("fg_color", Color::Blue);
     ///
     /// // Use bound variables in expressions
     /// let effect = compiler.compile(r#"
-    ///     fx::fade_to(bg_color, (1000, Linear))
+    ///     fx::fade_to_fg(fg_color, (1000, Linear))
     /// "#);
     /// ```
     pub fn compiler(&self) -> DslCompiler {
@@ -165,7 +165,7 @@ impl EffectDsl {
                 self.compilers
                     .iter()
                     .find(|d| d.effect_name == effect_name)
-                    .ok_or(DslError::UnknownEffect { name: effect_name.into() })
+                    .ok_or(DslError::UnknownEffect { name: effect_name.into(), location: ExprSpan::default() })
                     .and_then(|d| {
                         let mut args = Arguments::new(args.into(), self, env);
                         let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
@@ -199,7 +199,7 @@ impl EffectDsl {
                 fx::parallel(&effects)
                     .fold_fns(self_fns, self, env)
             },
-            Expr::Var { name, self_fns, .. } => env.bound_var::<Effect>(self, name)
+            Expr::Var { name, self_fns, span } => env.bound_var::<Effect>(self, name, span)
                 .and_then(|effect| effect.fold_fns(self_fns, self, env)),
             ref e => Err(DslError::InvalidExpression {
                 expected: "effect",
