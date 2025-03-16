@@ -193,13 +193,13 @@ fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
 
     // --- display error message if compilation failed ---
     if let Some(error_msg) = &app.compilation_error {
-        let message = error_msg.lines().next().unwrap();
+        let message = error_msg;
 
         let error_area = Rect::new(
             editor_area.x + 1,
-            editor_area.y + editor_area.height - 1,
+            editor_area.y + editor_area.height - 5,
             editor_area.width - 2,
-            1,
+            4,
         );
 
         let error_block = Block::default()
@@ -208,8 +208,8 @@ fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
         f.render_widget(Clear, error_area);
         f.render_widget(error_block, error_area);
 
-        Line::from(message)
-            .alignment(Alignment::Center)
+        Text::from_iter(message.lines())
+            .alignment(Alignment::Left)
             .render(error_area, f.buffer_mut());
     }
 }

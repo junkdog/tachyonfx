@@ -563,7 +563,7 @@ impl<'dsl> Arguments<'dsl> {
     fn next(&mut self, type_name: &'static str) -> Result<Expr, DslError> {
         self.args.pop_front()
             .ok_or(DslError::MissingArgument {
-                position: self.initial_arg_count - self.args.len(),
+                position: self.initial_arg_count - self.args.len() + 1,
                 name: type_name,
                 location: self.span
             })
