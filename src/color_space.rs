@@ -5,10 +5,12 @@ use crate::lru_cache::LruCache;
 
 /// Defines the color space to use for color interpolation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ColorSpace {
     /// Linear RGB interpolation (fastest but not perceptually uniform)
     Rgb,
     /// HSL interpolation (default - balance of performance and perceptual quality)
+    #[default]
     Hsl,
     /// HSV interpolation (similar to HSL but different perceptual model)
     Hsv,
@@ -296,11 +298,6 @@ pub(crate) fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
     (r, g, b)
 }
 
-impl Default for ColorSpace {
-    fn default() -> Self {
-        ColorSpace::Hsl // Match current default behavior
-    }
-}
 
 #[cfg(test)]
 mod tests {

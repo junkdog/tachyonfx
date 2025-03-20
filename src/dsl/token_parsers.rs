@@ -5,7 +5,7 @@ use crate::dsl::DslError;
 use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
 use anpa::core::{parse, ParserExt};
 use anpa::parsers::item_if;
-use anpa::{create_parser_trait, greedy_or, or, right, tuplify};
+use anpa::{create_parser_trait, or, right, tuplify};
 use compact_str::{format_compact, ToCompactString};
 
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
