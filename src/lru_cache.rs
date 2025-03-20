@@ -40,18 +40,12 @@ where
     K: PartialEq + Clone + Default,
     V: Clone,
 {
-    index: [Key<K>; N], // (key, entries[idx], counter)
-    entries: [V; N],
+    index: [K; N],
+    entries: [(V, u16); N],
     len: usize,
     counter: u16,
     cache_misses: u32,
     cache_hits: u32,
-}
-
-#[derive(Debug, Clone, Default)]
-struct Key<K: PartialEq + Clone + Default> {
-    id: K,
-    counter: u16,
 }
 
 impl<K, V, const N: usize> LruCache<K, V, N>
@@ -72,8 +66,8 @@ where
         assert!(N > 0,   "Cache size must be greater than 0");
         assert!(N < 256, "Cache size must be less than 256");
         Self {
-            index: array::from_fn(|_| Key::default()),
-            entries: array::from_fn(|_| V::default()),
+            index: array::from_fn(|_| Default::default()),
+            entries: array::from_fn(|_| Default::default()),
             len: 0,
             counter: 0,
             cache_misses: 0,
@@ -105,23 +99,23 @@ where
         self.counter += 1;
         if self.counter == 0xffff {
             self.normalize();
-            self.counter = self.index.iter()
+            self.counter = self.entries.iter()
                 .take(self.len)
-                .map(|k| k.counter)
+                .map(|(_, counter)| *counter)
                 .max()
                 .unwrap_or(0)
         }
 
         // Find the entry with the matching key
         let pos = (0..self.len)
-            .find(|&i| &self.index[i].id == key);
+            .find(|&i| &self.index[i] == key);
 
         match pos {
             Some(idx) => {
                 self.cache_hits += 1;
 
-                self.index[idx].counter = self.counter;
-                self.entries[idx].clone()
+                self.entries[idx].1 = self.counter;
+                self.entries[idx].0.clone()
             }
             None => {
                 self.cache_misses += 1;
@@ -134,12 +128,9 @@ where
                     idx
                 };
 
-                self.index[idx] = Key {
-                    id: key.clone(),
-                    counter: self.counter,
-                };
-                self.entries[idx] = f(key);
-                self.entries[idx].clone()
+                self.index[idx] = key.clone();
+                self.entries[idx] = (f(key), self.counter);
+                self.entries[idx].0.clone()
             }
         }
     }
@@ -165,22 +156,23 @@ where
     }
 
     fn normalize(&mut self) {
-        let min_offset = (0..self.len)
-            .map(|i| self.index[i].counter)
+        let min_offset = self.entries.iter()
+            .take(self.len)
+            .map(|(_, counter)| *counter)
             .min()
             .unwrap_or(0);
 
-        self.index.iter_mut()
+        self.entries.iter_mut()
             .take(self.len)
-            .for_each(|i| i.counter -= min_offset);
+            .for_each(|(_, counter)| *counter -= min_offset);
     }
 
     // Helper method to find the index of the least recently used entry
     fn find_lru_index(&self) -> usize {
-        self.index.iter()
+        self.entries.iter()
             .take(self.len)
             .enumerate()
-            .min_by(|(_, a), (_, b)| a.counter.cmp(&b.counter))
+            .min_by(|(_, (_, a)), (_, (_, b))| a.cmp(b))
             .map(|(i, _)| i)
             .unwrap_or(0)
     }
