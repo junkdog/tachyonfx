@@ -3,11 +3,12 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 
+
+use crate::color_space::color_from_hsl;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
-use crate::{CellFilter, Duration};
-use crate::{ColorMapper, HslConvertable, Interpolatable};
-use crate::color_space::color_from_hsl;
+use crate::{CellFilter, Duration, LruCache};
+use crate::{HslConvertable, Interpolatable};
 
 #[derive(Builder, Clone, Default, Debug)]
 pub struct HslShift {
@@ -28,9 +29,6 @@ impl Shader for HslShift {
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
         let alpha = self.timer.alpha();
 
-        let cell_iter = self.cell_iter(buf, area);
-        let mut fg_mapper = ColorMapper::default();
-        let mut bg_mapper = ColorMapper::default();
 
         let hsl_lerp = |c: Color, hsl: [f32; 3]| -> Color {
             let (h, s, l) = c.to_hsl_f32();
@@ -44,16 +42,19 @@ impl Shader for HslShift {
             color_from_hsl(h, s, l)
         };
 
+        let cell_iter = self.cell_iter(buf, area);
+        let mut fg_cache: LruCache<Color, Color, 8> = LruCache::default();
+        let mut bg_cache: LruCache<Color, Color, 8> = LruCache::default();
+
         for (_, cell) in cell_iter {
             if let Some(hsl_mod) = self.hsl_mod_fg {
-                let fg = fg_mapper.map(cell.fg, alpha, |c| hsl_lerp(c, hsl_mod));
+                let fg = fg_cache.memoize(&cell.fg, |c| hsl_lerp(*c, hsl_mod));
                 cell.set_fg(fg);
             }
             if let Some(hsl_mod) = self.hsl_mod_bg {
-                let bg = bg_mapper.map(cell.bg, alpha, |c| hsl_lerp(c, hsl_mod));
+                let bg = bg_cache.memoize(&cell.bg, |c| hsl_lerp(*c, hsl_mod));
                 cell.set_bg(bg);
             }
-
         }
     }
 
@@ -108,10 +109,10 @@ impl Shader for HslShift {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use indoc::indoc;
-    use crate::{fx, Effect};
     use crate::dsl::{EffectDsl, EffectExpression};
     use crate::Interpolation::Linear;
+    use crate::{fx, Effect};
+    use indoc::indoc;
 
     #[test]
     fn hsl_shift() {

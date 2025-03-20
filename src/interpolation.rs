@@ -1,5 +1,5 @@
 use crate::color_space::{color_from_hsl, hsl_to_rgb};
-use crate::color_to_hsl;
+use crate::{color_to_hsl, ColorSpace};
 use ratatui::layout::Offset;
 use ratatui::style::{Color, Style};
 use simple_easing::{back_in, back_in_out, back_out, bounce_in, bounce_in_out, bounce_out, circ_in, circ_in_out, circ_out, cubic_in, elastic_in, elastic_in_out, elastic_out, expo_in, expo_in_out, expo_out, quad_in, quad_in_out, quad_out, quart_in, quart_in_out, quart_out, quint_in, quint_in_out, quint_out, reverse, sine_in, sine_in_out, sine_out};
@@ -168,14 +168,8 @@ impl Interpolatable<Color> for Color {
         } else if alpha == 1.0 {
             return *target;
         }
-        
-        let (h, s, v) = self.to_hsl_f32();
-        let (h2, s2, v2) = target.to_hsl_f32();
-        color_from_hsl(
-            h.lerp(&h2, alpha),
-            s.lerp(&s2, alpha),
-            v.lerp(&v2, alpha),
-        )
+
+        ColorSpace::Hsl.lerp(self, target, alpha)
     }
 }
 

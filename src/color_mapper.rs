@@ -4,6 +4,7 @@ use ratatui::style::Color;
 /// a given alpha value. The `ColorMapper` caches the original color
 /// and alpha value to avoid redundant transformations.
 #[derive(Default)]
+#[deprecated(since = "0.11.0", note = "Use `tachyonfx::LruCache` instead")]
 pub struct ColorMapper {
     original: (Color, f32),
     transformed: Color
