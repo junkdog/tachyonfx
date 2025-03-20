@@ -14,9 +14,6 @@ mod color_ext;
 mod rect_ext;
 mod render_effect;
 mod motion;
-
-pub mod fx;
-pub mod widget;
 mod bounding_box;
 mod buffer_renderer;
 mod cell_filter;
@@ -24,12 +21,15 @@ mod simple_rng;
 mod duration;
 mod features;
 mod effect_manager;
+mod color_space;
+mod lru_cache;
+
+pub mod fx;
+pub mod widget;
 
 #[cfg(feature = "dsl")]
 #[doc = include_str!("../docs/dsl.md")]
 pub mod dsl;
-pub mod color_space;
-pub mod lru_cache;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
@@ -47,6 +47,8 @@ pub use simple_rng::*;
 pub use duration::Duration;
 pub use motion::*;
 pub use features::{ref_count, RefCount, ThreadSafetyMarker};
+pub use lru_cache::LruCache;
+pub use color_space::*;
 
 #[cfg(all(feature = "std-duration", feature = "web-time"))]
 compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");

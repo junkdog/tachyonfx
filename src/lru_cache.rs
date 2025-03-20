@@ -14,7 +14,7 @@ use std::array;
 /// # Examples
 ///
 /// ```
-/// use tachyonfx::lru_cache::LruCache;
+/// use tachyonfx::LruCache;
 ///
 /// let mut cache = LruCache::<String, i32, 2>::new();
 ///
