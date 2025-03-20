@@ -3,7 +3,6 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::prelude::Color;
 
-use crate::color_mapper::ColorMapper;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::{CellFilter, Duration, Interpolatable, LruCache};
@@ -103,12 +102,12 @@ impl Shader for FadeColors {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use indoc::indoc;
-    use ratatui::style::Color;
-    use crate::shader::Shader;
     use crate::effect_timer::EffectTimer;
     use crate::fx;
+    use crate::shader::Shader;
     use crate::Interpolation::QuadOut;
+    use indoc::indoc;
+    use ratatui::style::Color;
 
     #[test]
     fn to_dsl_fade_to_fg() {

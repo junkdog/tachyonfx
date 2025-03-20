@@ -8,9 +8,7 @@ use crate::effect_timer::EffectTimer;
 use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
 use crate::interpolation::{Interpolatable, Interpolation};
 use crate::shader::Shader;
-use crate::CellFilter;
-use crate::{ColorMapper, Duration};
-use crate::{DirectionalVariance, Motion};
+use crate::{CellFilter, Duration, DirectionalVariance, LruCache, Motion};
 
 #[derive(Clone, Debug)]
 pub struct SweepIn {
@@ -66,8 +64,8 @@ impl Shader for SweepIn {
 
         let mut axis_jitter = DirectionalVariance::from(area, direction, self.randomness_extent);
 
-        let mut fg_mapper = ColorMapper::default();
-        let mut bg_mapper = ColorMapper::default();
+        let mut fg_cache: LruCache<(Color, f32), Color, 4> = LruCache::default();
+        let mut bg_cache: LruCache<(Color, f32), Color, 4> = LruCache::default();
 
         let mut apply_alpha = |cell: &mut Cell, pos: Position| {
             match window_alpha.alpha(pos) {
@@ -77,10 +75,10 @@ impl Shader for SweepIn {
                 },
                 1.0 => {} // nothing to do
                 a => {
-                    let fg = fg_mapper
-                        .map(cell.fg, a, |c| self.faded_color.tween(&c, a, CircOut));
-                    let bg = bg_mapper
-                        .map(cell.bg, a, |c| self.faded_color.tween(&c, a, CircOut));
+                    let fg = fg_cache
+                        .memoize(&(cell.fg, a), |(c, a)| self.faded_color.tween(c, *a, CircOut));
+                    let bg = bg_cache
+                        .memoize(&(cell.bg, a), |(c, a)| self.faded_color.tween(c, *a, CircOut));
 
                     cell.set_fg(fg);
                     cell.set_bg(bg);

@@ -1,4 +1,4 @@
-use crate::color_space::{color_from_hsl, hsl_to_rgb};
+use crate::color_space::hsl_to_rgb;
 use crate::{color_to_hsl, ColorSpace};
 use ratatui::layout::Offset;
 use ratatui::style::{Color, Style};

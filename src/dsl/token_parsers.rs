@@ -316,11 +316,10 @@ fn within<'a, T>(
 mod tests {
     use super::*;
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
+    use crate::CellFilter;
     use anpa::core::parse;
-    use anpa::greedy_or;
     use compact_str::ToCompactString;
     use ratatui::prelude::Color;
-    use crate::CellFilter;
 
     // Helper function to create a Expr::FnCall expression
     fn expr_fn_call(

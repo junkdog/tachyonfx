@@ -7,8 +7,8 @@ use ratatui::style::Color;
 use crate::color_space::color_from_hsl;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
-use crate::{CellFilter, Duration, LruCache};
-use crate::{HslConvertable, Interpolatable};
+use crate::{color_to_hsl, CellFilter, Duration, LruCache};
+use crate::Interpolatable;
 
 #[derive(Builder, Clone, Default, Debug)]
 pub struct HslShift {
@@ -31,7 +31,7 @@ impl Shader for HslShift {
 
 
         let hsl_lerp = |c: Color, hsl: [f32; 3]| -> Color {
-            let (h, s, l) = c.to_hsl_f32();
+            let (h, s, l) = color_to_hsl(&c);
 
             let (h, s, l) = (
                 (h + 0.0.lerp(&hsl[0], alpha)) % 360.0,

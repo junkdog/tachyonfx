@@ -1,7 +1,7 @@
 use bon::bon;
 use crate::widget::effect_span::effect_span_tree;
 use crate::widget::{CellFilterRegistry, ColorResolver, EffectSpan};
-use crate::{CellFilter, Duration, Effect, HslConvertable, Shader};
+use crate::{color_to_hsl, CellFilter, Duration, Effect, Shader};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Style};
@@ -55,16 +55,16 @@ impl EffectTimeline {
         #[builder(default = Style::default().bg(Color::Black))]
         chart_style: Style,
 
-        #[builder(default = Style::default().fg(Color::from_hsl_f32(40.0, 20.0, 35.0)))]
+        #[builder(default = Style::default().fg(color_from_hsl(40.0, 20.0, 35.0)))]
         area_column_style: Style,
 
-        #[builder(default = Style::default().fg(Color::from_hsl_f32(40.0, 40.0, 47.0)))]
+        #[builder(default = Style::default().fg(color_from_hsl(40.0, 40.0, 47.0)))]
         area_legend_style: Style,
 
-        #[builder(default = Style::default().fg(Color::from_hsl_f32(170.0, 20.0, 35.0)))]
+        #[builder(default = Style::default().fg(color_from_hsl(170.0, 20.0, 35.0)))]
         cell_filter_column_style: Style,
 
-        #[builder(default = Style::default().fg(Color::from_hsl_f32(170.0, 40.0, 47.0)))]
+        #[builder(default = Style::default().fg(color_from_hsl(170.0, 40.0, 47.0)))]
         cell_filter_legend_style: Style,
     ) -> Self {
         let span = effect.as_effect_span(Duration::default());
@@ -492,7 +492,7 @@ impl Widget for EffectTimeline {
 }
 
 fn as_background_area_line(bar: &str, base_color: Color) -> Line<'static> {
-    let (h, s, l) = base_color.to_hsl_f32();
+    let (h, s, l) = color_to_hsl(&base_color);
     let color = color_from_hsl(h, s * 0.4, l * 0.4);
     let first = bar.chars().next().unwrap_or(' ').to_string();
     let last = bar.chars().last().unwrap_or(' ').to_string();

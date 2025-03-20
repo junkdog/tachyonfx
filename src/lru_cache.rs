@@ -37,7 +37,7 @@ use std::array;
 #[derive(Debug, Clone)]
 pub struct LruCache<K, V, const N: usize>
 where
-    K: Eq + Clone + Default,
+    K: PartialEq + Clone + Default,
     V: Clone,
 {
     index: [Key<K>; N], // (key, entries[idx], counter)
@@ -49,14 +49,14 @@ where
 }
 
 #[derive(Debug, Clone, Default)]
-struct Key<K: Eq + Clone + Default> {
+struct Key<K: PartialEq + Clone + Default> {
     id: K,
     counter: u16,
 }
 
 impl<K, V, const N: usize> LruCache<K, V, N>
 where
-    K: Eq + Clone + Default,
+    K: PartialEq + Clone + Default,
     V: Clone,
 {
     /// Creates a new empty LRU cache with the specified capacity.
@@ -188,7 +188,7 @@ where
 
 impl<K, V, const N: usize> Default for LruCache<K, V, N>
 where
-    K: Eq + Copy + Default,
+    K: PartialEq + Copy + Default,
     V: Copy + Default,
 {
     fn default() -> Self {

@@ -156,12 +156,12 @@ pub(crate) mod unique;
 /// let no_state = (); // no state to keep track of
 ///
 /// fx::effect_fn(no_state, timer, |_state, context, cell_iter| {
-///    let mut fg_mapper = ColorMapper::default();
 ///    let alpha = context.alpha();
+///    let fg_cache: LruCache<Color, Color, 4> = LruCache::default();
 ///
 ///    for (_pos, cell) in cell_iter {
 ///        // context.timer.progress() is already interpolated, so we can linearly lerp to the target color
-///        let color = fg_mapper.map(cell.fg, alpha, |c| c.lerp(&Color::Indexed(35), alpha));
+///        let color = fg_cache.memoize(&cell.fg, |c| c.lerp(&Color::Indexed(35), alpha));
 ///        cell.set_fg(color);
 ///    }
 /// }).filter(CellFilter::FgColor(Color::DarkGray));
