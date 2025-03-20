@@ -718,48 +718,6 @@ mod tests {
     }
 
     #[test]
-    fn negative_test() {
-
-
-
-        with_tokens("fx::sequence(fx::dissolve(200) fx::fade_to(Color::Red, 300))", |tokens| {
-            let statements = many_to_vec(
-                or!(
-                    //  or!(
-                    //     let_binding(),
-                    //     sequence(),
-                    //     parallel(),
-                    //     struct_instantiation(),
-                    //     variable().map(maybe_promote),
-                    //     function_expression(),
-                    // ),
-                    greedy_or!(
-                        let_binding(),
-                        sequence(),
-                        parallel(),
-                        struct_instantiation(),
-                        variable().map(maybe_promote),
-                        function_expression(),
-                    )
-                )
-                , true,separator(token(TokenKind::Semicolon), false)
-            );
-
-
-            let result = parse(function_call(), tokens);
-            // let result = parse(statements, tokens);
-            assert_eq!(
-                result.state,
-                vec![]
-            );
-            // assert_eq!(
-            //     result.result,
-            //     Some(fn_info("fade_to", vec![]))
-            // );
-        });
-    }
-
-    #[test]
     fn test_chained_fns_parser() {
         // Test with no chained methods
         with_tokens("", |tokens| {
