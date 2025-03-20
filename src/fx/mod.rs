@@ -178,7 +178,8 @@ pub(crate) mod unique;
 /// ```no_run
 /// use std::time::Instant;
 /// use ratatui::style::Color;
-/// use tachyonfx::{fx, HslConvertable};
+/// use tachyonfx::fx;
+/// use tachyonfx::color_space::color_from_hsl;
 ///
 /// fx::effect_fn(Instant::now(), 1000, |state, _ctx, cell_iter| {
 ///     let cycle: f32 = (state.elapsed().as_millis() % 3600) as f32;
@@ -187,7 +188,7 @@ pub(crate) mod unique;
 ///         .enumerate()
 ///         .for_each(|(i, (_pos, cell))| {
 ///             let hue = (2.0 * i as f32 + cycle * 0.2) % 360.0;
-///             let color = Color::from_hsl_f32(hue, 100.0, 50.0);
+///             let color = color_from_hsl(hue, 100.0, 50.0);
 ///             cell.set_fg(color);
 ///     });
 /// });

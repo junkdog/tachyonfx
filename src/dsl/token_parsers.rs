@@ -5,7 +5,7 @@ use crate::dsl::DslError;
 use anpa::combinators::{and_parsed, attempt, many_to_vec, middle, no_separator, separator, succeed};
 use anpa::core::{parse, ParserExt};
 use anpa::parsers::item_if;
-use anpa::{create_parser_trait, or, right, tuplify};
+use anpa::{create_parser_trait, greedy_or, or, right, tuplify};
 use compact_str::{format_compact, ToCompactString};
 
 create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
@@ -317,6 +317,7 @@ mod tests {
     use super::*;
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
     use anpa::core::parse;
+    use anpa::greedy_or;
     use compact_str::ToCompactString;
     use ratatui::prelude::Color;
     use crate::CellFilter;
@@ -713,6 +714,48 @@ mod tests {
                 parse(function_call(), tokens).result,
                 Some(fn_info("fade_to", vec![]))
             );
+        });
+    }
+
+    #[test]
+    fn negative_test() {
+
+
+
+        with_tokens("fx::sequence(fx::dissolve(200) fx::fade_to(Color::Red, 300))", |tokens| {
+            let statements = many_to_vec(
+                or!(
+                    //  or!(
+                    //     let_binding(),
+                    //     sequence(),
+                    //     parallel(),
+                    //     struct_instantiation(),
+                    //     variable().map(maybe_promote),
+                    //     function_expression(),
+                    // ),
+                    greedy_or!(
+                        let_binding(),
+                        sequence(),
+                        parallel(),
+                        struct_instantiation(),
+                        variable().map(maybe_promote),
+                        function_expression(),
+                    )
+                )
+                , true,separator(token(TokenKind::Semicolon), false)
+            );
+
+
+            let result = parse(function_call(), tokens);
+            // let result = parse(statements, tokens);
+            assert_eq!(
+                result.state,
+                vec![]
+            );
+            // assert_eq!(
+            //     result.result,
+            //     Some(fn_info("fade_to", vec![]))
+            // );
         });
     }
 

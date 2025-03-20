@@ -137,6 +137,7 @@ The library includes a variety of effects, loosely categorized as follows:
 - **effect_fn:**        Creates custom effects from user-defined functions, operating over `CellIterator`.
 - **effect_fn_buf:**    Creates custom effects from functions, operating over `Buffer`.
 - **offscreen_buffer:** Wraps an existing effect and redirects its rendering to a separate buffer.
+- **unique:**           A unique effect that will cancel any existing effect with the same key.
 
 Additional effects can be created by implementing the `Shader` trait.
 

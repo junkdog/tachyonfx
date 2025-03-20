@@ -28,6 +28,8 @@ mod effect_manager;
 #[cfg(feature = "dsl")]
 #[doc = include_str!("../docs/dsl.md")]
 pub mod dsl;
+pub mod color_space;
+pub mod lru_cache;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;

@@ -15,6 +15,7 @@ mod examples {
     use ratatui::layout::Offset;
     use super::*;
     use tachyonfx::{Motion, HslConvertable};
+    use tachyonfx::color_space::{color_from_hsl, ColorSpace};
 
     pub fn coalesce() -> Effect {
         fx::coalesce((1000, Interpolation::BounceOut))
@@ -174,7 +175,7 @@ mod examples {
                 .enumerate()
                 .for_each(|(i, (_pos, cell))| {
                     let hue = (2.0 * i as f32 + cycle * 0.2) % 360.0;
-                    let color = Color::from_hsl_f32(hue, 100.0, 50.0);
+                    let color = color_from_hsl(hue, 100.0, 50.0);
                     cell.set_fg(color);
                 });
         })

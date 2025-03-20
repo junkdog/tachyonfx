@@ -7,7 +7,7 @@ use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::{CellFilter, Duration};
 use crate::{ColorMapper, HslConvertable, Interpolatable};
-
+use crate::color_space::color_from_hsl;
 
 #[derive(Builder, Clone, Default, Debug)]
 pub struct HslShift {
@@ -41,7 +41,7 @@ impl Shader for HslShift {
                 (l + 0.0.lerp(&hsl[2], alpha)).clamp(0.0, 100.0),
             );
 
-            HslConvertable::from_hsl_f32(h, s, l)
+            color_from_hsl(h, s, l)
         };
 
         for (_, cell) in cell_iter {

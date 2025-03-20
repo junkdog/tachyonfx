@@ -2,6 +2,7 @@ use ratatui::layout::Offset;
 use ratatui::style::{Color, Style};
 use simple_easing::{back_in, back_in_out, back_out, bounce_in, bounce_in_out, bounce_out, circ_in, circ_in_out, circ_out, cubic_in, elastic_in, elastic_in_out, elastic_out, expo_in, expo_in_out, expo_out, quad_in, quad_in_out, quad_out, quart_in, quart_in_out, quart_out, quint_in, quint_in_out, quint_out, reverse, sine_in, sine_in_out, sine_out};
 use crate::color_ext::ToRgbComponents;
+use crate::color_space::{color_from_hsl, hsl_to_rgb, rgb_to_hsl, ColorSpace};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Interpolation {
@@ -105,7 +106,7 @@ impl Interpolation {
 /// A trait for interpolating between two values.
 pub trait Interpolatable<T> {
     fn lerp(&self, target: &T, alpha: f32) -> T;
-    
+
     fn tween(&self, target: &T, alpha: f32, interpolation: Interpolation) -> T {
         self.lerp(target, interpolation.alpha(alpha))
     }
@@ -170,7 +171,7 @@ impl Interpolatable<Color> for Color {
         
         let (h, s, v) = self.to_hsl_f32();
         let (h2, s2, v2) = target.to_hsl_f32();
-        Color::from_hsl_f32(
+        color_from_hsl(
             h.lerp(&h2, alpha),
             s.lerp(&s2, alpha),
             v.lerp(&v2, alpha),
@@ -198,6 +199,7 @@ impl Interpolatable<Offset> for Offset {
     }
 }
 
+#[deprecated(since = "0.11.0", note = "Replaced by ColorSpace and associated functions")]
 pub trait HslConvertable {
     fn from_hsl_f32(h: f32, s: f32, v: f32) -> Self;
     fn to_hsl_f32(&self) -> (f32, f32, f32);
@@ -205,21 +207,25 @@ pub trait HslConvertable {
 
 impl HslConvertable for Color {
     fn from_hsl_f32(h: f32, s: f32, v: f32) -> Self {
-        let hsl = colorsys::Hsl::new(h as f64, s as f64, v as f64, None);
-        let color: colorsys::Rgb = hsl.as_ref().into();
-        
-        let red = color.red().round();
-        let green = color.green().round();
-        let blue = color.blue().round();
-        
-        Color::Rgb(red as u8, green as u8, blue as u8)
+        // let hsl = colorsys::Hsl::new(h as f64, s as f64, v as f64, None);
+        // let color: colorsys::Rgb = hsl.as_ref().into();
+        //
+        // let red = color.red().round();
+        // let green = color.green().round();
+        // let blue = color.blue().round();
+
+        let (r, g, b) = hsl_to_rgb(h, s, v);
+
+        Color::Rgb(r, g, b)
     }
 
     fn to_hsl_f32(&self) -> (f32, f32, f32) {
         let (r, g, b) = self.to_rgb();
+        //
+        // let rgb = colorsys::Rgb::from([r, g, b]);
+        // let hsl: colorsys::Hsl = rgb.as_ref().into();
+        // (hsl.hue() as f32, hsl.saturation() as f32, hsl.lightness() as f32)
 
-        let rgb = colorsys::Rgb::from([r, g, b]);
-        let hsl: colorsys::Hsl = rgb.as_ref().into();
-        (hsl.hue() as f32, hsl.saturation() as f32, hsl.lightness() as f32)
+        rgb_to_hsl(r, g, b)
     }
 }

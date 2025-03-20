@@ -23,6 +23,7 @@ use tachyonfx::{fx::{
 }, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, HslConvertable, Interpolation, IntoEffect, Motion, Shader, SimpleRng};
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
+use tachyonfx::color_space::{color_from_hsl, ColorSpace};
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
@@ -230,7 +231,7 @@ impl EffectsRepository {
                 .enumerate()
                 .for_each(|(i, (_pos, cell))| {
                     let hue = (2.0 * i as f32 + cycle * 0.2) % 360.0;
-                    let color = Color::from_hsl_f32(hue, 100.0, 50.0);
+                    let color = color_from_hsl(hue, 100.0, 50.0);
                     cell.set_fg(color);
                 });
         }).with_filter(CellFilter::FgColor(Light3.into()));
