@@ -105,8 +105,9 @@ where
         self.counter += 1;
         if self.counter == 0xffff {
             self.normalize();
-            self.counter = (0..self.len)
-                .map(|i| self.index[i].counter)
+            self.counter = self.index.iter()
+                .take(self.len)
+                .map(|k| k.counter)
                 .max()
                 .unwrap_or(0)
         }
@@ -163,18 +164,15 @@ where
         self.cache_misses
     }
 
-    fn clear(&mut self) {
-        self.len = 0;
-        self.counter = 0;
-    }
-
     fn normalize(&mut self) {
         let min_offset = (0..self.len)
             .map(|i| self.index[i].counter)
             .min()
             .unwrap_or(0);
 
-        self.index.iter_mut().take(self.len).for_each(|i| i.counter -= min_offset);
+        self.index.iter_mut()
+            .take(self.len)
+            .for_each(|i| i.counter -= min_offset);
     }
 
     // Helper method to find the index of the least recently used entry

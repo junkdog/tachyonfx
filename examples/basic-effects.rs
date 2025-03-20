@@ -23,7 +23,7 @@ use tachyonfx::{fx::{
 }, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, HslConvertable, Interpolation, IntoEffect, Motion, Shader, SimpleRng};
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
-use tachyonfx::color_space::{color_from_hsl, ColorSpace};
+use tachyonfx::color_from_hsl;
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;

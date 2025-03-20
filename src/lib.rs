@@ -49,6 +49,7 @@ pub use motion::*;
 pub use features::{ref_count, RefCount, ThreadSafetyMarker};
 pub use lru_cache::LruCache;
 pub use color_space::*;
+pub use color_ext::ToRgbComponents;
 
 #[cfg(all(feature = "std-duration", feature = "web-time"))]
 compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");

@@ -12,23 +12,9 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{BorderType, Borders, Clear, StatefulWidget, Widget};
 use ratatui::{text, Frame};
 
-use tachyonfx::{
-    CellFilter,
-    CellFilter::{AllOf, Inner, Not, Outer},
-    CenteredShrink,
-    Duration,
-    Effect,
-    EffectRenderer,
-    HslConvertable,
-    Interpolation,
-    Motion,
-    Shader,
-    fx,
-    fx::{never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration},
-};
+use tachyonfx::{CellFilter, CellFilter::{AllOf, Inner, Not, Outer}, CenteredShrink, Duration, Effect, EffectRenderer, HslConvertable, Interpolation, Motion, Shader, fx, fx::{never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration}, color_from_hsl};
 use CellFilter::Text;
 use Interpolation::*;
-use tachyonfx::color_space::{color_from_hsl, ColorSpace};
 use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Light2, YellowBright};
 use crate::window::OpenWindow;
 

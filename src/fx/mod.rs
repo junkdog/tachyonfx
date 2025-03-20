@@ -178,8 +178,7 @@ pub(crate) mod unique;
 /// ```no_run
 /// use std::time::Instant;
 /// use ratatui::style::Color;
-/// use tachyonfx::fx;
-/// use tachyonfx::color_space::color_from_hsl;
+/// use tachyonfx::{color_from_hsl, fx};
 ///
 /// fx::effect_fn(Instant::now(), 1000, |state, _ctx, cell_iter| {
 ///     let cycle: f32 = (state.elapsed().as_millis() % 3600) as f32;

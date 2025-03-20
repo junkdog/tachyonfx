@@ -24,10 +24,14 @@ pub fn color_from_hsv(h: f32, s: f32, v: f32) -> Color {
     Color::Rgb(r, g, b)
 }
 
-impl Default for ColorSpace {
-    fn default() -> Self {
-        ColorSpace::Hsl // Match current default behavior
-    }
+pub fn color_to_hsv(color: &Color) -> (f32, f32, f32) {
+    let (r, g, b) = color.to_rgb();
+    rgb_to_hsv(r, g, b)
+}
+
+pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
+    let (r, g, b) = color.to_rgb();
+    rgb_to_hsl(r, g, b)
 }
 
 pub trait ColorSpaceEffect {
@@ -142,12 +146,7 @@ impl ColorSpace {
     }
 }
 
-pub fn color_to_hsv(color: &Color) -> (f32, f32, f32) {
-    let (r, g, b) = color.to_rgb();
-    rgb_to_hsv(r, g, b)
-}
-
-pub fn rgb_to_hsv(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+fn rgb_to_hsv(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     let r = r as f32 / 255.0;
     let g = g as f32 / 255.0;
     let b = b as f32 / 255.0;
@@ -178,7 +177,7 @@ pub fn rgb_to_hsv(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (h, s * 100.0, v * 100.0)
 }
 
-pub(crate) fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
+fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
     let s = s / 100.0;
     let v = v / 100.0;
     let h = h % 360.0;
@@ -211,12 +210,7 @@ pub(crate) fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
         (b * 255.0).round() as u8)
 }
 
-pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
-    let (r, g, b) = color.to_rgb();
-    rgb_to_hsl(r, g, b)
-}
-
-pub fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     let r = r as f32 / 255.0;
     let g = g as f32 / 255.0;
     let b = b as f32 / 255.0;
@@ -300,6 +294,12 @@ pub(crate) fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
     let b = to_rgb_component(h - 1.0/3.0);
 
     (r, g, b)
+}
+
+impl Default for ColorSpace {
+    fn default() -> Self {
+        ColorSpace::Hsl // Match current default behavior
+    }
 }
 
 #[cfg(test)]
