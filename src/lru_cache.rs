@@ -42,7 +42,6 @@ where
 {
     index: [K; N],
     entries: [(V, u16); N],
-    len: usize,
     counter: u16,
     cache_misses: u32,
     cache_hits: u32,
@@ -68,7 +67,6 @@ where
         Self {
             index: array::from_fn(|_| Default::default()),
             entries: array::from_fn(|_| Default::default()),
-            len: 0,
             counter: 0,
             cache_misses: 0,
             cache_hits: 0,
@@ -100,15 +98,15 @@ where
         if self.counter == 0xffff {
             self.normalize();
             self.counter = self.entries.iter()
-                .take(self.len)
                 .map(|(_, counter)| *counter)
                 .max()
                 .unwrap_or(0)
         }
 
         // Find the entry with the matching key
-        let pos = (0..self.len)
-            .find(|&i| &self.index[i] == key);
+        let pos = self.index.iter().enumerate()
+            .find(|(_, &ref k)| k == key)
+            .map(|(i, _)| i);
 
         match pos {
             Some(idx) => {
@@ -120,29 +118,12 @@ where
             None => {
                 self.cache_misses += 1;
 
-                let idx = if self.len >= N {
-                    self.find_lru_index()
-                } else {
-                    let idx = self.len;
-                    self.len += 1;
-                    idx
-                };
-
+                let idx = self.find_lru_index();
                 self.index[idx] = key.clone();
                 self.entries[idx] = (f(key), self.counter);
                 self.entries[idx].0.clone()
             }
         }
-    }
-
-    /// Returns the current number of entries in the cache.
-    pub fn len(&self) -> usize {
-        self.len
-    }
-
-    /// Returns true if the cache is empty.
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
     }
 
     /// Returns the number of cache hits since creation.
@@ -157,20 +138,17 @@ where
 
     fn normalize(&mut self) {
         let min_offset = self.entries.iter()
-            .take(self.len)
             .map(|(_, counter)| *counter)
             .min()
             .unwrap_or(0);
 
         self.entries.iter_mut()
-            .take(self.len)
             .for_each(|(_, counter)| *counter -= min_offset);
     }
 
     // Helper method to find the index of the least recently used entry
     fn find_lru_index(&self) -> usize {
         self.entries.iter()
-            .take(self.len)
             .enumerate()
             .min_by(|(_, (_, a)), (_, (_, b))| a.cmp(b))
             .map(|(i, _)| i)
@@ -193,13 +171,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new_cache_is_empty() {
-        let cache: LruCache<String, i32, 5> = LruCache::new();
-        assert_eq!(cache.len(), 0);
-        assert!(cache.is_empty());
-    }
-
-    #[test]
     fn test_memoize_adds_entry() {
         let mut cache: LruCache<&str, i32, 5> = LruCache::new();
 
@@ -210,9 +181,7 @@ mod tests {
         });
 
         assert_eq!(result, 42);
-        assert_eq!(cache.len(), 1);
         assert_eq!(compute_called.get(), 1);
-        assert!(!cache.is_empty());
     }
 
     #[test]
@@ -246,11 +215,8 @@ mod tests {
         cache.memoize(&3, |k| k * 10);
 
         // Cache should now be full
-        assert_eq!(cache.len(), 3);
-
         // Adding a new item should evict the least recently used (1)
         cache.memoize(&4, |k| k * 10);
-        assert_eq!(cache.len(), 3); // Size should still be 3
 
         // Checking if key 1 is recomputed to verify it was evicted
         let computation_occurred = std::cell::Cell::new(false);
@@ -310,7 +276,6 @@ mod tests {
         cache.memoize(&'c', |_| 3);
 
         // Cache should be normalized with only the most recent item
-        assert_eq!(cache.len(), 3);
         assert_eq!(cache.counter, 1); // Counter should be reset
 
         // Verify 'a' and 'b' were evicted by checking if they're recomputed
@@ -343,7 +308,6 @@ mod tests {
         let result = cache.memoize(&key1, |_| vec![99, 99, 99]);
 
         assert_eq!(result, vec![1, 2, 3]);
-        assert_eq!(cache.len(), 2);
     }
 
     #[test]
@@ -364,12 +328,6 @@ mod tests {
     #[should_panic(expected = "Cache size must be greater than 0")]
     fn test_zero_size_cache_panics() {
         let _cache: LruCache<i32, i32, 0> = LruCache::new();
-    }
-
-    #[test]
-    fn test_default_implementation() {
-        let cache: LruCache<i32, i32, 5> = LruCache::default();
-        assert_eq!(cache.len(), 0);
     }
 
     #[test]
