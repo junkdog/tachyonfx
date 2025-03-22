@@ -57,6 +57,7 @@ impl ChainableMethods for Effect {
             "clone"                  => effect.clone(),
             "reversed"               => effect.reversed(),
             "with_area"              => effect.with_area(args.rect()?),
+            "with_color_space"       => effect.with_color_space(args.color_space()?),
             "with_filter" | "filter" => effect.with_filter(args.cell_filter()?),
             _                        => Err(DslError::UnknownFunction {
                 name: name.into(),

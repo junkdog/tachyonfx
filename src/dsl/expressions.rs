@@ -1,6 +1,6 @@
 use crate::dsl::DslFormat;
 use crate::fx::RepeatMode;
-use crate::{CellFilter, Interpolation, Motion};
+use crate::{CellFilter, ColorSpace, Interpolation, Motion};
 use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::layout::Direction;
 use ratatui::prelude::{Color, Modifier};
@@ -52,6 +52,7 @@ pub(super) enum Value {
     I32(i32),
     U32(u32),
     F32(f32),
+    ColorSpace(ColorSpace),
     OptionNone,
     Modifier(Modifier),
     Motion(Motion),
@@ -145,6 +146,7 @@ impl Value {
             Value::OptionNone       => "None".to_compact_string(),
             Value::Modifier(m)      => m.dsl_format(),
             Value::Direction(dir)   => dir.dsl_format(),
+            Value::ColorSpace(c)    => c.dsl_format(),
         }
     }
 
@@ -162,6 +164,7 @@ impl Value {
             Value::OptionNone       => "option",
             Value::Modifier(_)      => "modifier",
             Value::Direction(_)     => "direction",
+            Value::ColorSpace(_)    => "color_space",
         }
     }
 }

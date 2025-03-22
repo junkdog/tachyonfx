@@ -4,7 +4,7 @@ use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::DslError;
 use crate::fx::RepeatMode;
-use crate::{CellFilter, Duration, Effect, EffectTimer, Interpolation, Motion};
+use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion};
 use compact_str::{CompactString, ToCompactString};
 use ratatui::layout::{Constraint, Direction, Layout, Margin, Offset, Rect};
 use ratatui::prelude::{Color, Style};
@@ -145,6 +145,14 @@ impl<'dsl> Arguments<'dsl> {
             Expr::Literal(Value::CellFilter(f), _) => Ok(f),
             Expr::Var { name, span, .. }           => self.bound_var(name, span),
             e                                      => self.expected_type_expr("cell_filter", e),
+        }
+    }
+
+    pub fn color_space(&mut self) -> Result<ColorSpace, DslError> {
+        match self.next("color_space")? {
+            Expr::Literal(Value::ColorSpace(c), _) => Ok(c),
+            Expr::Var { name, span, .. }           => self.bound_var(name, span),
+            e                                      => self.expected_type_expr("color_space", e),
         }
     }
 
@@ -842,6 +850,7 @@ impl_from_args!(Interpolation, interpolation);
 impl_from_args!(Motion, motion);
 impl_from_args!(RepeatMode, repeat_mode);
 impl_from_args!(CellFilter, cell_filter);
+impl_from_args!(ColorSpace, color_space);
 
 
 #[cfg(test)]

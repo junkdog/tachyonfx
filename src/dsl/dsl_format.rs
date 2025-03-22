@@ -1,5 +1,5 @@
 use crate::fx::RepeatMode;
-use crate::{CellFilter, Duration, EffectTimer, Interpolation, Motion};
+use crate::{CellFilter, ColorSpace, Duration, EffectTimer, Interpolation, Motion};
 use compact_str::{format_compact, CompactString, CompactStringExt, ToCompactString};
 use ratatui::layout::{Constraint, Direction, Margin, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -52,6 +52,12 @@ impl DslFormat for Rect {
         format_compact!("Rect::new({}, {}, {}, {})",
             self.x, self.y, self.width, self.height
         )
+    }
+}
+
+impl DslFormat for ColorSpace {
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("{:?}", self)
     }
 }
 

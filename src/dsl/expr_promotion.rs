@@ -1,6 +1,6 @@
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::fx::RepeatMode;
-use crate::{CellFilter, Interpolation, Motion};
+use crate::{CellFilter, ColorSpace, Interpolation, Motion};
 use ratatui::layout::Direction;
 use ratatui::prelude::Modifier;
 use ratatui::style::Color;
@@ -37,6 +37,7 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
         .or_else(|| direction(text))
         .or_else(|| cell_filter(text))
         .or_else(|| modifier(text))
+        .or_else(|| color_space(text))
         .or_else(|| interpolation(text))
         .or_else(|| color(text))
         .or_else(|| repeat_mode(text))
@@ -51,6 +52,15 @@ fn motion(text: &str) -> Option<Value> {
         "UpToDown"    => Motion::UpToDown,
         "DownToUp"    => Motion::DownToUp,
         _             => None?,
+    }))
+}
+
+fn color_space(text: &str) -> Option<Value> {
+    Some(Value::ColorSpace(match text.trim_start_matches("ColorSpace::") {
+        "Rgb" => ColorSpace::Rgb,
+        "Hsl" => ColorSpace::Hsl,
+        "Hsv" => ColorSpace::Hsv,
+        _     => None?,
     }))
 }
 
