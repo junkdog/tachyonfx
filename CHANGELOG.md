@@ -36,6 +36,7 @@
 
 ### Added
 - `ColorSpace`: enum with `Rgb`, `Hsl`, and `Hsv` options for controlling color interpolation
+  - Eliminates overhead of converting to/from colorsys representation; ~1/3 faster color conversions
 - `color_from_hsl()`, `color_from_hsv()`, `color_to_hsl()`, `color_to_hsv()`: utility functions
 - Added `Effect::with_color_space` to set the color space used for color interpolation
   - Modified effects to respect or propagate the selected color space
