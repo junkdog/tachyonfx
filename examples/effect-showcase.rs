@@ -14,7 +14,7 @@ use tachyonfx::{fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer
 mod examples {
     use ratatui::layout::Offset;
     use super::*;
-    use tachyonfx::{Motion, HslConvertable, color_from_hsl};
+    use tachyonfx::{Motion, color_from_hsl};
 
     pub fn coalesce() -> Effect {
         fx::coalesce((1000, Interpolation::BounceOut))

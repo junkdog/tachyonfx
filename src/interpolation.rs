@@ -199,6 +199,7 @@ pub trait HslConvertable {
     fn to_hsl_f32(&self) -> (f32, f32, f32);
 }
 
+#[allow(deprecated)]
 impl HslConvertable for Color {
     fn from_hsl_f32(h: f32, s: f32, v: f32) -> Self {
         let (r, g, b) = hsl_to_rgb(h, s, v);

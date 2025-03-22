@@ -87,7 +87,7 @@ pub use shader_fn::*;
 pub use repeat::RepeatMode;
 use slide::SlideCell;
 pub use direction::*;
-use crate::{CellIterator, Duration, Motion, RefCount, ThreadSafetyMarker};
+use crate::{CellIterator, ColorSpace, Duration, Motion, RefCount, ThreadSafetyMarker};
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::fx::ansi256::Ansi256;
@@ -1196,6 +1196,7 @@ fn fade<C: Into<Color>>(
         .maybe_fg(fg.map(Into::into))
         .maybe_bg(bg.map(Into::into))
         .timer(if reverse { timer.reversed() } else { timer })
+        .color_space(ColorSpace::default())
         .build()
         .into_effect()
 }

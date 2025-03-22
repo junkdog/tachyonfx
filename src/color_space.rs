@@ -1,6 +1,5 @@
 use ratatui::style::Color;
 use crate::color_ext::ToRgbComponents;
-use crate::Effect;
 use crate::lru_cache::LruCache;
 
 /// Defines the color space to use for color interpolation.
@@ -34,11 +33,6 @@ pub fn color_to_hsv(color: &Color) -> (f32, f32, f32) {
 pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
     let (r, g, b) = color.to_rgb();
     rgb_to_hsl(r, g, b)
-}
-
-pub trait ColorSpaceEffect {
-    /// Set the color space used for color interpolation
-    fn with_color_space(self, color_space: ColorSpace) -> Effect;
 }
 
 impl<const N: usize> LruCache<Color, (f32, f32, f32), N> {

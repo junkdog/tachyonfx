@@ -1,7 +1,7 @@
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
 use crate::simple_rng::SimpleRng;
-use crate::{CellFilter, Duration};
+use crate::{default_shader_impl, CellFilter, Duration};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -38,6 +38,8 @@ impl Dissolve {
 }
 
 impl Shader for Dissolve {
+    default_shader_impl!(area, timer, filter, clone);
+
     fn name(&self) -> &'static str {
         match (self.dissolved_style, self.timer.is_reversed()) {
             (Some(_), true)  => "coalesce_from",
@@ -65,38 +67,6 @@ impl Shader for Dissolve {
                 c.set_char(' ');
             });
         }
-    }
-
-    fn done(&self) -> bool {
-          self.timer.done()
-     }
-
-     fn clone_box(&self) -> Box<dyn Shader> {
-          Box::new(self.clone())
-     }
-
-    fn area(&self) -> Option<Rect> {
-        self.area
-    }
-
-    fn set_area(&mut self, area: Rect) {
-        self.area = Some(area)
-    }
-
-    fn filter(&mut self, strategy: CellFilter) {
-        self.cell_filter = strategy
-    }
-
-    fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer)
-    }
-
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.timer)
-    }
-
-    fn cell_filter(&self) -> Option<CellFilter> {
-        Some(self.cell_filter.clone())
     }
 
     #[cfg(feature = "dsl")]

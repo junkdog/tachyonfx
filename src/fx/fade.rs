@@ -1,3 +1,4 @@
+use crate::default_shader_impl;
 use bon::{builder, Builder};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -5,7 +6,7 @@ use ratatui::prelude::Color;
 
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
-use crate::{CellFilter, Duration, Interpolatable, LruCache};
+use crate::{CellFilter, ColorSpace, Duration, LruCache};
 
 #[derive(Builder, Clone, Debug)]
 pub struct FadeColors {
@@ -16,9 +17,12 @@ pub struct FadeColors {
     area: Option<Rect>,
     #[builder(default)]
     cell_filter: CellFilter,
+    color_space: ColorSpace,
 }
 
 impl Shader for FadeColors {
+    default_shader_impl!(area, timer, filter, color_space, clone);
+
     fn name(&self) -> &'static str {
         if self.timer.is_reversed() { "fade_from" } else { "fade_to" }
     }
@@ -32,47 +36,17 @@ impl Shader for FadeColors {
 
         cell_iter.for_each(|(_, cell)| {
             if let Some(fg) = self.fg.as_ref() {
-                let color = fg_cache.memoize(&cell.fg, |c| c.lerp(fg, alpha));
+                let color = fg_cache
+                    .memoize(&cell.fg, |c| self.color_space.lerp(c, fg, alpha));
                 cell.set_fg(color);
             }
 
             if let Some(bg) = self.bg.as_ref() {
-                let color = bg_cache.memoize(&cell.bg, |c| c.lerp(bg, alpha));
+                let color = bg_cache
+                    .memoize(&cell.bg, |c| self.color_space.lerp(c, bg, alpha));
                 cell.set_bg(color);
             }
         });
-    }
-
-    fn done(&self) -> bool {
-        self.timer.done()
-    }
-
-    fn clone_box(&self) -> Box<dyn Shader> {
-        Box::new(self.clone())
-    }
-
-    fn area(&self) -> Option<Rect> {
-        self.area
-    }
-
-    fn set_area(&mut self, area: Rect) {
-        self.area = Some(area);
-    }
-
-    fn filter(&mut self, strategy: CellFilter) {
-        self.cell_filter = strategy;
-    }
-
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.timer)
-    }
-
-    fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer)
-    }
-
-    fn cell_filter(&self) -> Option<CellFilter> {
-        Some(self.cell_filter.clone())
     }
 
     #[cfg(feature = "dsl")]
@@ -98,6 +72,8 @@ impl Shader for FadeColors {
         crate::dsl::EffectExpression::parse(&s)
     }
 }
+
+
 
 #[cfg(test)]
 #[cfg(feature = "dsl")]

@@ -4,7 +4,7 @@ use ratatui::layout::{Position, Rect};
 use ratatui::style::Color;
 
 use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
-use crate::{CellFilter, Duration, EffectTimer, Shader};
+use crate::{default_shader_impl, CellFilter, Duration, EffectTimer, Shader};
 use crate::{DirectionalVariance, Motion};
 
 /// A shader that applies a directional sliding effect to terminal cells.
@@ -42,6 +42,8 @@ impl SlideCell {
 }
 
 impl Shader for SlideCell {
+    default_shader_impl!(area, timer, filter, clone);
+
     fn name(&self) -> &'static str {
         if self.timer.is_reversed() ^ self.direction.flips_timer() {
             "slide_in"
@@ -111,36 +113,6 @@ impl Shader for SlideCell {
                 }
             }
         }
-    }
-
-    fn done(&self) -> bool { self.timer.done() }
-
-    fn clone_box(&self) -> Box<dyn Shader> {
-        Box::new(self.clone())
-    }
-
-    fn area(&self) -> Option<Rect> {
-        self.area
-    }
-
-    fn set_area(&mut self, area: Rect) {
-        self.area = Some(area);
-    }
-
-    fn filter(&mut self, strategy: CellFilter) {
-        self.cell_filter = strategy;
-    }
-
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.timer)
-    }
-
-    fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer)
-    }
-
-    fn cell_filter(&self) -> Option<CellFilter> {
-        Some(self.cell_filter.clone())
     }
 
     #[cfg(feature = "dsl")]

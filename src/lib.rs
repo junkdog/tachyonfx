@@ -33,6 +33,7 @@ pub mod dsl;
 
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
+#[allow(deprecated)]
 pub use color_mapper::ColorMapper;
 pub use cell_filter::{CellFilter, CellPredicate};
 pub use effect::{Effect, IntoEffect};

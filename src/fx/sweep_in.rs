@@ -6,9 +6,9 @@ use Interpolation::CircOut;
 
 use crate::effect_timer::EffectTimer;
 use crate::fx::sliding_window_alpha::SlidingWindowAlpha;
-use crate::interpolation::{Interpolatable, Interpolation};
+use crate::interpolation::Interpolation;
 use crate::shader::Shader;
-use crate::{CellFilter, Duration, DirectionalVariance, LruCache, Motion};
+use crate::{CellFilter, Duration, DirectionalVariance, LruCache, Motion, default_shader_impl, ColorSpace};
 
 #[derive(Clone, Debug)]
 pub struct SweepIn {
@@ -19,6 +19,7 @@ pub struct SweepIn {
     direction: Motion,
     area: Option<Rect>,
     cell_filter: CellFilter,
+    color_space: ColorSpace,
 }
 
 
@@ -38,11 +39,14 @@ impl SweepIn {
             timer: if direction.flips_timer() { lifetime.reversed() } else { lifetime },
             area: None,
             cell_filter: CellFilter::All,
+            color_space: ColorSpace::default(),
         }
     }
 }
 
 impl Shader for SweepIn {
+    default_shader_impl!(area, timer, filter, color_space, clone);
+
     fn name(&self) -> &'static str {
         if self.timer.is_reversed() ^ self.direction.flips_timer() {
             "sweep_out"
@@ -75,10 +79,12 @@ impl Shader for SweepIn {
                 },
                 1.0 => {} // nothing to do
                 a => {
+                    let faded = self.faded_color;
+                    let mod_a = CircOut.alpha(a);
                     let fg = fg_cache
-                        .memoize(&(cell.fg, a), |(c, a)| self.faded_color.tween(c, *a, CircOut));
+                        .memoize(&(cell.fg, a), |(c, _)| self.color_space.lerp(&faded, c, mod_a));
                     let bg = bg_cache
-                        .memoize(&(cell.bg, a), |(c, a)| self.faded_color.tween(c, *a, CircOut));
+                        .memoize(&(cell.bg, a), |(c, _)| self.color_space.lerp(&faded, c, mod_a));
 
                     cell.set_fg(fg);
                     cell.set_bg(bg);
@@ -119,38 +125,6 @@ impl Shader for SweepIn {
                 }
             }
         }
-    }
-
-    fn done(&self) -> bool {
-        self.timer.done()
-    }
-
-    fn clone_box(&self) -> Box<dyn Shader> {
-        Box::new(self.clone())
-    }
-
-    fn area(&self) -> Option<Rect> {
-        self.area
-    }
-
-    fn set_area(&mut self, area: Rect) {
-        self.area = Some(area)
-    }
-
-    fn filter(&mut self, strategy: CellFilter) {
-        self.cell_filter = strategy;
-    }
-
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.timer)
-    }
-
-    fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer)
-    }
-
-    fn cell_filter(&self) -> Option<CellFilter> {
-        Some(self.cell_filter.clone())
     }
 
     #[cfg(feature = "dsl")]

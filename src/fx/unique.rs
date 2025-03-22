@@ -51,7 +51,6 @@ impl<K: Clone + Debug + ThreadSafetyMarker + 'static> Shader for Unique<K> {
 
     fn done(&self) -> bool {
         let iid = acquire_ref(&self.id_context).instance_id;
-        // let iid = binding.deref().instance_id;
         self.instance_id != iid || self.fx.done()
     }
 

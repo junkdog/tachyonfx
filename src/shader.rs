@@ -4,7 +4,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
 use crate::widget::EffectSpan;
-use crate::{CellFilter, Duration, ThreadSafetyMarker};
+use crate::{CellFilter, ColorSpace, Duration, ThreadSafetyMarker};
 use crate::EffectTimer;
 
 
@@ -195,6 +195,13 @@ pub trait Shader: ThreadSafetyMarker + Debug {
         self.cell_filter()
     }
 
+    /// Set the color space used for color interpolation
+    #[allow(unused_variables)]
+    fn set_color_space(&mut self, color_space: ColorSpace) {}
+
+    /// Get the current color space
+    fn color_space(&self) -> ColorSpace { ColorSpace::Hsl }
+
     /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and
     /// [fx::repeat](fx/fn.repeat.html) to reset the hosted shader effect to its initial state.
     fn reset(&mut self) {
@@ -230,4 +237,91 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         EffectSpan::new(self, offset, Vec::default())
     }
+}
+
+/// A macro for implementing common Shader trait functions.
+///
+/// This macro reduces boilerplate code by automatically implementing various
+/// Shader trait methods based on the specified fields. You can choose which
+/// groups of implementations to include.
+///
+/// # Arguments
+///
+/// * One or more tokens representing implementation groups:
+///   - `area` - Implements `area()` and `set_area()` methods
+///   - `timer` - Implements `done()`, `timer_mut()`, and `timer()` methods
+///   - `filter` - Implements `filter()` and `cell_filter()` methods
+///   - `color_space` - Implements `set_color_space()` and `color_space()` methods
+///   - `clone` - Implements `clone_box()` method
+///
+/// # Requirements
+///
+/// Depending on which groups you include, your struct must have the following fields:
+/// * `area` - Requires a field named `area` of type `Option<Rect>`
+/// * `timer` - Requires a field named `timer` of type `EffectTimer`
+/// * `filter` - Requires a field named `cell_filter` of type `CellFilter`
+/// * `color_space` - Requires a field named `color_space` of type `ColorSpace`
+/// * `clone` - Requires your type to implement `Clone`
+#[macro_export]
+macro_rules! default_shader_impl {
+    ( $($group:ident),* ) => {
+        $(
+            default_shader_impl!(@$group);
+        )*
+    };
+
+    // Area implementation
+    (@area) => {
+        fn area(&self) -> Option<Rect> {
+            self.area
+        }
+
+        fn set_area(&mut self, area: Rect) {
+            self.area = Some(area);
+        }
+    };
+
+    // Timer implementation
+    (@timer) => {
+        fn done(&self) -> bool {
+            self.timer.done()
+        }
+
+        fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+            Some(&mut self.timer)
+        }
+
+        fn timer(&self) -> Option<EffectTimer> {
+            Some(self.timer)
+        }
+    };
+
+    // Filter implementation
+    (@filter) => {
+        fn filter(&mut self, strategy: CellFilter) {
+            self.cell_filter = strategy;
+        }
+
+        fn cell_filter(&self) -> Option<CellFilter> {
+            Some(self.cell_filter.clone())
+        }
+    };
+
+    // Color space implementation
+    (@color_space) => {
+        fn set_color_space(&mut self, color_space: ColorSpace) {
+            self.color_space = color_space;
+        }
+
+        fn color_space(&self) -> ColorSpace {
+            self.color_space
+        }
+    };
+
+    // Clone implementation
+    (@clone) => {
+        fn clone_box(&self) -> Box<dyn Shader> {
+            Box::new(self.clone())
+        }
+    };
 }

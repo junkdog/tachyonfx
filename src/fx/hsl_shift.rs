@@ -7,7 +7,7 @@ use ratatui::style::Color;
 use crate::color_space::color_from_hsl;
 use crate::effect_timer::EffectTimer;
 use crate::shader::Shader;
-use crate::{color_to_hsl, CellFilter, Duration, LruCache};
+use crate::{color_to_hsl, default_shader_impl, CellFilter, Duration, LruCache};
 use crate::Interpolatable;
 
 #[derive(Builder, Clone, Default, Debug)]
@@ -22,6 +22,8 @@ pub struct HslShift {
 }
 
 impl Shader for HslShift {
+    default_shader_impl!(area, timer, filter, clone);
+
     fn name(&self) -> &'static str {
         "hsl_shift"
     }
@@ -56,35 +58,6 @@ impl Shader for HslShift {
                 cell.set_bg(bg);
             }
         }
-    }
-
-    fn done(&self) -> bool {
-        self.timer.done()
-    }
-
-    fn clone_box(&self) -> Box<dyn Shader> {
-        Box::new(self.clone())
-    }
-
-    fn area(&self) -> Option<Rect> { self.area }
-    fn set_area(&mut self, area: Rect) {
-        self.area = Some(area);
-    }
-
-    fn filter(&mut self, strategy: CellFilter) {
-        self.cell_filter = strategy;
-    }
-
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.timer)
-    }
-
-    fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer)
-    }
-
-    fn cell_filter(&self) -> Option<CellFilter> {
-        Some(self.cell_filter.clone())
     }
 
     #[cfg(feature = "dsl")]

@@ -1,6 +1,6 @@
 use crate::color_ext::AsIndexedColor;
 use crate::shader::Shader;
-use crate::CellFilter;
+use crate::{default_shader_impl, CellFilter};
 use crate::{Duration, LruCache};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
@@ -12,6 +12,8 @@ pub struct Ansi256 {
 }
 
 impl Shader for Ansi256 {
+    default_shader_impl!(area, clone);
+
     fn name(&self) -> &'static str {
         "term256_colors"
     }
@@ -41,18 +43,6 @@ impl Shader for Ansi256 {
     }
 
     fn done(&self) -> bool { false }
-
-    fn clone_box(&self) -> Box<dyn Shader> {
-        Box::new(self.clone())
-    }
-
-    fn area(&self) -> Option<Rect> {
-        self.area
-    }
-
-    fn set_area(&mut self, area: Rect) {
-        self.area = Some(area);
-    }
 
     fn filter(&mut self, _strategy: CellFilter) {}
 

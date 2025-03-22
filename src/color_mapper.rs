@@ -10,6 +10,7 @@ pub struct ColorMapper {
     transformed: Color
 }
 
+#[allow(deprecated)]
 impl ColorMapper {
     /// Maps the given color to a transformed color using the provided transformation function.
     /// The transformation is only applied if the input color or alpha value has changed since
