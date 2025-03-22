@@ -15,21 +15,59 @@ pub enum ColorSpace {
     Hsv,
 }
 
+/// Converts HSL (Hue, Saturation, Lightness) values to a ratatui Color.
+///
+/// # Arguments
+/// * `h` - Hue value in degrees (0-360)
+/// * `s` - Saturation percentage (0-100)
+/// * `l` - Lightness percentage (0-100)
+///
+/// # Returns
+/// A ratatui Color in RGB format
 pub fn color_from_hsl(h: f32, s: f32, l: f32) -> Color {
     let (r, g, b) = hsl_to_rgb(h, s, l);
     Color::Rgb(r, g, b)
 }
 
+/// Converts HSV (Hue, Saturation, Value) values to a ratatui Color.
+///
+/// # Arguments
+/// * `h` - Hue value in degrees (0-360)
+/// * `s` - Saturation percentage (0-100)
+/// * `v` - Value/brightness percentage (0-100)
+///
+/// # Returns
+/// A ratatui Color in RGB format
 pub fn color_from_hsv(h: f32, s: f32, v: f32) -> Color {
     let (r, g, b) = hsv_to_rgb(h, s, v);
     Color::Rgb(r, g, b)
 }
 
+/// Converts a ratatui Color to HSV (Hue, Saturation, Value) components.
+///
+/// # Arguments
+/// * `color` - The source Color to convert
+///
+/// # Returns
+/// A tuple of (hue, saturation, value) where:
+/// * hue is in degrees (0-360)
+/// * saturation is a percentage (0-100)
+/// * value is a percentage (0-100)
 pub fn color_to_hsv(color: &Color) -> (f32, f32, f32) {
     let (r, g, b) = color.to_rgb();
     rgb_to_hsv(r, g, b)
 }
 
+/// Converts a ratatui Color to HSL (Hue, Saturation, Lightness) components.
+///
+/// # Arguments
+/// * `color` - The source Color to convert
+///
+/// # Returns
+/// A tuple of (hue, saturation, lightness) where:
+/// * hue is in degrees (0-360)
+/// * saturation is a percentage (0-100)
+/// * lightness is a percentage (0-100)
 pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
     let (r, g, b) = color.to_rgb();
     rgb_to_hsl(r, g, b)
