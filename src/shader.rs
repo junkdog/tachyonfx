@@ -200,7 +200,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     fn set_color_space(&mut self, color_space: ColorSpace) {}
 
     /// Get the current color space
-    fn color_space(&self) -> ColorSpace { ColorSpace::Hsl }
+    fn color_space(&self) -> ColorSpace { ColorSpace::default() }
 
     /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and
     /// [fx::repeat](fx/fn.repeat.html) to reset the hosted shader effect to its initial state.

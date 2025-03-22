@@ -1,5 +1,5 @@
 use crate::widget::EffectSpan;
-use crate::{CellFilter, Duration, Effect, RefCount, Shader};
+use crate::{CellFilter, ColorSpace, Duration, Effect, RefCount, Shader};
 use compact_str::ToCompactString;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -70,6 +70,10 @@ impl Shader for OffscreenBuffer {
         self.fx.filter(filter);
     }
 
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.fx.cell_filter()
+    }
+
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
@@ -80,5 +84,13 @@ impl Shader for OffscreenBuffer {
         Err(DslError::UnsupportedEffect {
             name: self.name().to_compact_string(),
         })
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.fx.set_color_space(color_space);
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.fx.color_space()
     }
 }

@@ -1,7 +1,7 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
-use crate::{CellFilter, Duration, Effect, EffectTimer, Shader};
+use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Shader};
 use crate::widget::EffectSpan;
 
 #[derive(Clone, Debug)]
@@ -82,6 +82,14 @@ impl Shader for PingPong {
 
     fn cell_filter(&self) -> Option<CellFilter> {
         Some(self.strategy.clone())
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.fx.set_color_space(color_space);
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.fx.color_space()
     }
 
     fn reset(&mut self) {

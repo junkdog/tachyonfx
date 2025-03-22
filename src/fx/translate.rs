@@ -3,7 +3,7 @@ use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 
 use crate::bounding_box::BoundingBox;
-use crate::{CellFilter, Duration};
+use crate::{CellFilter, ColorSpace, Duration};
 use crate::effect::Effect;
 use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolatable;
@@ -108,6 +108,16 @@ impl Shader for Translate {
             return fx.cell_filter();
         }
         None
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        if let Some(fx) = &mut self.fx {
+            fx.set_color_space(color_space);
+        }
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.fx.as_ref().map(|e| e.color_space()).unwrap_or_default()
     }
 
     fn reset(&mut self) {

@@ -1,6 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Rect};
-use crate::{CellFilter, Duration, EffectTimer};
+use crate::{CellFilter, ColorSpace, Duration, EffectTimer};
 use crate::effect::Effect;
 use crate::widget::EffectSpan;
 use crate::Interpolation::Linear;
@@ -103,9 +103,15 @@ impl Shader for ParallelEffect {
         EffectSpan::new(self, offset, children)
     }
 
+
+
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         to_dsl(self.name(), &self.effects)
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.effects.iter_mut().for_each(|e| e.set_color_space(color_space));
     }
 }
 
@@ -180,6 +186,10 @@ impl Shader for SequentialEffect {
     fn reset(&mut self) {
         self.current = 0;
         self.effects.iter_mut().for_each(Effect::reset)
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.effects.iter_mut().for_each(|e| e.set_color_space(color_space));
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {

@@ -1,5 +1,5 @@
 use crate::features::acquire_ref;
-use crate::{CellFilter, Duration, Effect, EffectTimer, RefCount, Shader, ThreadSafetyMarker};
+use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefCount, Shader, ThreadSafetyMarker};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use std::fmt::Debug;
@@ -84,6 +84,14 @@ impl<K: Clone + Debug + ThreadSafetyMarker + 'static> Shader for Unique<K> {
 
     fn cell_filter(&self) -> Option<CellFilter> {
         self.fx.cell_filter()
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.fx.set_color_space(color_space);
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.fx.color_space()
     }
 
     fn reset(&mut self) {

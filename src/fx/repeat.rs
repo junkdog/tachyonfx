@@ -1,7 +1,7 @@
 use crate::effect::Effect;
 use crate::shader::Shader;
 use crate::widget::EffectSpan;
-use crate::{CellFilter, Duration, EffectTimer};
+use crate::{CellFilter, ColorSpace, Duration, EffectTimer};
 use ratatui::buffer::Buffer;
 use ratatui::prelude::Rect;
 
@@ -95,6 +95,14 @@ impl Shader for Repeat {
 
     fn filter(&mut self, strategy: CellFilter) {
         self.fx.filter(strategy);
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.fx.set_color_space(color_space);
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.fx.color_space()
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {

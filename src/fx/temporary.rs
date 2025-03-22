@@ -3,7 +3,7 @@ use crate::effect_timer::EffectTimer;
 use crate::interpolation::Interpolation::Linear;
 use crate::shader::Shader;
 use crate::widget::EffectSpan;
-use crate::{CellFilter, Duration};
+use crate::{CellFilter, ColorSpace, Duration};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
@@ -75,6 +75,14 @@ impl Shader for TemporaryEffect {
     fn reset(&mut self) {
         self.effect.reset();
         self.timer.reset();
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.effect.set_color_space(color_space);
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.effect.color_space()
     }
 
     #[cfg(feature = "dsl")]

@@ -1,6 +1,6 @@
 use crate::widget::EffectSpan;
 use crate::Interpolation::Linear;
-use crate::{CellFilter, Duration, Effect, EffectTimer, Shader};
+use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Shader};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
@@ -77,6 +77,14 @@ impl Shader for Prolong {
 
     fn filter(&mut self, strategy: CellFilter) {
         self.inner.filter(strategy);
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.inner.set_color_space(color_space);
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.inner.color_space()
     }
 
     /// Returns the total duration of the prolonged effect.

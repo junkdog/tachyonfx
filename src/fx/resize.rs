@@ -4,7 +4,7 @@ use ratatui::layout::Size;
 use ratatui::prelude::Rect;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
-use crate::{CellFilter, Duration};
+use crate::{CellFilter, ColorSpace, Duration};
 
 use crate::effect::Effect;
 use crate::effect_timer::EffectTimer;
@@ -96,6 +96,16 @@ impl Shader for ResizeArea {
         if let Some(fx) = self.fx.as_mut() {
             fx.filter(strategy);
         }
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        if let Some(fx) = self.fx.as_mut() {
+            fx.set_color_space(color_space);
+        }
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.fx.as_ref().map(|e| e.color_space()).unwrap_or_default()
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {

@@ -1,7 +1,7 @@
 use crate::effect::Effect;
 use crate::shader::Shader;
 use crate::widget::EffectSpan;
-use crate::{CellFilter, Duration, EffectTimer};
+use crate::{CellFilter, ColorSpace, Duration, EffectTimer};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
@@ -53,6 +53,14 @@ impl Shader for NeverComplete {
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)])
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.effect.color_space()
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.effect.set_color_space(color_space);
     }
 
     #[cfg(feature = "dsl")]
