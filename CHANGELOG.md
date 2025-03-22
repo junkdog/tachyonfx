@@ -4,7 +4,7 @@
 
 ### DSL Improvements
 
-#### Enhanced Error Handling and Diagnostics
+#### Improved Error Handling and Diagnostics
 
 - **Improved Error Reporting**: Added source location tracking for DSL errors, making it easier to identify and fix issues in DSL expressions
   - New `DslParseError` type provides detailed context including:
@@ -34,9 +34,19 @@
 
 - **Improved DSL Writer**: Enhanced DSL serialization with smarter line breaking and indentation.
 
+### Added
+- `ColorSpace`: enum with `Rgb`, `Hsl`, and `Hsv` options for controlling color interpolation
+- `color_from_hsl()`, `color_from_hsv()`, `color_to_hsl()`, `color_to_hsv()`: utility functions
+- Added `Effect::with_color_space` to set the color space used for color interpolation
+  - Modified effects to respect or propagate the selected color space
+- `LruCache<K, V, N>`: const-capacity LRU cache for storing color conversions etc.
 
 ### Breaking Changes
-- **Error Handling**: The error type for `DslCompiler::compile` has changed from `DslError` to `DslParseError`. 
+- **Error Handling**: The error type for `DslCompiler::compile` has changed from `DslError` to `DslParseError`.
+
+### Deprecated
+- `HslConvertable`: deprecated in favor of new color space utilities
+- `ColorMapper`: superseded by `LruCache`.
 
 ## tachyonfx 0.11.1 - 2025-03-02
 
