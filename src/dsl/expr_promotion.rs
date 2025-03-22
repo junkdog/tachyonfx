@@ -11,6 +11,7 @@ use ratatui::style::Color;
 /// Supported types for promotion:
 /// - Motion enum variants
 /// - Direction enum variants
+/// - ColorSpace enum variants
 /// - CellFilter enum variants
 /// - Modifier enum variants
 /// - Interpolation enum variants

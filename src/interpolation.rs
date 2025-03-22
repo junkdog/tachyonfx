@@ -193,7 +193,7 @@ impl Interpolatable<Offset> for Offset {
     }
 }
 
-#[deprecated(since = "0.11.0", note = "Replaced by ColorSpace and associated functions")]
+#[deprecated(since = "0.12.0", note = "Replaced by ColorSpace and associated functions")]
 pub trait HslConvertable {
     fn from_hsl_f32(h: f32, s: f32, v: f32) -> Self;
     fn to_hsl_f32(&self) -> (f32, f32, f32);

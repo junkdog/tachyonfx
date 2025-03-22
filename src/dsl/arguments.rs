@@ -397,7 +397,6 @@ impl<'dsl> Arguments<'dsl> {
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
             Expr::FnCall { call, self_fns, span } => {
-                // Handle Style constructors
                 if call.name == "Style::new" || call.name == "Style::default" {
                     Style::new().fold_fns(self_fns, self.context, self.vars)
                 } else {
