@@ -101,9 +101,9 @@ let effect = dsl.compiler().compile(r#"
     fx::dissolve(1000)
         .with_filter(CellFilter::Text)
         .with_area(Rect::new(10, 10, 20, 5))
+        .with_color_space(ColorSpace::Hsv)
 "#).expect("Valid effect");
 ```
-
 ### Composing Effects
 
 The Effect DSL supports both sequence and parallel composition of effects:
@@ -144,6 +144,7 @@ In the Effect DSL, these types work exactly like their Rust counterparts:
 ```rust
 use tachyonfx::Duration;
 use ratatui::style::Color;
+use tachyonfx::ColorSpace;
 
 // Numbers
 let n1 = 42;        // u32
@@ -162,7 +163,14 @@ let d2 = Duration::from_secs_f32(0.5);
 
 // Strings
 let s = "hello world";
+
+// ColorSpace
+let cs1 = ColorSpace::Rgb;
+let cs2 = ColorSpace::Hsl;
+let cs3 = ColorSpace::Hsv;
 ```
+
+### Effect-Related Types
 
 ### Effect-Related Types
 
@@ -170,7 +178,7 @@ The Effect DSL support all tachyonfx effect-related types:
 
 ```rust
 use ratatui::style::Color;
-use tachyonfx::{Duration, EffectTimer, Interpolation, Interpolation::QuadOut, fx::RepeatMode, Motion};
+use tachyonfx::{Duration, EffectTimer, Interpolation, Interpolation::QuadOut, fx::RepeatMode, Motion, ColorSpace};
 
 // EffectTimer (with shorthand syntax)
 let t1 = EffectTimer::from_ms(500, Interpolation::Linear);
@@ -189,6 +197,11 @@ let i3 = Interpolation::CubicInOut;
 let r1 = RepeatMode::Forever;
 let r2 = RepeatMode::Times(3);
 let r3 = RepeatMode::Duration(Duration::from_millis(1000));
+
+// ColorSpace
+let cs1 = ColorSpace::Rgb;   // Linear RGB interpolation (fastest)
+let cs2 = ColorSpace::Hsl;   // HSL interpolation (default - balance of performance and quality)
+let cs3 = ColorSpace::Hsv;   // HSV interpolation
 ```
 
 ### Layout Types
@@ -252,6 +265,17 @@ let m1 = Modifier::BOLD;
 let m2 = Modifier::ITALIC;
 ```
 
+## Shorthand Syntax in DSL
+
+The Effect DSL provides several conveniences for compact, readable code:
+
+1. **Optional `fx::` Prefix**: All effect functions like `dissolve()`, `fade_to()`, etc. can be used without the `fx::` prefix
+2. **Unqualified Enum Variants**: Enum variants like `CellFilter::Text` can be used as just `Text`
+3. **Timer Shorthand**: Instead of writing `EffectTimer::from_ms(500, Linear)`, you can use the shorthand `(500, Linear)`
+
+This makes DSL expressions more concise and less verbose, especially for complex combinations of effects.
+
+
 ## Converting Between Code and DSL
 
 You can convert between programmatic effect creation and DSL expressions:
@@ -298,31 +322,31 @@ You can extend the Effect DSL with custom effects by registering your own compil
 
 ```rust
 use tachyonfx::dsl::{EffectDsl, Arguments, DslError};
-use tachyonfx::{fx, Effect, Shader};
+use tachyonfx::{fx, Effect, Shader, ColorSpace};
 use ratatui::style::Color;
 
-// Create a custom effect function
-fn pulse_effect(color: Color, duration: u32) -> Effect {
+// Create a custom effect function with color space support
+fn color_pulse_effect(color: Color, duration: u32, color_space: ColorSpace) -> Effect {
     fx::sequence(&[
         fx::fade_from_fg(color, duration / 2),
         fx::fade_to_fg(color, duration / 2)
-    ])
+    ]).with_color_space(color_space)
 }
 
-// Register the custom effect with the DSL
 let dsl = EffectDsl::new()
-    .register("pulse", | args: & mut Arguments| {
+    .register("color_pulse", | args: &mut Arguments| {
         // Parse arguments from the DSL expression
         let color = args.color()?;
         let duration = args.read_u32()?;
-        
+        let color_space = args.option(Arguments::color_space)?.unwrap_or(ColorSpace::Hsl);
+
         // Return the custom effect
-        Ok(pulse_effect(color, duration))
+        Ok(color_pulse_effect(color, duration, color_space))
     });
 
 // Now you can use your custom effect in DSL expressions
 let effect = dsl.compiler().compile(r#"
-    fx::pulse(Color::Blue, 1000)
+    fx::color_pulse(Color::Blue, 1000, Some(Hsv))
 "#).expect("Valid effect");
 ```
 
@@ -363,21 +387,24 @@ impl Shader for PulseShader {
 Here's a complete example showing how to build a complex animation with the Effect DSL:
 
 ```rust
-use tachyonfx::{Effect, dsl::EffectDsl};
+use tachyonfx::{Effect, dsl::EffectDsl, ColorSpace};
 
 let animation_dsl = r#"
     // Define variables for reuse
     let timer = (1000, QuadOut);
     let color = Color::from_u32(0x3366ff);
+    let color_space = ColorSpace::Rgb;  
 
     // Create a parallel sequenece of effects
     fx::parallel(&[
         // Fade in text
         fx::fade_from_fg(Color::Black, timer)
-            .with_filter(CellFilter::Text),
+            .with_filter(CellFilter::Text)
+            .with_color_space(color_space),
 
         // Add some color shifting 
-        fx::hsl_shift_fg([30.0, 0.0, 0.0], (500, SineInOut)),
+        fx::hsl_shift_fg([30.0, 0.0, 0.0], (500, SineInOut))
+            .with_color_space(color_space),
 
         // After 1s, fade everything out
         fx::prolong_start(1000, fx::fade_to(Color::Black, Color::Black, timer))
