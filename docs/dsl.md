@@ -163,11 +163,6 @@ let d2 = Duration::from_secs_f32(0.5);
 
 // Strings
 let s = "hello world";
-
-// ColorSpace
-let cs1 = ColorSpace::Rgb;
-let cs2 = ColorSpace::Hsl;
-let cs3 = ColorSpace::Hsv;
 ```
 
 ### Effect-Related Types
