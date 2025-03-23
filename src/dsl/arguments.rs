@@ -574,6 +574,11 @@ impl<'dsl> Arguments<'dsl> {
                 name: type_name,
                 location: self.span
             })
+            .and_then(|arg| if let Expr::SyntaxError { message, span } = arg {
+                Err(DslError::SyntaxError { message, location: span })
+            } else {
+                Ok(arg)
+            })
     }
 
     fn peek(&self) -> Option<&Expr> {
@@ -738,6 +743,7 @@ impl DslError {
             DslError::MissingArgument { location, .. } => *location,
             DslError::MissingField { location, .. } => *location,
             DslError::NoSuchVariable { location, .. } => *location,
+            DslError::SyntaxError { location, .. } => *location,
             DslError::TokenParseError { location, .. } => *location,
             DslError::TokenizationError { location, .. } => *location,
             DslError::TooManyArguments { location, .. } => *location,

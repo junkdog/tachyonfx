@@ -53,6 +53,8 @@ impl DslWriter {
             Expr::Parallel { effects, self_fns, .. } => self.write_parallel(effects, self_fns),
             Expr::StructInit { name, fields, .. }    => self.write_struct_init(name, fields),
             Expr::Tuple(exprs, _)                    => self.write_tuple(exprs),
+            Expr::Delimiter { .. }                   => unreachable!("delimiter should be have been excluded"),
+            Expr::SyntaxError { .. }                 => unreachable!("syntax errors should have been handled"),
         }
     }
 

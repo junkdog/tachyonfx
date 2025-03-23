@@ -92,6 +92,12 @@ pub enum DslError {
         location: ExprSpan,
     },
 
+    #[error("'{message}'")]
+    SyntaxError {
+        message: CompactString,
+        location: ExprSpan,
+    },
+
     #[error("Failed to cast {from} to expected type {to}")]
     CastOverflow {
         from: &'static str,

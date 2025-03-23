@@ -152,10 +152,22 @@ fn some<'a>() -> impl TokenParser<'a, Expr> {
     )).map(|(span, (_, expr))| Expr::OptionSome(Box::new(expr), span))
 }
 
+fn delimiter<'a>(kind: TokenKind) -> impl TokenParser<'a, Expr> {
+    token(kind)
+        .filter(move |t| t.kind == kind)
+        .map(|t| Expr::Delimiter {
+            symbol: t.text.chars().next().unwrap(),
+            span: ExprSpan::new(t.span.0, t.span.1)
+        })
+}
+
 fn arguments<'a>() -> impl TokenParser<'a, Vec<Expr>> {
     use TokenKind::*;
 
-    many_to_vec(expression(), true, separator(token(Comma), true))
+    // many_to_vec(expression(), true, separator(token(Comma), true))
+    let args_with_comma = or!(expression(), delimiter(Comma));
+    many_to_vec(args_with_comma, true, no_separator())
+        .map(sanitize_syntax)
 }
 
 fn tuple<'a>() -> impl TokenParser<'a, Expr> {
@@ -191,19 +203,21 @@ fn sequence<'a>() -> impl TokenParser<'a, Expr> {
 fn parallel<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    let arguments = or!(
-        array().map_if(|a| match a {
-            Expr::Array(args, _)    => Some(args),
-            Expr::ArrayRef(args, _) => Some(args),
-            _                       => Some(vec![])
-        }),
+    let arr_effects = array().map_if(|a| match a {
+        Expr::Array(args, _)    => Some(args),
+        Expr::ArrayRef(args, _) => Some(args),
+        _                       => Some(vec![])
+    });
+
+    let effects = or!(
+        arr_effects,
         succeed(item_if(|_| false)).map(|_| vec![])
     );
 
     yield_consumed(tuplify!(
         maybe_qualified("fx"),
         id("parallel"),
-        within(LeftParen, arguments, RightParen),
+        within(LeftParen, effects, RightParen),
         method_chain(),
     )).map(|(span, (_, _, args, self_fns))| Expr::Parallel { effects: args, self_fns, span })
 }
@@ -312,6 +326,50 @@ fn within<'a, T>(
 
 // endregion
 
+fn sanitize_syntax(args: Vec<Expr>) -> Vec<Expr> {
+    let (args, delimeters): (Vec<_>, Vec<_>) = args.into_iter()
+        .enumerate()
+        .partition(|(i, _)| i & 1 == 0);
+
+    // ensure that args are delimited correctly
+    let not_delimeted = delimeters.iter()
+        .find(|(_, e)| !matches!(e, Expr::Delimiter { symbol: ',', .. }));
+
+    // ensure that delimeters are in the correct place
+    let wrong_place = args.iter()
+        .find(|(_, e)| matches!(e, Expr::Delimiter { symbol: ',', .. }));
+
+
+    // if there are no errors, return the arguments
+    if not_delimeted.is_none() && wrong_place.is_none() {
+        args.into_iter().map(|(_, e)| e).collect()
+    } else {
+        let unexpected_comma = |span| Expr::SyntaxError {
+            message: "Unexpected comma delimiter".into(),
+            span
+        };
+
+        let expected_comma = |span| Expr::SyntaxError {
+            message: "Expected comma delimiter".into(),
+            span
+        };
+
+        match (not_delimeted, wrong_place) {
+            (Some((i, a)), Some((j, b))) => {
+                if i < j {
+                    vec![expected_comma(a.span())]
+                } else {
+                    vec![unexpected_comma(b.span())]
+                }
+            }
+            (Some((_, e)), _) => vec![expected_comma(e.span())],
+            (_, Some((_, e))) => vec![unexpected_comma(e.span())],
+            _                 => vec![] // unreachable
+        }
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -359,6 +417,8 @@ mod tests {
                 Parallel { effects, self_fns, .. } => Parallel { effects, self_fns, span },
                 StructInit { name, fields, .. }    => StructInit { name, fields, span },
                 Tuple(exprs, _)                    => Tuple(exprs, span),
+                Delimiter { symbol, .. }           => Delimiter { symbol, span },
+                SyntaxError { message, .. }        => SyntaxError { message, span },
             }
         }
     }
