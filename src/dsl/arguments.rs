@@ -519,6 +519,7 @@ impl<'dsl> Arguments<'dsl> {
         match self.next("array")? {
             Expr::Array(exprs, _)        => self.map_exprs(exprs, inner),
             Expr::ArrayRef(exprs, _)     => self.map_exprs(exprs, inner),
+            Expr::Macro { name, args, .. } if name == "vec" => self.map_exprs(args, inner),
             Expr::Var { name, span, .. } => self.bound_var(name, span),
             e                            => self.expected_type_expr("array", e),
         }
@@ -1093,6 +1094,49 @@ mod tests {
 
         let result = args.cell_filter().unwrap();
         assert!(matches!(result, CellFilter::FgColor(Color::Red)));
+    }
+    
+    #[test]
+    fn test_cell_filter_allof_with_vec_macro() {
+        let span = ExprSpan::new(0, 0);
+        
+        // Create a vec![] macro expression with two filters
+        let text_filter = Expr::Literal(Value::CellFilter(CellFilter::Text), span);
+        let fg_filter = Expr::FnCall {
+            call: FnCallInfo {
+                name: "CellFilter::FgColor".to_compact_string(),
+                args: vec![Expr::Literal(Value::Color(Color::Red), span)]
+            },
+            self_fns: vec![],
+            span
+        };
+        
+        // Test with CellFilter::AllOf using vec![] macro
+        let mut args = prepare_test(vec![
+            Expr::FnCall {
+                call: FnCallInfo {
+                    name: "CellFilter::AllOf".to_compact_string(),
+                    args: vec![
+                        Expr::Macro {
+                            name: "vec".into(),
+                            args: vec![text_filter, fg_filter],
+                            span
+                        }
+                    ]
+                },
+                self_fns: vec![],
+                span
+            },
+        ]);
+
+        let result = args.cell_filter().unwrap();
+        if let CellFilter::AllOf(filters) = result {
+            assert_eq!(filters.len(), 2);
+            assert!(matches!(filters[0], CellFilter::Text));
+            assert!(matches!(filters[1], CellFilter::FgColor(Color::Red)));
+        } else {
+            panic!("Expected CellFilter::AllOf, got {:?}", result);
+        }
     }
 
     #[test]

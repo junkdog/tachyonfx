@@ -37,6 +37,7 @@ pub(super) enum TokenKind {
     Ampersand,        // &
     DoubleColon,      // ::
     Minus,            // -
+    Bang,             // !
 
     // comments
     LineComment,  // discarded
@@ -193,7 +194,7 @@ fn double_colon<'a>() -> impl StrParser<'a, Token<'a>> {
 }
 
 fn structural<'a>() -> impl StrParser<'a, Token<'a>> {
-    let p = get_parsed(item_if(|c: char| "()[]{},.:;=&-".contains(c)))
+    let p = get_parsed(item_if(|c: char| "()[]{},.:;=&-!".contains(c)))
         .map(|t: &str| (t, match t {
             "(" => TokenKind::LeftParen,
             ")" => TokenKind::RightParen,
@@ -208,6 +209,7 @@ fn structural<'a>() -> impl StrParser<'a, Token<'a>> {
             "=" => TokenKind::Equals,
             "&" => TokenKind::Ampersand,
             "-" => TokenKind::Minus,
+            "!" => TokenKind::Bang,
             _ => unreachable!(),
         }));
 

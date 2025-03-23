@@ -756,14 +756,14 @@ mod tests {
 
     #[test]
     fn test_let_bindings_with_effect_chaining() {
-        let filter = CellFilter::Text;
+        let filter = CellFilter::AllOf(vec![CellFilter::Text, CellFilter::Outer(Margin::new(1, 1))]);
         let color = Color::from_u32(0xffaabb);
         let expected = fx::fade_to_fg(color, EffectTimer::from_ms(1000, Linear))
             .with_filter(filter);
 
         let input = r#"
             let color = Color::from_u32(0xffaabb);
-            let filter = CellFilter::Text;
+            let filter = AllOf(vec![Text, Outer(Margin::new(1, 1))]);
 
             fx::fade_to_fg(color, 1000)
                 .with_filter(filter)
@@ -772,6 +772,10 @@ mod tests {
         let effect = EffectDsl::new()
             .compiler()
             .compile(input)
+            .map_err(|e| {
+                println!("{:}", e);
+                e
+            })
             .expect("effect to be compiled");
 
         assert_eq!("fade_to", effect.name());

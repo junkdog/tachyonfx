@@ -50,6 +50,7 @@ pub(super) fn expression<'a>() -> impl TokenParser<'a, Expr> {
         parallel(),
         some(),
         function_expression(),
+        macro_expr(),
         array(),
         struct_instantiation(),
         qualified_name().map(maybe_promote),
@@ -164,7 +165,6 @@ fn delimiter<'a>(kind: TokenKind) -> impl TokenParser<'a, Expr> {
 fn arguments<'a>() -> impl TokenParser<'a, Vec<Expr>> {
     use TokenKind::*;
 
-    // many_to_vec(expression(), true, separator(token(Comma), true))
     let args_with_comma = or!(expression(), delimiter(Comma));
     many_to_vec(args_with_comma, true, no_separator())
         .map(sanitize_syntax)
@@ -312,6 +312,20 @@ fn struct_instantiation<'a>() -> impl TokenParser<'a, Expr> {
     })
 }
 
+fn macro_expr<'a>() -> impl TokenParser<'a, Expr> {
+    use TokenKind::*;
+
+    yield_consumed(tuplify!(
+        identifier(),
+        token(Bang),
+        within(LeftBracket, arguments(), RightBracket)
+    )).map(|(span, (name, _, args))| Expr::Macro {
+        name: name.into(),
+        args,
+        span,
+    })
+}
+
 fn within<'a, T>(
     start: TokenKind,
     inner_parser: impl TokenParser<'a, T>,
@@ -417,6 +431,7 @@ mod tests {
                 Parallel { effects, self_fns, .. } => Parallel { effects, self_fns, span },
                 StructInit { name, fields, .. }    => StructInit { name, fields, span },
                 Tuple(exprs, _)                    => Tuple(exprs, span),
+                Macro { name, args, .. }           => Macro { name, args, span },
                 Delimiter { symbol, .. }           => Delimiter { symbol, span },
                 SyntaxError { message, .. }        => SyntaxError { message, span },
             }
@@ -1404,6 +1419,45 @@ mod tests {
                     span: ExprSpan::new(0, 23)
                 })
             );
+        });
+    }
+    
+    #[test]
+    fn test_macro_expression() {
+        // Test vec macro with simple values
+        with_tokens("vec![1, 2, 3]", |tokens| {
+            assert_eq!(
+                parse(macro_expr(), tokens).result,
+                Some(Expr::Macro {
+                    name: "vec".into(),
+                    args: vec![
+                        Expr::Literal(Value::U32(1), ExprSpan::new(5, 6)),
+                        Expr::Literal(Value::U32(2), ExprSpan::new(8, 9)),
+                        Expr::Literal(Value::U32(3), ExprSpan::new(11, 12))
+                    ],
+                    span: ExprSpan::new(0, 13)
+                })
+            );
+        });
+
+        // Test vec macro with CellFilter values - this is specifically for the use case we're implementing
+        with_tokens("vec![CellFilter::Text, CellFilter::Inner(Margin::new(1, 1))]", |tokens| {
+            let result = parse(macro_expr(), tokens).result;
+            assert!(result.is_some());
+            if let Some(Expr::Macro { name, args, span }) = result {
+                assert_eq!(name, "vec");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(args[0], Expr::Literal(Value::CellFilter(CellFilter::Text), _)));
+                if let Expr::FnCall { call, .. } = &args[1] {
+                    assert_eq!(call.name, "CellFilter::Inner");
+                    assert_eq!(call.args.len(), 1);
+                } else {
+                    panic!("Expected FnCall expression for the second argument");
+                }
+                assert!(span.start < span.end);
+            } else {
+                panic!("Expected Macro expression");
+            }
         });
     }
 }

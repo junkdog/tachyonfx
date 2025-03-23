@@ -41,6 +41,7 @@ pub(super) enum Expr {
         span: ExprSpan,
     },
     Tuple(Vec<Expr>, ExprSpan),
+    Macro { name: CompactString, args: Vec<Expr>, span: ExprSpan },
     Delimiter { symbol: char, span: ExprSpan }, // discarded after validation
     SyntaxError { message: CompactString, span: ExprSpan },
 }
@@ -104,6 +105,7 @@ impl Expr {
             Expr::Parallel { span, .. } => span,
             Expr::StructInit { span, .. } => span,
             Expr::Tuple(_, span) => span,
+            Expr::Macro { span, .. } => span,
             Expr::Delimiter { span, .. } => span,
             Expr::SyntaxError { span, .. } => span
         }
@@ -125,6 +127,7 @@ impl Expr {
             Expr::QualifiedMember(_, _) => "qualified_name",
             Expr::StructInit { .. }     => "struct",
             Expr::Tuple(_, _)           => "tuple",
+            Expr::Macro { .. }          => "macro",
             Expr::Delimiter { .. }      => "delimiter",
             Expr::SyntaxError { .. }    => "syntax_error",
         }

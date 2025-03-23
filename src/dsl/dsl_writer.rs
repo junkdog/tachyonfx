@@ -53,6 +53,7 @@ impl DslWriter {
             Expr::Parallel { effects, self_fns, .. } => self.write_parallel(effects, self_fns),
             Expr::StructInit { name, fields, .. }    => self.write_struct_init(name, fields),
             Expr::Tuple(exprs, _)                    => self.write_tuple(exprs),
+            Expr::Macro { name, args, .. }           => self.write_macro(name, args),
             Expr::Delimiter { .. }                   => unreachable!("delimiter should be have been excluded"),
             Expr::SyntaxError { .. }                 => unreachable!("syntax errors should have been handled"),
         }
@@ -209,6 +210,30 @@ impl DslWriter {
             self.write(")");
         }
     }
+    
+    /// Write a macro expression like vec![].
+    fn write_macro(&mut self, name: &CompactString, args: &[Expr]) {
+        self.write(name);
+        self.write("![");
+        
+        if args.is_empty() {
+            self.write("]");
+            return;
+        }
+        
+        if self.should_inline_exprs(args) {
+            self.write_exprs_inline(args);
+            self.write("]");
+        } else {
+            self.increase_indent();
+            self.new_line();
+            self.write_exprs_multiline(args);
+            self.decrease_indent();
+            self.new_line();
+            self.write_indent();
+            self.write("]");
+        }
+    }
 
     /// Write function arguments.
     fn write_args(&mut self, args: &[Expr]) {
@@ -362,6 +387,12 @@ impl DslWriter {
                 elements.len() > 3 ||
                     elements.iter().any(|e| self.is_complex_expr(e))
             },
+            
+            // Macros with many or complex arguments are complex
+            Expr::Macro { args, .. } => {
+                args.len() > 3 ||
+                    args.iter().any(|e| self.is_complex_expr(e))
+            },
 
             // Variables with method chains are complex
             Expr::Var { self_fns, .. } => !self_fns.is_empty(),
@@ -401,6 +432,16 @@ impl DslWriter {
                 }
                 len
             },
+            Expr::Macro { name, args, .. } => {
+                let mut len = name.len() + 3; // +3 for "![]"
+                len += args.iter()
+                    .map(|arg| self.estimate_expr_length(arg))
+                    .sum::<usize>();
+                if !args.is_empty() {
+                    len += args.len() * 2 - 2; // For ", " between elements
+                }
+                len
+            },
             // For complex expressions, just use a large value to encourage multi-line formatting
             _ => self.max_line_length,
         }
@@ -410,7 +451,7 @@ impl DslWriter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dsl::expressions::Expr;
+    use crate::dsl::expressions::{Expr, ExprSpan, Value};
     use crate::dsl::token_parsers::parse_ast;
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
@@ -474,5 +515,23 @@ mod tests {
         let expr = parse_expr(r#"fx::fade_to(Color::Red, 1000).clone().reversed()"#);
         let formatted = DslWriter::format(&expr);
         assert_eq!(formatted, "fx::fade_to(Color::Red, 1000).clone().reversed()");
+    }
+    
+    #[test]
+    fn test_macro_formatting() {
+        // Create a simple macro expression manually
+        let span = ExprSpan::new(0, 0);
+        let expr = Expr::Macro {
+            name: "vec".into(),
+            args: vec![
+                Expr::Literal(Value::U32(1), span),
+                Expr::Literal(Value::U32(2), span),
+                Expr::Literal(Value::U32(3), span),
+            ],
+            span,
+        };
+        
+        let formatted = DslWriter::format(&expr);
+        assert_eq!(formatted, "vec![1, 2, 3]");
     }
 }
