@@ -49,20 +49,22 @@ impl DslEnv {
         &'dsl self,
         dsl: &'dsl EffectDsl,
         name: impl Into<CompactString>,
-        span: ExprSpan,
+        use_site: ExprSpan,
     ) -> Result<T, DslError> {
         let name = name.into();
         if let Some(expr) = self.let_expr(name.as_str()) {
-            let mut args = Arguments::new([expr].into(), dsl, self, span);
+            let mut args = Arguments::new([expr].into(), dsl, self, use_site);
             Ok(match FromDslExpr::from_expr(&mut args) {
                 Ok(v) => Ok(v),
                 Err(DslError::WrongArgumentType { expected, actual, .. }) => {
-                    Err(DslError::WrongArgumentType { expected, actual, location: span })
+                    // avoid reporting the span of the declaration of the variable,
+                    // we want the use site
+                    Err(DslError::WrongArgumentType { expected, actual, location: use_site })
                 }
                 e => e
             })?
         } else {
-            self.bound_global(name.as_str(), span)
+            self.bound_global(name.as_str(), use_site)
         }
     }
 
