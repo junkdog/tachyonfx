@@ -159,7 +159,7 @@ impl EffectDsl {
         let remaining_expr = self.compile_let_bindings(input, env)?;
 
         match remaining_expr {
-            Expr::FnCall { call: FnCallInfo { name, args }, self_fns, .. } => {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns, .. } => {
 
                 let effect_name = name.strip_prefix("fx::").unwrap_or(&name);
                 self.compilers
@@ -167,7 +167,7 @@ impl EffectDsl {
                     .find(|d| d.effect_name == effect_name)
                     .ok_or(DslError::UnknownEffect { name: effect_name.into(), location: ExprSpan::default() })
                     .and_then(|d| {
-                        let mut args = Arguments::new(args.into(), self, env);
+                        let mut args = Arguments::new(args.into(), self, env, span);
                         let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
 
                         match () {
@@ -181,8 +181,8 @@ impl EffectDsl {
                         }
                     })
             },
-            Expr::Sequence { effects, self_fns, .. } => {
-                let mut args = Arguments::new(effects.into(), self, env);
+            Expr::Sequence { effects, self_fns, span } => {
+                let mut args = Arguments::new(effects.into(), self, env, span);
                 let effects = (0..args.remaining_arg_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
@@ -190,8 +190,8 @@ impl EffectDsl {
                 fx::sequence(&effects)
                     .fold_fns(self_fns, self, env)
             },
-            Expr::Parallel { effects, self_fns, .. } => {
-                let mut args = Arguments::new(effects.into(), self, env);
+            Expr::Parallel { effects, self_fns, span } => {
+                let mut args = Arguments::new(effects.into(), self, env, span);
                 let effects = (0..args.remaining_arg_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
@@ -914,7 +914,7 @@ mod tests {
         let dsl = EffectDsl::new();
         let exprs = vec![];
         let env = DslEnv::new();
-        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env, ExprSpan::default());
         assert!(compilers::fade_to_fg(&mut args).is_err());
     }
 
@@ -926,7 +926,7 @@ mod tests {
             Expr::Literal(Value::OptionNone, ExprSpan::new(0, 0))
         ];
         let env = DslEnv::new();
-        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env);
+        let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env, ExprSpan::default());
         assert!(compilers::fade_to_fg(&mut args).is_err());
     }
 }

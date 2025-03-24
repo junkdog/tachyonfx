@@ -26,7 +26,7 @@ pub(super) trait ChainableMethods where Self: Sized {
     ) -> Result<Self, DslError> {
         self_fns.into_iter().try_fold(self, |this, f| {
             let name = f.name;
-            let mut args = Arguments::new(f.args.into(), context, vars);
+            let mut args = Arguments::new(f.args.into(), context, vars, f.span);
             let result = Self::apply_fn(this, name.as_str(), &mut args);
             if args.remaining_arg_count() > 0 {
                 Err(DslError::TooManyArguments {

@@ -50,10 +50,11 @@ impl<'dsl> Arguments<'dsl> {
     pub(super) fn new(
         args: VecDeque<Expr>,
         context: &'dsl EffectDsl,
-        vars: &'dsl DslEnv
+        vars: &'dsl DslEnv,
+        fallback_span: ExprSpan,
     ) -> Self {
         let initial_arg_count = args.len();
-        let mut span = args.front().map_or_else(ExprSpan::default, |e| e.span());
+        let mut span = args.front().map_or_else(|| fallback_span, |e| e.span());
         span.end = args.back().map_or(span.end, |e| e.span().end);
         Self { args, span, vars, context, initial_arg_count }
     }
@@ -69,13 +70,13 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Duration`].
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
                 "Duration::from_millis" => {
-                    let ms = self.extract_nested(args, Arguments::read_u32)?;
+                    let ms = self.extract_nested(args, Arguments::read_u32, span)?;
                     Duration::from_millis(ms as _)
                 },
                 "Duration::from_secs_f32" => {
-                    let seconds = self.extract_nested(args, Arguments::read_f32)?;
+                    let seconds = self.extract_nested(args, Arguments::read_f32, span)?;
                     Duration::from_secs_f32(seconds)
                 },
                 _ => self.expected_type("duration", name, span)?,
@@ -90,15 +91,15 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns an [`EffectTimer`].
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
                 "EffectTimer::from_ms" => {
-                    let mut inner_args = self.nested_args(args, 2)?;
+                    let mut inner_args = self.nested_args(args, 2, span)?;
                     let ms = inner_args.read_u32()?;
                     let interpolation = inner_args.interpolation()?;
                     EffectTimer::from_ms(ms, interpolation)
                 },
                 "EffectTimer::new" => {
-                    let mut inner_args = self.nested_args(args, 2)?;
+                    let mut inner_args = self.nested_args(args, 2, span)?;
                     let duration = inner_args.duration()?;
                     let interpolation = inner_args.interpolation()?;
                     EffectTimer::new(duration, interpolation)
@@ -106,8 +107,8 @@ impl<'dsl> Arguments<'dsl> {
                 _ => self.expected_type("timer", name, span)?,
             }),
             Expr::Literal(Value::U32(ms), _)   => Ok(ms.into()),
-            Expr::Tuple(exprs, _) => {
-                let mut args = self.nested_args(exprs, 2)?;
+            Expr::Tuple(exprs, span) => {
+                let mut args = self.nested_args(exprs, 2, span)?;
                 let duration = args.duration()?;
                 let interpolation = args.interpolation()?;
                 Ok(EffectTimer::new(duration, interpolation))
@@ -120,9 +121,9 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Color`].
     pub fn cell_filter(&mut self) -> Result<CellFilter, DslError> {
         match self.next("cell_filter")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => {
                 let filter_type = name.trim_start_matches("CellFilter::");
-                let mut inner_args = Arguments::new(args.into(), self.context, self.vars);
+                let mut inner_args = Arguments::new(args.into(), self.context, self.vars, span);
 
                 match filter_type {
                     "FgColor"    => Ok(CellFilter::FgColor(inner_args.color()?)),
@@ -132,7 +133,7 @@ impl<'dsl> Arguments<'dsl> {
                     "AllOf"      => Ok(CellFilter::AllOf(inner_args.array(Arguments::cell_filter)?)),
                     "AnyOf"      => Ok(CellFilter::AnyOf(inner_args.array(Arguments::cell_filter)?)),
                     "NoneOf"     => Ok(CellFilter::NoneOf(inner_args.array(Arguments::cell_filter)?)),
-                    "Not"        => Ok(CellFilter::Not(inner_args.boxed(Arguments::cell_filter)?)),
+                    "Not"        => Ok(CellFilter::Not(inner_args.boxed(Arguments::cell_filter, span)?)),
                     "Layout"     => Ok(CellFilter::Layout(inner_args.layout()?, inner_args.read_u16()?)),
                     "PositionFn" => Ok(CellFilter::PositionFn(inner_args.any_var()?)),
                     "EvalCell"   => Ok(CellFilter::EvalCell(inner_args.any_var()?)),
@@ -171,15 +172,15 @@ impl<'dsl> Arguments<'dsl> {
         use Constraint::*;
 
         match self.next("constraint")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } =>
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } =>
                 Ok(match name.trim_start_matches("Constraint::") {
-                    "Min"        => Min(self.extract_nested(args, Arguments::read_u16)?),
-                    "Max"        => Max(self.extract_nested(args, Arguments::read_u16)?),
-                    "Length"     => Length(self.extract_nested(args, Arguments::read_u16)?),
-                    "Percentage" => Percentage(self.extract_nested(args, Arguments::read_u16)?),
-                    "Fill"       => Fill(self.extract_nested(args, Arguments::read_u16)?),
+                    "Min"        => Min(self.extract_nested(args, Arguments::read_u16, span)?),
+                    "Max"        => Max(self.extract_nested(args, Arguments::read_u16, span)?),
+                    "Length"     => Length(self.extract_nested(args, Arguments::read_u16, span)?),
+                    "Percentage" => Percentage(self.extract_nested(args, Arguments::read_u16, span)?),
+                    "Fill"       => Fill(self.extract_nested(args, Arguments::read_u16, span)?),
                     "Ratio" => {
-                        let mut inner_args = self.nested_args(args, 2)?;
+                        let mut inner_args = self.nested_args(args, 2, span)?;
                         let a = inner_args.read_u32()?;
                         let b = inner_args.read_u32()?;
                         Ratio(a, b)
@@ -203,25 +204,25 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Layout`].
     pub fn layout(&mut self) -> Result<Layout, DslError> {
         match self.next("layout")? {
-            Expr::FnCall { call, self_fns, span } => {
+            Expr::FnCall { call, self_fns } => {
                 let base_layout = match call.name.as_str() {
                     "Layout::horizontal" => {
                         let constraints = self.extract_nested(
-                            call.args, |a| a.array(Arguments::constraint))?;
+                            call.args, |a| a.array(Arguments::constraint), call.span)?;
                         Ok(Layout::horizontal(constraints))
                     },
                     "Layout::vertical" => {
                         let constraints = self.extract_nested(
-                            call.args, |a| a.array(Arguments::constraint))?;
+                            call.args, |a| a.array(Arguments::constraint), call.span)?;
                         Ok(Layout::vertical(constraints))
                     },
                     "Layout::new" => {
-                        let mut inner_args = self.nested_args(call.args, 2)?;
+                        let mut inner_args = self.nested_args(call.args, 2, call.span)?;
                         let direction = inner_args.direction()?;
                         let constraints = inner_args.array(Arguments::constraint)?;
                         Ok(Layout::new(direction, constraints))
                     },
-                    _ => self.expected_type("layout", call.name.to_compact_string(), span),
+                    _ => self.expected_type("layout", call.name.to_compact_string(), call.span),
                 }?;
 
                 // Apply method chains
@@ -320,8 +321,8 @@ impl<'dsl> Arguments<'dsl> {
     ) -> Result<Option<T>, DslError> {
         match self.next("option")? {
             Expr::Literal(Value::OptionNone, _) => Ok(None),
-            Expr::OptionSome(expr, _)           => {
-                let mut args = self.nested_args(vec![*expr], 1)?;
+            Expr::OptionSome(expr, span)        => {
+                let mut args = self.nested_args(vec![*expr], 1, span)?;
                 inner(&mut args).map(Some)
             },
             Expr::Var { name, span, .. }         => self.bound_var(name, span),
@@ -332,7 +333,7 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns an [`Effect`].
     pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
-            Expr::FnCall { call, self_fns, span } => {
+            Expr::FnCall { call, self_fns } => {
                 // Check if it's an effect constructor with "fx::" prefix
                 let fx_name = call.name.strip_prefix("fx::").unwrap_or(&call.name);
 
@@ -340,10 +341,10 @@ impl<'dsl> Arguments<'dsl> {
                     let fx_expr = Expr::FnCall {
                         call: FnCallInfo {
                             name: fx_name.to_compact_string(),
-                            args: call.args
+                            args: call.args,
+                            span: call.span,
                         },
                         self_fns,
-                        span
                     };
                     self.compile_effect(fx_expr)
             },
@@ -362,19 +363,19 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Color`].
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
                 "Color::Rgb" => {
-                    let mut inner_args = self.nested_args(args, 3)?;
+                    let mut inner_args = self.nested_args(args, 3, span)?;
                     let r = inner_args.read_u8()?;
                     let g = inner_args.read_u8()?;
                     let b = inner_args.read_u8()?;
                     Color::Rgb(r, g, b)
                 },
                 "Color::from_u32" => {
-                    Color::from_u32(self.extract_nested(args, Arguments::read_u32)?)
+                    Color::from_u32(self.extract_nested(args, Arguments::read_u32, span)?)
                 }
                 "Color::Indexed" => {
-                    Color::Indexed(self.extract_nested(args, Arguments::read_u8)?)
+                    Color::Indexed(self.extract_nested(args, Arguments::read_u8, span)?)
                 }
                 _ => self.expected_type("color", name, span)?,
             }),
@@ -396,11 +397,11 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Style`].
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
-            Expr::FnCall { call, self_fns, span } => {
+            Expr::FnCall { call, self_fns } => {
                 if call.name == "Style::new" || call.name == "Style::default" {
                     Style::new().fold_fns(self_fns, self.context, self.vars)
                 } else {
-                    self.expected_type("style", call.name.to_compact_string(), span)?
+                    self.expected_type("style", call.name.to_compact_string(), call.span)?
                 }
             },
             Expr::Var { name, self_fns, span } => self.bound_var::<Style>(name, span)?
@@ -421,10 +422,10 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`RepeatMode`].
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, span, .. } => Ok(match name.as_str() {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
                 "RepeatMode::Forever" => RepeatMode::Forever,
-                "RepeatMode::Times"   => RepeatMode::Times(self.extract_nested(args, Arguments::read_u32)?),
-                "RepeatMode::Duration"=> RepeatMode::Duration(self.extract_nested(args, Arguments::duration)?),
+                "RepeatMode::Times"   => RepeatMode::Times(self.extract_nested(args, Arguments::read_u32, span)?),
+                "RepeatMode::Duration"=> RepeatMode::Duration(self.extract_nested(args, Arguments::duration, span)?),
                 _                     => self.expected_type("repeat_mode", name, span)?,
             }),
             Expr::Literal(Value::RepeatMode(m), _) => Ok(m),
@@ -436,8 +437,8 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Margin`].
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } if name == "Margin::new" => {
-                let mut inner_args = self.nested_args(args, 2)?;
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } if name == "Margin::new" => {
+                let mut inner_args = self.nested_args(args, 2, span)?;
                 Ok(Margin::new(inner_args.read_u16()?, inner_args.read_u16()?))
             },
             Expr::Var { name, span, .. } => self.bound_var(name, span),
@@ -448,9 +449,9 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Rect`].
     pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
-            Expr::FnCall { call, self_fns, span } => match call.name.as_str() {
+            Expr::FnCall { call, self_fns } => match call.name.as_str() {
                 "Rect::new" => {
-                    let mut inner_args = self.nested_args(call.args, 4)?;
+                    let mut inner_args = self.nested_args(call.args, 4, call.span)?;
                     let x = inner_args.read_u16()?;
                     let y = inner_args.read_u16()?;
                     let width = inner_args.read_u16()?;
@@ -461,7 +462,7 @@ impl<'dsl> Arguments<'dsl> {
                 },
                 e => Err(DslError::UnknownFunction {
                     name: e.to_compact_string(),
-                    location: span,
+                    location: call.span,
                 }),
             },
             Expr::StructInit { name, fields, span } => {
@@ -469,10 +470,10 @@ impl<'dsl> Arguments<'dsl> {
                     let fields = struct_fields("Rect", &["x", "y", "width", "height"], fields)
                         .map_err(|e| e.with_span(span))?;
                     Ok(Rect {
-                        x: self.extract_field("x", &fields, Arguments::read_u16)?,
-                        y: self.extract_field("y", &fields, Arguments::read_u16)?,
-                        width: self.extract_field("width", &fields, Arguments::read_u16)?,
-                        height: self.extract_field("height", &fields, Arguments::read_u16)?,
+                        x: self.extract_field("x", &fields, Arguments::read_u16, span)?,
+                        y: self.extract_field("y", &fields, Arguments::read_u16, span)?,
+                        width: self.extract_field("width", &fields, Arguments::read_u16, span)?,
+                        height: self.extract_field("height", &fields, Arguments::read_u16, span)?,
                     })
                 } else {
                     Err(DslError::UnknownStruct {
@@ -495,8 +496,8 @@ impl<'dsl> Arguments<'dsl> {
                 if name == "Offset" {
                     let fields = struct_fields("Offset", &["x", "y"], fields)?;
                     Ok(Offset {
-                        x: self.extract_field("x", &fields, Arguments::read_i32)?,
-                        y: self.extract_field("y", &fields, Arguments::read_i32)?,
+                        x: self.extract_field("x", &fields, Arguments::read_i32, span)?,
+                        y: self.extract_field("y", &fields, Arguments::read_i32, span)?,
                     })
                 } else {
                     Err(DslError::UnknownStruct {
@@ -517,21 +518,22 @@ impl<'dsl> Arguments<'dsl> {
         inner: impl Fn(&mut Self) -> Result<T, DslError>
     ) -> Result<Vec<T>, DslError> {
         match self.next("array")? {
-            Expr::Array(exprs, _)        => self.map_exprs(exprs, inner),
-            Expr::ArrayRef(exprs, _)     => self.map_exprs(exprs, inner),
-            Expr::Macro { name, args, .. } if name == "vec" => self.map_exprs(args, inner),
-            Expr::Var { name, span, .. } => self.bound_var(name, span),
-            e                            => self.expected_type_expr("array", e),
+            Expr::Array(exprs, span)        => self.map_exprs(exprs, inner, span),
+            Expr::ArrayRef(exprs, span)     => self.map_exprs(exprs, inner, span),
+            Expr::Macro { name, args, span } if name == "vec" => self.map_exprs(args, inner, span),
+            Expr::Var { name, span, .. }    => self.bound_var(name, span),
+            e                               => self.expected_type_expr("array", e),
         }
     }
 
     pub fn boxed<T: Clone + FromDslExpr + 'static>(
         &mut self,
-        inner: impl Fn(&mut Self) -> Result<T, DslError>
+        inner: impl Fn(&mut Self) -> Result<T, DslError>,
+        span: ExprSpan,
     ) -> Result<Box<T>, DslError> {
         match self.next("box")? {
-            Expr::FnCall { call: FnCallInfo { name, args }, .. } if name == "Box::new" => {
-                let mut inner_args = self.nested_args(args, 1)?;
+            Expr::FnCall { call: FnCallInfo { name, args, .. }, .. } if name == "Box::new" => {
+                let mut inner_args = self.nested_args(args, 1, span)?;
                 inner(&mut inner_args).map(Box::new)
             },
             e => self.expected_type_expr("box", e),
@@ -549,9 +551,10 @@ impl<'dsl> Arguments<'dsl> {
     fn map_exprs<T: Clone>(
         &mut self,
         exprs: Vec<Expr>,
-        inner: impl Fn(&mut Self) -> Result<T, DslError>
+        inner: impl Fn(&mut Self) -> Result<T, DslError>,
+        span: ExprSpan,
     ) -> Result<Vec<T>, DslError> {
-        let mut args = self.all_inner_args(exprs);
+        let mut args = self.all_inner_args(exprs, span);
         (0..args.initial_arg_count)
             .map(|_| inner(&mut args)).collect()
     }
@@ -573,7 +576,10 @@ impl<'dsl> Arguments<'dsl> {
             .ok_or(DslError::MissingArgument {
                 position: self.initial_arg_count - self.args.len() + 1,
                 name: type_name,
-                location: self.span
+                location: ExprSpan::new(
+                    self.span.start + self.span.len().saturating_sub(1),
+                    self.span.end
+                ),
             })
             .and_then(|arg| if let Expr::SyntaxError { message, span } = arg {
                 Err(DslError::SyntaxError { message, location: span })
@@ -607,7 +613,12 @@ impl<'dsl> Arguments<'dsl> {
         self.expected_type(expected, actual.type_name().to_compact_string(), actual.span())
     }
 
-    fn nested_args(&mut self, exprs: Vec<Expr>, required_arg_count: usize) -> Result<Self, DslError> {
+    fn nested_args(
+        &mut self,
+        exprs: Vec<Expr>,
+        required_arg_count: usize,
+        span: ExprSpan,
+    ) -> Result<Self, DslError> {
         if exprs.len() != required_arg_count {
             let start = exprs.iter().map(|e| e.span().start).min().unwrap_or_default();
             let end = exprs.iter().map(|e| e.span().end).max().unwrap_or_default();
@@ -618,15 +629,16 @@ impl<'dsl> Arguments<'dsl> {
             });
         }
 
-        Ok(self.all_inner_args(exprs))
+        Ok(self.all_inner_args(exprs, span))
     }
 
     pub(super) fn extract_nested<T>(
         &mut self,
         exprs: Vec<Expr>,
-        inner: impl Fn(&mut Self) -> Result<T, DslError>
+        inner: impl Fn(&mut Self) -> Result<T, DslError>,
+        span: ExprSpan,
     ) -> Result<T, DslError> {
-        let mut args = self.nested_args(exprs, 1)?;
+        let mut args = self.nested_args(exprs, 1, span)?;
         inner(&mut args)
     }
 
@@ -634,15 +646,16 @@ impl<'dsl> Arguments<'dsl> {
         &mut self,
         key: &'static str,
         exprs: &BTreeMap<&'static str, Expr>,
-        inner: impl FnOnce(&mut Self) -> Result<T, DslError>
+        inner: impl FnOnce(&mut Self) -> Result<T, DslError>,
+        span: ExprSpan,
     ) -> Result<T, DslError> {
         let field_expr = exprs.get(key).expect("key to already be validated").clone();
-        let mut args = self.nested_args(vec![field_expr], 1)?;
+        let mut args = self.nested_args(vec![field_expr], 1, span)?;
         inner(&mut args)
     }
 
-    fn all_inner_args(&mut self, exprs: Vec<Expr>) -> Self {
-        Self::new(exprs.into(), self.context, self.vars)
+    fn all_inner_args(&mut self, exprs: Vec<Expr>, span: ExprSpan) -> Self {
+        Self::new(exprs.into(), self.context, self.vars, span)
     }
 }
 
@@ -880,7 +893,7 @@ mod tests {
         let dsl = Box::leak(Box::new(EffectDsl::new()));
         let env = Box::leak(Box::new(DslEnv::new()));
 
-        Arguments::new(args.into(), dsl, env)
+        Arguments::new(args.into(), dsl, env, ExprSpan::default())
     }
 
     fn assert_result<'a, T: Debug>(
@@ -893,7 +906,7 @@ mod tests {
         let env = Box::leak(Box::new(DslEnv::new()));
 
         let args = parse_expr(input);
-        let mut args = Arguments::new([args].into(), dsl, env);
+        let mut args = Arguments::new([args].into(), dsl, env, ExprSpan::default());
         let result = f(&mut args)
             .expect("value from arguments");
 
@@ -1059,10 +1072,10 @@ mod tests {
             Expr::FnCall {
                 call: FnCallInfo {
                     name: "fx::test".to_compact_string(),
-                    args: test_args
+                    args: test_args,
+                    span
                 },
                 self_fns: vec![],
-                span
             },
         ]);
 
@@ -1085,10 +1098,10 @@ mod tests {
             Expr::FnCall {
                 call: FnCallInfo {
                     name: "CellFilter::FgColor".to_compact_string(),
-                    args: vec![Expr::Literal(Value::Color(Color::Red), span)]
+                    args: vec![Expr::Literal(Value::Color(Color::Red), span)],
+                    span,
                 },
                 self_fns: vec![],
-                span
             },
         ]);
 
@@ -1105,10 +1118,10 @@ mod tests {
         let fg_filter = Expr::FnCall {
             call: FnCallInfo {
                 name: "CellFilter::FgColor".to_compact_string(),
-                args: vec![Expr::Literal(Value::Color(Color::Red), span)]
+                args: vec![Expr::Literal(Value::Color(Color::Red), span)],
+                span
             },
             self_fns: vec![],
-            span
         };
         
         // Test with CellFilter::AllOf using vec![] macro
@@ -1122,10 +1135,10 @@ mod tests {
                             args: vec![text_filter, fg_filter],
                             span
                         }
-                    ]
+                    ],
+                    span,
                 },
                 self_fns: vec![],
-                span
             },
         ]);
 
@@ -1147,15 +1160,16 @@ mod tests {
             Expr::FnCall {
                 call: FnCallInfo {
                     name: "Style::new".to_compact_string(),
-                    args: vec![]
+                    args: vec![],
+                    span
                 },
                 self_fns: vec![
                     FnCallInfo {
                         name: "fg".to_compact_string(),
-                        args: vec![Expr::Literal(Value::Color(Color::Red), span)]
+                        args: vec![Expr::Literal(Value::Color(Color::Red), span)],
+                        span
                     }
                 ],
-                span
             },
         ]);
 

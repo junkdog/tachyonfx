@@ -53,8 +53,14 @@ impl DslEnv {
     ) -> Result<T, DslError> {
         let name = name.into();
         if let Some(expr) = self.let_expr(name.as_str()) {
-            let mut args = Arguments::new([expr].into(), dsl, self);
-            Ok(FromDslExpr::from_expr(&mut args)?)
+            let mut args = Arguments::new([expr].into(), dsl, self, span);
+            Ok(match FromDslExpr::from_expr(&mut args) {
+                Ok(v) => Ok(v),
+                Err(DslError::WrongArgumentType { expected, actual, .. }) => {
+                    Err(DslError::WrongArgumentType { expected, actual, location: span })
+                }
+                e => e
+            })?
         } else {
             self.bound_global(name.as_str(), span)
         }

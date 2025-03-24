@@ -9,6 +9,7 @@ use ratatui::prelude::{Color, Modifier};
 pub(super) struct FnCallInfo {
     pub name: CompactString,
     pub args: Vec<Expr>,
+    pub span: ExprSpan,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -22,7 +23,7 @@ pub(super) enum Expr {
     },
     ArrayRef(Vec<Expr>, ExprSpan),
     Array(Vec<Expr>, ExprSpan),
-    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo>, span: ExprSpan },
+    FnCall { call: FnCallInfo, self_fns: Vec<FnCallInfo> },
     QualifiedMember(CompactString, ExprSpan), // enums, struct fields
     OptionSome(Box<Expr>, ExprSpan),
     Sequence {
@@ -73,20 +74,30 @@ impl ExprSpan {
     pub(super) const fn new(start: u32, end: u32) -> Self {
         Self { start, end }
     }
+
+    pub(super) const fn len(&self) -> u32 {
+        self.end - self.start
+    }
 }
 
 impl FnCallInfo {
     pub fn new(
         name: impl Into<CompactString>,
-        args: Vec<Expr>
+        args: Vec<Expr>,
+        span: ExprSpan
     ) -> Self {
-        Self { name: name.into(), args }
+        Self { name: name.into(), args, span }
     }
 }
 
 impl From<(&str, Vec<Expr>)> for FnCallInfo {
     fn from((name, args): (&str, Vec<Expr>)) -> Self {
-        Self { name: name.into(), args }
+        let (start, end) = (
+            args.first().map(|a| a.span().start).unwrap_or(0),
+            args.last().map(|a| a.span().end).unwrap_or(0)
+        );
+
+        Self { name: name.into(), args, span: ExprSpan::new(start, end) }
     }
 }
 
@@ -98,7 +109,7 @@ impl Expr {
             Expr::LetBinding { span, .. } => span,
             Expr::ArrayRef(_, span) => span,
             Expr::Array(_, span) => span,
-            Expr::FnCall { span, .. } => span,
+            Expr::FnCall { call, .. } => &call.span,
             Expr::QualifiedMember(_, span) => span,
             Expr::OptionSome(_, span) => span,
             Expr::Sequence { span, .. } => span,
