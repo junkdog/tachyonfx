@@ -126,6 +126,7 @@ impl<'dsl> Arguments<'dsl> {
                 let mut inner_args = Arguments::new(args.into(), self.context, self.vars, span);
 
                 match filter_type {
+                    "Area"       => Ok(CellFilter::Area(inner_args.rect()?)),
                     "FgColor"    => Ok(CellFilter::FgColor(inner_args.color()?)),
                     "BgColor"    => Ok(CellFilter::BgColor(inner_args.color()?)),
                     "Inner"      => Ok(CellFilter::Inner(inner_args.margin()?)),

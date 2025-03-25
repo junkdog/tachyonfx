@@ -35,6 +35,7 @@
 - **Improved DSL Writer**: Enhanced DSL serialization with smarter line breaking and indentation.
 
 ### Added
+- `CellFilter::Area`: filters cells within a specified rectangular area.
 - `ColorSpace`: enum with `Rgb`, `Hsl`, and `Hsv` options for controlling color interpolation
   - Eliminates overhead of converting to/from colorsys representation; ~1/3 faster color conversions
 - `color_from_hsl()`, `color_from_hsv()`, `color_to_hsl()`, `color_to_hsv()`: utility functions
@@ -48,6 +49,9 @@
 ### Deprecated
 - `HslConvertable`: deprecated in favor of new color space utilities
 - `ColorMapper`: superseded by `LruCache`.
+
+### Fixed
+- `CellFilter::Not` now correctly inverts the behavior for all filter types.
 
 ## tachyonfx 0.11.1 - 2025-03-02
 

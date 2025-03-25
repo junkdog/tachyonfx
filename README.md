@@ -228,7 +228,7 @@ cargo run --release --example=fx-chart
 ### Example: [dsl-playground](examples/dsl-playground.rs)
 ![dsl-playground](images/example-dsl-playground.png)
 ```
-cargo run --release --example=dsl-playground --features=dsl
+cargo run --release --example=dsl-playground
 ```
 
 A playground for experimenting with the DSL to create and combine effects interactively.
