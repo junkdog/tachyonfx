@@ -42,10 +42,9 @@ impl Effect {
     /// fx::dissolve(EffectTimer::from_ms(120, Interpolation::CircInOut))
     ///     .with_area(Rect::new(0, 0, 10, 10));
     /// ```
-    pub fn with_area(&self, area: Rect) -> Self {
-        let mut cloned = self.clone();
-        cloned.shader.set_area(area);
-        cloned
+    pub fn with_area(mut self, area: Rect) -> Self {
+        self.shader.set_area(area);
+        self
     }
 
     /// Creates a new `Effect` with the specified cell filter.
@@ -66,10 +65,9 @@ impl Effect {
     /// let shader = fx::fade_to_fg(color, (300, Interpolation::SineIn))
     ///     .with_filter(CellFilter::Text);
     /// ```
-    pub fn with_filter(self, mode: CellFilter) -> Self {
-        let mut effect = self;
-        effect.filter(mode);
-        effect
+    pub fn with_filter(mut self, mode: CellFilter) -> Self {
+        self.filter(mode);
+        self
     }
 
     #[deprecated(since = "0.11.0", note = "Use `with_filter` instead")]
@@ -86,10 +84,9 @@ impl Effect {
         self.shader.set_color_space(color_space);
     }
 
-    pub fn with_color_space(self, color_space: ColorSpace) -> Self {
-        let mut effect = self;
-        effect.set_color_space(color_space);
-        effect
+    pub fn with_color_space(mut self, color_space: ColorSpace) -> Self {
+        self.set_color_space(color_space);
+        self
     }
 
     /// Creates a new `Effect` with the shader's reverse flag toggled.

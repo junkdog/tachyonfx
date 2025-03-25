@@ -390,7 +390,7 @@ mod tests {
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
     use crate::CellFilter;
     use anpa::core::parse;
-    use compact_str::{CompactString, ToCompactString};
+    use compact_str::ToCompactString;
     use ratatui::prelude::Color;
 
     // Helper function to create a Expr::FnCall expression

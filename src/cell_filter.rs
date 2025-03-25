@@ -385,7 +385,7 @@ mod tests {
             ". . . . ",
             ". . . . ",
         ]);
-        let mut fx = effect_fn((), 1, |_, _, cells| {
+        let fx = effect_fn((), 1, |_, _, cells| {
             for (_, c) in cells {
                 c.set_symbol("X");
             }

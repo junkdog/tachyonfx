@@ -105,7 +105,7 @@ pub enum DslError {
         location: ExprSpan,
     },
 
-    #[error("Expected '{expected}' but found '{actual}'")]
+    #[error("Expected argument of type '{expected}' but found '{actual}'")]
     WrongArgumentType {
         expected: &'static str,
         actual: CompactString,
@@ -136,7 +136,7 @@ pub enum DslError {
         location: ExprSpan,
     },
 
-    #[error("Unknown cell filter '{name}'")]
+    #[error("Not a cell filter: '{name}'")]
     UnknownCellFilter {
         name: CompactString,
         location: ExprSpan,

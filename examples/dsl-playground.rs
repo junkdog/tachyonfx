@@ -1,22 +1,70 @@
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Clear},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame, Terminal,
 };
 use std::{error::Error, io, time::{Duration as StdDuration, Instant}};
 use tachyonfx::{dsl::EffectDsl, CenteredShrink, Duration, Effect, EffectRenderer, Shader};
 use tui_textarea::TextArea;
 
+const RATATUI_MASCOT: &str = indoc::indoc! {"
+                   hhh
+                 hhhhhh
+                hhhhhhh
+               hhhhhhhh
+              hhhhhhhhh
+             hhhhhhhhhh
+            hhhhhhhhhhhh
+            hhhhhhhhhhhhh
+            hhhhhhhhhhhhh     ██████
+             hhhhhhhhhhh    ████████
+                  hhhhh ███████████
+                   hhh ██ee████████
+                    h █████████████
+                ████ █████████████
+               █████████████████
+               ████████████████
+               ████████████████
+                ███ ██████████
+              ▒▒    █████████
+             ▒░░▒   █████████
+            ▒░░░░▒ ██████████
+           ▒░░▓░░░▒ █████████
+          ▒░░▓▓░░░░▒ ████████
+         ▒░░░░░░░░░░▒ ██████████
+        ▒░░░░░░░░░░░░▒ ██████████
+       ▒░░░░░░░▓▓░░░░░▒ █████████
+      ▒░░░░░░░░░▓▓░░░░░▒ ████  ███
+     ▒░░░░░░░░░░░░░░░░░░▒ ██   ███
+    ▒░░░░░░░░░░░░░░░░░░░░▒ █   ███
+    ▒░░░░░░░░░░░░░░░░░░░░░▒   ███
+     ▒░░░░░░░░░░░░░░░░░░░░░▒ ███
+      ▒░░░░░░░░░░░░░░░░░░░░░▒ █"
+};
+
 // import the gruvbox colors for consistent theming with other examples
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
 use crate::gruvbox::Gruvbox;
 
-const DEFAULT_DSL_CODE: &str = "fx::sequence(&[
-    fx::fade_from_fg(Color::Gray, (500, Interpolation::QuadOut)),
-    fx::dissolve((500, Interpolation::BounceOut))
-])";
+const DEFAULT_DSL_CODE: &str = r#"// Try these combinations:
+// 1. Apply effect to both mascot and blake areas
+fx::parallel(&[
+    fx::fade_from_fg(Color::Gray, (1200, Interpolation::QuadOut))
+        .with_area(mascot_area),
+    fx::dissolve((1200, Interpolation::BounceOut))
+        .with_area(blake_area)
+])
+
+// 2. Or create separate effects for each area:
+// fx::sequence(&[
+//     fx::slide_in(Motion::LeftToRight, 10, 0, Color::from_u32(0x1d2021), 800)
+//         .with_area(mascot_area),
+//     fx::sweep_in(Motion::UpToDown, 10, 0, Color::from_u32(0x1d2021), 800)
+//         .with_area(blake_area)
+// ])
+"#;
 
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -34,10 +82,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 struct App<'a> {
     editor: TextArea<'a>,
     dsl: EffectDsl,
-    compiled_effect: Option<Effect>,
+    pub compiled_effect: Option<Effect>,
     compilation_error: Option<String>,
     last_frame: Instant,
     full_effect_area: Rect,
+    blake_area: Rect,
+    mascot_area: Rect,
 }
 
 impl<'a> App<'a> {
@@ -51,15 +101,18 @@ impl<'a> App<'a> {
             compilation_error: None,
             last_frame: Instant::now(),
             full_effect_area: Rect::default(),
+            blake_area: Rect::default(),
+            mascot_area: Rect::default(),
         }
     }
 
     fn update_effect(&mut self) {
-        // create a DSL compiler instance and bind the content and full preview areas
+        // create a DSL compiler instance and bind the content and preview areas
         let dsl_result = self.dsl.compiler()
             // Bind variables that can be used in the DSL code
-            .bind("content_area", Rect::new(0, 0, 40, 6)) // the "widget"
-            .bind("full_area", self.full_effect_area)     // the rest of the preview area
+            .bind("blake_area", self.blake_area)          // the Blake quote widget
+            .bind("mascot_area", self.mascot_area)        // the Ratatui mascot area
+            .bind("full_area", self.full_effect_area)     // the entire preview area
             .compile(&self.editor.lines().join("\n"));    // compile the effect
 
         match dsl_result {
@@ -112,12 +165,10 @@ fn tick_app(terminal: &mut Terminal<impl Backend>, app: &mut App) -> io::Result<
     let elapsed = app.update_timer();
 
     terminal.draw(|f| {
-        // define layout with main areas; we persist the full effect
-        // area so that we can bind it the DSL compiler instance
-        let layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(10), // effect preview area
+        // define layout with main areas; we persist the areas
+        // so that we can bind them to the DSL compiler instance
+        let layout = Layout::vertical([
+                Constraint::Length(35), // increased height for effect preview area
                 Constraint::Min(1),     // editor area
             ])
             .split(f.area());
@@ -135,7 +186,6 @@ fn tick_app(terminal: &mut Terminal<impl Backend>, app: &mut App) -> io::Result<
 }
 
 fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
-
     // ---  preview area ---
     let preview_area = layout[0];
     let preview_block = Block::default()
@@ -148,9 +198,31 @@ fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
 
     // inner area for the preview content
     let inner_preview = preview_area.inner(Margin::new(1, 1));
-    let centered_area = inner_preview.inner_centered(40, 6);
 
-    // setup the quote text to demonstrate the effect on
+    // update areas for binding to DSL
+    app.mascot_area = inner_preview;
+
+    // Set up a centered area for the Blake quote
+    let blake_container = Rect::new(40, 4, 40, 6);
+    app.blake_area = blake_container.inner_centered(40, 6);
+
+    // --- render the Ratatui mascot ---
+    let mascot_block = Block::default()
+        .style(theme_mascot_style())
+        .title(Line::from(vec![
+            Span::from(" area bound as "),
+            Span::from("mascot_area ").style(theme_mascot_style().add_modifier(Modifier::BOLD)),
+        ]))
+        .borders(Borders::ALL);
+
+    let mascot_text = Paragraph::new(RATATUI_MASCOT)
+        .style(theme_mascot_text_style())
+        .block(mascot_block)
+        .alignment(Alignment::Left);
+
+    f.render_widget(mascot_text, app.mascot_area);
+
+    // --- setup the Blake quote text ---
     let content = Text::from(vec![
         Line::from("You never know what is enough unless")
             .alignment(Alignment::Center),
@@ -162,19 +234,24 @@ fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
             .alignment(Alignment::Right),
     ]);
 
-    // render background for the text area
+    // render background for the Blake text area
     Block::default()
         .style(theme_quote_style())
-        .render(centered_area, f.buffer_mut());
+        .title(Line::from(vec![
+            Span::from(" area bound as "),
+            Span::from("blake_area ").style(theme_quote_style().add_modifier(Modifier::BOLD)),
+        ]))
+        .borders(Borders::ALL)
+        .render(app.blake_area, f.buffer_mut());
 
-    // render the content
-    let content_area = centered_area.inner(Margin::new(1, 1));
+    // render the Blake content
+    let content_area = app.blake_area.inner(Margin::new(1, 1));
     f.render_widget(content, content_area);
 
     // apply the compiled effect, if any
     if let Some(effect) = &mut app.compiled_effect {
         if effect.running() {
-            f.render_effect(effect, centered_area, elapsed);
+            f.render_effect(effect, inner_preview, elapsed);
         }
     }
 
@@ -224,6 +301,16 @@ fn theme_quote_style() -> Style {
     Style::default()
         .bg(Gruvbox::Dark2.color())
         .fg(Gruvbox::Light2.color())
+}
+
+fn theme_mascot_style() -> Style {
+    Style::default()
+        .bg(Gruvbox::Dark0Soft.color())
+}
+
+fn theme_mascot_text_style() -> Style {
+    Style::default()
+        .fg(Gruvbox::YellowBright.color())
 }
 
 fn theme_author_style() -> Style {
