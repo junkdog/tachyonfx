@@ -1,6 +1,6 @@
 # Changelog
 
-## tachyonfx 0.12.0 - 2025-0....
+## tachyonfx 0.12.0 - 2025-03-26
 
 ### DSL Improvements
 
@@ -18,9 +18,6 @@
   - Enables pinpointing specific tokens in error messages
   - Note that this feature has room for further improvements in future releases. It will occasionally point to the wrong
     token, depending on where and which category of parser intercepts the failure.
-
-![dsl-error](images/example-dsl-playground.png)
-`dsl-playground`:_DSL compilation failure due to wrong type_
 
 #### Internal Parser Improvements
 
