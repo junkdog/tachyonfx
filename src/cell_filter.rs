@@ -130,7 +130,7 @@ pub struct CellPredicate {
     /// The filter strategy that defines the criteria cells must meet to be considered valid.
     /// This strategy can combine multiple filters using logical operations (AND, OR, NOT)
     /// and can include both position-based and content-based criteria.
-    pub(super) strategy: CellFilter,
+    strategy: CellFilter,
 }
 
 impl CellPredicate {
