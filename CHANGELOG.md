@@ -3,6 +3,10 @@
 ### Fixes
 - `CellFilter::AnyOf`, `CellFilter::NoneOf`: now correctly filter cells based on the provided filters.
 
+### Improvements
+- Optimized CellFilter evaluation, reducing overhead by ~30-50% depending on the filter type.
+
+
 
 ## tachyonfx 0.12.0 - 2025-03-26
 

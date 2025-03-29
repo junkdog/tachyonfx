@@ -69,3 +69,7 @@ harness = false
 [[bench]]
 name = "color_conversion"
 harness = false
+
+[[bench]]
+name = "cell_filter"
+harness = false
