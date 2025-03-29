@@ -213,38 +213,6 @@ impl CellPredicate {
             },
         }
     }
-
-    fn is_valid_cell(&self, cell: &Cell, mode: &CellFilter) -> bool {
-        fn apply_eval_fn(f: &CellPredFn, cell: &Cell) -> bool {
-            #[cfg(not(feature = "sendable"))]
-            return f.borrow()(cell);
-            #[cfg(feature = "sendable")]
-            f.lock().unwrap()(cell)
-        }
-
-        match mode {
-            CellFilter::Text => {
-                if cell.symbol().len() == 1 {
-                    let ch = cell.symbol().chars().next().unwrap();
-                    ch.is_alphabetic() || ch.is_numeric() || " ?!.,:;()".contains(ch)
-                } else {
-                    false
-                }
-            },
-
-            CellFilter::AllOf(s) => s.iter()
-                .all(|s| s.selector(self.filter_area).is_valid_cell(cell, s)),
-
-            CellFilter::FgColor(color) => cell.fg == *color,
-            CellFilter::BgColor(color) => cell.bg == *color,
-
-            CellFilter::Not(m) => !self.is_valid_cell(cell, m.as_ref()),
-
-            CellFilter::EvalCell(f) => apply_eval_fn(f, cell),
-
-            _ => true,
-        }
-    }
 }
 
 impl CellFilter {
@@ -321,7 +289,7 @@ mod tests {
     use crate::{Duration, EffectRenderer};
     use layout::Layout;
     use ratatui::buffer::Buffer;
-    use ratatui::style::{Style, Styled};
+    use ratatui::style::Style;
     use ratatui::text::Span;
 
     #[test]
@@ -413,18 +381,6 @@ mod tests {
 
     #[test]
     fn test_all_any_and_none_of() {
-        let red = Style::default().fg(Color::Red);
-
-        let mut buf = Buffer::filled(Rect::new(0, 0, 6, 4), Cell::new("."));
-        // 2nd row from top has red fg color
-        buf.set_span(0, 1, &Span::from("......").style(red), 6);
-        let buf = buf;
-
-        let filters = vec![
-            CellFilter::FgColor(Color::Red),
-            CellFilter::Inner(Margin::new(1, 1)),
-        ];
-
         fn assert_filter(
             buf: &Buffer,
             filter: CellFilter,
@@ -448,6 +404,18 @@ mod tests {
 
             assert_eq!(b, expected);
         }
+
+        let red = Style::default().fg(Color::Red);
+
+        let mut buf = Buffer::filled(Rect::new(0, 0, 6, 4), Cell::new("."));
+        // 2nd row from top has red fg color
+        buf.set_span(0, 1, &Span::from("......").style(red), 6);
+        let buf = buf;
+
+        let filters = vec![
+            CellFilter::FgColor(Color::Red),
+            CellFilter::Inner(Margin::new(1, 1)),
+        ];
 
         assert_filter(&buf, CellFilter::AllOf(filters.clone()), Buffer::with_lines([
             "......",

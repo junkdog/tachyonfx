@@ -41,7 +41,6 @@ impl<'a> Iterator for CellIterator<'a> {
     type Item = (Position, &'a mut Cell);
 
     fn next(&mut self) -> Option<Self::Item> {
-        // let selector = &self.filter;
         let area = self.area.area();
         while self.current < area {
             let (pos, cell) = self.cell_mut()?;
@@ -49,7 +48,7 @@ impl<'a> Iterator for CellIterator<'a> {
             let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
             self.current += 1;
 
-            if self.filter.strategy == CellFilter::All || self.is_valid(pos, cell) {
+            if self.is_valid(pos, cell) {
                 return Some((pos, cell));
             }
         }
