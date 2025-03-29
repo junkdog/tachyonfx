@@ -68,6 +68,6 @@ fn ui(f: &mut Frame<'_>, effect: &mut Effect) {
     ]);
     f.render_widget(main_text.white().centered(), area);
     if effect.running() {
-        f.render_effect(effect, area, Duration::from_millis(100));
+        f.render_effect(effect, area, Duration::from_millis(33));
     }
 }
