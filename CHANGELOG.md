@@ -1,5 +1,9 @@
 # Changelog
 
+### Fixes
+- `CellFilter::AnyOf`, `CellFilter::NoneOf`: now correctly filter cells based on the provided filters.
+
+
 ## tachyonfx 0.12.0 - 2025-03-26
 
 ### DSL Improvements

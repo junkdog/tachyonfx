@@ -1,12 +1,12 @@
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Position, Rect};
-use crate::CellFilter;
+use crate::{CellFilter, CellPredicate};
 
 pub struct CellIterator<'a> {
     current: u32,
     area: Rect,
     buf: &'a mut Buffer,
-    filter: Option<CellFilter>,
+    filter: CellPredicate,
 }
 
 impl<'a> CellIterator<'a> {
@@ -19,7 +19,7 @@ impl<'a> CellIterator<'a> {
             current: 0,
             area: area.intersection(buf.area),
             buf,
-            filter
+            filter: filter.unwrap_or_default().selector(area),
         }
     }
 
@@ -31,13 +31,17 @@ impl<'a> CellIterator<'a> {
         let cell = self.buf.cell_mut(pos)?;
         Some((pos, cell))
     }
+
+    fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
+        self.filter.is_valid(pos, cell)
+    }
 }
 
 impl<'a> Iterator for CellIterator<'a> {
     type Item = (Position, &'a mut Cell);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let selector = self.filter.as_ref().map(|f| f.selector(self.area));
+        // let selector = &self.filter;
         let area = self.area.area();
         while self.current < area {
             let (pos, cell) = self.cell_mut()?;
@@ -45,11 +49,7 @@ impl<'a> Iterator for CellIterator<'a> {
             let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
             self.current += 1;
 
-            if let Some(filter) = &selector {
-                if filter.is_valid(pos, cell) {
-                    return Some((pos, cell));
-                }
-            } else {
+            if self.filter.strategy == CellFilter::All || self.is_valid(pos, cell) {
                 return Some((pos, cell));
             }
         }

@@ -125,12 +125,12 @@ pub struct CellPredicate {
     /// The effective area for cell evaluation after applying any area-modifying filters.
     /// This may be different from the original area if the filter modifies spatial bounds
     /// (e.g., margins or layout sections).
-    inner_area: Rect,
+    filter_area: Rect,
 
     /// The filter strategy that defines the criteria cells must meet to be considered valid.
     /// This strategy can combine multiple filters using logical operations (AND, OR, NOT)
     /// and can include both position-based and content-based criteria.
-    strategy: CellFilter,
+    pub(super) strategy: CellFilter,
 }
 
 impl CellPredicate {
@@ -142,27 +142,27 @@ impl CellPredicate {
     /// * `area` - The initial rectangular area for cell evaluation
     /// * `strategy` - The filter strategy to apply
     fn new(area: Rect, strategy: CellFilter) -> Self {
-        let inner_area = Self::resolve_area(area, &strategy);
+        let filter_area = Self::resolve_area(area, &strategy);
 
-        Self { inner_area, strategy }
+        Self { filter_area, strategy }
     }
 
     fn resolve_area(area: Rect, mode: &CellFilter) -> Rect {
         match mode {
-            CellFilter::All                  => area,
-            CellFilter::Area(_)              => area,
-            CellFilter::Inner(margin)        => area.inner(*margin),
-            CellFilter::Outer(margin)        => area.inner(*margin),
-            CellFilter::Text                 => area,
-            CellFilter::AllOf(_)             => area,
-            CellFilter::AnyOf(_)             => area,
-            CellFilter::NoneOf(_)            => area,
-            CellFilter::Not(m)               => Self::resolve_area(area, m.as_ref()),
-            CellFilter::FgColor(_)           => area,
-            CellFilter::BgColor(_)           => area,
-            CellFilter::Layout(layout, idx)  => layout.split(area)[*idx as usize],
-            CellFilter::PositionFn(_)        => area,
-            CellFilter::EvalCell(_)          => area,
+            CellFilter::All                 => area,
+            CellFilter::Area(r)             => area.intersection(*r),
+            CellFilter::Inner(margin)       => area.inner(*margin),
+            CellFilter::Outer(margin)       => area.inner(*margin),
+            CellFilter::Text                => area,
+            CellFilter::AllOf(_)            => area,
+            CellFilter::AnyOf(_)            => area,
+            CellFilter::NoneOf(_)           => area,
+            CellFilter::Not(m)              => Self::resolve_area(area, m.as_ref()),
+            CellFilter::FgColor(_)          => area,
+            CellFilter::BgColor(_)          => area,
+            CellFilter::Layout(layout, idx) => layout.split(area)[*idx as usize],
+            CellFilter::PositionFn(_)       => area,
+            CellFilter::EvalCell(_)         => area,
         }
     }
 
@@ -178,47 +178,39 @@ impl CellPredicate {
     /// # Returns
     /// `true` if the cell meets all filter criteria, `false` otherwise
     pub fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
-        let mode = &self.strategy;
 
-        match mode {
-            CellFilter::Not(inner) => {
-                // negate the entire predicate for the inner filter
-                !inner.selector(self.inner_area).is_valid(pos, cell)
+        match &self.strategy {
+            CellFilter::All           => true,
+            CellFilter::Area(_)       => self.filter_area.contains(pos),
+            CellFilter::Layout(_, _)  => self.filter_area.contains(pos),
+            CellFilter::Inner(_)      => self.filter_area.contains(pos),
+            CellFilter::Outer(_)      => !self.filter_area.contains(pos),
+            CellFilter::Text          => {
+                let ch = cell.symbol().chars().next().unwrap();
+                ch.is_alphabetic() || ch.is_numeric() || " ?!.,:;()".contains(ch)
             },
-            _ => {
-                // regular logic for other filters
-                self.valid_position(pos, mode)
-                    && self.is_valid_cell(cell, mode)
-            }
-        }
-    }
-
-    fn valid_position(&self, pos: Position, mode: &CellFilter) -> bool {
-        fn apply_position_fn(f: &PositionFnType, pos: Position) -> bool {
-            #[cfg(not(feature = "sendable"))]
-            return f.borrow()(pos);
-            #[cfg(feature = "sendable")]
-            f.lock().unwrap()(pos)
-        }
-
-        match mode {
-            CellFilter::All           => self.inner_area.contains(pos),
-            CellFilter::Area(r)       => self.inner_area.intersection(*r).contains(pos),
-            CellFilter::Layout(_, _)  => self.inner_area.contains(pos),
-            CellFilter::Inner(_)      => self.inner_area.contains(pos),
-            CellFilter::Outer(_)      => !self.inner_area.contains(pos),
-            CellFilter::Text          => self.inner_area.contains(pos),
             CellFilter::AllOf(s)      => s.iter()
-                .all(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
+                .all(|mode| mode.selector(self.filter_area).is_valid(pos, cell)),
             CellFilter::AnyOf(s)      => s.iter()
-                .any(|mode| mode.selector(self.inner_area).valid_position(pos, mode)),
+                .any(|mode| mode.selector(self.filter_area).is_valid(pos, cell)),
             CellFilter::NoneOf(s)     => s.iter()
-                .all(|mode| !mode.selector(self.inner_area).valid_position(pos, mode)),
-            CellFilter::Not(m)        => !self.valid_position(pos, m.as_ref()),
-            CellFilter::FgColor(_)    => self.inner_area.contains(pos),
-            CellFilter::BgColor(_)    => self.inner_area.contains(pos),
-            CellFilter::PositionFn(f) => apply_position_fn(f, pos),
-            CellFilter::EvalCell(_)   => self.inner_area.contains(pos),
+                .all(|mode| !mode.selector(self.filter_area).is_valid(pos, cell)),
+            CellFilter::Not(m)        => !m.selector(self.filter_area).is_valid(pos, cell),
+            // CellFilter::Not(m)        => !self.valid_position(pos, m.as_ref()),
+            CellFilter::FgColor(c)    => cell.fg == *c,
+            CellFilter::BgColor(c)    => cell.fg == *c,
+            CellFilter::PositionFn(f) => {
+                #[cfg(not(feature = "sendable"))]
+                return f.borrow()(pos);
+                #[cfg(feature = "sendable")]
+                return f.lock().unwrap()(pos);
+            },
+            CellFilter::EvalCell(f)   => {
+                #[cfg(not(feature = "sendable"))]
+                return f.borrow()(cell);
+                #[cfg(feature = "sendable")]
+                return f.lock().unwrap()(cell);
+            },
         }
     }
 
@@ -241,7 +233,7 @@ impl CellPredicate {
             },
 
             CellFilter::AllOf(s) => s.iter()
-                .all(|s| s.selector(self.inner_area).is_valid_cell(cell, s)),
+                .all(|s| s.selector(self.filter_area).is_valid_cell(cell, s)),
 
             CellFilter::FgColor(color) => cell.fg == *color,
             CellFilter::BgColor(color) => cell.bg == *color,
@@ -304,6 +296,7 @@ impl PartialEq for CellFilter {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (CellFilter::All, CellFilter::All) => true,
+            (CellFilter::Area(r1), CellFilter::Area(r2)) => r1 == r2,
             (CellFilter::FgColor(c1), CellFilter::FgColor(c2)) => c1 == c2,
             (CellFilter::BgColor(c1), CellFilter::BgColor(c2)) => c1 == c2,
             (CellFilter::Inner(m1), CellFilter::Inner(m2)) => m1 == m2,
@@ -328,6 +321,8 @@ mod tests {
     use crate::{Duration, EffectRenderer};
     use layout::Layout;
     use ratatui::buffer::Buffer;
+    use ratatui::style::{Style, Styled};
+    use ratatui::text::Span;
 
     #[test]
     fn test_cell_filter_to_string() {
@@ -406,7 +401,6 @@ mod tests {
 
         let mut buf = empty.clone();
         let filter = CellFilter::Not(Box::new(CellFilter::Area(Rect::new(0, 0, 8, 2))));
-        // let filter = CellFilter::Area(Rect::new(0, 2, 8, 2));
         buf.render_effect(&mut fx.clone().with_filter(filter), area, Duration::from_millis(16));
 
         assert_eq!(buf, Buffer::with_lines([
@@ -414,6 +408,64 @@ mod tests {
             ". . . . ",
             "XXXXXXXX",
             "XXXXXXXX",
+        ]));
+    }
+
+    #[test]
+    fn test_all_any_and_none_of() {
+        let red = Style::default().fg(Color::Red);
+
+        let mut buf = Buffer::filled(Rect::new(0, 0, 6, 4), Cell::new("."));
+        // 2nd row from top has red fg color
+        buf.set_span(0, 1, &Span::from("......").style(red), 6);
+        let buf = buf;
+
+        let filters = vec![
+            CellFilter::FgColor(Color::Red),
+            CellFilter::Inner(Margin::new(1, 1)),
+        ];
+
+        fn assert_filter(
+            buf: &Buffer,
+            filter: CellFilter,
+            expected: Buffer,
+        ) {
+            let mut mark_fx = effect_fn((), 1, |_, _, cells| {
+                for (_, c) in cells {
+                    c.set_symbol("X");
+                }
+            }).with_filter(filter);
+
+            let mut clear_styling = effect_fn((), 1, |_, _, cells| {
+                for (_, c) in cells {
+                    c.set_style(Style::reset());
+                }
+            });
+
+            let mut b = buf.clone();
+            b.render_effect(&mut mark_fx, buf.area, Duration::from_millis(16));
+            b.render_effect(&mut clear_styling, buf.area, Duration::from_millis(16));
+
+            assert_eq!(b, expected);
+        }
+
+        assert_filter(&buf, CellFilter::AllOf(filters.clone()), Buffer::with_lines([
+            "......",
+            ".XXXX.",
+            "......",
+            "......",
+        ]));
+        assert_filter(&buf, CellFilter::AnyOf(filters.clone()), Buffer::with_lines([
+            "......",
+            "XXXXXX",
+            ".XXXX.",
+            "......",
+        ]));
+        assert_filter(&buf, CellFilter::NoneOf(filters.clone()), Buffer::with_lines([
+            "XXXXXX",
+            "......",
+            "X....X",
+            "XXXXXX",
         ]));
     }
 }
