@@ -1,7 +1,7 @@
 # Changelog
 
-### Changed
-- With the introduction of `LruCache::memoize_ref`, values no longer have to implement 'Clone'.  
+### Changed`
+- With the introduction of `LruCache::memoize_ref`, values no longer have to implement `Clone`.  
 
 ## tachyonfx 0.13.0 - 2025-03-30
 
