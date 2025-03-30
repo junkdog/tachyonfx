@@ -17,7 +17,7 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
     group.bench_function("raw_no_filter", |b| {
         b.iter_with_setup(
             || Buffer::empty(area),
-            |mut buffer| {
+            |buffer| {
                 // This is the absolute baseline - just iterating through the buffer
                 for y in 0..height {
                     for x in 0..width {

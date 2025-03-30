@@ -104,10 +104,7 @@ fn run_app(
             if event::poll(StdDuration::from_millis(5))? {
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
-                        match key.code {
-                            KeyCode::Esc => return Ok(()),
-                            _ => {}
-                        }
+                        if key.code == KeyCode::Esc { return Ok(()) }
                     }
                 }
             }
@@ -181,7 +178,7 @@ impl HelloWorldPopupState {
             Line::from("vitae semper eros nisl eget nisi. ").style(content_style),
         ]);
 
-        let title_style = border_style.clone().add_modifier(Modifier::BOLD);
+        let title_style = border_style.add_modifier(Modifier::BOLD);
 
         
         

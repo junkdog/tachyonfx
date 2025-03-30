@@ -90,7 +90,7 @@ struct App<'a> {
     mascot_area: Rect,
 }
 
-impl<'a> App<'a> {
+impl App<'_> {
     fn new() -> Self {
         let mut editor = TextArea::new(DEFAULT_DSL_CODE.lines().map(|s| s.to_string()).collect());
         editor.set_style(theme_editor_style());

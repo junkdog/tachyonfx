@@ -39,7 +39,7 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("direct", "ui-pattern"), &(), |b, _| {
         b.iter(|| {
             // Simulate 100 frames of animation
-            for frame in 0..100 {
+            for _ in 0..100 {
                 // Theme colors used in every frame
                 for &theme_color in &theme_colors {
                     // Each theme color fades to a slightly different shade
@@ -60,10 +60,10 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
     // Benchmark with cache size 8 for HSL conversion
     group.bench_with_input(BenchmarkId::new("cached_hsl_size_8", "ui-pattern"), &(), |b, _| {
         b.iter_with_setup(
-            || LruCache::<Color, (f32, f32, f32), 8>::new(),
+            LruCache::<Color, (f32, f32, f32), 8>::new,
             |mut cache| {
                 // Simulate 100 frames of animation
-                for frame in 0..100 {
+                for _ in 0..100 {
                     // Theme colors used in every frame
                     for &theme_color in &theme_colors {
                         // Each theme color fades to a slightly different shade
@@ -85,10 +85,10 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
     // Benchmark with cache size 16 for HSL conversion
     group.bench_with_input(BenchmarkId::new("cached_hsl_size_16", "ui-pattern"), &(), |b, _| {
         b.iter_with_setup(
-            || LruCache::<Color, (f32, f32, f32), 16>::new(),
+            LruCache::<Color, (f32, f32, f32), 16>::new,
             |mut cache| {
                 // Simulate 100 frames of animation
-                for frame in 0..100 {
+                for _ in 0..100 {
                     // Theme colors used in every frame
                     for &theme_color in &theme_colors {
                         // Each theme color fades to a slightly different shade
@@ -110,10 +110,10 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
     // Cache the entire lerp operation result
     group.bench_with_input(BenchmarkId::new("cached_full_lerp_size_8", "ui-pattern"), &(), |b, _| {
         b.iter_with_setup(
-            || LruCache::<LerpKey, Color, 8>::new(),
+            LruCache::<LerpKey, Color, 8>::new,
             |mut cache| {
                 // Simulate 100 frames of animation
-                for frame in 0..100 {
+                for _ in 0..100 {
                     // Theme colors used in every frame
                     for &theme_color in &theme_colors {
                         // Each theme color fades to a slightly different shade
@@ -144,10 +144,10 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
     // Cache the entire lerp operation result with a larger cache
     group.bench_with_input(BenchmarkId::new("cached_full_lerp_size_16", "ui-pattern"), &(), |b, _| {
         b.iter_with_setup(
-            || LruCache::<LerpKey, Color, 16>::new(),
+            LruCache::<LerpKey, Color, 16>::new,
             |mut cache| {
                 // Simulate 100 frames of animation
-                for frame in 0..100 {
+                for _ in 0..100 {
                     // Theme colors used in every frame
                     for &theme_color in &theme_colors {
                         // Each theme color fades to a slightly different shade

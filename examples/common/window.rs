@@ -116,7 +116,7 @@ impl Shader for OpenWindow {
     }
 
     fn cell_filter(&self) -> Option<CellFilter> {
-        self.pre_render_fx.as_ref().map(Effect::cell_filter).flatten()
+        self.pre_render_fx.as_ref().and_then(Effect::cell_filter)
     }
 
     fn reset(&mut self) {

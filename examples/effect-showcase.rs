@@ -193,7 +193,7 @@ mod examples {
             let cell_pred = context.filter.unwrap_or(CellFilter::All).selector(buf.area);
             for (i, pos) in buf.area.positions().enumerate() {
                 let cell = &mut buf[pos];
-                if !cell_pred.is_valid(pos, &cell) {
+                if !cell_pred.is_valid(pos, cell) {
                     continue;
                 }
                 cell.set_fg(Color::Indexed(((offset + i) % 256) as u8));
@@ -222,29 +222,29 @@ fn main() -> io::Result<()> {
     let mut terminal = ratatui::init();
 
     run_with_effect(&mut terminal, wait_for_input)?;
-    run_example(&mut terminal, &examples::fade_from)?;
-    run_example(&mut terminal, &examples::fade_to)?;
-    run_example(&mut terminal, &examples::fade_from_fg)?;
-    run_example(&mut terminal, &examples::fade_to_fg)?;
-    run_example(&mut terminal, &examples::coalesce)?;
-    run_example(&mut terminal, &examples::coalesce_from)?;
-    run_example(&mut terminal, &examples::dissolve)?;
-    run_example(&mut terminal, &examples::dissolve_to)?;
-    run_example(&mut terminal, &examples::sweep_in)?;
-    run_example(&mut terminal, &examples::sweep_out)?;
-    run_example(&mut terminal, &examples::slide_in)?;
-    run_example(&mut terminal, &examples::slide_out)?;
-    run_example(&mut terminal, &examples::hsl_shift)?;
-    run_example(&mut terminal, &examples::hsl_shift_fg)?;
-    run_example(&mut terminal, &examples::parallel)?;
-    run_example(&mut terminal, &examples::sequence)?;
-    run_example(&mut terminal, &examples::delay)?;
-    run_example(&mut terminal, &examples::never_complete)?;
-    run_example(&mut terminal, &examples::ping_pong)?;
-    run_example(&mut terminal, &examples::prolong_start)?;
-    run_example(&mut terminal, &examples::prolong_end)?;
-    run_example(&mut terminal, &examples::effect_fn)?;
-    run_example(&mut terminal, &examples::effect_fn_buf)?;
+    run_example(&mut terminal, examples::fade_from)?;
+    run_example(&mut terminal, examples::fade_to)?;
+    run_example(&mut terminal, examples::fade_from_fg)?;
+    run_example(&mut terminal, examples::fade_to_fg)?;
+    run_example(&mut terminal, examples::coalesce)?;
+    run_example(&mut terminal, examples::coalesce_from)?;
+    run_example(&mut terminal, examples::dissolve)?;
+    run_example(&mut terminal, examples::dissolve_to)?;
+    run_example(&mut terminal, examples::sweep_in)?;
+    run_example(&mut terminal, examples::sweep_out)?;
+    run_example(&mut terminal, examples::slide_in)?;
+    run_example(&mut terminal, examples::slide_out)?;
+    run_example(&mut terminal, examples::hsl_shift)?;
+    run_example(&mut terminal, examples::hsl_shift_fg)?;
+    run_example(&mut terminal, examples::parallel)?;
+    run_example(&mut terminal, examples::sequence)?;
+    run_example(&mut terminal, examples::delay)?;
+    run_example(&mut terminal, examples::never_complete)?;
+    run_example(&mut terminal, examples::ping_pong)?;
+    run_example(&mut terminal, examples::prolong_start)?;
+    run_example(&mut terminal, examples::prolong_end)?;
+    run_example(&mut terminal, examples::effect_fn)?;
+    run_example(&mut terminal, examples::effect_fn_buf)?;
     ratatui::restore();
 
     Ok(())
