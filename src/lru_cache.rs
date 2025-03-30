@@ -38,7 +38,6 @@ use std::array;
 pub struct LruCache<K, V, const N: usize>
 where
     K: PartialEq + Clone + Default,
-    V: Clone,
 {
     index: [K; N],
     entries: [(V, u16); N],
@@ -50,7 +49,6 @@ where
 impl<K, V, const N: usize> LruCache<K, V, N>
 where
     K: PartialEq + Clone + Default,
-    V: Clone,
 {
     /// Creates a new empty LRU cache with the specified capacity.
     ///
@@ -94,7 +92,7 @@ where
         &mut self,
         key: &K,
         f: impl FnOnce(&K) -> V,
-    ) -> V {
+    ) -> V where V: Clone {
         self.memoize_ref(key, f).clone()
     }
 
