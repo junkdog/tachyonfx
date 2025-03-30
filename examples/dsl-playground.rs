@@ -58,12 +58,35 @@ fx::parallel(&[
 ])
 
 // 2. Or create separate effects for each area:
-// fx::sequence(&[
-//     fx::slide_in(Motion::LeftToRight, 10, 0, Color::from_u32(0x1d2021), 800)
-//         .with_area(mascot_area),
-//     fx::sweep_in(Motion::UpToDown, 10, 0, Color::from_u32(0x1d2021), 800)
-//         .with_area(blake_area)
-// ])
+/*
+let t = (800, Linear);
+let t2 = (1500, Linear);
+
+let not_blake = CellFilter::Not(Box::new(CellFilter::Area(blake_area)));
+let reset_filter = CellFilter::BgColor(Color::from_u32(0x000000));
+
+parallel(&[
+    // slide in mascot
+    slide_in(UpToDown, 40, 0, Color::from_u32(0x101010), t)
+        .with_filter(not_blake),
+
+    // flicker blake quote
+    prolong_start(1000,
+        dissolve((500, BounceOut)).with_area(blake_area)),
+
+    // explode the quote; fade into background (approx)
+    prolong_start(t2, parallel(&[
+        // fading colors to an approx of bg
+        fade_to_fg(Color::from_u32(0x404040), t),
+
+        // the delays avoid triggering effects prematurely
+        delay(1, explode(20.0, 0.4, t)),
+
+        // fade quote back in
+        delay(800, fade_from(Color::Black, Color::Black, (800, SineOut))),
+    ]).with_area(blake_area)),
+])
+*/
 "#;
 
 

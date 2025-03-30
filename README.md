@@ -227,7 +227,7 @@ cargo run --release --example=fx-chart
 ```
 
 ### Example: [dsl-playground](examples/dsl-playground.rs)
-![dsl-playground](images/example-dsl-playground.png)
+![dsl-playground](images/example-dsl-playground.gif)
 ```
 cargo run --release --example=dsl-playground
 ```
