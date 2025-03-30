@@ -6,20 +6,22 @@ pub struct CellIterator<'a> {
     current: u32,
     area: Rect,
     buf: &'a mut Buffer,
-    filter: CellPredicate,
+    predicate: Option<CellPredicate>,
 }
 
 impl<'a> CellIterator<'a> {
     pub fn new(
         buf: &'a mut Buffer,
         area: Rect,
-        filter: Option<CellFilter>,
+        cell_filter: Option<CellFilter>,
     ) -> Self {
         Self {
             current: 0,
             area: area.intersection(buf.area),
             buf,
-            filter: filter.unwrap_or_default().selector(area),
+            predicate: cell_filter
+                .filter(|f| *f != CellFilter::All)
+                .map(|f| f.selector(area)),
         }
     }
 
@@ -30,10 +32,6 @@ impl<'a> CellIterator<'a> {
         let pos = Position::new(self.area.x + x, self.area.y + y);
         let cell = self.buf.cell_mut(pos)?;
         Some((pos, cell))
-    }
-
-    fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
-        self.filter.is_valid(pos, cell)
     }
 }
 
@@ -48,7 +46,11 @@ impl<'a> Iterator for CellIterator<'a> {
             let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
             self.current += 1;
 
-            if self.is_valid(pos, cell) {
+            if let Some(predicate) = &self.predicate {
+                if predicate.is_valid(pos, cell) {
+                    return Some((pos, cell));
+                }
+            } else {
                 return Some((pos, cell));
             }
         }

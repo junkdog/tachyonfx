@@ -29,6 +29,26 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
     });
 
     // Test the overhead of using CellFilter::All (should be minimal)
+    group.bench_function("filter_plain", |b| {
+        b.iter_with_setup(
+            || {
+                let buffer = Buffer::empty(area);
+                let effect = fx::effect_fn((), 1, |_, _, cells| {
+                    // Just iterate over the cells with black_box to prevent optimizations
+                    for (pos, cell) in cells {
+                        black_box(pos);
+                        black_box(cell);
+                    }
+                });
+                (buffer, effect)
+            },
+            |(mut buffer, mut effect)| {
+                effect.process(black_box(Duration::from_millis(16)), &mut buffer, area);
+            }
+        );
+    });
+
+    // Test the overhead of using CellFilter::All (should be minimal)
     group.bench_function("filter_all", |b| {
         b.iter_with_setup(
             || {
