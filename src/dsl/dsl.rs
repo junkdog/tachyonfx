@@ -311,6 +311,7 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("delay",                compilers::delay)
         .register("dissolve",             |args| dissolve(args.effect_timer()?).into())
         .register("dissolve_to",          compilers::dissolve_to)
+        .register("explode",              compilers::explode)
         .register("fade_from",            compilers::fade_from)
         .register("fade_from_fg",         compilers::fade_from_fg)
         .register("fade_to",              compilers::fade_to)
@@ -364,6 +365,14 @@ mod compilers {
         fx::coalesce_from(
             args.style()?,
             args.effect_timer()?
+        ).into()
+    }
+
+    pub(super) fn explode(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::explode(
+            args.read_into_f32()?,
+            args.read_into_f32()?,
+            args.effect_timer()?,
         ).into()
     }
 

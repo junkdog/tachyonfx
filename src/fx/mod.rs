@@ -24,6 +24,7 @@
 //! |------------------------|-------------|----------|
 //! | [`coalesce()`] ⬆️      | Reforms dissolved foreground | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce.gif) |
 //! | [`coalesce_from()`] ⬆️ | Reforms dissolved foreground | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce_from.gif) |
+//! | [`explode()`] 💥       | Explodes content outward     | no preview |
 //! | [`dissolve()`] ⬇️      | Dissolves foreground content | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve.gif) |
 //! | [`dissolve_to()`] ⬇️   | Dissolves foreground content | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve_to.gif) |
 //! | [`slide_in()`] ↔️      | Slides content with gradient | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/slide_in.gif) |
@@ -127,6 +128,7 @@ mod offscreen_buffer;
 mod prolong;
 mod direction;
 pub(crate) mod unique;
+mod explode;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -336,6 +338,48 @@ pub fn hsl_shift_fg<T: Into<EffectTimer>>(
 /// Returns an effect that downsamples to 256 color mode.
 pub fn term256_colors() -> Effect {
     Ansi256::default().into_effect()
+}
+
+/// Creates an explosion effect where content disperses outward from the center.
+///
+/// This effect simulates an explosion by moving cells away from the center of the
+/// specified area, with their appearance changing over time to represent debris.
+///
+/// # Arguments
+///
+/// * `force` - Base explosion force determining how far cells move outward. Higher values
+///             create more dramatic explosions with cells moving farther from the center.
+///
+/// * `force_rng_factor` - Randomization factor for explosion force. Higher values create
+///                        more varied and chaotic explosions, with some cells moving faster
+///                        than others. Set to 0.0 for uniform movement.
+///
+/// * `timer` - Controls the duration and interpolation of the effect.
+///
+/// # Returns
+///
+/// * An `Effect` that creates an explosion animation when processed.
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::{fx, Interpolation::Linear};
+/// use ratatui::layout::Rect;
+/// use ratatui::style::Color;
+///
+/// let timer = (1000, Linear);
+///
+/// fx::parallel(&[
+///     fx::fade_to_fg(Color::from_u32(0x404040), timer),
+///     fx::explode(15.0, 2.0, timer),
+/// ]);
+/// ```
+pub fn explode(
+    force: f32,
+    force_rng_factor: f32,
+    timer: impl Into<EffectTimer>,
+) -> Effect {
+    Explode::new(force, force_rng_factor, timer.into()).into_effect()
 }
 
 /// Repeat the effect indefinitely or for a specified number of times or duration.
@@ -1219,6 +1263,7 @@ macro_rules! invoke_fn {
 }
 
 pub (crate) use invoke_fn;
+use crate::fx::explode::Explode;
 
 #[cfg(test)]
 mod tests {

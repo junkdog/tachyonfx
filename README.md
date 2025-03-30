@@ -107,6 +107,7 @@ The library includes a variety of effects, loosely categorized as follows:
 #### Text/Character Effects
 - **coalesce:**   The reverse of dissolve, coalesces text over the specified duration.
 - **dissolve:**   Dissolves the current text over the specified duration.
+- **explode:**    Explodes the content dispersing it outward from the center.
 - **slide_in:**   Applies a directional sliding in effect to terminal cells.
 - **slide_out:**  Applies a directional sliding out effect to terminal cells.
 - **sweep_in:**   Sweeps in from the specified color.

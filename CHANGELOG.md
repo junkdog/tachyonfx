@@ -1,11 +1,16 @@
 # Changelog
 
+## tachyonfx 0.13.0 - 2025-03-30
+
+### Added
+- `fx::explode`: explodes the content outward from the center.
+- `LruCache::memoize_ref`: returns a reference to the cached value instead of cloning it.
+
 ### Fixes
 - `CellFilter::AnyOf`, `CellFilter::NoneOf`: now correctly filter cells based on the provided filters.
 
 ### Improvements
 - Optimized CellFilter evaluation, reducing overhead by ~30-50% depending on the filter type.
-
 
 
 ## tachyonfx 0.12.0 - 2025-03-26

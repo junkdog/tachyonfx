@@ -74,6 +74,7 @@ where
     }
 
     /// Retrieves a value from the cache, or computes and caches it using the provided function.
+    /// Note that this method returns a clone of the value.
     ///
     /// If the key exists in the cache, its value is returned and marked as recently used.
     /// If the key doesn't exist, the function `f` is called to compute the value, which is
@@ -94,6 +95,30 @@ where
         key: &K,
         f: impl FnOnce(&K) -> V,
     ) -> V {
+        self.memoize_ref(key, f).clone()
+    }
+
+    /// Retrieves a reference from the cache, or computes and caches it using the provided function.
+    ///
+    /// If the key exists in the cache, its value is returned and marked as recently used.
+    /// If the key doesn't exist, the function `f` is called to compute the value, which is
+    /// then stored in the cache before being returned.
+    ///
+    /// When the cache is full, the least recently used entry is replaced.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to look up
+    /// * `f` - Function to compute the value if the key is not in the cache
+    ///
+    /// # Returns
+    ///
+    /// The value associated with the key, either from the cache or newly computed
+    pub fn memoize_ref(
+        &mut self,
+        key: &K,
+        f: impl FnOnce(&K) -> V,
+    ) -> &V {
         self.counter += 1;
         if self.counter == 0xffff {
             self.normalize();
@@ -113,7 +138,7 @@ where
                 self.cache_hits += 1;
 
                 self.entries[idx].1 = self.counter;
-                self.entries[idx].0.clone()
+                &self.entries[idx].0
             }
             None => {
                 self.cache_misses += 1;
@@ -121,7 +146,7 @@ where
                 let idx = self.find_lru_index();
                 self.index[idx] = key.clone();
                 self.entries[idx] = (f(key), self.counter);
-                self.entries[idx].0.clone()
+                &self.entries[idx].0
             }
         }
     }
@@ -165,6 +190,7 @@ where
         Self::new()
     }
 }
+
 
 #[cfg(test)]
 mod tests {
