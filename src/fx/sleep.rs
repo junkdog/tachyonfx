@@ -1,4 +1,4 @@
-use crate::Duration;
+use crate::{default_shader_impl, Duration};
 use ratatui::layout::Rect;
 
 use crate::effect_timer::EffectTimer;
@@ -18,29 +18,15 @@ impl Sleep {
 }
 
 impl Shader for Sleep {
+    default_shader_impl!(timer, clone);
+
     fn name(&self) -> &'static str {
         "sleep"
-    }
-
-    fn done(&self) -> bool {
-        self.timer.done()
-    }
-
-    fn clone_box(&self) -> Box<dyn Shader> {
-        Box::new(self.clone())
     }
 
     fn area(&self) -> Option<Rect> { None }
     fn set_area(&mut self, _area: Rect) {}
     fn filter(&mut self, _strategy: CellFilter) {}
-
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
-        Some(&mut self.timer)
-    }
-
-    fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer)
-    }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         EffectSpan::new(self, offset, Vec::default())
