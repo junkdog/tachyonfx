@@ -26,7 +26,7 @@ web-time = { version = "1.1.0", optional = true }
 [dev-dependencies]
 regex = "1.11.1"
 indoc = "2.0.6"
-crossterm = "0.28.1"
+crossterm = "0.29.0"
 tui-textarea = "0.7.0"
 criterion = "0.5.1"
 
