@@ -92,6 +92,12 @@ pub enum DslError {
         location: ExprSpan,
     },
 
+    #[error("Unmatched bracket '{bracket}'")]
+    BracketMismatch {
+        bracket: char,
+        location: ExprSpan,
+    },
+
     #[error("'{message}'")]
     SyntaxError {
         message: CompactString,

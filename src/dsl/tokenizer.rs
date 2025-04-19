@@ -70,6 +70,50 @@ impl<'a> Token<'a> {
     }
 }
 
+pub(super) fn verify_tokens(
+    tokens: Vec<Token>,
+) -> Result<Vec<Token>, DslError> {
+    verify_brackets(&tokens, TokenKind::LeftParen, TokenKind::RightParen)?;
+    verify_brackets(&tokens, TokenKind::LeftBracket, TokenKind::RightBracket)?;
+    verify_brackets(&tokens, TokenKind::LeftBrace, TokenKind::RightBrace)?;
+
+    Ok(tokens)
+}
+
+fn verify_brackets(
+    tokens: &Vec<Token>,
+    bracket_open: TokenKind,
+    bracket_close: TokenKind,
+) -> Result<(), DslError> {
+    let mut stack: Vec<&Token> = Vec::new();
+    
+    for token in tokens {
+        if token.kind == bracket_open {
+            // push to stack
+            stack.push(token);
+        } else if token.kind == bracket_close {
+            if stack.pop().is_none() {
+                // unmatched closing bracket
+                Err(DslError::BracketMismatch {
+                    bracket: token.text.chars().next().unwrap(),
+                    location: ExprSpan::new(token.span.0, token.span.1),
+                })?;
+            }
+        }
+    }
+    
+    if !stack.is_empty() {
+        // unmatched opening bracket
+        let trailing = stack.first().unwrap();
+        Err(DslError::BracketMismatch {
+            bracket: trailing.text.chars().next().unwrap(),
+            location: ExprSpan::new(trailing.span.0, trailing.span.1),
+        })?;
+    }
+    
+    Ok(())
+}
+
 pub(super) fn sanitize_tokens(tokens: Vec<Token>) -> Vec<Token> {
     const DISCARD: &[TokenKind] = &[
         TokenKind::Whitespace,

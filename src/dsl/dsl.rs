@@ -3,7 +3,7 @@ use crate::dsl::environment::DslEnv;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::token_parsers::parse_ast;
-use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
+use crate::dsl::tokenizer::{sanitize_tokens, tokenize, verify_tokens};
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
@@ -296,6 +296,7 @@ impl DslCompiler<'_> {
     pub fn compile(self, input: &str) -> Result<Effect, DslParseError> {
         tokenize(input)
             .map(sanitize_tokens)
+            .and_then(verify_tokens)
             .and_then(parse_ast)
             .and_then(|ast| self.dsl.compile(&self.environment, ast))
             .map_err(|e| DslParseError::new(input, e))
@@ -917,7 +918,6 @@ mod tests {
         assert!(matches!(err.source, DslError::InvalidArgumentLength { .. }), "{:?}", err);
     }
 
-    // Error cases
     #[test]
     fn test_compiler_missing_arguments() {
         let dsl = EffectDsl::new();
@@ -937,5 +937,19 @@ mod tests {
         let env = DslEnv::new();
         let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env, ExprSpan::default());
         assert!(compilers::fade_to_fg(&mut args).is_err());
+    }
+    
+    #[test]
+    fn test_missing_brackets() {
+        let dsl = EffectDsl::new();
+        
+        for expr in [ "x)", "(x", "[x", "x]", "{x", "x}", ] {
+            let err = dsl.compiler()
+                .compile(expr)
+                .expect_err("should fail")
+                .source;
+    
+            assert!(matches!(err, DslError::BracketMismatch { .. }), "{:?}", err);
+        }
     }
 }

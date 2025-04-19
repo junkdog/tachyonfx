@@ -3,6 +3,9 @@
 ### Changed`
 - With the introduction of `LruCache::memoize_ref`, values no longer have to implement `Clone`.  
 
+### Effect DSL
+- Missing brackets are now reported with less misleading error messages.
+
 ## tachyonfx 0.13.0 - 2025-03-30
 
 ### Added

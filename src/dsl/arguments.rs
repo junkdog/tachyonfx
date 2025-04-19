@@ -752,6 +752,7 @@ impl DslError {
     pub(super) fn span(&self) -> Option<ExprSpan> {
         Some(match self {
             DslError::ArrayLengthMismatch { location, .. } => *location,
+            DslError::BracketMismatch { location, .. } => *location,
             DslError::CastOverflow { location, .. } => *location,
             DslError::InvalidArgumentLength { location, .. } => *location,
             DslError::InvalidExpression { location, .. } => *location,
@@ -880,7 +881,7 @@ mod tests {
     use crate::dsl::environment::DslEnv;
     use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
     use crate::dsl::token_parsers::parse_ast;
-    use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
+    use crate::dsl::tokenizer::{sanitize_tokens, tokenize, verify_tokens};
     use crate::dsl::DslError;
     use crate::{CellFilter, Motion};
     use compact_str::ToCompactString;
@@ -985,6 +986,7 @@ mod tests {
     fn parse_expr(input: &str) -> Expr {
         tokenize(input)
             .map(sanitize_tokens)
+            .and_then(verify_tokens)
             .and_then(parse_ast)
             .unwrap()
             .last()
