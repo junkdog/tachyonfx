@@ -102,9 +102,8 @@ fn verify_brackets(
         }
     }
     
-    if !stack.is_empty() {
+    if let Some(trailing) = stack.last() {
         // unmatched opening bracket
-        let trailing = stack.first().unwrap();
         Err(DslError::BracketMismatch {
             bracket: trailing.text.chars().next().unwrap(),
             location: ExprSpan::new(trailing.span.0, trailing.span.1),
