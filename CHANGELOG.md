@@ -4,6 +4,7 @@
 - With the introduction of `LruCache::memoize_ref`, values no longer have to implement `Clone`.  
 
 ### Effect DSL
+- Update DslError messages to be more informative and user-friendly.
 - Missing brackets are now reported with less misleading error messages.
 - Improved error messages for missing semicolons.
 - Added error messages for missing commas in DSL expressions.

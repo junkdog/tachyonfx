@@ -25,135 +25,138 @@ use dsl_writer::DslWriter;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
-    #[error("Failed to tokenize DSL")]
+    #[error("Failed to tokenize the input at position {location}. Check for invalid characters or syntax.")]
     TokenizationError {
         location: ExprSpan,
     },
 
-    #[error("Failed to parse token")]
+    #[error("Failed to parse expression at position {location}. This could be due to unexpected tokens or invalid syntax.")]
     TokenParseError { location: ExprSpan },
 
-    #[error("Unknown tokenization or parsing error, please consider submitting a bug report")]
+    #[error("An unexpected error occurred during parsing. Please report this as a bug with your code sample.")]
     OhNoError,
 
-    #[error("Compiler not found for effect '{name}'")]
+    #[error("Unknown effect '{name}'. Check the effect name or register the effect with EffectDsl::register.")]
     UnknownEffect { name: CompactString, location: ExprSpan },
 
-    #[error("Variable '{name}' not found")]
+    #[error("Variable '{name}' not found. Make sure it's declared before use with 'let {name} = ...'.")]
     UnknownArgument { name: CompactString, location: ExprSpan },
 
-    #[error("Invalid argument type '{name}'. Expected {expected}")]
+    #[error("Cannot find variable '{name}' of type {expected}.")]
     NoSuchVariable {
         name: CompactString,
         expected: &'static str,
         location: ExprSpan,
     },
 
-    #[error("Missing required argument '{name}' at position {position}")]
+    #[error("Missing required argument '{name}' at position {position}. This function requires more arguments.")]
     MissingArgument {
         position: usize,
         name: &'static str,
         location: ExprSpan,
     },
 
-    #[error("Unknown function '{name}'")]
+    #[error("Unknown function '{name}'. Check the function name or import the required module.")]
     UnknownFunction {
         name: CompactString,
         location: ExprSpan,
     },
 
-    #[error("Unknown struct '{name}'")]
+    #[error("Unknown struct '{name}'. Check the struct name or import the required module.")]
     UnknownStruct { name: CompactString, location: ExprSpan },
 
-    #[error("Unknown field '{field}' in object '{struct_name}'")]
+    #[error("Unknown field '{field}' in struct '{struct_name}'. Valid fields are {valid_fields}.")]
     UnknownField {
         struct_name: CompactString,
         field: CompactString,
         location: ExprSpan,
+        valid_fields: CompactString,
     },
 
-    #[error("Missing field '{field}' in object '{struct_name}'")]
+    #[error("Missing required field '{field}' in struct '{struct_name}'.")]
     MissingField {
         struct_name: CompactString,
         field: &'static str,
         location: ExprSpan,
     },
 
-    #[error("Invalid argument length. Expected {expected}, got {actual}")]
+    #[error("Invalid number of arguments. Expected {expected}, got {actual}.")]
     InvalidArgumentLength {
         expected: usize,
         actual: usize,
         location: ExprSpan,
     },
 
-    #[error("Invalid expression. Expected {expected}, got {actual}")]
+    #[error("Invalid expression. Expected {expected}, but found {actual}.")]
     InvalidExpression {
         expected: &'static str,
         actual: &'static str,
         location: ExprSpan,
     },
 
-    #[error("Unmatched bracket '{bracket}'")]
+    #[error("Unmatched {bracket_type} '{bracket}'.")]
     BracketMismatch {
         bracket: char,
         location: ExprSpan,
+        bracket_type: &'static str,  // "opening" or "closing"
     },
 
-    #[error("Missing comma between elements")]
+    #[error("Missing semicolon after let statement. Add a ';' to terminate the statement.")]
     MissingSemicolon {
         location: ExprSpan,
     },
 
-    #[error("Missing semicolon after let statement")]
+    #[error("Missing comma between elements. Add a ',' to separate items in the list.")]
     MissingComma {
         location: ExprSpan,
     },
 
-    #[error("'{message}'")]
+    #[error("{message}")]
     SyntaxError {
         message: CompactString,
         location: ExprSpan,
     },
 
-    #[error("Failed to cast {from} to expected type {to}")]
+    #[error("Value cannot be converted from {from} to {to}. The number is out of range for the target type.")]
     CastOverflow {
         from: &'static str,
         to: &'static str,
         location: ExprSpan,
     },
 
-    #[error("Expected argument of type '{expected}' but found '{actual}'")]
+    #[error("Type mismatch: expected '{expected}' but found '{actual}'.")]
     WrongArgumentType {
         expected: &'static str,
         actual: CompactString,
         location: ExprSpan,
     },
 
-    #[error("Too many arguments for function '{name}'. Expected {count}")]
+    #[error("Too many arguments for function '{name}'. Expected {count} arguments.")]
     TooManyArguments {
         name: CompactString,
         count: usize,
         location: ExprSpan
     },
 
-    #[error("{name} does not provide a to_dsl() implementation")]
+    #[error("The effect '{name}' cannot be converted to DSL format.")]
     EffectExpressionNotSupported {
         name: &'static str,
     },
 
-    #[error("{name} is not supported by the dsl")]
+    #[error("The effect '{name}' can not be instantiated by the DSL.")]
     UnsupportedEffect {
         name: CompactString,
+        // Consider adding: similar_effects: Vec<CompactString>,
     },
 
-    #[error("Array length mismatch. Expected {expected}, got {actual}")]
+    #[error("Array has incorrect length. Expected {expected} elements, got {actual}.")]
     ArrayLengthMismatch {
         expected: usize,
         actual: usize,
         location: ExprSpan,
     },
 
-    #[error("Not a cell filter: '{name}'")]
+    #[error("Invalid cell filter: '{name}'. Valid cell filters include CellFilter::Text, CellFilter::All, etc.")]
     UnknownCellFilter {
         name: CompactString,
         location: ExprSpan,

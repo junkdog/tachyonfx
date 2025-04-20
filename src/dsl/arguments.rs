@@ -717,8 +717,8 @@ impl DslError {
             DslError::TooManyArguments { name, count, .. } => {
                 DslError::TooManyArguments { name, count, location: span }
             }
-            DslError::UnknownField { struct_name, field, .. } => {
-                DslError::UnknownField { struct_name, field, location: span }
+            DslError::UnknownField { struct_name, field, valid_fields, .. } => {
+                DslError::UnknownField { struct_name, field, valid_fields, location: span, }
             }
             DslError::UnknownFunction { name, .. } => {
                 DslError::UnknownFunction { name, location: span }

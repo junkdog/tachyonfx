@@ -36,10 +36,12 @@ fn verify_brackets(
         }
     };
 
-    let bracket_mismatch = |t: &Token| -> Result<Vec<Token>, DslError> {
+    let bracket_mismatch = |t: &Token, bracket_type: &'static str| -> Result<Vec<Token>, DslError> {
+        let bracket = t.text.chars().next().unwrap();
         Err(DslError::BracketMismatch {
-            bracket: t.text.chars().next().unwrap(),
+            bracket,
             location: ExprSpan::new(t.span.0, t.span.1),
+            bracket_type,
         })
     };
 
@@ -51,18 +53,18 @@ fn verify_brackets(
             if let Some(top) = stack.pop() {
                 if token.kind != rhs(&top.kind) {
                     // mismatched brackets
-                    return bracket_mismatch(token);
+                    return bracket_mismatch(token, "closing");
                 }
             } else {
                 // unmatched closing bracket
-                return bracket_mismatch(token);
+                return bracket_mismatch(token, "closing");
             }
         }
     }
 
     if let Some(trailing) = stack.last() {
         // unmatched opening bracket
-        return bracket_mismatch(trailing);
+        return bracket_mismatch(trailing, "opening");
     }
 
     Ok(tokens)
