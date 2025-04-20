@@ -11,6 +11,9 @@ transformations, animations, and complex effect combinations.
 
 [ratatui]: https://ratatui.rs/
 
+## Try it out in your browser
+[TachyonFX FTL][tfx-ftl] is a browser-based editor for creating and tweaking effects.
+
 ## Installation
 Add tachyonfx to your `Cargo.toml`:
 
@@ -90,6 +93,10 @@ with `Effect::to_dsl`:
 
 
  [docs-supported-types]: https://docs.rs/tachyonfx/latest/tachyonfx/dsl/index.html#supported-types-and-methods
+
+### TachyonFX FTL
+[TachyonFX FTL][tfx-ftl] is a browser-based editor for creating and tweaking effects. It allows you to visualize
+effects in real-time, making it easier to understand how they work and how to use them in your applications.
 
 ### Types of Effects
 
@@ -234,10 +241,11 @@ cargo run --release --example=dsl-playground
 
 A playground for experimenting with the DSL to create and combine effects interactively.
 
-
 [API Badge]: https://docs.rs/tachyonfx/badge.svg
 [API]: https://docs.rs/tachyonfx
 [Crate Badge]: https://img.shields.io/crates/v/tachyonfx.svg
 [Crate]: https://crates.io/crates/tachyonfx
 [Deps.rs Badge]: https://deps.rs/repo/github/junkdog/tachyonfx/status.svg
 [Deps.rs]: https://deps.rs/repo/github/junkdog/tachyonfx
+
+[tfx-ftl]: https://junkdog.github.io/tachyonfx-ftl/
