@@ -98,6 +98,11 @@ pub enum DslError {
         location: ExprSpan,
     },
 
+    #[error("Missing semicolon after let statement")]
+    MissingSemicolon {
+        location: ExprSpan,
+    },
+
     #[error("'{message}'")]
     SyntaxError {
         message: CompactString,

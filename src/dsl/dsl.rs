@@ -959,4 +959,17 @@ mod tests {
             assert!(matches!(err, DslError::BracketMismatch { .. }), "expr: {expr} - {:?}", err);
         }
     }
+    
+    #[test]
+    fn test_missing_semicolon() {
+        let dsl = EffectDsl::new();
+
+        let expr = "let fx::dissolve(500) fx::dissolve(500)";
+        let err = dsl.compiler()
+            .compile(expr)
+            .expect_err("should fail")
+            .source;
+
+        assert!(matches!(err, DslError::MissingSemicolon { .. }), "expr: {expr} - {:?}", err);
+    }
 }

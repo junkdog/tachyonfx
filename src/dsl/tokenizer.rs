@@ -74,6 +74,7 @@ pub(super) fn verify_tokens(
     tokens: Vec<Token>,
 ) -> Result<Vec<Token>, DslError> {
     verify_brackets(tokens)
+        .and_then(verify_semicolons)
 }
 
 fn verify_brackets(
@@ -103,7 +104,7 @@ fn verify_brackets(
     };
     
     let bracket_mismatch = |t: &Token| -> Result<Vec<Token>, DslError> {
-        return Err(DslError::BracketMismatch {
+        Err(DslError::BracketMismatch {
             bracket: t.text.chars().next().unwrap(),
             location: ExprSpan::new(t.span.0, t.span.1),
         })
@@ -114,7 +115,7 @@ fn verify_brackets(
             // push to stack
             stack.push(token);
         } else if RIGHT_BRACKETS.contains(&token.kind) {
-            if let Some(top) = stack.last() {
+            if let Some(top) = stack.pop() {
                 if token.kind != rhs(&top.kind) {
                     // mismatched brackets
                     return bracket_mismatch(token);
@@ -129,6 +130,57 @@ fn verify_brackets(
     if let Some(trailing) = stack.last() {
         // unmatched opening bracket
         return bracket_mismatch(trailing);
+    }
+
+    Ok(tokens)
+}
+
+fn verify_semicolons(
+    tokens: Vec<Token>,
+) -> Result<Vec<Token>, DslError> {
+    if tokens.is_empty() {
+        return Ok(tokens);
+    }
+
+    // Check for consecutive semicolons
+    for i in 1..tokens.len() {
+        if tokens[i].kind == TokenKind::Semicolon && tokens[i-1].kind == TokenKind::Semicolon {
+            return Err(DslError::SyntaxError {
+                message: "Multiple consecutive semicolons".into(),
+                location: ExprSpan::new(tokens[i].span.0, tokens[i].span.1),
+            });
+        }
+    }
+
+    // find statement boundaries (let statements); since we don't have flow
+    // control, we just need to check for let statements followed by other statements
+    // This is a good-enough heuristic for most cases in the DSL
+    for i in 0..tokens.len() - 1 {
+        if tokens[i].kind == TokenKind::Keyword && tokens[i].text == "let" {
+            // find the end of this let statement
+            let mut j = i + 1;
+            let mut depth = 0;
+
+            while j < tokens.len() {
+                match tokens[j].kind {
+                    TokenKind::LeftParen | TokenKind::LeftBrace | TokenKind::LeftBracket => depth += 1,
+                    TokenKind::RightParen | TokenKind::RightBrace | TokenKind::RightBracket => {
+                        if depth > 0 { depth -= 1; }
+                    },
+                    TokenKind::Semicolon if depth == 0 => break,
+                    _ => {}
+                }
+                j += 1;
+            }
+
+            // if we didn't find a semicolon at depth 0, and we're not
+            // at the end of the file, we're missing a semicolon
+            if j == tokens.len() && i < tokens.len() - 2 {
+                return Err(DslError::MissingSemicolon {
+                    location: ExprSpan::new(tokens[j-1].span.1, tokens[j-1].span.1 + 1),
+                });
+            }
+        }
     }
 
     Ok(tokens)

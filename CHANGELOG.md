@@ -5,6 +5,7 @@
 
 ### Effect DSL
 - Missing brackets are now reported with less misleading error messages.
+- Improved error messages for missing semicolons.
 
 ## tachyonfx 0.13.0 - 2025-03-30
 

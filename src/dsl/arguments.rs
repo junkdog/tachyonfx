@@ -757,6 +757,7 @@ impl DslError {
             DslError::InvalidArgumentLength { location, .. } => *location,
             DslError::InvalidExpression { location, .. } => *location,
             DslError::MissingArgument { location, .. } => *location,
+            DslError::MissingSemicolon { location, .. } => *location,
             DslError::MissingField { location, .. } => *location,
             DslError::NoSuchVariable { location, .. } => *location,
             DslError::SyntaxError { location, .. } => *location,
