@@ -73,44 +73,65 @@ impl<'a> Token<'a> {
 pub(super) fn verify_tokens(
     tokens: Vec<Token>,
 ) -> Result<Vec<Token>, DslError> {
-    verify_brackets(&tokens, TokenKind::LeftParen, TokenKind::RightParen)?;
-    verify_brackets(&tokens, TokenKind::LeftBracket, TokenKind::RightBracket)?;
-    verify_brackets(&tokens, TokenKind::LeftBrace, TokenKind::RightBrace)?;
-
-    Ok(tokens)
+    verify_brackets(tokens)
 }
 
 fn verify_brackets(
-    tokens: &Vec<Token>,
-    bracket_open: TokenKind,
-    bracket_close: TokenKind,
-) -> Result<(), DslError> {
+    tokens: Vec<Token>,
+) -> Result<Vec<Token>, DslError> {
     let mut stack: Vec<&Token> = Vec::new();
+
+    const LEFT_BRACKETS: [TokenKind; 3] = [
+        TokenKind::LeftParen,
+        TokenKind::LeftBracket,
+        TokenKind::LeftBrace,
+    ];
+
+    const RIGHT_BRACKETS: [TokenKind; 3] = [
+        TokenKind::RightParen,
+        TokenKind::RightBracket,
+        TokenKind::RightBrace,
+    ];
+
+    let rhs = |t: &TokenKind| {
+        match t {
+            TokenKind::LeftParen => TokenKind::RightParen,
+            TokenKind::LeftBracket => TokenKind::RightBracket,
+            TokenKind::LeftBrace => TokenKind::RightBrace,
+            _ => unreachable!(),
+        }
+    };
     
-    for token in tokens {
-        if token.kind == bracket_open {
+    let bracket_mismatch = |t: &Token| -> Result<Vec<Token>, DslError> {
+        return Err(DslError::BracketMismatch {
+            bracket: t.text.chars().next().unwrap(),
+            location: ExprSpan::new(t.span.0, t.span.1),
+        })
+    };
+
+    for token in &tokens {
+        if LEFT_BRACKETS.contains(&token.kind) {
             // push to stack
             stack.push(token);
-        } else if token.kind == bracket_close {
-            if stack.pop().is_none() {
+        } else if RIGHT_BRACKETS.contains(&token.kind) {
+            if let Some(top) = stack.last() {
+                if token.kind != rhs(&top.kind) {
+                    // mismatched brackets
+                    return bracket_mismatch(token);
+                }
+            } else {
                 // unmatched closing bracket
-                Err(DslError::BracketMismatch {
-                    bracket: token.text.chars().next().unwrap(),
-                    location: ExprSpan::new(token.span.0, token.span.1),
-                })?;
+                return bracket_mismatch(token);
             }
         }
     }
-    
+
     if let Some(trailing) = stack.last() {
         // unmatched opening bracket
-        Err(DslError::BracketMismatch {
-            bracket: trailing.text.chars().next().unwrap(),
-            location: ExprSpan::new(trailing.span.0, trailing.span.1),
-        })?;
+        return bracket_mismatch(trailing);
     }
-    
-    Ok(())
+
+    Ok(tokens)
 }
 
 pub(super) fn sanitize_tokens(tokens: Vec<Token>) -> Vec<Token> {

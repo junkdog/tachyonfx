@@ -938,18 +938,25 @@ mod tests {
         let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env, ExprSpan::default());
         assert!(compilers::fade_to_fg(&mut args).is_err());
     }
-    
+
     #[test]
     fn test_missing_brackets() {
         let dsl = EffectDsl::new();
-        
-        for expr in [ "x)", "(x", "[x", "x]", "{x", "x}", ] {
+
+        for expr in [
+            "(x", "x)",
+            "[x", "x]",
+            "{x", "x}",
+            "{[x}]",
+            "[(x])",
+            "{(x})",
+        ] {
             let err = dsl.compiler()
                 .compile(expr)
                 .expect_err("should fail")
                 .source;
-    
-            assert!(matches!(err, DslError::BracketMismatch { .. }), "{:?}", err);
+
+            assert!(matches!(err, DslError::BracketMismatch { .. }), "expr: {expr} - {:?}", err);
         }
     }
 }
