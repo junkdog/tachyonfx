@@ -758,6 +758,7 @@ impl DslError {
             DslError::InvalidExpression { location, .. } => *location,
             DslError::MissingArgument { location, .. } => *location,
             DslError::MissingSemicolon { location, .. } => *location,
+            DslError::MissingComma { location, .. } => *location,
             DslError::MissingField { location, .. } => *location,
             DslError::NoSuchVariable { location, .. } => *location,
             DslError::SyntaxError { location, .. } => *location,
@@ -882,7 +883,7 @@ mod tests {
     use crate::dsl::environment::DslEnv;
     use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
     use crate::dsl::token_parsers::parse_ast;
-    use crate::dsl::tokenizer::{sanitize_tokens, tokenize, verify_tokens};
+    use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
     use crate::dsl::DslError;
     use crate::{CellFilter, Motion};
     use compact_str::ToCompactString;
@@ -890,6 +891,7 @@ mod tests {
     use ratatui::prelude::Color;
     use std::collections::VecDeque;
     use std::fmt::Debug;
+    use crate::dsl::token_verification::verify_tokens;
 
     fn prepare_test<'a>(args: impl Into<VecDeque<Expr>>) -> Arguments<'a> {
         // leaking, but it's fine for tests as it reduces boilerplate

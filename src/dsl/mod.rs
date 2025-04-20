@@ -9,6 +9,7 @@ mod token_parsers;
 mod expr_promotion;
 mod dsl_writer;
 mod parse_error;
+mod token_verification;
 
 use crate::dsl::expressions::{Expr, ExprSpan};
 use compact_str::CompactString;
@@ -98,8 +99,13 @@ pub enum DslError {
         location: ExprSpan,
     },
 
-    #[error("Missing semicolon after let statement")]
+    #[error("Missing comma between elements")]
     MissingSemicolon {
+        location: ExprSpan,
+    },
+
+    #[error("Missing semicolon after let statement")]
+    MissingComma {
         location: ExprSpan,
     },
 

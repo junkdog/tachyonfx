@@ -3,7 +3,7 @@ use crate::dsl::environment::DslEnv;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::token_parsers::parse_ast;
-use crate::dsl::tokenizer::{sanitize_tokens, tokenize, verify_tokens};
+use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
 use crate::{fx, Effect};
@@ -11,6 +11,7 @@ use compact_str::CompactString;
 use std::fmt;
 use std::fmt::Formatter;
 use crate::dsl::parse_error::DslParseError;
+use crate::dsl::token_verification::verify_tokens;
 
 /// A compiler and registry for tachyonfx effect DSL expressions.
 ///
@@ -971,5 +972,18 @@ mod tests {
             .source;
 
         assert!(matches!(err, DslError::MissingSemicolon { .. }), "expr: {expr} - {:?}", err);
+    }
+    
+    #[test]
+    fn test_missing_commma() {
+        let dsl = EffectDsl::new();
+
+        let expr = "(1000 QuadOut)";
+        let err = dsl.compiler()
+            .compile(expr)
+            .expect_err("should fail")
+            .source;
+
+        assert!(matches!(err, DslError::MissingComma { .. }), "expr: {expr} - {:?}", err);
     }
 }
