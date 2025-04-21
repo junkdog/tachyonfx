@@ -10,12 +10,22 @@ use crate::dsl::DslError;
 pub struct DslParseError {
     /// The underlying error that occurred during parsing
     pub source: DslError,
-    /// The complete line of text where the error occurred
-    context_line: String,
-    /// The character range within the context line that caused the error
-    error_range: std::ops::Range<usize>,
-    /// The line number where the error occurred (1-based)
-    line_number: u32,
+    /// The complete input text where the error occurred
+    input: String,
+    /// Line and column information
+    location: Location,
+}
+
+#[derive(Debug, Clone)]
+struct Location {
+    /// The line number where the error starts (1-based)
+    start_line: usize,
+    /// The column number where the error starts (1-based)
+    start_column: usize,
+    /// The line number where the error ends (1-based)
+    end_line: usize,
+    /// The column number where the error ends (1-based)
+    end_column: usize,
 }
 
 impl DslParseError {
@@ -23,71 +33,183 @@ impl DslParseError {
         input: &str,
         cause: DslError,
     ) -> Self {
-        if let Some(span) = cause.span() {
-            let line_start_offset = input[0..span.start as usize]
-                .rfind('\n')
-                .map_or(0, |pos| pos + 1);
-            let line_end_offset = input[line_start_offset..]
-                .find('\n')
-                .map_or(input.len(), |pos| line_start_offset + pos);
+        let location = if let Some(span) = cause.span() {
+            // Calculate line and column information
+            let mut start_line = 1;
+            let mut start_column = 1;
+            let mut end_line = 1;
+            let mut end_column = 1;
 
-            let context_line = input[line_start_offset..line_end_offset].to_string();
-            let error_start = span.start as usize - line_start_offset;
-            let error_end = span.end as usize - line_start_offset;
-            let error_range = error_start..error_end;
+            let mut current_pos = 0;
+            for (i, c) in input.char_indices() {
+                if i >= span.start as usize {
+                    break;
+                }
+                if c == '\n' {
+                    start_line += 1;
+                    start_column = 1;
+                } else {
+                    start_column += 1;
+                }
+                current_pos = i + c.len_utf8();
+            }
 
-            debug_assert!(!context_line.contains('\n'), "Error line contains newline: \n'{}'", context_line);
+            // Reset for end position calculation
+            current_pos = 0;
+            for (i, c) in input.char_indices() {
+                if i >= span.end as usize {
+                    break;
+                }
+                if c == '\n' {
+                    end_line += 1;
+                    end_column = 1;
+                } else {
+                    end_column += 1;
+                }
+                current_pos = i + c.len_utf8();
+            }
 
-            Self {
-                source: cause,
-                context_line,
-                error_range,
-                line_number: input[0..span.start as usize].lines().count() as u32,
+            Location {
+                start_line,
+                start_column,
+                end_line,
+                end_column,
             }
         } else {
-            Self {
-                source: cause,
-                context_line: input.to_string(),
-                error_range: 0..input.len(),
-                line_number: 0,
+            // Default location if no span is available
+            Location {
+                start_line: 1,
+                start_column: 1,
+                end_line: 1,
+                end_column: 1,
             }
+        };
+
+        Self {
+            source: cause,
+            input: input.to_string(),
+            location,
         }
     }
 
-    /// Returns the portion of DSL that caused the error
-    pub fn error_text(&self) -> &str {
-        let range = self.error_range.clone();
-        &self.context_line[range]
+    /// Returns the line where the error starts
+    pub fn start_line(&self) -> usize {
+        self.location.start_line
     }
 
-    /// Returns the entire line of code that contained the error
-    pub fn error_line(&self) -> &str {
-        self.context_line.trim()
+    /// Returns the column where the error starts
+    pub fn start_column(&self) -> usize {
+        self.location.start_column
     }
 
-    /// Returns the column position where the error starts (1-based)
-    pub fn column(&self) -> u32 {
-        self.error_range.start as u32 + 1
+    /// Returns the line where the error ends
+    pub fn end_line(&self) -> usize {
+        self.location.end_line
     }
 
-    /// Returns the line number where the error occurred (1-based)
-    pub fn line(&self) -> u32 {
-        self.line_number
+    /// Returns the column where the error ends
+    pub fn end_column(&self) -> usize {
+        self.location.end_column
+    }
+
+    /// Returns the entire context around the error, including nearby lines
+    pub fn context(&self) -> String {
+        let context_lines = 2; // Number of lines before and after the error to show
+        let lines: Vec<&str> = self.input.lines().collect();
+
+        let start_idx = self.location.start_line.saturating_sub(context_lines + 1);
+        let end_idx = (self.location.end_line + context_lines).min(lines.len());
+
+        let mut result = String::new();
+
+        for (i, line) in lines[start_idx..end_idx].iter().enumerate() {
+            let line_num = start_idx + i + 1;
+            let line_indicator = if line_num >= self.location.start_line && line_num <= self.location.end_line {
+                ">"
+            } else {
+                " "
+            };
+
+            result.push_str(&format!("{:>2} {} | {}\n", line_indicator, line_num, line));
+
+            // Add underline for error location
+            if line_num >= self.location.start_line && line_num <= self.location.end_line {
+                let start_col = if line_num == self.location.start_line { self.location.start_column } else { 1 };
+                let end_col = if line_num == self.location.end_line { self.location.end_column } else { line.len() + 1 };
+
+                let padding = " ".repeat(7);
+                let leading_space = " ".repeat(start_col.saturating_sub(1));
+                let underline = "^".repeat((end_col - start_col).max(1));
+
+                result.push_str(&format!("{}{}{}\n", padding, leading_space, underline));
+            }
+        }
+
+        result
+    }
+
+    /// Returns the portion of text that caused the error
+    pub fn error_text(&self) -> String {
+        let lines: Vec<&str> = self.input.lines().collect();
+
+        if self.location.start_line == self.location.end_line {
+            // Single line error
+            let line = lines.get(self.location.start_line - 1).unwrap_or(&"");
+            let start_col = self.location.start_column.saturating_sub(1);
+            let end_col = self.location.end_column.min(line.len() + 1);
+
+            line[start_col..end_col].to_string()
+        } else {
+            // Multi-line error
+            let mut result = String::new();
+
+            for line_num in self.location.start_line..=self.location.end_line {
+                if line_num > self.location.start_line {
+                    result.push('\n');
+                }
+
+                if let Some(line) = lines.get(line_num - 1) {
+                    let start_col = if line_num == self.location.start_line {
+                        self.location.start_column.saturating_sub(1)
+                    } else {
+                        0
+                    };
+
+                    let end_col = if line_num == self.location.end_line {
+                        self.location.end_column.min(line.len() + 1)
+                    } else {
+                        line.len()
+                    };
+
+                    result.push_str(&line[start_col..end_col]);
+                }
+            }
+
+            result
+        }
     }
 }
 
 impl fmt::Display for DslParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Error at line {} column {}: {}", self.line(), self.column(), self.source)?;
-
-        let pointer_padding = " ".repeat(self.column() as usize - 1);
-        if self.context_line.lines().count() == 1 {
-            // If error spans multiple characters, underline the whole range
-            let underline = "^".repeat(self.error_range.len().max(1));
-            writeln!(f, "\n{}\n{pointer_padding}{underline}", self.context_line)
+        if self.location.start_line == self.location.end_line {
+            writeln!(f, "Error at line {}:{} to {}:{}: {}",
+                self.location.start_line, self.location.start_column,
+                self.location.end_line, self.location.end_column,
+                self.source)?;
         } else {
-            // For multi-line errors, just point to the start
-            writeln!(f, "\n{}\n{pointer_padding}^", self.context_line)
+            writeln!(f, "Error from line {}:{} to line {}:{}: {}",
+                self.location.start_line, self.location.start_column,
+                self.location.end_line, self.location.end_column,
+                self.source)?;
         }
+
+        write!(f, "{}", self.context())
+    }
+}
+
+impl std::error::Error for DslParseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.source)
     }
 }
