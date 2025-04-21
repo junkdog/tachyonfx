@@ -40,7 +40,6 @@ impl DslParseError {
             let mut end_line = 1;
             let mut end_column = 1;
 
-            let mut current_pos = 0;
             for (i, c) in input.char_indices() {
                 if i >= span.start as usize {
                     break;
@@ -51,11 +50,9 @@ impl DslParseError {
                 } else {
                     start_column += 1;
                 }
-                current_pos = i + c.len_utf8();
             }
 
             // Reset for end position calculation
-            current_pos = 0;
             for (i, c) in input.char_indices() {
                 if i >= span.end as usize {
                     break;
@@ -66,7 +63,6 @@ impl DslParseError {
                 } else {
                     end_column += 1;
                 }
-                current_pos = i + c.len_utf8();
             }
 
             Location {
