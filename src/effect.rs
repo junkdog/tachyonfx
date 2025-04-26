@@ -55,6 +55,10 @@ impl Effect {
     /// # Returns
     /// * A new `Effect` instance with the specified filter.
     ///
+    /// /// # Notes
+    /// This method only applies the filter if the effect doesn't already have a filter set,
+    /// preserving any existing filters during effect composition.
+    /// 
     /// # Example
     /// ```
     /// use ratatui::style::Color;
@@ -138,7 +142,7 @@ impl Shader for Effect {
     }
 
     fn filter(&mut self, strategy: CellFilter) {
-        self.shader.filter(strategy)
+        self.shader.propagate_filter(strategy)
     }
 
     fn reverse(&mut self) {
@@ -184,5 +188,27 @@ impl<S> IntoEffect for S
 {
     fn into_effect(self) -> Effect {
         Effect::new(self)
+    }
+}
+
+
+pub(crate) trait ShaderExt {
+    /// Propagates the cell filter to the shader if it is not already set.
+    fn propagate_filter(&mut self, cell_filter: CellFilter);
+}
+
+impl <S: Shader + 'static> ShaderExt for S {
+    fn propagate_filter(&mut self, cell_filter: CellFilter) {
+        if self.cell_filter().is_none() {
+            self.filter(cell_filter);
+        }
+    }
+}
+
+impl ShaderExt for dyn Shader {
+    fn propagate_filter(&mut self, cell_filter: CellFilter) {
+        if self.cell_filter().is_none() {
+            self.filter(cell_filter);
+        }
     }
 }

@@ -124,7 +124,8 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// * `area` - The rectangular area to set.
     fn set_area(&mut self, area: Rect);
 
-    /// Sets the cell selection strategy for the shader.
+    /// Sets the cell selection strategy for the shader. Has no effect on the shader
+    /// if already set.
     ///
     /// # Arguments
     /// * `filter` - The cell selection strategy to set.
@@ -299,11 +300,11 @@ macro_rules! default_shader_impl {
     // Filter implementation
     (@filter) => {
         fn filter(&mut self, strategy: CellFilter) {
-            self.cell_filter = strategy;
+            self.cell_filter = Some(strategy);
         }
 
         fn cell_filter(&self) -> Option<CellFilter> {
-            Some(self.cell_filter.clone())
+            self.cell_filter.clone()
         }
     };
 
@@ -325,3 +326,4 @@ macro_rules! default_shader_impl {
         }
     };
 }
+

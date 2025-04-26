@@ -11,7 +11,7 @@ pub struct Dissolve {
     timer: EffectTimer,
     dissolved_style: Option<Style>,
     area: Option<Rect>,
-    cell_filter: CellFilter,
+    cell_filter: Option<CellFilter>,
     lcg: SimpleRng,
 }
 

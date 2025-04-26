@@ -15,8 +15,7 @@ pub struct FadeColors {
     #[builder(into)]
     timer: EffectTimer,
     area: Option<Rect>,
-    #[builder(default)]
-    cell_filter: CellFilter,
+    cell_filter: Option<CellFilter>,
     color_space: ColorSpace,
 }
 

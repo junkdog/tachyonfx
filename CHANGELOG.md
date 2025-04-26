@@ -1,5 +1,13 @@
 # Changelog
 
+### Breaking Changes
+- Changed how effect filters are applied and stored:
+  - Effect filters are now stored as `Option<CellFilter>` instead of `CellFilter` directly
+  - `Effect::with_filter` now uses filter propagation to preserve existing filters
+  - Filters set on individual effects won't be overwritten during effect composition
+  - Custom `Shader` implementations will need to update to store `cell_filter` as `Option<CellFilter>`
+  - `default_shader_impl!(@filter)` macro users must update their field type from `CellFilter` to `Option<CellFilter>`
+
 ## tachyonfx 0.14.0 - 2025-04-21
 
 ### Changed`

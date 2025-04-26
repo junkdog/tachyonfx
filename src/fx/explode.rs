@@ -11,7 +11,7 @@ pub struct Explode {
     force: f32,
     force_rng_factor: f32,
     area: Option<Rect>,
-    cell_filter: CellFilter,
+    cell_filter: Option<CellFilter>,
     sorted_cells: LruCache<Rect, Vec<(Position, (f32, f32))>, 1>,
     lcg: SimpleRng,
 }
@@ -29,7 +29,7 @@ impl Explode {
             force,
             force_rng_factor,
             area: None,
-            cell_filter: CellFilter::default(),
+            cell_filter: None,
             sorted_cells: LruCache::new(),
             lcg: SimpleRng::new(0x12345678),
         }
@@ -88,7 +88,7 @@ impl Shader for Explode {
             cells
         });
 
-        let cell_filter = self.cell_filter.selector(safe_area);
+        let cell_filter = self.cell_filter.as_ref().unwrap_or(&CellFilter::All).selector(safe_area);
         for (pos, (dx, dy)) in cells.into_iter() {
             let pos = *pos;
             let (dx, dy) = (*dx, *dy);

@@ -17,8 +17,7 @@ pub struct HslShift {
     hsl_mod_fg: Option<[f32; 3]>,
     hsl_mod_bg: Option<[f32; 3]>,
     area: Option<Rect>,
-    #[builder(default)]
-    cell_filter: CellFilter,
+    cell_filter: Option<CellFilter>,
 }
 
 impl Shader for HslShift {

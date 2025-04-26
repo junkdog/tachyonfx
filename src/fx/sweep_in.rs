@@ -18,7 +18,7 @@ pub struct SweepIn {
     timer: EffectTimer,
     direction: Motion,
     area: Option<Rect>,
-    cell_filter: CellFilter,
+    cell_filter: Option<CellFilter>,
     color_space: ColorSpace,
 }
 
@@ -38,7 +38,7 @@ impl SweepIn {
             faded_color,
             timer: if direction.flips_timer() { lifetime.reversed() } else { lifetime },
             area: None,
-            cell_filter: CellFilter::All,
+            cell_filter: None,
             color_space: ColorSpace::default(),
         }
     }
@@ -94,7 +94,7 @@ impl Shader for SweepIn {
 
 
         let area = area.intersection(buf.area); // safe area
-        let cell_filter = self.cell_filter.selector(area);
+        let cell_filter = self.cell_filter.as_ref().unwrap_or(&CellFilter::All).selector(area);
 
         if self.randomness_extent == 0 || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction) {
             for y in area.y..area.bottom() {

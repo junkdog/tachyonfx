@@ -25,8 +25,7 @@ pub struct SlideCell {
     /// The area within which the effect is applied.
     area: Option<Rect>,
     /// The cell selection strategy used to filter cells.
-    #[builder(default)]
-    cell_filter: CellFilter,
+    cell_filter: Option<CellFilter>,
 }
 
 impl SlideCell {
@@ -82,7 +81,7 @@ impl Shader for SlideCell {
         };
 
         let area = area.intersection(buf.area);
-        let cell_filter = self.cell_filter.selector(area);
+        let cell_filter = self.cell_filter.as_ref().unwrap_or(&CellFilter::All).selector(area);
 
         if self.randomness_extent == 0 || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction) {
             for y in area.y..area.bottom() {

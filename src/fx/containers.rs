@@ -226,8 +226,45 @@ fn to_dsl(
 }
 
 #[cfg(test)]
-#[cfg(feature = "dsl")]
 mod tests {
+    use ratatui::layout::Margin;
+    use ratatui::style::Color;
+    use crate::fx::fade_to_fg;
+    use crate::ShaderExt;
+    use super::*;
+
+    #[test]
+    fn test_cell_filter_propagation() {
+        let fx = fade_to_fg(Color::Black, 1);
+
+        let mut effect = SequentialEffect::new(vec![
+            fx.clone().with_filter(CellFilter::All),
+            fx.clone().with_filter(CellFilter::Inner(Margin::new(1, 1))),
+            fx.clone(),
+        ]);
+
+        // same effect as calling Effect::filter
+        effect.propagate_filter(CellFilter::Text);
+
+        assert_eq!(
+            effect.effects[0].cell_filter().unwrap(),
+            CellFilter::All
+        );
+        assert_eq!(
+            effect.effects[1].cell_filter().unwrap(),
+            CellFilter::Inner(Margin::new(1, 1))
+        );
+        assert_eq!(
+            effect.effects[2].cell_filter().unwrap(),
+            CellFilter::Text
+        );
+        assert_eq!(effect.done(), false);
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "dsl")]
+mod dsl_tests {
     use indoc::indoc;
     use crate::{fx, Shader};
 

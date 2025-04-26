@@ -1267,9 +1267,10 @@ use crate::fx::explode::Explode;
 
 #[cfg(test)]
 mod tests {
+    use ratatui::layout::Margin;
     use ratatui::prelude::Color;
     use super::*;
-    use crate::Shader;
+    use crate::{CellFilter, Shader};
 
     const DIRECTIONS: [Motion; 4] = [
         Motion::DownToUp,
