@@ -77,7 +77,7 @@
 //!
 //! Additional effects can be created by implementing the [Shader](crate::Shader) trait.
 
-use ratatui::buffer::Buffer;
+use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Offset, Size};
 use ratatui::style::{Color, Style};
 
@@ -344,6 +344,9 @@ pub fn term256_colors() -> Effect {
 ///
 /// This effect simulates an explosion by moving cells away from the center of the
 /// specified area, with their appearance changing over time to represent debris.
+/// 
+/// The original cells are replaced with the `Color::Black` for both foreground and
+/// background. No modifiers are retained.
 ///
 /// # Arguments
 ///
@@ -379,7 +382,10 @@ pub fn explode(
     force_rng_factor: f32,
     timer: impl Into<EffectTimer>,
 ) -> Effect {
-    Explode::new(force, force_rng_factor, timer.into()).into_effect()
+    let mut replacement_cell = Cell::default();
+    replacement_cell.set_fg(Color::Black);
+    replacement_cell.set_bg(Color::Black);
+    Explode::new(force, force_rng_factor, replacement_cell, timer.into()).into_effect()
 }
 
 /// Repeat the effect indefinitely or for a specified number of times or duration.

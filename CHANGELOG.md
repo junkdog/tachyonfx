@@ -1,5 +1,10 @@
 # Changelog
 
+### Changed`
+- `fx::explode`: cells "behind" the explosion now have `Color::Black` instead of `Color::Reset` for
+  for both foreground and background colors. This change makes it easier to apply later effects
+  to the area underneath the explosion.
+
 ### Breaking Changes
 - Changed how effect filters are applied and stored:
   - Effect filters are now stored as `Option<CellFilter>` instead of `CellFilter` directly

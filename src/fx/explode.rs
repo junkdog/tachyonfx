@@ -4,6 +4,7 @@ use crate::simple_rng::SimpleRng;
 use crate::{default_shader_impl, CellFilter, Duration, LruCache};
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Position, Rect};
+use ratatui::style::Color;
 
 #[derive(Clone, Debug)]
 pub struct Explode {
@@ -13,6 +14,7 @@ pub struct Explode {
     area: Option<Rect>,
     cell_filter: Option<CellFilter>,
     sorted_cells: LruCache<Rect, Vec<(Position, (f32, f32))>, 1>,
+    replacement_cell: Cell,
     lcg: SimpleRng,
 }
 
@@ -22,6 +24,7 @@ impl Explode {
     pub fn new<T: Into<EffectTimer>>(
         force: f32,
         force_rng_factor: f32,
+        replacement_cell: Cell,
         timer: T,
     ) -> Self {
         Self {
@@ -31,6 +34,7 @@ impl Explode {
             area: None,
             cell_filter: None,
             sorted_cells: LruCache::new(),
+            replacement_cell,
             lcg: SimpleRng::new(0x12345678),
         }
     }
@@ -99,7 +103,10 @@ impl Shader for Explode {
 
             // replace original cell with empty cell
             let orig_cell = buf[pos].clone();
-            buf[pos] = Cell::default();
+            let mut c = Cell::default();
+            c.set_fg(Color::Black);
+            c.set_bg(Color::Black);
+            buf[pos] = c;
 
             if (dx, dy) == (0.0, 0.0) {
                 continue;
