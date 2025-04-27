@@ -325,6 +325,7 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("ping_pong",            |args| ping_pong(args.effect()?).into())
         .register("prolong_end",          compilers::prolong_end)
         .register("prolong_start",        compilers::prolong_start)
+        .register("remap_alpha",          compilers::remap_alpha)
         .register("repeat",               compilers::repeat)
         .register("sleep",                compilers::sleep)
         .register("repeating",            |args| repeating(args.effect()?).into())
@@ -490,6 +491,14 @@ mod compilers {
         fx::prolong_end(args.effect_timer()?, args.effect()?).into()
     }
     
+    pub(super) fn remap_alpha(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::remap_alpha(
+            args.read_into_f32()?,
+            args.read_into_f32()?,
+            args.effect()?
+        ).into()
+    }
+    
     pub(super) fn repeat(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::repeat(args.effect()?, args.repeat_mode()?).into()
     }
@@ -612,6 +621,7 @@ mod tests {
             fx::prolong_end((1000, Linear), fx::dissolve((1000, Linear))),
             fx::prolong_start((1000, Linear), fx::dissolve((1000, Linear))),
             fx::repeat(fx::dissolve((1000, Linear)), RepeatMode::Times(3)),
+            fx::remap_alpha(0.3, 0.6, fx::dissolve((1000, Linear))),
             fx::repeating(fx::dissolve((1000, Linear))),
             fx::sleep((1000, Linear)),
             fx::slide_in(Motion::LeftToRight, 10, 5, color, (1000, Linear)),

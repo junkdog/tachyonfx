@@ -1,3 +1,4 @@
+use std::ops::Range;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use Interpolation::Linear;
@@ -59,7 +60,7 @@ impl Shader for FreezeAt {
     }
 
     fn done(&self) -> bool {
-        false
+        self.fx.timer().is_none()
     }
 
     fn area(&self) -> Option<Rect> {
@@ -100,6 +101,108 @@ impl Shader for FreezeAt {
             "fx::freeze_at({}, {}, {})",
             self.alpha,
             self.set_raw_alpha,
+            self.fx.to_dsl()?
+        ))
+    }
+
+    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
+        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
+    }
+
+    fn reset(&mut self) {
+        self.fx.reset();
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RemapAlpha {
+    raw_alpha_range: Range<f32>,
+    fx: Effect,
+    timer: EffectTimer, // copy of fx timer but linear interpolation
+    rest: f32
+}
+
+impl RemapAlpha {
+    pub fn new(
+        raw_alpha_range: Range<f32>,
+        fx: Effect,
+    ) -> Self {
+        let timer = fx.timer().clone().unwrap_or_default();
+
+        let start = raw_alpha_range.start;
+        let end = raw_alpha_range.end;
+        let raw_alpha_range = start.clamp(0.0, 1.0)..end.clamp(0.0, 1.0);
+        
+        let rest = 0.0;
+        Self { raw_alpha_range, fx, timer, rest }
+    }
+}
+
+impl Shader for RemapAlpha {
+    default_shader_impl!(clone);
+
+    fn name(&self) -> &'static str {
+        "remap_alpha"
+    }
+
+    fn execute(&mut self, duration: Duration, area: Rect, buf: &mut Buffer) {
+        if let Some(t) = self.fx.timer_mut() {
+            if !t.started() {
+                // deduct initial duration from the timer
+                let skip_initial = t.duration() * self.raw_alpha_range.start;
+                t.process(skip_initial);
+            }
+        }
+
+        let range = self.raw_alpha_range.end - self.raw_alpha_range.start;
+        let scaled_duration_ms = 1_000.0 * (duration.as_secs_f32() * range) + self.rest;
+        
+        self.fx.process(Duration::from_millis(scaled_duration_ms as u32), buf, area);
+        self.rest = scaled_duration_ms - scaled_duration_ms.floor();
+    }
+
+    fn done(&self) -> bool {
+        self.timer.done()
+    }
+
+    fn area(&self) -> Option<Rect> {
+        self.fx.area()
+    }
+
+    fn set_area(&mut self, area: Rect) {
+        self.fx.set_area(area)
+    }
+
+    fn filter(&mut self, filter: CellFilter) {
+        self.fx.filter(filter)
+    }
+
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        Some(&mut self.timer)
+    }
+
+    fn timer(&self) -> Option<EffectTimer> {
+        Some(self.timer.clone())
+    }
+
+    fn cell_filter(&self) -> Option<CellFilter> {
+        self.fx.cell_filter()
+    }
+
+    fn set_color_space(&mut self, color_space: ColorSpace) {
+        self.fx.set_color_space(color_space);
+    }
+
+    fn color_space(&self) -> ColorSpace {
+        self.fx.color_space()
+    }
+
+    #[cfg(feature = "dsl")]
+    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+        crate::dsl::EffectExpression::parse(&format!(
+            "fx::remap_alpha({}, {}, {})",
+            self.raw_alpha_range.start,
+            self.raw_alpha_range.end,
             self.fx.to_dsl()?
         ))
     }

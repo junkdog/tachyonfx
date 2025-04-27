@@ -127,6 +127,7 @@ The library includes a variety of effects, loosely categorized as follows:
 - **ping_pong:**            Plays the effect forwards and then backwards.
 - **prolong_start**:        Extends the start of an effect by a specified duration.
 - **prolong_end**:          Extends the end of an effect by a specified duration.
+- **remap_alpha:**          Remaps an effect's alpha progression to operate within a smaller range.
 - **repeat:**               Repeats an effect indefinitely or for a specified number of times or duration.
 - **repeating:**            Repeats the effect indefinitely.
 - **sleep:**                Pauses for a specified duration.

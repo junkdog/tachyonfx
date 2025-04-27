@@ -44,6 +44,7 @@
 //! | [`ping_pong()`] 🔄 | Plays effect forward then backward   | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/ping_pong.gif)|
 //! | [`prolong_start()`] ⏳ | Extends effect duration          | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/prolong_start.gif)|
 //! | [`prolong_end()`] ⏳ | Extends effect duration            | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/prolong_end.gif)|
+//! | [`remap_alpha()`] 🔁 | Remaps an effect's alpha progression to operate within a smaller range | N/A |
 //! | [`repeat()`] 🔁 | Repeats effect by count or duration     | N/A |
 //! | [`repeating()`] 🔁 | Repeats an effect indefinitely       | N/A |
 //! | [`sleep()`] 💤 | Pauses for specified duration            | N/A |
@@ -78,6 +79,7 @@
 //!
 //! Additional effects can be created by implementing the [Shader](crate::Shader) trait.
 
+use std::ops::Range;
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Offset, Size};
 use ratatui::style::{Color, Style};
@@ -408,6 +410,32 @@ pub fn freeze_at(
     effect: Effect,
 ) -> Effect {
     FreezeAt::new(alpha, set_raw_alpha, effect).into_effect()
+}
+
+/// Remaps an effect's alpha progression to operate within a smaller range.
+///
+/// This is useful for:
+/// - Creating partially completed effects
+/// - Skipping uninteresting parts of a transition
+/// - Focusing on the most visually appealing portion of an effect
+/// - Creating sequential effects that join seamlessly at specific transition points
+///
+/// # Arguments
+///
+/// * `alpha_start` - The lower bound of the alpha range (0.0-1.0). Values less than 0.0 are clamped to 0.0.
+/// * `alpha_end` - The upper bound of the alpha range (0.0-1.0). Values greater than 1.0 are clamped to 1.0.
+/// * `effect` - The effect to remap.
+///
+/// # Returns
+///
+/// A new effect that remaps the original effect's alpha progression to the specified range.
+pub fn remap_alpha(
+    alpha_start: f32,
+    alpha_end: f32,
+    effect: Effect,
+) -> Effect {
+    let range = alpha_start.max(0.0)..alpha_end.min(1.0);
+    RemapAlpha::new(range, effect).into_effect()
 }
 
 /// Repeat the effect indefinitely or for a specified number of times or duration.
@@ -1291,7 +1319,7 @@ macro_rules! invoke_fn {
 }
 
 pub (crate) use invoke_fn;
-use crate::fx::alpha_xform::FreezeAt;
+use crate::fx::alpha_xform::{FreezeAt, RemapAlpha};
 use crate::fx::explode::Explode;
 
 #[cfg(test)]
