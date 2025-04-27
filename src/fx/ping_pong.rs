@@ -99,8 +99,6 @@ impl Shader for PingPong {
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-        
-
         crate::dsl::EffectExpression::parse(&format!(
             "fx::ping_pong({})", self.fx.to_dsl()?)
         )

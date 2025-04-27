@@ -44,6 +44,7 @@ pub(super) fn parse_ast(input: Vec<Token>) -> Result<Vec<Expr>, DslError> {
 
 pub(super) fn expression<'a>() -> impl TokenParser<'a, Expr> {
     or!(
+        boolean(),
         literal(),
         let_binding(),
         sequence(),
@@ -222,9 +223,20 @@ fn parallel<'a>() -> impl TokenParser<'a, Expr> {
     )).map(|(span, (_, _, args, self_fns))| Expr::Parallel { effects: args, self_fns, span })
 }
 
-fn literal<'a>() -> impl TokenParser<'a, Expr> {
+fn boolean<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
+    yield_consumed(token(Keyword))
+        .map_if(|(span, t): (_, &'a Token<'a>)| Some(Expr::Literal(match t.text {
+            "true"  => Value::Bool(true),
+            "false" => Value::Bool(false),
+            _       => None?,
+        }, span)))
+}
+
+fn literal<'a>() -> impl TokenParser<'a, Expr> {
+    use TokenKind::*;
+    
     yield_consumed(item_if(|_| true))
         .map_if(|(span, t): (_, &'a Token<'a>)| Some(Expr::Literal(match t.kind {
             FloatLiteral  => Value::F32(t.text.parse().unwrap()),

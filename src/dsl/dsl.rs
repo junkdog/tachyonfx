@@ -318,6 +318,7 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("fade_from_fg",         compilers::fade_from_fg)
         .register("fade_to",              compilers::fade_to)
         .register("fade_to_fg",           compilers::fade_to_fg)
+        .register("freeze_at",            compilers::freeze_at)
         .register("hsl_shift",            compilers::hsl_shift)
         .register("hsl_shift_fg",         compilers::hsl_shift_fg)
         .register("never_complete",       |args| never_complete(args.effect()?).into())
@@ -397,6 +398,14 @@ mod compilers {
             args.color()?,
             args.color()?,
             args.effect_timer()?
+        ).into()
+    }
+    
+    pub(super) fn freeze_at(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::freeze_at(
+            args.read_into_f32()?,
+            args.read_bool()?,
+            args.effect()?
         ).into()
     }
 
@@ -594,6 +603,8 @@ mod tests {
             fx::fade_from_fg(color, (1000, Linear)),
             fx::fade_to(color, color, (1000, Linear)),
             fx::fade_to_fg(color, (1000, Linear)),
+            fx::freeze_at(0.8, true, fx::dissolve((1000, Linear))),
+            fx::freeze_at(0.8, false, fx::dissolve((1000, Linear))),
             fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear)),
             fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear)),
             fx::never_complete(fx::dissolve((1000, Linear))),

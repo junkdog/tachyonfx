@@ -1,10 +1,12 @@
 # Changelog
 
 ### Added
+- `fx::freeze_at`: freezes another effect at a specific alpha (transition) value.
 - trait `IntoTemporaryEffect`: previously not exposed although it was implemented for `Effect`.
 
 ### DSL
 - `.with_duration()` is now available on effects.
+- `fx::freeze_at` added to the DSL.
 
 ### Changed`
 - `fx::explode`: cells "behind" the explosion now have `Color::Black` instead of `Color::Reset` for

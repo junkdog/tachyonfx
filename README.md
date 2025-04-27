@@ -122,6 +122,7 @@ The library includes a variety of effects, loosely categorized as follows:
 
 #### Timing and Control Effects
 - **consume_tick:**         Consumes a single tick.
+- **freeze_at:**            Freezes another effect at a specific alpha (transition) value.
 - **never_complete:**       Makes an effect run indefinitely.
 - **ping_pong:**            Plays the effect forwards and then backwards.
 - **prolong_start**:        Extends the start of an effect by a specified duration.

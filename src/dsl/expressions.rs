@@ -53,6 +53,7 @@ pub(super) enum Value {
     Color(Color),
     Direction(Direction),
     String(CompactString),
+    Bool(bool),
     I32(i32),
     U32(u32),
     F32(f32),
@@ -167,11 +168,13 @@ impl Value {
             Value::Modifier(m)      => m.dsl_format(),
             Value::Direction(dir)   => dir.dsl_format(),
             Value::ColorSpace(c)    => c.dsl_format(),
+            Value::Bool(b)          => b.dsl_format(),
         }
     }
 
     fn type_name(&self) -> &'static str {
         match self {
+            Value::Bool(_)          => "bool",
             Value::CellFilter(_)    => "cell_filter",
             Value::Color(_)         => "color",
             Value::Motion(_)        => "motion",

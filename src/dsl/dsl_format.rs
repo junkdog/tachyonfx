@@ -61,6 +61,16 @@ impl DslFormat for ColorSpace {
     }
 }
 
+impl DslFormat for bool {
+    fn dsl_format(&self) -> CompactString {
+        if *self {
+            CompactString::const_new("true")
+        } else {
+            CompactString::const_new("false")
+        }
+    }
+}
+
 impl DslFormat for RepeatMode {
     fn dsl_format(&self) -> CompactString {
         match self {

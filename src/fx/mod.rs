@@ -24,7 +24,7 @@
 //! |------------------------|-------------|----------|
 //! | [`coalesce()`] ⬆️      | Reforms dissolved foreground | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce.gif) |
 //! | [`coalesce_from()`] ⬆️ | Reforms dissolved foreground | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce_from.gif) |
-//! | [`explode()`] 💥       | Explodes content outward     | no preview |
+//! | [`explode()`] 💥       | Explodes content outward     | N/A |
 //! | [`dissolve()`] ⬇️      | Dissolves foreground content | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve.gif) |
 //! | [`dissolve_to()`] ⬇️   | Dissolves foreground content | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve_to.gif) |
 //! | [`slide_in()`] ↔️      | Slides content with gradient | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/slide_in.gif) |
@@ -39,6 +39,7 @@
 //! |---------------------|-------------|----------|
 //! | [`consume_tick()`] ⌛ | Consumes a single tick            | N/A |
 //! | [`delay()`] ⏳ | Delays effect by specified duration      | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/delay.gif)|
+//! | [`freeze_at()`] ⏳ | Freezes another effect at a specific alpha (transition) value      | N/A |
 //! | [`never_complete()`] ♾️ | Makes effect run indefinitely   | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/never_complete.gif) |
 //! | [`ping_pong()`] 🔄 | Plays effect forward then backward   | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/ping_pong.gif)|
 //! | [`prolong_start()`] ⏳ | Extends effect duration          | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/prolong_start.gif)|
@@ -130,6 +131,7 @@ mod prolong;
 mod direction;
 pub(crate) mod unique;
 mod explode;
+mod alpha_xform;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -345,7 +347,7 @@ pub fn term256_colors() -> Effect {
 ///
 /// This effect simulates an explosion by moving cells away from the center of the
 /// specified area, with their appearance changing over time to represent debris.
-/// 
+///
 /// The original cells are replaced with the `Color::Black` for both foreground and
 /// background. No modifiers are retained.
 ///
@@ -387,6 +389,25 @@ pub fn explode(
     replacement_cell.set_fg(Color::Black);
     replacement_cell.set_bg(Color::Black);
     Explode::new(force, force_rng_factor, replacement_cell, timer.into()).into_effect()
+}
+
+/// Freezes an effect at a specific alpha (transition) value.
+///
+/// # Arguments
+///
+/// * `alpha` - The alpha value to freeze the effect at (between 0.0 and 1.0)
+/// * `set_raw_alpha` - If true, bypasses interpolation and sets raw alpha
+/// * `fx` - The effect to freeze
+///
+/// # Returns
+///
+/// An `Effect` that shows the inner effect frozen at the specified alpha
+pub fn freeze_at(
+    alpha: f32,
+    set_raw_alpha: bool,
+    effect: Effect,
+) -> Effect {
+    FreezeAt::new(alpha, set_raw_alpha, effect).into_effect()
 }
 
 /// Repeat the effect indefinitely or for a specified number of times or duration.
@@ -1270,6 +1291,7 @@ macro_rules! invoke_fn {
 }
 
 pub (crate) use invoke_fn;
+use crate::fx::alpha_xform::FreezeAt;
 use crate::fx::explode::Explode;
 
 #[cfg(test)]

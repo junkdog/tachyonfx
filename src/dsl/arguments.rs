@@ -245,6 +245,15 @@ impl<'dsl> Arguments<'dsl> {
             e                            => self.expected_type_expr("interpolation", e),
         }
     }
+    
+    /// Consumes the next argument and returns a `bool`.
+    pub fn read_bool(&mut self) -> Result<bool, DslError> {
+        match self.next("bool")? {
+            Expr::Literal(Value::Bool(v), _) => Ok(v),
+            Expr::Var { name, span, .. }     => self.bound_var(name, span),
+            e                                => self.expected_type_expr("bool", e),
+        }
+    }
 
     /// Consumes the next argument and returns a `u8`.
     pub fn read_u8(&mut self) -> Result<u8, DslError> {
@@ -276,7 +285,7 @@ impl<'dsl> Arguments<'dsl> {
             e                               => self.expected_type_expr("u32", e),
         }
     }
-
+    
     pub fn read_i32(&mut self) -> Result<i32, DslError> {
         match self.next("i32")? {
             Expr::Literal(Value::I32(i), _) => Ok(i),
@@ -843,11 +852,12 @@ macro_rules! impl_from_args {
 }
 
 // Basic numeric types
-impl_from_args!(u8,  read_u8);
-impl_from_args!(u16, read_u16);
-impl_from_args!(u32, read_u32);
-impl_from_args!(i32, read_i32);
-impl_from_args!(f32, read_f32);
+impl_from_args!(bool, read_bool);
+impl_from_args!(u8,   read_u8);
+impl_from_args!(u16,  read_u16);
+impl_from_args!(u32,  read_u32);
+impl_from_args!(i32,  read_i32);
+impl_from_args!(f32,  read_f32);
 
 // String types
 impl_from_args!(CompactString, string);
