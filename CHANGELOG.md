@@ -1,5 +1,7 @@
 # Changelog
 
+## tachyonfx 0.15.0 - 2025-04-27
+
 ### Added
 - `fx::freeze_at`: freezes another effect at a specific alpha (transition) value.
 - `fx::remap_alpha`: rescales an effect's alpha progression to a smaller window.
