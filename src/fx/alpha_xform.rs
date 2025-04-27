@@ -157,7 +157,7 @@ impl Shader for RemapAlpha {
         let range = self.raw_alpha_range.end - self.raw_alpha_range.start;
         let scaled_duration_ms = 1_000.0 * (duration.as_secs_f32() * range) + self.rest;
         
-        self.fx.process(Duration::from_millis(scaled_duration_ms as u32), buf, area);
+        self.fx.process(Duration::from_millis(scaled_duration_ms as _), buf, area);
         self.rest = scaled_duration_ms - scaled_duration_ms.floor();
     }
 

@@ -79,20 +79,10 @@
 //!
 //! Additional effects can be created by implementing the [Shader](crate::Shader) trait.
 
-use std::ops::Range;
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Offset, Size};
 use ratatui::style::{Color, Style};
 
-pub use temporary::IntoTemporaryEffect;
-pub use glitch::Glitch;
-use ping_pong::PingPong;
-use prolong::{Prolong, ProlongPosition};
-pub use shader_fn::*;
-pub use repeat::RepeatMode;
-use slide::SlideCell;
-pub use direction::*;
-use crate::{CellIterator, ColorSpace, Duration, Motion, RefCount, ThreadSafetyMarker};
 use crate::effect::{Effect, IntoEffect};
 use crate::effect_timer::EffectTimer;
 use crate::fx::ansi256::Ansi256;
@@ -106,8 +96,17 @@ use crate::fx::repeat::Repeat;
 use crate::fx::resize::ResizeArea;
 use crate::fx::sleep::Sleep;
 use crate::fx::sweep_in::SweepIn;
-use crate::fx::temporary::{TemporaryEffect};
+use crate::fx::temporary::TemporaryEffect;
 use crate::fx::translate_buffer::TranslateBuffer;
+use crate::{CellIterator, ColorSpace, Duration, Motion, RefCount, ThreadSafetyMarker};
+pub use direction::*;
+pub use glitch::Glitch;
+use ping_pong::PingPong;
+use prolong::{Prolong, ProlongPosition};
+pub use repeat::RepeatMode;
+pub use shader_fn::*;
+use slide::SlideCell;
+pub use temporary::IntoTemporaryEffect;
 
 mod ansi256;
 mod consume_tick;
@@ -1324,10 +1323,9 @@ use crate::fx::explode::Explode;
 
 #[cfg(test)]
 mod tests {
-    use ratatui::layout::Margin;
-    use ratatui::prelude::Color;
     use super::*;
-    use crate::{CellFilter, Shader};
+    use crate::Shader;
+    use ratatui::prelude::Color;
 
     const DIRECTIONS: [Motion; 4] = [
         Motion::DownToUp,
@@ -1432,7 +1430,7 @@ mod tests {
             assert_eq!(actual, expected);
         };
 
-        use crate::fx::{translate::Translate, offscreen_buffer::OffscreenBuffer};
+        use crate::fx::{offscreen_buffer::OffscreenBuffer, translate::Translate};
 
         verify_size(size_of::<EffectTimer>(),      12);
         verify_size(size_of::<Ansi256>(),          10);

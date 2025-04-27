@@ -4,7 +4,6 @@ use crate::simple_rng::SimpleRng;
 use crate::{default_shader_impl, CellFilter, Duration, LruCache};
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Position, Rect};
-use ratatui::style::Color;
 
 #[derive(Clone, Debug)]
 pub struct Explode {
@@ -103,10 +102,7 @@ impl Shader for Explode {
 
             // replace original cell with empty cell
             let orig_cell = buf[pos].clone();
-            let mut c = Cell::default();
-            c.set_fg(Color::Black);
-            c.set_bg(Color::Black);
-            buf[pos] = c;
+            buf[pos] = self.replacement_cell.clone();
 
             if (dx, dy) == (0.0, 0.0) {
                 continue;
