@@ -1,5 +1,11 @@
 # Changelog
 
+### Added
+- trait `IntoTemporaryEffect`: previously not exposed although it was implemented for `Effect`.
+
+### DSL
+- `.with_duration()` is now available on effects.
+
 ### Changed`
 - `fx::explode`: cells "behind" the explosion now have `Color::Black` instead of `Color::Reset` for
   for both foreground and background colors. This change makes it easier to apply later effects

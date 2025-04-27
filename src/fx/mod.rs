@@ -81,6 +81,7 @@ use ratatui::buffer::{Buffer, Cell};
 use ratatui::layout::{Offset, Size};
 use ratatui::style::{Color, Style};
 
+pub use temporary::IntoTemporaryEffect;
 pub use glitch::Glitch;
 use ping_pong::PingPong;
 use prolong::{Prolong, ProlongPosition};
@@ -102,7 +103,7 @@ use crate::fx::repeat::Repeat;
 use crate::fx::resize::ResizeArea;
 use crate::fx::sleep::Sleep;
 use crate::fx::sweep_in::SweepIn;
-use crate::fx::temporary::{IntoTemporaryEffect, TemporaryEffect};
+use crate::fx::temporary::{TemporaryEffect};
 use crate::fx::translate_buffer::TranslateBuffer;
 
 mod ansi256;

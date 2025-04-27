@@ -4,6 +4,7 @@ use crate::dsl::{Arguments, DslError, EffectDsl};
 use crate::Effect;
 use ratatui::layout::{Layout, Rect};
 use ratatui::style::Style;
+use crate::fx::IntoTemporaryEffect;
 
 /// A trait for types that support method chaining in the tachyonfx DSL.
 ///
@@ -58,6 +59,7 @@ impl ChainableMethods for Effect {
             "reversed"               => effect.reversed(),
             "with_area"              => effect.with_area(args.rect()?),
             "with_color_space"       => effect.with_color_space(args.color_space()?),
+            "with_duration"          => effect.with_duration(args.duration()?),
             "with_filter" | "filter" => effect.with_filter(args.cell_filter()?),
             _                        => Err(DslError::UnknownFunction {
                 name: name.into(),
