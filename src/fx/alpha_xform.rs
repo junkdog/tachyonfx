@@ -50,9 +50,9 @@ impl Shader for FreezeAt {
             // fix alpha on first frame
             if !t.started() {
                 let interpolation = if self.set_raw_alpha { Linear } else { t.interpolation() };
-                let d = t.remaining() * (1.0 - self.alpha);
+                let d = t.remaining().as_secs_f32() * (1.0 - self.alpha);
                 *t = EffectTimer::new(t.remaining(), interpolation);
-                t.process(d);
+                t.process(Duration::from_secs_f32(d));
             }
         }
         
@@ -149,8 +149,8 @@ impl Shader for RemapAlpha {
         if let Some(t) = self.fx.timer_mut() {
             if !t.started() {
                 // deduct initial duration from the timer
-                let skip_initial = t.duration() * self.raw_alpha_range.start;
-                t.process(skip_initial);
+                let skip_initial = t.duration().as_secs_f32() * self.raw_alpha_range.start;
+                t.process(Duration::from_secs_f32(skip_initial));
             }
         }
 
