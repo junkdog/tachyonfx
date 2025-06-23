@@ -16,7 +16,7 @@ exclude = ["images/*.gif", "docs/assets/*.gif", ".*", "scripts/*"]
 [dependencies]
 anpa = { version = "0.9.0", optional = true }
 bon = "3.6.3"
-colorsys = "0.6.7"
+colorsys = "0.7.0"
 compact_str = "0.9.0"
 ratatui = { version = "0.29", default-features = false }
 simple-easing = "1.0.1"
