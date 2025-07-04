@@ -340,6 +340,7 @@ pub fn hsl_shift_fg<T: Into<EffectTimer>>(
 }
 
 /// Returns an effect that downsamples to 256 color mode.
+#[deprecated(since = "0.16.0", note = "not considered widely useful")]
 pub fn term256_colors() -> Effect {
     Ansi256::default().into_effect()
 }

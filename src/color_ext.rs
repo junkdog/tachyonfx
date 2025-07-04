@@ -26,13 +26,14 @@ impl ToRgbComponents for Color {
             Color::LightCyan => (0, 255, 255),
             Color::White => (192, 192, 192),
             Color::Indexed(code) => {
-                let rgb = colorsys::Ansi256::new(*code).as_rgb();
-                (rgb.red().round() as u8, rgb.green().round() as u8, rgb.blue().round() as u8)
+                let [_, r, g, b] = indexed_color_to_rgb(*code).to_le_bytes();
+                (r, g, b)
             },
         }
     }
 }
 
+#[deprecated(since = "0.16.0", note = "not considered core/useful")]
 pub trait AsIndexedColor {
     fn as_indexed_color(&self) -> Color;
 }
@@ -44,5 +45,61 @@ impl AsIndexedColor for Color {
         let c = colorsys::Rgb::from([r as f64, g as f64, b as f64]);
         let ansi256 = colorsys::Ansi256::from(c);
         Color::Indexed(ansi256.code())
+    }
+}
+
+/// Converts an indexed color (0-255) to an RGB value.
+fn indexed_color_to_rgb(index: u8) -> u32 {
+    match index {
+        // Basic 16 colors (0-15)
+        0..=15 => {
+            const BASIC_COLORS: [u32; 16] = [
+                0x000000, // 0: black
+                0xCD0000, // 1: red
+                0x00CD00, // 2: green
+                0xCDCD00, // 3: yellow
+                0x0000EE, // 4: blue
+                0xCD00CD, // 5: magenta
+                0x00CDCD, // 6: cyan
+                0xE5E5E5, // 7: white
+                0x7F7F7F, // 8: bright Black
+                0xFF0000, // 9: bright Red
+                0x00FF00, // 10: bright Green
+                0xFFFF00, // 11: bright Yellow
+                0x5C5CFF, // 12: bright Blue
+                0xFF00FF, // 13: bright Magenta
+                0x00FFFF, // 14: bright Cyan
+                0xFFFFFF, // 15: bright White
+            ];
+            BASIC_COLORS[index as usize]
+        }
+
+        // 216-color cube (16-231)
+        16..=231 => {
+            let cube_index = index - 16;
+            let r = cube_index / 36;
+            let g = (cube_index % 36) / 6;
+            let b = cube_index % 6;
+
+            // Convert 0-5 range to 0-255 RGB
+            // Values: 0 -> 0, 1 -> 95, 2 -> 135, 3 -> 175, 4 -> 215, 5 -> 255
+            let to_rgb = |n: u8| -> u32 {
+                if n == 0 {
+                    0
+                } else {
+                    55 + 40 * n as u32
+                }
+            };
+
+            to_rgb(r) << 16 | to_rgb(g) << 8 | to_rgb(b)
+        }
+
+        // 24 grayscale colors (232-255)
+        232..=255 => {
+            let gray_index = index - 232;
+            // linear interpolation from 8 to 238
+            let gray = (8 + gray_index * 10) as u32;
+            (gray << 16) | (gray << 8) | gray
+        }
     }
 }
