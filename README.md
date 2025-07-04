@@ -1,253 +1,252 @@
-## tachyonfx
+# tachyonfx
 
-[![Crate Badge]][Crate] [![API Badge]][API] [![Deps.rs
-Badge]][Deps.rs]
+[![Crates.io](https://img.shields.io/crates/v/tachyonfx.svg)](https://crates.io/crates/tachyonfx)
+[![Documentation](https://docs.rs/tachyonfx/badge.svg)](https://docs.rs/tachyonfx)
+[![License](https://img.shields.io/crates/l/tachyonfx.svg)](https://github.com/junkdog/tachyonfx/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/crates/d/tachyonfx.svg)](https://crates.io/crates/tachyonfx)
+[![Deps.rs](https://deps.rs/repo/github/junkdog/tachyonfx/status.svg)](https://deps.rs/repo/github/junkdog/tachyonfx)
 
-tachyonfx (_ˈtakɪɒn ˌɛfˈɛks_) is a [ratatui][ratatui] library for creating shader-like effects in terminal UIs. It
-provides a collection of stateful effects that can enhance the visual appeal of terminal applications through color
-transformations, animations, and complex effect combinations.
+A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. Build complex animations by composing and layering simple effects, bringing smooth transitions and visual polish to the terminal.
 
 ![demo](images/demo-0.6.0.gif)
 
-[ratatui]: https://ratatui.rs/
+## ✨ Features
 
-## Try it out in your browser
-[TachyonFX FTL][tfx-ftl] is a browser-based editor for creating and tweaking effects.
+- **25 unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
+- **Shader-like API** — effects operate on rendered cells, allowing complex visual transformations
+- **Effect composition** — chain and combine effects for sophisticated animations
+- **Interactive browser editor** — design and preview effects in real-time with [TachyonFX FTL][tfx-ftl]
+- **Runtime effect compilation** — create effects from strings using the built-in DSL
+- **Cell-precise targeting** — apply effects to specific regions or cells matching custom criteria
 
-## Installation
+## 🚀 Quick Start
+
 Add tachyonfx to your `Cargo.toml`:
 
 ```toml
+[dependencies]
 tachyonfx = "0.15.0"
 ```
 
-## Core Concepts
-
-### Effects and State
-Effects in tachyonfx are stateful objects that evolve over time. When you create an effect, it typically maintains:
-
-- An internal timer or flag tracking progress
-- Effect-specific state (like transition progress)
-- Configuration (like styling, directions, or interpolation methods)
+Create your first effect:
 
 ```rust
-use tachyonfx::fx::{fade_to_fg, Color};
+use std::{io, time::Instant};
+use ratatui::{crossterm::event, prelude::*};
+use tachyonfx::{fx, EffectManager};
 
-// Create the effect once
-let mut fade_effect = fx::fade_to_fg(Color::Red, Duration::from_millis(1000));
-
-// In your render loop:
-loop {
-    widget.render(area, buf);
-
-    // Process the same effect each frame, updating its state
-    fade_effect.process(frame_duration, buf, area);
-    // Or use the helper trait:
-    // frame.render_effect(&mut fade_effect, area, frame_duration);
+fn main() -> io::Result<()> {
+    let mut terminal = ratatui::init();
+    let mut effects: EffectManager<()> = EffectManager::default();
+    
+    // Add a simple fade-in effect
+    effects.add_effect(
+        fx::fade_from_fg(Color::Red, (1000, tachyonfx::Interpolation::SineIn))
+    );
+    
+    let mut last_frame = Instant::now();
+    loop {
+        let elapsed = last_frame.elapsed();
+        last_frame = Instant::now();
+        
+        terminal.draw(|frame| {
+            // Render your content
+            let text = Paragraph::new("Hello, TachyonFX!")
+                .alignment(Alignment::Center);
+            frame.render_widget(text, frame.area());
+            
+            // Apply effects
+            effects.process_effects(elapsed.into(), frame.buffer_mut(), frame.area());
+        })?;
+        
+        // Exit on any key press
+        if event::poll(std::time::Duration::from_millis(16))? {
+            if let event::Event::Key(_) = event::read()? {
+                break;
+            }
+        }
+    }
+    
+    ratatui::restore();
+    Ok(())
 }
 ```
 
-### Effects and Widgets
+## 📸 Examples
 
-Effects in tachyonfx operate on terminal cells after widgets have been rendered to the screen. When an effect is
-applied, it modifies properties of the already-rendered cells - like their colors, characters, or visibility. This means
-the typical flow is:
+Explore the examples to see effects in action:
 
-1. Render your widget to the screen
-2. Apply effects to transform the rendered content
+```bash
+# Basic effects showcase
+cargo run --example basic-effects
 
-### Effect DSL (Domain-Specific Language)
+# Interactive DSL playground  
+cargo run --example dsl-playground
 
-tachyonfx includes a rust-looking DSL for defining effects as text expressions that can be compiled at runtime.
-This enables:
+# Effect timeline visualization
+cargo run --example fx-chart
 
-- Fast iteration and prototyping of effects
-- Creating effects from configuration files or user input
-- Storing and serializing effect definitions
+# Minimal setup example
+cargo run --example minimal
+```
+
+## 🎯 Getting Started
+
+### Try it in your browser
+
+[TachyonFX FTL][tfx-ftl] is a browser-based editor for creating and tweaking effects in real-time.
+
+### Basic Concepts
+
+1. **Effects are stateful** — Create once, apply every frame
+2. **Effects transform rendered content** — Apply after widgets render  
+3. **Effects compose** — Build complex animations from simple pieces
+
+### Simple Example: Fade In
+
+```rust
+use tachyonfx::{fx, Effect, CellFilter};
+
+// Create a fade-in effect
+let mut fade = fx::fade_from(Color::Black, Color::White, 
+    EffectTimer::from_ms(500, QuadOut));
+
+// Apply to red text only
+fade.set_cell_filter(CellFilter::FgColor(Color::Red));
+
+// In your render loop
+fade.process(delta_time, buf, area);
+```
+
+### Combining Effects
+
+```rust
+// Run multiple effects in parallel
+let effects = fx::parallel(&[
+    fx::fade_from_fg(Color::Red, 500),
+    fx::slide_in(Direction::LeftToRight, 800),
+]);
+
+// Or sequence them
+let effects = fx::sequence(&[
+    fx::fade_from_fg(Color::Black, 300),
+    fx::coalesce(500),
+]);
+```
+
+### Using the DSL
+
+Create effects from strings at runtime:
 
 ```rust
 use tachyonfx::dsl::EffectDsl;
 
-// Create a DSL compiler and bind variables
-let effect = EffectDsl::new().compiler()
-    .bind("color", Color::Red)
-    .compile("fx::fade_to_fg(color, (1000, QuadOut))")
-    .expect("valid effect from dsl");
-
-// Complex compositions
-let expression = r#"
-    fx::sequence(&[
-        fx::fade_from(Color::Black, Color::Red, (500, LinearOut)),
-        fx::dissolve((300, BounceOut))
-    ])
-"#;
-
 let effect = EffectDsl::new()
     .compiler()
-    .compile(expression)
-    .expect("valid effect from dsl");
+    .compile("fx::dissolve(500)")
+    .expect("valid effect");
 ```
 
-The DSL supports let bindings, [method chaining][docs-supported-types], and serialization of effects
-with `Effect::to_dsl`:
+## 📦 Effect Reference
 
+### Color Effects
+Transform colors over time for smooth transitions.
 
- [docs-supported-types]: https://docs.rs/tachyonfx/latest/tachyonfx/dsl/index.html#supported-types-and-methods
+- `fade_from` / `fade_to` — Transition colors  
+- `fade_from_fg` / `fade_to_fg` — Foreground color transitions
+- `hsl_shift` — Animate through HSL color space
+- `term256_colors` — Downsample to 256-color mode
 
-### TachyonFX FTL
-[TachyonFX FTL][tfx-ftl] is a browser-based editor for creating and tweaking effects. It allows you to visualize
-effects in real-time, making it easier to understand how they work and how to use them in your applications.
+### Text & Motion Effects  
+Animate text and cell positions for dynamic content.
 
-### Types of Effects
+- `coalesce` / `dissolve` — Text materialization effects
+- `slide_in` / `slide_out` — Directional sliding animations  
+- `sweep_in` / `sweep_out` — Color sweep transitions
+- `explode` — Particle dispersion effect
 
-The library includes a variety of effects, loosely categorized as follows:
+### Control Effects
+Fine-tune timing and behavior.
 
-#### Color Effects
-- **fade_from:**      Fades from the specified background and foreground colors
-- **fade_from_fg:**   Fades the foreground color from a specified color.
-- **fade_to:**        Fades to the specified background and foreground colors.
-- **fade_to_fg:**     Fades the foreground color to a specified color.
-- **hsl_shift:**      Changes the hue, saturation, and lightness of the foreground and background colors.
-- **hsl_shift_fg:**   Shifts the foreground color by the specified hue, saturation, and lightness over the specified duration.
-- **term256_colors:** Downsamples to 256 color mode.
+- `parallel` — Run multiple effects simultaneously
+- `sequence` — Chain effects one after another
+- `repeat` — Loop effects with optional limits
+- `ping_pong` — Play forward then reverse
+- `with_duration` — Override effect duration
 
-#### Text/Character Effects
-- **coalesce:**   The reverse of dissolve, coalesces text over the specified duration.
-- **dissolve:**   Dissolves the current text over the specified duration.
-- **explode:**    Explodes the content dispersing it outward from the center.
-- **slide_in:**   Applies a directional sliding in effect to terminal cells.
-- **slide_out:**  Applies a directional sliding out effect to terminal cells.
-- **sweep_in:**   Sweeps in from the specified color.
-- **sweep_out:**  Sweeps out to the specified color.
+### Geometry Effects
+Transform positions and layout.
 
-#### Timing and Control Effects
-- **consume_tick:**         Consumes a single tick.
-- **freeze_at:**            Freezes another effect at a specific alpha (transition) value.
-- **never_complete:**       Makes an effect run indefinitely.
-- **ping_pong:**            Plays the effect forwards and then backwards.
-- **prolong_start**:        Extends the start of an effect by a specified duration.
-- **prolong_end**:          Extends the end of an effect by a specified duration.
-- **remap_alpha:**          Remaps an effect's alpha progression to operate within a smaller range.
-- **repeat:**               Repeats an effect indefinitely or for a specified number of times or duration.
-- **repeating:**            Repeats the effect indefinitely.
-- **sleep:**                Pauses for a specified duration.
-- **timed_never_complete:** Creates an effect that runs indefinitely but has an enforced duration.
-- **with_duration:**        Wraps an effect and enforces a maximum duration on it.
+- `translate` — Move content by offset
+- `resize_area` — Scale effect bounds
+- `translate_buf` — Copy and move buffer content
 
-#### Geometry Effects
-- **translate:**     Moves the effect area by a specified amount.
-- **translate_buf:** Copies the contents from an aux buffer, moving it by a specified amount.
-- **resize_area:**   Resizes the area of the wrapped effect.
+## 🔧 Advanced Features
 
-#### Combination Effects
-- **parallel:** Runs effects in parallel, all at the same time. Reports completion once all effects have completed.
-- **sequence:** Runs effects in sequence, one after the other. Reports completion once the last effect has completed.
+### Cell Filtering
 
-#### Other Effects
-- **effect_fn:**        Creates custom effects from user-defined functions, operating over `CellIterator`.
-- **effect_fn_buf:**    Creates custom effects from functions, operating over `Buffer`.
-- **offscreen_buffer:** Wraps an existing effect and redirects its rendering to a separate buffer.
-- **unique:**           A unique effect that will cancel any existing effect with the same key.
-
-Additional effects can be created by implementing the `Shader` trait.
-
-
-### EffectTimer and Interpolations
-
-Most effects are driven by an `EffectTimer` that controls their duration and interpolation. It
-allows for precise timing and synchronization of visual effects within your application.
+Apply effects selectively:
 
 ```rust
-fx::dissolve(EffectTimer::from_ms(500, BounceOut))
-fx::dissolve((500, BounceOut)) // shorthand for the above
-fx::dissolve(500)              // linear interpolation
-```
+// Only apply to cells with specific colors
+fx::dissolve(500)
+    .with_filter(CellFilter::FgColor(Color::Red))
 
-### Cell Selection and Area
-
-Effects can be applied to specific cells in the terminal UI, allowing for targeted visual
-modifications and animations.
-
-```rust
-// only apply to cells with `Light2` foreground color
-fx::sweep_in(Direction::UpToDown, 15, 0, Dark0, timer)
-    .with_filter(CellFilter::FgColor(Light2.into()))
-```
-
-`CellFilter`s can be combined to form complex selection criteria.
-
-```rust
-// apply effect to cells on the outer border of the area
-let margin = Margin::new(1, 1);
-let border_text = CellFilter::AllOf(&[
-    CellFilter::Outer(margin),
-    CellFilter::Text
+// Target specific regions
+let filter = CellFilter::AllOf(vec![
+    CellFilter::Outer(Margin::new(1, 1)),
+    CellFilter::Text,
 ]);
-
-prolong_start(duration, fx::fade_from(Dark0, Dark0, (320, QuadOut)),
-    .with_filter(border_text)
 ```
+
+### Custom Effects
+
+Create your own effects:
+
+```rust
+fx::effect_fn(state, timer, |state, context, cell_iter| {
+    // Your custom effect logic
+    timer.progress()
+})
+```
+
+Alternatively, implement the `Shader` trait and use it together with `.into_effect()`.
+
+### Effect DSL
+
+The DSL supports:
+- Most built-in effects (excludes: `effect_fn`, `effect_fn_buf`, `glitch`, `offscreen_buffer`, `resize_area`, `translate`, `translate_buf`)
+- Variable bindings
+- Method chaining
+- Complex compositions
+
+```rust
+let expr = r#"
+    let duration = 300;
+    fx::sequence(&[
+        fx::fade_from(black, white, duration),
+        fx::dissolve(duration)
+    ])
+"#;
+```
+
+## 🛠️ Configuration
 
 ### Features
-- `dsl`: Enables the Effect DSL, allowing for runtime compilation of effect expressions. Enabled by default.
-- `sendable`: Enables the `Send` trait for effects, shaders, and associated parameters. This allows effects to be
-  safely transferred across thread boundaries. Note that enabling this feature requires all `Shader` implementations
-  to be `Send`, which may impose additional constraints on custom shader implementations.
-- `std-duration`:  Uses `std::time::Duration` instead of a custom 32-bit duration type.
-- `web-time`: Enables WebAssembly compatibility by providing alternative time handling implementations. This allows
-  tachyonfx to be used in browser-based WebAssembly applications where `std::time` is not available.
+
+- `dsl` — Effect DSL support (enabled by default)
+- `sendable` — Make effects `Send` (but not `Sync`)
+- `std-duration` — Use `std::time::Duration` instead of 32-bit custom type
+- `web-time` — WebAssembly compatibility
 
 
-## Examples
+## 🤝 Contributing
 
-### Example: [minimal](examples/minimal.rs)
-```
-cargo run --release --example=minimal 
-```
+Contributions welcome! Please check existing issues or create new ones to discuss changes.
 
-### Example: [tweens](examples/tweens.rs)
-![tweens](images/example-tweens.png)
+## 📝 License
 
-```
-cargo run --release --example=tweens 
-```
+MIT License - see [LICENSE](LICENSE) for details.
 
-### Example: [basic-effects](examples/basic-effects.rs)
-![basic effeects](images/example-basic-effects.png)
-```
-cargo run --release --example=basic-effects 
-```
-
-
-### Example: [open-window](examples/open-window.rs)
-
-```
-cargo run --release --example=open-window  
-```
-
-### Example: [fx-chart](examples/fx-chart.rs)
-![fx-chart](images/effect-timeline.gif)
-
-A demo of the `EffectTimelineWidget` showcasing the composition of effects. The widget is a "plain" widget
-without any effects as part of its rendering. The effects are instead applied after rendering the widget.
-
-```
-cargo run --release --example=fx-chart
-```
-
-### Example: [dsl-playground](examples/dsl-playground.rs)
-![dsl-playground](images/example-dsl-playground.gif)
-```
-cargo run --release --example=dsl-playground
-```
-
-A playground for experimenting with the DSL to create and combine effects interactively.
-
-[API Badge]: https://docs.rs/tachyonfx/badge.svg
-[API]: https://docs.rs/tachyonfx
-[Crate Badge]: https://img.shields.io/crates/v/tachyonfx.svg
-[Crate]: https://crates.io/crates/tachyonfx
-[Deps.rs Badge]: https://deps.rs/repo/github/junkdog/tachyonfx/status.svg
-[Deps.rs]: https://deps.rs/repo/github/junkdog/tachyonfx
-
+[ratatui]: https://ratatui.rs/
 [tfx-ftl]: https://junkdog.github.io/tachyonfx-ftl/
