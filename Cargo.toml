@@ -14,7 +14,7 @@ authors = ["Adrian Papari <junkdog@angelhill.net>"]
 exclude = ["images/*.gif", "docs/assets/*.gif", ".*", "scripts/*"]
 
 [dependencies]
-anpa = { version = "0.9.0", optional = true }
+anpa = { version = "0.10.0", optional = true }
 bon = "3.6.3"
 colorsys = "0.6.7"
 compact_str = "0.9.0"
