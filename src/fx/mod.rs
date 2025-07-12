@@ -73,6 +73,7 @@
 //!
 //! | Effect & Description | Preview | Example |
 //! |---------------------|---------|----------|
+//! | [`dynamic_area()`] 📱     | Wraps effects for responsive layouts | N/A |
 //! | [`effect_fn()`] 🔧        | Custom effects with cell iterator | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn.gif) |
 //! | [`effect_fn_buf()`] 🔧    | Custom effects with buffer        | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn_buf.gif) |
 //! | [`offscreen_buffer()`] 📺 | Renders to separate buffer        | N/A |
@@ -98,9 +99,10 @@ use crate::fx::sleep::Sleep;
 use crate::fx::sweep_in::SweepIn;
 use crate::fx::temporary::TemporaryEffect;
 use crate::fx::translate_buffer::TranslateBuffer;
-use crate::{CellIterator, ColorSpace, Duration, Motion, RefCount, ThreadSafetyMarker};
+use crate::{CellIterator, ColorSpace, Duration, Motion, RefCount, RefRect, ThreadSafetyMarker};
 pub use direction::*;
 pub use glitch::Glitch;
+pub use dynamic_area::DynamicArea;
 use ping_pong::PingPong;
 use prolong::{Prolong, ProlongPosition};
 pub use repeat::RepeatMode;
@@ -133,6 +135,7 @@ mod direction;
 pub(crate) mod unique;
 mod explode;
 mod alpha_xform;
+mod dynamic_area;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -1279,6 +1282,43 @@ pub fn with_duration(duration: Duration, effect: Effect) -> Effect {
 /// after which the effect will be marked as complete.
 pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
     TemporaryEffect::new(never_complete(effect), duration).into_effect()
+}
+
+/// Creates a dynamic area effect that adapts to changing rectangular areas.
+///
+/// This function wraps an effect with dynamic area capabilities, allowing the effect
+/// to operate on an area that can be changed during execution. This is particularly
+/// useful for responsive layouts where widget areas change due to window resizing
+/// or dynamic content.
+///
+/// # Arguments
+///
+/// * `area` - A shared reference to the rectangular area where the effect will be applied
+/// * `effect` - The effect to wrap with dynamic area capabilities
+///
+/// # Returns
+///
+/// An `Effect` that will apply the inner effect to the dynamically changing area
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::layout::Rect;
+/// use tachyonfx::{fx, RefRect, EffectTimer, Interpolation};
+/// use ratatui::style::Color;
+///
+/// // Create a shared area reference
+/// let area_ref = RefRect::new(Rect::new(0, 0, 20, 5));
+///
+/// // Create an effect that adapts to area changes
+/// let fade_effect = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));
+/// let dynamic_effect = fx::dynamic_area(area_ref.clone(), fade_effect);
+///
+/// // Later, update the area and the effect will use the new area
+/// area_ref.set(Rect::new(0, 0, 30, 8));
+/// ```
+pub fn dynamic_area(area: RefRect, effect: Effect) -> Effect {
+    DynamicArea::new(area, effect).into_effect()
 }
 
 

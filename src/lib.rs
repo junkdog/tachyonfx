@@ -23,6 +23,7 @@ mod features;
 mod effect_manager;
 mod color_space;
 mod lru_cache;
+mod ref_rect;
 
 pub mod fx;
 pub mod widget;
@@ -51,6 +52,7 @@ pub use features::{ref_count, RefCount, ThreadSafetyMarker};
 pub use lru_cache::LruCache;
 pub use color_space::*;
 pub use color_ext::ToRgbComponents;
+pub use ref_rect::RefRect;
 
 pub(crate) use effect::ShaderExt;
 
