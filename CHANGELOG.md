@@ -8,6 +8,10 @@
 - `DynamicArea` shader: enables effects to adapt to changing rectangular areas in real-time.
 - `fx::dispatch_event`: dispatches an event immediately when an effect starts, enabling coordination between visual effects and application logic.
 
+### DSL
+- `RefRect` constructors (`RefRect::new`, `RefRect::default`) are now available in DSL expressions.
+- `CellFilter::RefArea` now supports RefRect for shared area filtering in DSL expressions.
+
 ## tachyonfx 0.15.0 - 2025-04-27
 
 ### Added

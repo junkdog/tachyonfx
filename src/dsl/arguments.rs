@@ -4,7 +4,7 @@ use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value};
 use crate::dsl::method_chains::ChainableMethods;
 use crate::dsl::DslError;
 use crate::fx::RepeatMode;
-use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion};
+use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect};
 use compact_str::{CompactString, ToCompactString};
 use ratatui::layout::{Constraint, Direction, Layout, Margin, Offset, Rect};
 use ratatui::prelude::{Color, Style};
@@ -127,6 +127,7 @@ impl<'dsl> Arguments<'dsl> {
 
                 match filter_type {
                     "Area"       => Ok(CellFilter::Area(inner_args.rect()?)),
+                    "RefArea"    => Ok(CellFilter::RefArea(inner_args.ref_rect()?)),
                     "FgColor"    => Ok(CellFilter::FgColor(inner_args.color()?)),
                     "BgColor"    => Ok(CellFilter::BgColor(inner_args.color()?)),
                     "Inner"      => Ok(CellFilter::Inner(inner_args.margin()?)),
@@ -496,6 +497,29 @@ impl<'dsl> Arguments<'dsl> {
                 .fold_fns(self_fns, self.context, self.vars),
 
             e => self.expected_type_expr("rect", e),
+        }
+    }
+
+    /// Consumes the next argument and returns a [`RefRect`].
+    pub fn ref_rect(&mut self) -> Result<RefRect, DslError> {
+        match self.next("ref_rect")? {
+            Expr::FnCall { call, self_fns: _ } => match call.name.as_str() {
+                "RefRect::new" => {
+                    let mut inner_args = self.nested_args(call.args, 1, call.span)?;
+                    let rect = inner_args.rect()?;
+                    Ok(RefRect::new(rect))
+                },
+                "RefRect::default" => {
+                    Ok(RefRect::default())
+                },
+                e => Err(DslError::UnknownFunction {
+                    name: e.to_compact_string(),
+                    location: call.span,
+                }),
+            },
+            Expr::Var { name, self_fns: _, span } => self.bound_var(name, span),
+
+            e => self.expected_type_expr("ref_rect", e),
         }
     }
 
@@ -873,6 +897,7 @@ impl_from_args!(Layout, layout);
 impl_from_args!(Constraint, constraint);
 impl_from_args!(Margin, margin);
 impl_from_args!(Rect, rect);
+impl_from_args!(RefRect, ref_rect);
 impl_from_args!(Offset, offset);
 
 // Effect related
@@ -895,7 +920,7 @@ mod tests {
     use crate::dsl::token_parsers::parse_ast;
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
     use crate::dsl::DslError;
-    use crate::{CellFilter, Motion};
+    use crate::{CellFilter, Motion, RefRect};
     use compact_str::ToCompactString;
     use ratatui::layout::{Margin, Offset, Rect};
     use ratatui::prelude::Color;
@@ -1239,5 +1264,72 @@ mod tests {
         });
 
         assert_eq!(args.duration(), missing(1, "duration"));
+    }
+
+    #[test]
+    fn test_ref_rect_constructors() {
+        // Test RefRect::new with a simple rect
+        let expected = RefRect::new(Rect::new(10, 20, 30, 40));
+        assert_result("RefRect::new(Rect::new(10, 20, 30, 40))", expected, Arguments::ref_rect);
+
+        // Test RefRect::default
+        let expected = RefRect::default();
+        assert_result("RefRect::default()", expected, Arguments::ref_rect);
+    }
+
+    #[test]
+    fn test_ref_rect_with_chained_rect() {
+        // Test RefRect::new with a chained rect
+        let expected = RefRect::new(
+            Rect::new(0, 0, 100, 50)
+                .inner(Margin::new(5, 2))
+                .intersection(Rect::new(10, 10, 80, 30))
+        );
+        
+        let input = r#"RefRect::new(
+            Rect::new(0, 0, 100, 50)
+                .inner(Margin::new(5, 2))
+                .intersection(Rect::new(10, 10, 80, 30))
+        )"#;
+        
+        assert_result(input, expected, Arguments::ref_rect);
+    }
+
+    #[test]
+    fn test_cell_filter_ref_area() {
+        // Test CellFilter::RefArea with RefRect::new
+        let expected = CellFilter::RefArea(RefRect::new(Rect::new(5, 10, 20, 15)));
+        assert_result(
+            "CellFilter::RefArea(RefRect::new(Rect::new(5, 10, 20, 15)))",
+            expected,
+            Arguments::cell_filter
+        );
+
+        // Test CellFilter::RefArea with RefRect::default
+        let expected = CellFilter::RefArea(RefRect::default());
+        assert_result(
+            "CellFilter::RefArea(RefRect::default())",
+            expected,
+            Arguments::cell_filter
+        );
+    }
+
+    #[test]
+    fn test_compound_cell_filter_with_ref_rect() {
+        // Test RefRect in compound cell filters
+        let ref_rect1 = RefRect::new(Rect::new(0, 0, 50, 25));
+        let ref_rect2 = RefRect::new(Rect::new(25, 12, 50, 25));
+        
+        let expected = CellFilter::AllOf(vec![
+            CellFilter::RefArea(ref_rect1),
+            CellFilter::Not(Box::new(CellFilter::RefArea(ref_rect2)))
+        ]);
+        
+        let input = r#"CellFilter::AllOf(vec![
+            CellFilter::RefArea(RefRect::new(Rect::new(0, 0, 50, 25))),
+            CellFilter::Not(Box::new(CellFilter::RefArea(RefRect::new(Rect::new(25, 12, 50, 25)))))
+        ])"#;
+        
+        assert_result(input, expected, Arguments::cell_filter);
     }
 }
