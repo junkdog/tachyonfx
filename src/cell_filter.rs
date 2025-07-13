@@ -1,5 +1,5 @@
 use crate::color_ext::ToRgbComponents;
-use crate::{ref_count, RefCount, ThreadSafetyMarker};
+use crate::{ref_count, RefCount, RefRect, ThreadSafetyMarker};
 use ratatui::buffer::Cell;
 use ratatui::layout;
 use ratatui::layout::{Margin, Position, Rect};
@@ -28,6 +28,8 @@ pub enum CellFilter {
     All,
     /// Selects cells within the specified area
     Area(Rect),
+    /// Selects cells within the area defined by a RefRect
+    RefArea(RefRect),
     /// Selects cells with matching foreground color
     FgColor(Color),
     /// Selects cells with matching background color
@@ -98,6 +100,7 @@ impl CellFilter {
         match self {
             CellFilter::All             => "all".to_string(),
             CellFilter::Area(area)      => format!("area({})", area),
+            CellFilter::RefArea(ref_rect) => format!("ref_area({})", ref_rect.get()),
             CellFilter::FgColor(color)  => format!("fg({})", to_hex(color)),
             CellFilter::BgColor(color)  => format!("bg({})", to_hex(color)),
             CellFilter::Inner(m)        => format!("inner({})", format_margin(m)),
@@ -151,6 +154,7 @@ impl CellPredicate {
         match mode {
             CellFilter::All                 => area,
             CellFilter::Area(r)             => area.intersection(*r),
+            CellFilter::RefArea(ref_rect)   => area.intersection(ref_rect.get()),
             CellFilter::Inner(margin)       => area.inner(*margin),
             CellFilter::Outer(margin)       => area.inner(*margin),
             CellFilter::Text                => area,
@@ -182,6 +186,7 @@ impl CellPredicate {
         match &self.strategy {
             CellFilter::All           => true,
             CellFilter::Area(_)       => self.filter_area.contains(pos),
+            CellFilter::RefArea(_)    => self.filter_area.contains(pos),
             CellFilter::Layout(_, _)  => self.filter_area.contains(pos),
             CellFilter::Inner(_)      => self.filter_area.contains(pos),
             CellFilter::Outer(_)      => !self.filter_area.contains(pos),
@@ -226,6 +231,7 @@ impl fmt::Debug for CellFilter {
         match self {
             CellFilter::All            => write!(f, "All"),
             CellFilter::Area(area)     => write!(f, "Area({:})", area),
+            CellFilter::RefArea(ref_rect) => write!(f, "RefArea({:?})", ref_rect.get()),
             CellFilter::FgColor(color) => write!(f, "FgColor({:?})", color),
             CellFilter::BgColor(color) => write!(f, "BgColor({:?})", color),
             CellFilter::Inner(margin)  => write!(f, "Inner({:?})", margin),
@@ -265,6 +271,7 @@ impl PartialEq for CellFilter {
         match (self, other) {
             (CellFilter::All, CellFilter::All) => true,
             (CellFilter::Area(r1), CellFilter::Area(r2)) => r1 == r2,
+            (CellFilter::RefArea(r1), CellFilter::RefArea(r2)) => r1.get() == r2.get(),
             (CellFilter::FgColor(c1), CellFilter::FgColor(c2)) => c1 == c2,
             (CellFilter::BgColor(c1), CellFilter::BgColor(c2)) => c1 == c2,
             (CellFilter::Inner(m1), CellFilter::Inner(m2)) => m1 == m2,
@@ -338,6 +345,10 @@ mod tests {
 
         let filter = CellFilter::EvalCell(ref_count(|_| true));
         assert_eq!(filter.to_string(), "eval_cell");
+
+        let ref_rect = RefRect::new(Rect::new(5, 10, 20, 30));
+        let filter = CellFilter::RefArea(ref_rect);
+        assert_eq!(filter.to_string(), "ref_area(20x30+5+10)");
     }
 
     #[test]
@@ -435,5 +446,66 @@ mod tests {
             "X....X",
             "XXXXXX",
         ]));
+    }
+
+    #[test]
+    fn test_ref_area_filter() {
+        let empty = Buffer::with_lines([
+            ". . . . ",
+            ". . . . ",
+            ". . . . ",
+            ". . . . ",
+        ]);
+        let fx = effect_fn((), 1, |_, _, cells| {
+            for (_, c) in cells {
+                c.set_symbol("X");
+            }
+        });
+
+        let ref_rect = RefRect::new(Rect::new(2, 1, 4, 2));
+        let mut buf = empty.clone();
+        let filter = CellFilter::RefArea(ref_rect.clone());
+
+        let area = buf.area().clone();
+        buf.render_effect(&mut fx.clone().with_filter(filter), area, Duration::from_millis(16));
+
+        assert_eq!(buf, Buffer::with_lines([
+            ". . . . ",
+            ". XXXX. ",
+            ". XXXX. ",
+            ". . . . ",
+        ]));
+
+        // Test that changing the RefRect updates the filter area
+        ref_rect.set(Rect::new(0, 0, 2, 2));
+        let mut buf2 = empty.clone();
+        let filter2 = CellFilter::RefArea(ref_rect.clone());
+        buf2.render_effect(&mut fx.clone().with_filter(filter2), area, Duration::from_millis(16));
+
+        assert_eq!(buf2, Buffer::with_lines([
+            "XX. . . ",
+            "XX. . . ",
+            ". . . . ",
+            ". . . . ",
+        ]));
+    }
+
+    #[test]
+    fn test_ref_area_filter_equality() {
+        let ref_rect1 = RefRect::new(Rect::new(0, 0, 10, 10));
+        let ref_rect2 = RefRect::new(Rect::new(0, 0, 10, 10));
+        let ref_rect3 = RefRect::new(Rect::new(5, 5, 10, 10));
+
+        let filter1 = CellFilter::RefArea(ref_rect1.clone());
+        let filter2 = CellFilter::RefArea(ref_rect2);
+        let filter3 = CellFilter::RefArea(ref_rect3.clone());
+
+        assert_eq!(filter1, filter2);
+        assert_ne!(filter1, filter3);
+
+        // Test that changing one RefRect affects equality
+        ref_rect3.set(Rect::new(0, 0, 10, 10));
+        let filter4 = CellFilter::RefArea(ref_rect3);
+        assert_eq!(filter1, filter4);
     }
 }

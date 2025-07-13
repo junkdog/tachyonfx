@@ -6,6 +6,7 @@
 - `fx::dynamic_area`: wraps effects with dynamic area capabilities for responsive layouts.
 - `RefRect`: a reference-counted, mutable rectangle for sharing areas between components.
 - `DynamicArea` shader: enables effects to adapt to changing rectangular areas in real-time.
+- `fx::dispatch_event`: dispatches an event immediately when an effect starts, enabling coordination between visual effects and application logic.
 
 ## tachyonfx 0.15.0 - 2025-04-27
 

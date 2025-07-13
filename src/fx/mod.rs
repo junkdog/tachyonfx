@@ -73,6 +73,7 @@
 //!
 //! | Effect & Description | Preview | Example |
 //! |---------------------|---------|----------|
+//! | [`dispatch_event()`] 📨   | Dispatches events when effects start | N/A |
 //! | [`dynamic_area()`] 📱     | Wraps effects for responsive layouts | N/A |
 //! | [`effect_fn()`] 🔧        | Custom effects with cell iterator | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn.gif) |
 //! | [`effect_fn_buf()`] 🔧    | Custom effects with buffer        | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn_buf.gif) |
@@ -1319,6 +1320,67 @@ pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
 /// ```
 pub fn dynamic_area(area: RefRect, effect: Effect) -> Effect {
     DynamicArea::new(area, effect).into_effect()
+}
+
+/// Creates an effect that dispatches an event as soon as it starts.
+///
+/// This utility function allows effects to trigger application events,
+/// enabling coordination between the visual effect system and application logic.
+/// The event is sent through the provided channel sender immediately when the
+/// effect begins processing.
+///
+/// # Type Parameters
+///
+/// * `T` - Event type that must implement `Clone`, `std::fmt::Debug`, and be thread-safe
+///
+/// # Arguments
+///
+/// * `sender` - Channel sender for dispatching the event
+/// * `event` - Event to be dispatched when the effect starts
+///
+/// # Returns
+///
+/// An `Effect` that dispatches the specified event immediately when started
+///
+/// # Examples
+///
+/// ```no_run
+/// use std::sync::mpsc;
+/// use tachyonfx::{fx, Effect};
+///
+/// #[derive(Clone, Debug)]
+/// enum AppEvent {
+///     EffectStarted,
+///     EffectCompleted,
+/// }
+///
+/// let (tx, rx) = mpsc::channel();
+///
+/// // Create an effect that sends an event when it starts
+/// let notify_effect = fx::dispatch_event(tx.clone(), AppEvent::EffectStarted);
+///
+/// // Combine with other effects in a sequence
+/// let sequence = fx::sequence(&[
+///     notify_effect,
+///     fx::fade_to_fg(ratatui::style::Color::Red, 1000),
+///     fx::dispatch_event(tx, AppEvent::EffectCompleted),
+/// ]);
+/// ```
+///
+/// This is particularly useful for:
+/// - Triggering application state changes when effects start or complete
+/// - Coordinating between visual effects and business logic
+/// - Implementing effect-driven UI updates
+/// - Creating reactive effect chains
+pub fn dispatch_event<T>(sender: std::sync::mpsc::Sender<T>, event: T) -> Effect
+where
+    T: Clone + std::fmt::Debug + ThreadSafetyMarker + 'static,
+{
+    effect_fn_buf(Some(event), 1, move |e, _, _| {
+        if let Some(e) = e.take() {
+            let _ = sender.send(e);
+        }
+    })
 }
 
 

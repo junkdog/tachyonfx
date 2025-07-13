@@ -218,6 +218,7 @@ impl DslFormat for CellFilter {
         match self {
             CellFilter::All             => CompactString::const_new("CellFilter::All"),
             CellFilter::Area(r)         => format_compact!("CellFilter::Area({})", r.dsl_format()),
+            CellFilter::RefArea(ref_rect) => format_compact!("CellFilter::RefArea(RefRect::new({}))", ref_rect.get().dsl_format()),
             CellFilter::FgColor(color)  => format_compact!("CellFilter::FgColor({})", color.dsl_format()),
             CellFilter::BgColor(color)  => format_compact!("CellFilter::BgColor({})", color.dsl_format()),
             CellFilter::Inner(m)        => format_compact!("CellFilter::Inner({})", m.dsl_format()),

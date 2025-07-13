@@ -18,7 +18,8 @@ use ratatui::layout::Rect;
 ///
 /// ```rust
 /// use ratatui::layout::Rect;
-/// use tachyonfx::{fx, RefRect};
+/// use ratatui::prelude::Color;
+/// use tachyonfx::{fx, RefRect, Duration};
 /// use tachyonfx::fx::DynamicArea;
 ///
 /// // Create a shared area reference
@@ -27,7 +28,7 @@ use ratatui::layout::Rect;
 /// // Create an effect that will adapt to area changes
 /// let mut dynamic_effect = DynamicArea::new(
 ///     area_ref.clone(),
-///     fx::fade_in(Duration::from_millis(1000))
+///     fx::fade_to(Color::Red, Color::Blue, Duration::from_millis(1000))
 /// );
 ///
 /// // Later, if the widget area changes, update the effect area
