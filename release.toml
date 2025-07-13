@@ -1,0 +1,15 @@
+# All members share the same version
+shared-version = true
+consolidate-commits = true
+
+# Custom commit/tag messages
+pre-release-commit-message = "chore: release tachyonfx {{version}}"
+tag-message = "🚀 Release {{version}}"
+tag-prefix = "glim-"
+
+dependent-version = "upgrade"
+owners = ["junkdog"]
+
+# Safety: don't push/publish without explicit confirmation
+push = true
+publish = false
