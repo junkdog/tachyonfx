@@ -7,10 +7,14 @@
 - `RefRect`: a reference-counted, mutable rectangle for sharing areas between components.
 - `DynamicArea` shader: enables effects to adapt to changing rectangular areas in real-time.
 - `fx::dispatch_event`: dispatches an event immediately when an effect starts, enabling coordination between visual effects and application logic.
+- `buffer_to_ansi_string()`: new function that replaces `render_as_ansi_string()` with configurable width handling for double-width characters.
 
 ### DSL
 - `RefRect` constructors (`RefRect::new`, `RefRect::default`) are now available in DSL expressions.
 - `CellFilter::RefArea` now supports RefRect for shared area filtering in DSL expressions.
+
+### Deprecated
+- `render_as_ansi_string()`: deprecated in favor of `buffer_to_ansi_string(buffer, false)` which provides the same behavior with more explicit control over cell handling.
 
 ### Fixed
 - `render_as_ansi_string()` now properly handles unicode characters by detecting and skipping space cells that follow multi-width characters, eliminating extra spaces in ANSI output for emoji and CJK text.

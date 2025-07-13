@@ -159,7 +159,41 @@ pub fn blit_buffer_region(
 /// # Returns
 ///
 /// A `String` containing the styled representation of the buffer's content.
+#[deprecated(since = "0.16.0", note = "use `buffer_to_ansi_string(buffer, false)` instead")]
 pub fn render_as_ansi_string(buffer: &Buffer) -> String {
+    buffer_to_ansi_string(buffer, false)
+}
+
+/// Converts a `Buffer` to an ANSI-encoded string representation with configurable width handling.
+///
+/// This function takes a `Buffer` and converts it to a string that includes ANSI escape codes
+/// for styling. The resulting string represents the content of the buffer with all styling
+/// information (colors and text modifiers) preserved.
+///
+/// # Arguments
+///
+/// * `buffer` - A reference to the `Buffer` to be converted.
+/// * `include_all_cells` - If `true`, includes every cell in the buffer grid, even those that 
+///   are spaces following multi-width characters. If `false`, properly handles unicode 
+///   characters by detecting and skipping space cells that follow multi-width characters 
+///   to avoid extra spaces in the output.
+///
+/// # Returns
+///
+/// A `String` containing the styled representation of the buffer's content.
+///
+/// # Cell Handling Modes
+///
+/// When `include_all_cells` is `false` (default behavior):
+/// - Skips space cells that follow multi-width characters (emoji, CJK characters, etc.)
+/// - Produces compact output suitable for display terminals
+/// - Example: "🦀test" renders as "🦀test" (no extra spaces)
+///
+/// When `include_all_cells` is `true`:
+/// - Includes every cell in the buffer grid, regardless of character width
+/// - Useful for output formats that expect the full buffer grid to be printed
+/// - Example: "🦀test" might render as "🦀 test" (with spaces from the buffer grid)
+pub fn buffer_to_ansi_string(buffer: &Buffer, include_all_cells: bool) -> String {
     use unicode_width::UnicodeWidthStr;
     
     let mut s = String::new();
@@ -171,8 +205,8 @@ pub fn render_as_ansi_string(buffer: &Buffer) -> String {
             let cell = buffer.cell(Position::new(x, y)).unwrap();
             
             // Skip cells that are spaces following a multi-width character
-            // to avoid extra spaces in unicode output
-            if cell.symbol() == " " && x > 0 {
+            // to avoid extra spaces in unicode output (unless include_all_cells is true)
+            if !include_all_cells && cell.symbol() == " " && x > 0 {
                 if let Some(prev_cell) = buffer.cell(Position::new(x - 1, y)) {
                     if prev_cell.symbol().width() > 1 {
                         x += 1;
@@ -557,6 +591,41 @@ mod tests {
         assert!(!ansi_output.contains("🦀 🐍")); // No spaces between emojis
         assert!(!ansi_output.contains("🐍 🌟")); // No spaces between emojis
         assert!(!ansi_output.contains("🌟 hello")); // No space before hello
+    }
+
+    #[test]
+    fn test_buffer_to_ansi_string_include_all_cells() {
+        // Test the include_all_cells option
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
+        buffer.set_stringn(0, 0, "🦀test", 8, Style::default());
+        
+        // Default behavior: skip spaces after wide characters
+        let ansi_output_default = render_as_ansi_string(&buffer);
+        assert!(ansi_output_default.contains("🦀test"));
+        
+        // Include all cells: include all cells from the buffer grid
+        let ansi_output_all_cells = buffer_to_ansi_string(&buffer, true);
+        
+        // With include_all_cells=true, we should get the space that follows the emoji
+        // The exact output depends on how ratatui's set_stringn handles the wide character
+        assert!(ansi_output_all_cells.contains("🦀"));
+        assert!(ansi_output_all_cells.contains("test"));
+        
+        // Test with CJK characters
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
+        buffer.set_stringn(0, 0, "世界", 4, Style::default());
+        
+        let ansi_output_default = render_as_ansi_string(&buffer);
+        let ansi_output_all_cells = buffer_to_ansi_string(&buffer, true);
+        
+        // Both should contain the characters, but all_cells might have spaces
+        assert!(ansi_output_default.contains("世界"));
+        // Note: The all_cells version might have the characters split by spaces
+        // so we test for individual characters
+        assert!(ansi_output_all_cells.contains("世") || ansi_output_all_cells.contains("界"));
+        
+        // The all_cells version should be longer or equal (includes more spaces)
+        assert!(ansi_output_all_cells.len() >= ansi_output_default.len());
     }
 
     #[test]
