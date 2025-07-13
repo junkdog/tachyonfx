@@ -148,6 +148,10 @@ pub fn blit_buffer_region(
 /// for styling. The resulting string represents the content of the buffer with all styling
 /// information (colors and text modifiers) preserved.
 ///
+/// This implementation properly handles unicode characters that span multiple cells by:
+/// - Detecting and skipping space cells that follow multi-width characters
+/// - Preserving the correct visual representation of unicode text without extra spaces
+///
 /// # Arguments
 ///
 /// * `buffer` - A reference to the `Buffer` to be converted.
@@ -156,18 +160,35 @@ pub fn blit_buffer_region(
 ///
 /// A `String` containing the styled representation of the buffer's content.
 pub fn render_as_ansi_string(buffer: &Buffer) -> String {
+    use unicode_width::UnicodeWidthStr;
+    
     let mut s = String::new();
     let mut style = Style::default();
 
     for y in 0..buffer.area.height {
-        for x in 0..buffer.area.width {
+        let mut x = 0;
+        while x < buffer.area.width {
             let cell = buffer.cell(Position::new(x, y)).unwrap();
+            
+            // Skip cells that are spaces following a multi-width character
+            // to avoid extra spaces in unicode output
+            if cell.symbol() == " " && x > 0 {
+                if let Some(prev_cell) = buffer.cell(Position::new(x - 1, y)) {
+                    if prev_cell.symbol().width() > 1 {
+                        x += 1;
+                        continue;
+                    }
+                }
+            }
+            
             if cell.style() != style {
                 s.push_str("\x1b[0m"); // reset
                 s.push_str(&escape_code_of(cell.style()));
                 style = cell.style();
             }
+            
             s.push_str(cell.symbol());
+            x += 1;
         }
         s.push_str("\x1b[0m");
         s.push('\n');
@@ -479,6 +500,63 @@ mod tests {
             ". . . . ",
             ". . . . ",
         ]));
+    }
+
+    #[test]
+    fn test_render_as_ansi_string_unicode() {
+        // Test that set_stringn works properly with unicode and ANSI output doesn't have extra spaces
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
+        buffer.set_stringn(0, 0, "🦀test", 8, Style::default());
+        
+        let ansi_output = render_as_ansi_string(&buffer);
+        
+        // Should contain both the emoji and the text directly adjacent (no extra spaces)
+        assert!(ansi_output.contains("🦀test"));
+        
+        // Test with CJK characters  
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
+        buffer.set_stringn(0, 0, "世界test", 8, Style::default());
+        
+        let ansi_output = render_as_ansi_string(&buffer);
+        // Should be directly adjacent, no extra spaces between wide characters
+        assert!(ansi_output.contains("世界test"));
+        
+        // Test with styled unicode
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 6, 1));
+        buffer.set_stringn(0, 0, "🦀", 2, Style::default().fg(Color::Red));
+        buffer.set_stringn(2, 0, "test", 4, Style::default().fg(Color::Blue));
+        
+        let ansi_output = render_as_ansi_string(&buffer);
+        assert!(ansi_output.contains("🦀"));
+        assert!(ansi_output.contains("test"));
+        // Should contain both red and blue color codes
+        assert!(ansi_output.contains("\x1b[38;5;1m")); // Red
+        assert!(ansi_output.contains("\x1b[38;5;4m")); // Blue
+        assert!(ansi_output.contains("\x1b[0m")); // Reset codes
+        
+        // Test edge case: multi-width at end of line
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 3, 1));
+        buffer.set_stringn(0, 0, "a🦀", 3, Style::default());
+        
+        let ansi_output = render_as_ansi_string(&buffer);
+        assert!(ansi_output.contains("a🦀"));
+        assert!(!ansi_output.contains("a🦀 ")); // No trailing space
+    }
+
+    #[test]
+    fn test_render_as_ansi_string_spacing_demo() {
+        // Demonstrate the issue and solution with a clear example
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 12, 1));
+        buffer.set_stringn(0, 0, "🦀🐍🌟hello", 12, Style::default());
+        
+        let ansi_output = render_as_ansi_string(&buffer);
+        
+        // Without proper width handling, this would be "🦀 🐍 🌟 hello" with spaces
+        // With proper width handling, this should be "🦀🐍🌟hello" without extra spaces
+        assert!(ansi_output.contains("🦀🐍🌟hello"));
+        assert!(!ansi_output.contains("🦀 🐍")); // No spaces between emojis
+        assert!(!ansi_output.contains("🐍 🌟")); // No spaces between emojis
+        assert!(!ansi_output.contains("🌟 hello")); // No space before hello
     }
 
     #[test]

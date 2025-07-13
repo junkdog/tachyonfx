@@ -12,6 +12,9 @@
 - `RefRect` constructors (`RefRect::new`, `RefRect::default`) are now available in DSL expressions.
 - `CellFilter::RefArea` now supports RefRect for shared area filtering in DSL expressions.
 
+### Fixed
+- `render_as_ansi_string()` now properly handles unicode characters by detecting and skipping space cells that follow multi-width characters, eliminating extra spaces in ANSI output for emoji and CJK text.
+
 ## tachyonfx 0.15.0 - 2025-04-27
 
 ### Added
