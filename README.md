@@ -23,9 +23,8 @@ A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. B
 
 Add tachyonfx to your `Cargo.toml`:
 
-```toml
-[dependencies]
-tachyonfx = "0.15.0"
+```bash
+cargo add tachyonfx
 ```
 
 Create your first effect:
