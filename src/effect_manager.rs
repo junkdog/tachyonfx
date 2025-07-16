@@ -247,4 +247,94 @@ mod tests {
     fn counter_effect(done_after: usize) -> Effect {
         Effect::new(CounterShader::new(done_after))
     }
+
+    #[test]
+    fn test_effect_manager_with_zero_duration_shader_fn() {
+        use crate::fx;
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let mut manager = EffectManager::<String>::default();
+        let call_count = Rc::new(RefCell::new(0));
+        let call_count_clone = call_count.clone();
+
+        // Create an effect with zero duration using fx::effect_fn
+        let effect = fx::effect_fn((), Duration::ZERO, move |_state, _ctx, _cells| {
+            *call_count_clone.borrow_mut() += 1;
+        });
+
+        manager.add_effect(effect);
+        assert_eq!(manager.effects.len(), 1);
+
+        // Process the effect once
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
+        let area = Rect::new(0, 0, 10, 10);
+        manager.process_effects(Duration::from_millis(1), &mut buffer, area);
+
+        // The effect should have been called at least once and then completed/removed
+        assert_eq!(*call_count.borrow(), 1, "Effect should have been called once");
+        assert_eq!(manager.effects.len(), 0, "Effect should be removed after completion");
+    }
+
+    #[test]
+    fn test_effect_manager_with_normal_duration_shader_fn() {
+        use crate::fx;
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let mut manager = EffectManager::<String>::default();
+        let call_count = Rc::new(RefCell::new(0));
+        let call_count_clone = call_count.clone();
+
+        // Create an effect with 100ms duration
+        let effect = fx::effect_fn((), Duration::from_millis(100), move |_state, _ctx, _cells| {
+            *call_count_clone.borrow_mut() += 1;
+        });
+
+        manager.add_effect(effect);
+        assert_eq!(manager.effects.len(), 1);
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
+        let area = Rect::new(0, 0, 10, 10);
+
+        // Process for 50ms - effect should still be running
+        manager.process_effects(Duration::from_millis(50), &mut buffer, area);
+        assert_eq!(*call_count.borrow(), 1);
+        assert_eq!(manager.effects.len(), 1, "Effect should still be running");
+
+        // Process for another 60ms (total 110ms) - effect should complete
+        manager.process_effects(Duration::from_millis(60), &mut buffer, area);
+        assert_eq!(*call_count.borrow(), 2);
+        assert_eq!(manager.effects.len(), 0, "Effect should be completed and removed");
+    }
+
+    #[test]
+    fn test_multiple_zero_duration_shader_fn_effects() {
+        use crate::fx;
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let mut manager = EffectManager::<String>::default();
+        let call_count = Rc::new(RefCell::new(0));
+
+        // Add multiple zero-duration effects
+        for i in 0..3 {
+            let call_count_clone = call_count.clone();
+            let effect = fx::effect_fn(i, Duration::ZERO, move |state, _ctx, _cells| {
+                *call_count_clone.borrow_mut() += *state + 1;
+            });
+            manager.add_effect(effect);
+        }
+
+        assert_eq!(manager.effects.len(), 3);
+
+        // Process once - all effects should run and be removed
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
+        let area = Rect::new(0, 0, 10, 10);
+        manager.process_effects(Duration::from_millis(1), &mut buffer, area);
+
+        // Total call count should be 0+1 + 1+1 + 2+1 = 6
+        assert_eq!(*call_count.borrow(), 6, "All effects should have been called");
+        assert_eq!(manager.effects.len(), 0, "All effects should be completed and removed");
+    }
 }

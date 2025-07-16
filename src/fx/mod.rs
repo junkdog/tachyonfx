@@ -1376,7 +1376,7 @@ pub fn dispatch_event<T>(sender: std::sync::mpsc::Sender<T>, event: T) -> Effect
 where
     T: Clone + std::fmt::Debug + ThreadSafetyMarker + 'static,
 {
-    effect_fn_buf(Some(event), 1, move |e, _, _| {
+    effect_fn_buf(Some(event), 0, move |e, _, _| {
         if let Some(e) = e.take() {
             let _ = sender.send(e);
         }
