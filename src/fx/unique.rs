@@ -4,39 +4,36 @@ use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
     features::acquire_ref, CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefCount, Shader,
-    ThreadSafetyMarker,
 };
 
 pub type InstanceId = u32;
 
 #[derive(Clone, Debug)]
-pub struct Unique<K: Clone + ThreadSafetyMarker> {
-    id_context: RefCount<UniqueContext<K>>,
+pub(crate) struct Unique {
+    id_context: RefCount<UniqueContext>,
     instance_id: InstanceId,
     fx: Effect,
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
-pub(crate) struct UniqueContext<K: Clone + ThreadSafetyMarker> {
-    pub key: K,
+pub(crate) struct UniqueContext {
     pub instance_id: InstanceId,
 }
 
-impl<K: Clone + ThreadSafetyMarker> UniqueContext<K> {
-    pub(crate) fn new(key: impl Into<K>, instance_id: InstanceId) -> Self {
-        Self { key: key.into(), instance_id }
+impl UniqueContext {
+    pub(crate) fn new(instance_id: InstanceId) -> Self {
+        Self { instance_id }
     }
 }
 
-impl<K: Clone + ThreadSafetyMarker> Unique<K> {
-    pub(crate) fn new(id_context: RefCount<UniqueContext<K>>, fx: Effect) -> Self {
+impl Unique {
+    pub(crate) fn new(id_context: RefCount<UniqueContext>, fx: Effect) -> Self {
         let instance_id = acquire_ref(&id_context).instance_id;
         Self { id_context, instance_id, fx }
     }
 }
 
-impl<K: Clone + Debug + ThreadSafetyMarker + 'static> Shader for Unique<K> {
+impl Shader for Unique {
     fn name(&self) -> &'static str {
         "unique"
     }

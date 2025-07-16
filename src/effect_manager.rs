@@ -17,7 +17,7 @@ use crate::{
 #[derive(Default)]
 pub struct EffectManager<K: Clone + Ord + ThreadSafetyMarker + 'static> {
     effects: Vec<Effect>,
-    uniques: BTreeMap<K, RefCount<UniqueContext<K>>>,
+    uniques: BTreeMap<K, RefCount<UniqueContext>>,
     rng: SimpleRng,
 }
 
@@ -44,7 +44,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
             .uniques
             .entry(key.clone())
             .and_modify(|ctx| acquire_mut(ctx).instance_id = self.rng.gen())
-            .or_insert_with(|| ref_count(UniqueContext::new(key.clone(), self.rng.gen())))
+            .or_insert_with(|| ref_count(UniqueContext::new(self.rng.gen())))
             .clone();
 
         Unique::new(ctx, fx.into()).into_effect()

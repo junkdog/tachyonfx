@@ -32,29 +32,25 @@ mod sendable {
 
 #[cfg(feature = "sendable")]
 pub(crate) fn acquire_mut<K: Clone + ThreadSafetyMarker>(
-    ctx: &RefCount<UniqueContext<K>>,
-) -> std::sync::MutexGuard<'_, UniqueContext<K>> {
+    ctx: &RefCount<UniqueContext>,
+) -> std::sync::MutexGuard<'_, UniqueContext> {
     ctx.lock().unwrap()
 }
 
 #[cfg(feature = "sendable")]
 pub(crate) fn acquire_ref<K: Clone + ThreadSafetyMarker>(
-    ctx: &RefCount<UniqueContext<K>>,
-) -> std::sync::MutexGuard<'_, UniqueContext<K>> {
+    ctx: &RefCount<UniqueContext>,
+) -> std::sync::MutexGuard<'_, UniqueContext> {
     ctx.lock().unwrap()
 }
 
 #[cfg(not(feature = "sendable"))]
-pub(crate) fn acquire_mut<K: Clone + ThreadSafetyMarker>(
-    ctx: &RefCount<UniqueContext<K>>,
-) -> std::cell::RefMut<'_, UniqueContext<K>> {
+pub(crate) fn acquire_mut(ctx: &RefCount<UniqueContext>) -> std::cell::RefMut<'_, UniqueContext> {
     ctx.borrow_mut()
 }
 
 #[cfg(not(feature = "sendable"))]
-pub(crate) fn acquire_ref<K: Clone + ThreadSafetyMarker>(
-    ctx: &RefCount<UniqueContext<K>>,
-) -> std::cell::Ref<'_, UniqueContext<K>> {
+pub(crate) fn acquire_ref(ctx: &RefCount<UniqueContext>) -> std::cell::Ref<'_, UniqueContext> {
     ctx.borrow()
 }
 
