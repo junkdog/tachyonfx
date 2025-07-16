@@ -1,13 +1,10 @@
 use compact_str::ToCompactString;
-use ratatui::buffer::Buffer;
-use ratatui::prelude::Rect;
+use ratatui::{buffer::Buffer, prelude::Rect};
 
-use crate::bounding_box::BoundingBox;
-use crate::{CellFilter, ColorSpace, Duration};
-use crate::effect::Effect;
-use crate::effect_timer::EffectTimer;
-use crate::interpolation::Interpolatable;
-use crate::shader::Shader;
+use crate::{
+    bounding_box::BoundingBox, effect::Effect, effect_timer::EffectTimer,
+    interpolation::Interpolatable, shader::Shader, CellFilter, ColorSpace, Duration,
+};
 
 #[derive(Clone, Default, Debug)]
 pub struct Translate {
@@ -19,14 +16,15 @@ pub struct Translate {
 }
 
 impl Translate {
-    pub fn new(
-        fx: Option<Effect>,
-        translate_by: (i16, i16),
-        lifetime: EffectTimer
-    ) -> Self {
+    pub fn new(fx: Option<Effect>, translate_by: (i16, i16), lifetime: EffectTimer) -> Self {
         let (dx, dy) = translate_by;
         let translate_by = (dx as f32, dy as f32);
-        Self { fx, translate_by, timer: lifetime, ..Self::default() }
+        Self {
+            fx,
+            translate_by,
+            timer: lifetime,
+            ..Self::default()
+        }
     }
 }
 
@@ -35,12 +33,7 @@ impl Shader for Translate {
         "translate_by"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let overflow = self.timer.process(duration);
         let alpha = self.timer.alpha();
 
@@ -49,7 +42,9 @@ impl Shader for Translate {
         }
 
         let (dx, dy) = (0.0, 0.0).lerp(&self.translate_by, alpha);
-        let translated_area = self.original_area.as_ref()
+        let translated_area = self
+            .original_area
+            .as_ref()
             .map(|a| a.translate(dx, dy))
             .and_then(|a| a.as_rect(buf.area));
 
@@ -62,7 +57,7 @@ impl Shader for Translate {
             // only return the overflow if the fx is done and this translate is done
             match (overflow, hosted_overflow) {
                 (Some(a), Some(b)) => Some(a.min(b)),
-                _ => None
+                _ => None,
             }
         } else {
             overflow
@@ -70,8 +65,7 @@ impl Shader for Translate {
     }
 
     fn done(&self) -> bool {
-        self.timer.done()
-            && self.fx.as_ref().is_none_or(Effect::done)
+        self.timer.done() && self.fx.as_ref().is_none_or(Effect::done)
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -117,7 +111,10 @@ impl Shader for Translate {
     }
 
     fn color_space(&self) -> ColorSpace {
-        self.fx.as_ref().map(|e| e.color_space()).unwrap_or_default()
+        self.fx
+            .as_ref()
+            .map(|e| e.color_space())
+            .unwrap_or_default()
     }
 
     fn reset(&mut self) {
@@ -129,9 +126,7 @@ impl Shader for Translate {
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-        Err(crate::dsl::DslError::UnsupportedEffect {
-            name: self.name().to_compact_string(),
-        })
+        Err(crate::dsl::DslError::UnsupportedEffect { name: self.name().to_compact_string() })
     }
 }
 
@@ -139,16 +134,10 @@ impl Shader for Translate {
 mod tests {
     use ratatui::widgets::{Block, Borders, Widget};
 
-    use crate::CenteredShrink;
-    use crate::Interpolation::Linear;
-
     use super::*;
+    use crate::{CenteredShrink, Interpolation::Linear};
 
-    fn assert_translation(
-        translate_by: (i16, i16),
-        percent: u8,
-        expected: Buffer,
-    ) {
+    fn assert_translation(translate_by: (i16, i16), percent: u8, expected: Buffer) {
         assert_translation_fx(translate_fx(translate_by), percent, expected);
     }
 
@@ -156,11 +145,7 @@ mod tests {
         Translate::new(None, translate_by, EffectTimer::from_ms(100, Linear))
     }
 
-    fn assert_translation_fx(
-        fx: Translate,
-        percent: u8,
-        expected: Buffer,
-    ) {
+    fn assert_translation_fx(fx: Translate, percent: u8, expected: Buffer) {
         let screen = Rect::new(0, 0, 20, 10);
         let content = screen.inner_centered(10, 4);
 
@@ -169,9 +154,7 @@ mod tests {
         let mut fx = fx.clone();
         fx.process(Duration::from_millis(percent as _), &mut buf, content);
 
-        let block = Block::new()
-            .borders(Borders::ALL)
-            .title("hello");
+        let block = Block::new().borders(Borders::ALL).title("hello");
 
         block.render(fx.area.unwrap(), &mut buf);
 
@@ -180,242 +163,314 @@ mod tests {
 
     #[test]
     fn test_translate_within_bounds() {
-        assert_translation((0, 3), 0, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "     ┌hello───┐     ",
-            "     │        │     ",
-            "     │        │     ",
-            "     └────────┘     ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation((0, 3), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "     ┌hello───┐     ",
-            "     │        │     ",
-            "     │        │     ",
-            "     └────────┘     ",
-        ]));
-        assert_translation((0, -3), 100, Buffer::with_lines([
-            "     ┌hello───┐     ",
-            "     │        │     ",
-            "     │        │     ",
-            "     └────────┘     ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation((-5, -3), 100, Buffer::with_lines([
-            "┌hello───┐          ",
-            "│        │          ",
-            "│        │          ",
-            "└────────┘          ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation((5, 3), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "          ┌hello───┐",
-            "          │        │",
-            "          │        │",
-            "          └────────┘",
-        ]));
+        assert_translation(
+            (0, 3),
+            0,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "     ┌hello───┐     ",
+                "     │        │     ",
+                "     │        │     ",
+                "     └────────┘     ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            (0, 3),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "     ┌hello───┐     ",
+                "     │        │     ",
+                "     │        │     ",
+                "     └────────┘     ",
+            ]),
+        );
+        assert_translation(
+            (0, -3),
+            100,
+            Buffer::with_lines([
+                "     ┌hello───┐     ",
+                "     │        │     ",
+                "     │        │     ",
+                "     └────────┘     ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            (-5, -3),
+            100,
+            Buffer::with_lines([
+                "┌hello───┐          ",
+                "│        │          ",
+                "│        │          ",
+                "└────────┘          ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            (5, 3),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "          ┌hello───┐",
+                "          │        │",
+                "          │        │",
+                "          └────────┘",
+            ]),
+        );
     }
 
     #[test]
     fn translate_reversed() {
         let mut fx = translate_fx((-5, -3));
         fx.reverse();
-        assert_translation_fx(fx, 0, Buffer::with_lines([
-            "┌hello───┐          ",
-            "│        │          ",
-            "│        │          ",
-            "└────────┘          ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation_fx(
+            fx,
+            0,
+            Buffer::with_lines([
+                "┌hello───┐          ",
+                "│        │          ",
+                "│        │          ",
+                "└────────┘          ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
 
         let mut fx = translate_fx((5, 3));
         fx.reverse();
-        assert_translation_fx(fx, 0, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "          ┌hello───┐",
-            "          │        │",
-            "          │        │",
-            "          └────────┘",
-        ]));
+        assert_translation_fx(
+            fx,
+            0,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "          ┌hello───┐",
+                "          │        │",
+                "          │        │",
+                "          └────────┘",
+            ]),
+        );
     }
 
     #[test]
     fn translate_oob() {
         // down
-        assert_translation((0, 5), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "     ┌hello───┐     ",
-            "     └────────┘     ",
-        ]));
-        assert_translation((0, 6), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "     ┌hello───┐     ",
-        ]));
-        assert_translation((0, 7), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            (0, 5),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "     ┌hello───┐     ",
+                "     └────────┘     ",
+            ]),
+        );
+        assert_translation(
+            (0, 6),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "     ┌hello───┐     ",
+            ]),
+        );
+        assert_translation(
+            (0, 7),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
 
         // up
-        assert_translation((0, -5), 100, Buffer::with_lines([
-            "     ┌hello───┐     ",
-            "     └────────┘     ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation((0, -7), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            (0, -5),
+            100,
+            Buffer::with_lines([
+                "     ┌hello───┐     ",
+                "     └────────┘     ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            (0, -7),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
 
         // right
-        assert_translation((7, 0), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "            ┌hello─┐",
-            "            │      │",
-            "            │      │",
-            "            └──────┘",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            (7, 0),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "            ┌hello─┐",
+                "            │      │",
+                "            │      │",
+                "            └──────┘",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
         // right
-        assert_translation((12, 0), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                 ┌h┐",
-            "                 │ │",
-            "                 │ │",
-            "                 └─┘",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation((15, 0), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            (12, 0),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                 ┌h┐",
+                "                 │ │",
+                "                 │ │",
+                "                 └─┘",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            (15, 0),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
 
         // left
-        assert_translation((-7, 0), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "┌hello─┐            ",
-            "│      │            ",
-            "│      │            ",
-            "└──────┘            ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation((-12, 0), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "┌h┐                 ",
-            "│ │                 ",
-            "│ │                 ",
-            "└─┘                 ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation((-15, 0), 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            (-7, 0),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "┌hello─┐            ",
+                "│      │            ",
+                "│      │            ",
+                "└──────┘            ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            (-12, 0),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "┌h┐                 ",
+                "│ │                 ",
+                "│ │                 ",
+                "└─┘                 ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            (-15, 0),
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
     }
 }

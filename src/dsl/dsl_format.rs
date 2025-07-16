@@ -1,14 +1,17 @@
-use crate::fx::RepeatMode;
-use crate::{CellFilter, ColorSpace, Duration, EffectTimer, Interpolation, Motion};
 use compact_str::{format_compact, CompactString, CompactStringExt, ToCompactString};
-use ratatui::layout::{Constraint, Direction, Margin, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::{
+    layout::{Constraint, Direction, Margin, Rect},
+    style::{Color, Modifier, Style},
+};
 
-/// A trait for converting types into their DSL (Domain Specific Language) string representation.
+use crate::{fx::RepeatMode, CellFilter, ColorSpace, Duration, EffectTimer, Interpolation, Motion};
+
+/// A trait for converting types into their DSL (Domain Specific Language) string
+/// representation.
 ///
-/// This trait enables types to be formatted as valid tachyonfx DSL expressions that can be
-/// parsed back into effect definitions. It's primarily used for serializing effects and their
-/// parameters into a textual format that matches the tachyonfx DSL syntax.
+/// This trait enables types to be formatted as valid tachyonfx DSL expressions that can
+/// be parsed back into effect definitions. It's primarily used for serializing effects
+/// and their parameters into a textual format that matches the tachyonfx DSL syntax.
 pub trait DslFormat {
     /// Converts the type into its DSL string representation.
     ///
@@ -24,33 +27,40 @@ pub trait DslFormat {
 impl DslFormat for Color {
     fn dsl_format(&self) -> CompactString {
         match self {
-            Color::Reset        => "Color::Reset",
-            Color::Black        => "Color::Black",
-            Color::Red          => "Color::Red",
-            Color::Green        => "Color::Green",
-            Color::Yellow       => "Color::Yellow",
-            Color::Blue         => "Color::Blue",
-            Color::Magenta      => "Color::Magenta",
-            Color::Cyan         => "Color::Cyan",
-            Color::Gray         => "Color::Gray",
-            Color::DarkGray     => "Color::DarkGray",
-            Color::LightRed     => "Color::LightRed",
-            Color::LightGreen   => "Color::LightGreen",
-            Color::LightYellow  => "Color::LightYellow",
-            Color::LightBlue    => "Color::LightBlue",
+            Color::Reset => "Color::Reset",
+            Color::Black => "Color::Black",
+            Color::Red => "Color::Red",
+            Color::Green => "Color::Green",
+            Color::Yellow => "Color::Yellow",
+            Color::Blue => "Color::Blue",
+            Color::Magenta => "Color::Magenta",
+            Color::Cyan => "Color::Cyan",
+            Color::Gray => "Color::Gray",
+            Color::DarkGray => "Color::DarkGray",
+            Color::LightRed => "Color::LightRed",
+            Color::LightGreen => "Color::LightGreen",
+            Color::LightYellow => "Color::LightYellow",
+            Color::LightBlue => "Color::LightBlue",
             Color::LightMagenta => "Color::LightMagenta",
-            Color::LightCyan    => "Color::LightCyan",
-            Color::White        => "Color::White",
-            Color::Indexed(i)   => return format_compact!("Color::Indexed({i})"),
-            Color::Rgb(r, g, b) => return format_compact!("Color::from_u32(0x{r:02x}{g:02x}{b:02x})")
-        }.to_compact_string()
+            Color::LightCyan => "Color::LightCyan",
+            Color::White => "Color::White",
+            Color::Indexed(i) => return format_compact!("Color::Indexed({i})"),
+            Color::Rgb(r, g, b) => {
+                return format_compact!("Color::from_u32(0x{r:02x}{g:02x}{b:02x})")
+            },
+        }
+        .to_compact_string()
     }
 }
 
 impl DslFormat for Rect {
     fn dsl_format(&self) -> CompactString {
-        format_compact!("Rect::new({}, {}, {}, {})",
-            self.x, self.y, self.width, self.height
+        format_compact!(
+            "Rect::new({}, {}, {}, {})",
+            self.x,
+            self.y,
+            self.width,
+            self.height
         )
     }
 }
@@ -74,8 +84,8 @@ impl DslFormat for bool {
 impl DslFormat for RepeatMode {
     fn dsl_format(&self) -> CompactString {
         match self {
-            RepeatMode::Forever     => "RepeatMode::Forever".to_compact_string(),
-            RepeatMode::Times(n)    => format_compact!("RepeatMode::Times({n})"),
+            RepeatMode::Forever => "RepeatMode::Forever".to_compact_string(),
+            RepeatMode::Times(n) => format_compact!("RepeatMode::Times({n})"),
             RepeatMode::Duration(d) => format_compact!("RepeatMode::Duration({})", d.dsl_format()),
         }
     }
@@ -86,9 +96,10 @@ impl DslFormat for Motion {
         match self {
             Motion::LeftToRight => "Motion::LeftToRight",
             Motion::RightToLeft => "Motion::RightToLeft",
-            Motion::UpToDown    => "Motion::UpToDown",
-            Motion::DownToUp    => "Motion::DownToUp",
-        }.to_compact_string()
+            Motion::UpToDown => "Motion::UpToDown",
+            Motion::DownToUp => "Motion::DownToUp",
+        }
+        .to_compact_string()
     }
 }
 
@@ -157,13 +168,15 @@ impl DslFormat for Interpolation {
             Interpolation::SineIn => "Interpolation::SineIn",
             Interpolation::SineOut => "Interpolation::SineOut",
             Interpolation::SineInOut => "Interpolation::SineInOut",
-        }.to_compact_string()
+        }
+        .to_compact_string()
     }
 }
 
 impl DslFormat for EffectTimer {
     fn dsl_format(&self) -> CompactString {
-        format_compact!("EffectTimer::from_ms({}, {})",
+        format_compact!(
+            "EffectTimer::from_ms({}, {})",
             self.duration().as_millis(),
             self.interpolation().dsl_format(),
         )
@@ -194,7 +207,8 @@ impl DslFormat for Direction {
         match self {
             Direction::Horizontal => "Direction::Horizontal",
             Direction::Vertical => "Direction::Vertical",
-        }.to_compact_string()
+        }
+        .to_compact_string()
     }
 }
 
@@ -209,58 +223,76 @@ impl DslFormat for CellFilter {
         use std::borrow::Borrow;
 
         fn format(filters: &[CellFilter]) -> CompactString {
-            filters.iter()
+            filters
+                .iter()
                 .map(CellFilter::to_string)
                 .collect::<Vec<String>>()
                 .join_compact(", ")
         }
 
         match self {
-            CellFilter::All             => CompactString::const_new("CellFilter::All"),
-            CellFilter::Area(r)         => format_compact!("CellFilter::Area({})", r.dsl_format()),
-            CellFilter::RefArea(ref_rect) => format_compact!("CellFilter::RefArea(RefRect::new({}))", ref_rect.get().dsl_format()),
-            CellFilter::FgColor(color)  => format_compact!("CellFilter::FgColor({})", color.dsl_format()),
-            CellFilter::BgColor(color)  => format_compact!("CellFilter::BgColor({})", color.dsl_format()),
-            CellFilter::Inner(m)        => format_compact!("CellFilter::Inner({})", m.dsl_format()),
-            CellFilter::Outer(m)        => format_compact!("CellFilter::Outer({})", m.dsl_format()),
-            CellFilter::Text            => CompactString::const_new("CellFilter::Text"),
-            CellFilter::AllOf(filters)  => format_compact!("CellFilter::AllOf({})", format(filters)),
-            CellFilter::AnyOf(filters)  => format_compact!("CellFilter::AnyOf({})", format(filters)),
-            CellFilter::NoneOf(filters) => format_compact!("CellFilter::NoneOf({})", format(filters)),
-            CellFilter::Not(filter)     => {
+            CellFilter::All => CompactString::const_new("CellFilter::All"),
+            CellFilter::Area(r) => format_compact!("CellFilter::Area({})", r.dsl_format()),
+            CellFilter::RefArea(ref_rect) => format_compact!(
+                "CellFilter::RefArea(RefRect::new({}))",
+                ref_rect.get().dsl_format()
+            ),
+            CellFilter::FgColor(color) => {
+                format_compact!("CellFilter::FgColor({})", color.dsl_format())
+            },
+            CellFilter::BgColor(color) => {
+                format_compact!("CellFilter::BgColor({})", color.dsl_format())
+            },
+            CellFilter::Inner(m) => format_compact!("CellFilter::Inner({})", m.dsl_format()),
+            CellFilter::Outer(m) => format_compact!("CellFilter::Outer({})", m.dsl_format()),
+            CellFilter::Text => CompactString::const_new("CellFilter::Text"),
+            CellFilter::AllOf(filters) => format_compact!("CellFilter::AllOf({})", format(filters)),
+            CellFilter::AnyOf(filters) => format_compact!("CellFilter::AnyOf({})", format(filters)),
+            CellFilter::NoneOf(filters) => {
+                format_compact!("CellFilter::NoneOf({})", format(filters))
+            },
+            CellFilter::Not(filter) => {
                 let f: &CellFilter = filter.borrow();
                 format_compact!("Not(Box::new({}))", f.dsl_format())
             },
-            CellFilter::Layout(l, idx)  => format_compact!("CellFilter::Layout({l:#?}, {idx})"),
-            CellFilter::PositionFn(_)   => "CellFilter::PositionFn(fn)".to_compact_string(),
-            CellFilter::EvalCell(_)     => "CellFilter::EvalCell(fn)".to_compact_string(),
+            CellFilter::Layout(l, idx) => format_compact!("CellFilter::Layout({l:#?}, {idx})"),
+            CellFilter::PositionFn(_) => "CellFilter::PositionFn(fn)".to_compact_string(),
+            CellFilter::EvalCell(_) => "CellFilter::EvalCell(fn)".to_compact_string(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::dsl::DslFormat;
-    use crate::fx::RepeatMode;
-    use crate::{Duration, EffectTimer, Interpolation, Motion};
     use ratatui::style::{Color, Modifier, Style};
+
+    use crate::{dsl::DslFormat, fx::RepeatMode, Duration, EffectTimer, Interpolation, Motion};
 
     #[test]
     fn test_color_dsl_format() {
         // Test basic colors
-        assert_eq!(Color::Black.dsl_format(),   "Color::Black");
-        assert_eq!(Color::Red.dsl_format(),     "Color::Red");
-        assert_eq!(Color::Green.dsl_format(),   "Color::Green");
-        assert_eq!(Color::Yellow.dsl_format(),  "Color::Yellow");
-        assert_eq!(Color::Blue.dsl_format(),    "Color::Blue");
+        assert_eq!(Color::Black.dsl_format(), "Color::Black");
+        assert_eq!(Color::Red.dsl_format(), "Color::Red");
+        assert_eq!(Color::Green.dsl_format(), "Color::Green");
+        assert_eq!(Color::Yellow.dsl_format(), "Color::Yellow");
+        assert_eq!(Color::Blue.dsl_format(), "Color::Blue");
         assert_eq!(Color::Magenta.dsl_format(), "Color::Magenta");
-        assert_eq!(Color::Cyan.dsl_format(),    "Color::Cyan");
-        assert_eq!(Color::White.dsl_format(),   "Color::White");
+        assert_eq!(Color::Cyan.dsl_format(), "Color::Cyan");
+        assert_eq!(Color::White.dsl_format(), "Color::White");
 
         // Test RGB colors
-        assert_eq!(Color::Rgb(255, 127, 63).dsl_format(), "Color::from_u32(0xff7f3f)");
-        assert_eq!(Color::Rgb(0, 0, 0).dsl_format(), "Color::from_u32(0x000000)");
-        assert_eq!(Color::Rgb(255, 255, 255).dsl_format(), "Color::from_u32(0xffffff)");
+        assert_eq!(
+            Color::Rgb(255, 127, 63).dsl_format(),
+            "Color::from_u32(0xff7f3f)"
+        );
+        assert_eq!(
+            Color::Rgb(0, 0, 0).dsl_format(),
+            "Color::from_u32(0x000000)"
+        );
+        assert_eq!(
+            Color::Rgb(255, 255, 255).dsl_format(),
+            "Color::from_u32(0xffffff)"
+        );
 
         // Test indexed colors
         let indexed_color = Color::Indexed(42);
@@ -275,7 +307,10 @@ mod tests {
         // Test Times mode
         assert_eq!(RepeatMode::Times(3).dsl_format(), "RepeatMode::Times(3)");
         assert_eq!(RepeatMode::Times(1).dsl_format(), "RepeatMode::Times(1)");
-        assert_eq!(RepeatMode::Times(100).dsl_format(), "RepeatMode::Times(100)");
+        assert_eq!(
+            RepeatMode::Times(100).dsl_format(),
+            "RepeatMode::Times(100)"
+        );
 
         // Test Duration mode
         assert_eq!(
@@ -326,7 +361,9 @@ mod tests {
         assert_eq!(style_mod.dsl_format(), "Style::new().add_modifier(BOLD)");
 
         // Test style with multiple modifiers
-        let style_mods = Style::new().add_modifier(Modifier::BOLD).add_modifier(Modifier::ITALIC);
+        let style_mods = Style::new()
+            .add_modifier(Modifier::BOLD)
+            .add_modifier(Modifier::ITALIC);
         assert_eq!(
             style_mods.dsl_format(),
             "Style::new().add_modifier(BOLD).add_modifier(ITALIC)"
@@ -370,57 +407,135 @@ mod tests {
     fn test_interpolation_dsl_format() {
         // Test all interpolation variants
         assert_eq!(Interpolation::Linear.dsl_format(), "Interpolation::Linear");
-        assert_eq!(Interpolation::Reverse.dsl_format(), "Interpolation::Reverse");
+        assert_eq!(
+            Interpolation::Reverse.dsl_format(),
+            "Interpolation::Reverse"
+        );
 
         // Back family
         assert_eq!(Interpolation::BackIn.dsl_format(), "Interpolation::BackIn");
-        assert_eq!(Interpolation::BackOut.dsl_format(), "Interpolation::BackOut");
-        assert_eq!(Interpolation::BackInOut.dsl_format(), "Interpolation::BackInOut");
+        assert_eq!(
+            Interpolation::BackOut.dsl_format(),
+            "Interpolation::BackOut"
+        );
+        assert_eq!(
+            Interpolation::BackInOut.dsl_format(),
+            "Interpolation::BackInOut"
+        );
 
         // Bounce family
-        assert_eq!(Interpolation::BounceIn.dsl_format(), "Interpolation::BounceIn");
-        assert_eq!(Interpolation::BounceOut.dsl_format(), "Interpolation::BounceOut");
-        assert_eq!(Interpolation::BounceInOut.dsl_format(), "Interpolation::BounceInOut");
+        assert_eq!(
+            Interpolation::BounceIn.dsl_format(),
+            "Interpolation::BounceIn"
+        );
+        assert_eq!(
+            Interpolation::BounceOut.dsl_format(),
+            "Interpolation::BounceOut"
+        );
+        assert_eq!(
+            Interpolation::BounceInOut.dsl_format(),
+            "Interpolation::BounceInOut"
+        );
 
         // Circ family
         assert_eq!(Interpolation::CircIn.dsl_format(), "Interpolation::CircIn");
-        assert_eq!(Interpolation::CircOut.dsl_format(), "Interpolation::CircOut");
-        assert_eq!(Interpolation::CircInOut.dsl_format(), "Interpolation::CircInOut");
+        assert_eq!(
+            Interpolation::CircOut.dsl_format(),
+            "Interpolation::CircOut"
+        );
+        assert_eq!(
+            Interpolation::CircInOut.dsl_format(),
+            "Interpolation::CircInOut"
+        );
 
         // Cubic family
-        assert_eq!(Interpolation::CubicIn.dsl_format(), "Interpolation::CubicIn");
-        assert_eq!(Interpolation::CubicOut.dsl_format(), "Interpolation::CubicOut");
-        assert_eq!(Interpolation::CubicInOut.dsl_format(), "Interpolation::CubicInOut");
+        assert_eq!(
+            Interpolation::CubicIn.dsl_format(),
+            "Interpolation::CubicIn"
+        );
+        assert_eq!(
+            Interpolation::CubicOut.dsl_format(),
+            "Interpolation::CubicOut"
+        );
+        assert_eq!(
+            Interpolation::CubicInOut.dsl_format(),
+            "Interpolation::CubicInOut"
+        );
 
         // Elastic family
-        assert_eq!(Interpolation::ElasticIn.dsl_format(), "Interpolation::ElasticIn");
-        assert_eq!(Interpolation::ElasticOut.dsl_format(), "Interpolation::ElasticOut");
-        assert_eq!(Interpolation::ElasticInOut.dsl_format(), "Interpolation::ElasticInOut");
+        assert_eq!(
+            Interpolation::ElasticIn.dsl_format(),
+            "Interpolation::ElasticIn"
+        );
+        assert_eq!(
+            Interpolation::ElasticOut.dsl_format(),
+            "Interpolation::ElasticOut"
+        );
+        assert_eq!(
+            Interpolation::ElasticInOut.dsl_format(),
+            "Interpolation::ElasticInOut"
+        );
 
         // Expo family
         assert_eq!(Interpolation::ExpoIn.dsl_format(), "Interpolation::ExpoIn");
-        assert_eq!(Interpolation::ExpoOut.dsl_format(), "Interpolation::ExpoOut");
-        assert_eq!(Interpolation::ExpoInOut.dsl_format(), "Interpolation::ExpoInOut");
+        assert_eq!(
+            Interpolation::ExpoOut.dsl_format(),
+            "Interpolation::ExpoOut"
+        );
+        assert_eq!(
+            Interpolation::ExpoInOut.dsl_format(),
+            "Interpolation::ExpoInOut"
+        );
 
         // Quad family
         assert_eq!(Interpolation::QuadIn.dsl_format(), "Interpolation::QuadIn");
-        assert_eq!(Interpolation::QuadOut.dsl_format(), "Interpolation::QuadOut");
-        assert_eq!(Interpolation::QuadInOut.dsl_format(), "Interpolation::QuadInOut");
+        assert_eq!(
+            Interpolation::QuadOut.dsl_format(),
+            "Interpolation::QuadOut"
+        );
+        assert_eq!(
+            Interpolation::QuadInOut.dsl_format(),
+            "Interpolation::QuadInOut"
+        );
 
         // Quart family
-        assert_eq!(Interpolation::QuartIn.dsl_format(), "Interpolation::QuartIn");
-        assert_eq!(Interpolation::QuartOut.dsl_format(), "Interpolation::QuartOut");
-        assert_eq!(Interpolation::QuartInOut.dsl_format(), "Interpolation::QuartInOut");
+        assert_eq!(
+            Interpolation::QuartIn.dsl_format(),
+            "Interpolation::QuartIn"
+        );
+        assert_eq!(
+            Interpolation::QuartOut.dsl_format(),
+            "Interpolation::QuartOut"
+        );
+        assert_eq!(
+            Interpolation::QuartInOut.dsl_format(),
+            "Interpolation::QuartInOut"
+        );
 
         // Quint family
-        assert_eq!(Interpolation::QuintIn.dsl_format(), "Interpolation::QuintIn");
-        assert_eq!(Interpolation::QuintOut.dsl_format(), "Interpolation::QuintOut");
-        assert_eq!(Interpolation::QuintInOut.dsl_format(), "Interpolation::QuintInOut");
+        assert_eq!(
+            Interpolation::QuintIn.dsl_format(),
+            "Interpolation::QuintIn"
+        );
+        assert_eq!(
+            Interpolation::QuintOut.dsl_format(),
+            "Interpolation::QuintOut"
+        );
+        assert_eq!(
+            Interpolation::QuintInOut.dsl_format(),
+            "Interpolation::QuintInOut"
+        );
 
         // Sine family
         assert_eq!(Interpolation::SineIn.dsl_format(), "Interpolation::SineIn");
-        assert_eq!(Interpolation::SineOut.dsl_format(), "Interpolation::SineOut");
-        assert_eq!(Interpolation::SineInOut.dsl_format(), "Interpolation::SineInOut");
+        assert_eq!(
+            Interpolation::SineOut.dsl_format(),
+            "Interpolation::SineOut"
+        );
+        assert_eq!(
+            Interpolation::SineInOut.dsl_format(),
+            "Interpolation::SineInOut"
+        );
     }
 
     #[test]
@@ -502,31 +617,16 @@ mod tests {
             Constraint::Ratio(1, 3).dsl_format(),
             "Constraint::Ratio(1, 3)"
         );
-        assert_eq!(
-            Constraint::Min(5).dsl_format(),
-            "Constraint::Min(5)"
-        );
-        assert_eq!(
-            Constraint::Max(20).dsl_format(),
-            "Constraint::Max(20)"
-        );
-        assert_eq!(
-            Constraint::Fill(0).dsl_format(),
-            "Constraint::Fill(0)"
-        );
+        assert_eq!(Constraint::Min(5).dsl_format(), "Constraint::Min(5)");
+        assert_eq!(Constraint::Max(20).dsl_format(), "Constraint::Max(20)");
+        assert_eq!(Constraint::Fill(0).dsl_format(), "Constraint::Fill(0)");
     }
 
     #[test]
     fn test_direction_dsl_format() {
         use ratatui::layout::Direction;
 
-        assert_eq!(
-            Direction::Horizontal.dsl_format(),
-            "Direction::Horizontal"
-        );
-        assert_eq!(
-            Direction::Vertical.dsl_format(),
-            "Direction::Vertical"
-        );
+        assert_eq!(Direction::Horizontal.dsl_format(), "Direction::Horizontal");
+        assert_eq!(Direction::Vertical.dsl_format(), "Direction::Vertical");
     }
 }

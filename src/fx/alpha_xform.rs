@@ -1,15 +1,18 @@
 use std::ops::Range;
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+
+use ratatui::{buffer::Buffer, layout::Rect};
 use Interpolation::Linear;
-use crate::{default_shader_impl, CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Shader};
-use crate::widget::EffectSpan;
+
+use crate::{
+    default_shader_impl, widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, EffectTimer,
+    Interpolation, Shader,
+};
 
 #[derive(Debug, Clone)]
 pub struct FreezeAt {
     alpha: f32,
-    set_raw_alpha: bool, 
-    fx: Effect
+    set_raw_alpha: bool,
+    fx: Effect,
 }
 
 /// An effect that freezes another effect at a specific alpha (transition) value.
@@ -28,11 +31,7 @@ pub struct FreezeAt {
 /// let frozen_fade = fx::freeze_at(0.7, false, fade);
 /// ```
 impl FreezeAt {
-    pub fn new(
-        alpha: f32,
-        set_raw_alpha: bool,
-        fx: Effect
-    ) -> Self {
+    pub fn new(alpha: f32, set_raw_alpha: bool, fx: Effect) -> Self {
         let alpha = alpha.clamp(0.0, 1.0);
         Self { alpha, fx, set_raw_alpha }
     }
@@ -40,7 +39,7 @@ impl FreezeAt {
 
 impl Shader for FreezeAt {
     default_shader_impl!(clone);
-    
+
     fn name(&self) -> &'static str {
         "freeze_at"
     }
@@ -55,8 +54,9 @@ impl Shader for FreezeAt {
                 t.process(Duration::from_secs_f32(d));
             }
         }
-        
-        self.fx.process(Duration::from_millis(0), buf, area)
+
+        self.fx
+            .process(Duration::from_millis(0), buf, area)
     }
 
     fn done(&self) -> bool {
@@ -119,20 +119,17 @@ pub struct RemapAlpha {
     raw_alpha_range: Range<f32>,
     fx: Effect,
     timer: EffectTimer, // copy of fx timer but linear interpolation
-    rest: f32
+    rest: f32,
 }
 
 impl RemapAlpha {
-    pub fn new(
-        raw_alpha_range: Range<f32>,
-        fx: Effect,
-    ) -> Self {
-        let timer = fx.timer().clone().unwrap_or_default();
+    pub fn new(raw_alpha_range: Range<f32>, fx: Effect) -> Self {
+        let timer = fx.timer().unwrap_or_default();
 
         let start = raw_alpha_range.start;
         let end = raw_alpha_range.end;
         let raw_alpha_range = start.clamp(0.0, 1.0)..end.clamp(0.0, 1.0);
-        
+
         let rest = 0.0;
         Self { raw_alpha_range, fx, timer, rest }
     }
@@ -156,8 +153,9 @@ impl Shader for RemapAlpha {
 
         let range = self.raw_alpha_range.end - self.raw_alpha_range.start;
         let scaled_duration_ms = 1_000.0 * (duration.as_secs_f32() * range) + self.rest;
-        
-        self.fx.process(Duration::from_millis(scaled_duration_ms as _), buf, area);
+
+        self.fx
+            .process(Duration::from_millis(scaled_duration_ms as _), buf, area);
         self.rest = scaled_duration_ms - scaled_duration_ms.floor();
     }
 
@@ -182,7 +180,7 @@ impl Shader for RemapAlpha {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        Some(self.timer.clone())
+        Some(self.timer)
     }
 
     fn cell_filter(&self) -> Option<CellFilter> {

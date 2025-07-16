@@ -7,19 +7,20 @@ use ratatui::style::Color;
 #[deprecated(since = "0.12.0", note = "Use `tachyonfx::LruCache` instead")]
 pub struct ColorMapper {
     original: (Color, f32),
-    transformed: Color
+    transformed: Color,
 }
 
 #[allow(deprecated)]
 impl ColorMapper {
-    /// Maps the given color to a transformed color using the provided transformation function.
-    /// The transformation is only applied if the input color or alpha value has changed since
-    /// the last call.
+    /// Maps the given color to a transformed color using the provided transformation
+    /// function. The transformation is only applied if the input color or alpha value
+    /// has changed since the last call.
     ///
     /// # Arguments
     /// * `from_color` - The original color to be transformed.
     /// * `alpha` - The alpha value used for the transformation.
-    /// * `transform` - A closure that defines the transformation to be applied to the color.
+    /// * `transform` - A closure that defines the transformation to be applied to the
+    ///   color.
     ///
     /// # Returns
     /// * The transformed color.
@@ -40,7 +41,7 @@ impl ColorMapper {
         &mut self,
         from_color: Color,
         alpha: f32,
-        transform: impl Fn(Color) -> Color
+        transform: impl Fn(Color) -> Color,
     ) -> Color {
         if self.original != (from_color, alpha) {
             self.original = (from_color, alpha);

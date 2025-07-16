@@ -1,12 +1,10 @@
-use crate::default_shader_impl;
 use bon::{builder, Builder};
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use ratatui::prelude::Color;
+use ratatui::{buffer::Buffer, layout::Rect, prelude::Color};
 
-use crate::effect_timer::EffectTimer;
-use crate::shader::Shader;
-use crate::{CellFilter, ColorSpace, Duration, LruCache};
+use crate::{
+    default_shader_impl, effect_timer::EffectTimer, shader::Shader, CellFilter, ColorSpace,
+    Duration, LruCache,
+};
 
 #[derive(Builder, Clone, Debug)]
 pub struct FadeColors {
@@ -23,7 +21,11 @@ impl Shader for FadeColors {
     default_shader_impl!(area, timer, filter, color_space, clone);
 
     fn name(&self) -> &'static str {
-        if self.timer.is_reversed() { "fade_from" } else { "fade_to" }
+        if self.timer.is_reversed() {
+            "fade_from"
+        } else {
+            "fade_to"
+        }
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
@@ -35,14 +37,12 @@ impl Shader for FadeColors {
 
         cell_iter.for_each(|(_, cell)| {
             if let Some(fg) = self.fg.as_ref() {
-                let color = fg_cache
-                    .memoize(&cell.fg, |c| self.color_space.lerp(c, fg, alpha));
+                let color = fg_cache.memoize(&cell.fg, |c| self.color_space.lerp(c, fg, alpha));
                 cell.set_fg(color);
             }
 
             if let Some(bg) = self.bg.as_ref() {
-                let color = bg_cache
-                    .memoize(&cell.bg, |c| self.color_space.lerp(c, bg, alpha));
+                let color = bg_cache.memoize(&cell.bg, |c| self.color_space.lerp(c, bg, alpha));
                 cell.set_bg(color);
             }
         });
@@ -72,17 +72,13 @@ impl Shader for FadeColors {
     }
 }
 
-
-
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use crate::effect_timer::EffectTimer;
-    use crate::fx;
-    use crate::shader::Shader;
-    use crate::Interpolation::QuadOut;
     use indoc::indoc;
     use ratatui::style::Color;
+
+    use crate::{effect_timer::EffectTimer, fx, shader::Shader, Interpolation::QuadOut};
 
     #[test]
     fn to_dsl_fade_to_fg() {
@@ -91,12 +87,9 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert_eq!(
-            dsl,
-            indoc! {
-                "fx::fade_to_fg(Color::from_u32(0), EffectTimer::from_ms(1000, Interpolation::QuadOut))"
-            }
-        );
+        assert_eq!(dsl, indoc! {
+            "fx::fade_to_fg(Color::from_u32(0), EffectTimer::from_ms(1000, Interpolation::QuadOut))"
+        });
     }
 
     #[test]
@@ -105,20 +98,18 @@ mod tests {
             Color::from_u32(0),
             Color::from_u32(0),
             EffectTimer::from_ms(1000, QuadOut),
-        ).to_dsl()
-            .unwrap()
-            .to_string();
+        )
+        .to_dsl()
+        .unwrap()
+        .to_string();
 
-        assert_eq!(
-            dsl,
-            indoc! {
-                "fx::fade_to(
+        assert_eq!(dsl, indoc! {
+            "fx::fade_to(
                      Color::from_u32(0),
                      Color::from_u32(0),
                      EffectTimer::from_ms(1000, Interpolation::QuadOut)
                  )"
-            }
-        );
+        });
     }
 
     #[test]
@@ -128,12 +119,9 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert_eq!(
-            dsl,
-            indoc! {
-                "fx::fade_from_fg(Color::from_u32(0), EffectTimer::from_ms(1000, Interpolation::QuadOut))"
-            }
-        );
+        assert_eq!(dsl, indoc! {
+            "fx::fade_from_fg(Color::from_u32(0), EffectTimer::from_ms(1000, Interpolation::QuadOut))"
+        });
     }
 
     #[test]
@@ -142,19 +130,17 @@ mod tests {
             Color::from_u32(0),
             Color::from_u32(0),
             EffectTimer::from_ms(1000, QuadOut),
-        ).to_dsl()
-            .unwrap()
-            .to_string();
+        )
+        .to_dsl()
+        .unwrap()
+        .to_string();
 
-        assert_eq!(
-            dsl,
-            indoc! {
-                "fx::fade_from(
+        assert_eq!(dsl, indoc! {
+            "fx::fade_from(
                      Color::from_u32(0),
                      Color::from_u32(0),
                      EffectTimer::from_ms(1000, Interpolation::QuadOut)
                  )"
-            }
-        );
+        });
     }
 }

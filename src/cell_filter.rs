@@ -1,10 +1,13 @@
-use crate::color_ext::ToRgbComponents;
-use crate::{ref_count, RefCount, RefRect, ThreadSafetyMarker};
-use ratatui::buffer::Cell;
-use ratatui::layout;
-use ratatui::layout::{Margin, Position, Rect};
-use ratatui::prelude::Color;
 use std::fmt;
+
+use ratatui::{
+    buffer::Cell,
+    layout,
+    layout::{Margin, Position, Rect},
+    prelude::Color,
+};
+
+use crate::{color_ext::ToRgbComponents, ref_count, RefCount, RefRect, ThreadSafetyMarker};
 
 #[cfg(not(feature = "sendable"))]
 type CellPredFn = RefCount<dyn Fn(&Cell) -> bool>;
@@ -16,11 +19,12 @@ type PositionFnType = RefCount<dyn Fn(Position) -> bool>;
 #[cfg(feature = "sendable")]
 type PositionFnType = RefCount<dyn Fn(Position) -> bool + Send>;
 
-/// A filter mode that enables effects to operate on specific cells based on various criteria.
+/// A filter mode that enables effects to operate on specific cells based on various
+/// criteria.
 ///
-/// `CellFilter` provides a flexible way to select cells for applying effects based on their
-/// properties such as colors, position, content, or custom predicates. Filters can be combined
-/// using logical operations to create complex selection patterns.
+/// `CellFilter` provides a flexible way to select cells for applying effects based on
+/// their properties such as colors, position, content, or custom predicates. Filters can
+/// be combined using logical operations to create complex selection patterns.
 #[derive(Clone, Default)]
 pub enum CellFilter {
     /// Selects every cell
@@ -68,7 +72,8 @@ impl CellFilter {
     /// # Type Parameters
     /// * `F` - A function type that implements the required thread safety markers
     pub fn eval_cell<F>(f: F) -> Self
-        where F: Fn(&Cell) -> bool + ThreadSafetyMarker + 'static
+    where
+        F: Fn(&Cell) -> bool + ThreadSafetyMarker + 'static,
     {
         CellFilter::EvalCell(ref_count(f))
     }
@@ -80,10 +85,11 @@ impl CellFilter {
     ///
     /// # Returns
     /// A String representing the filter in a readable format
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         fn to_hex(c: &Color) -> String {
             let (r, g, b) = c.to_rgb();
-            format!("#{:02x}{:02x}{:02x}", r, g, b)
+            format!("#{r:02x}{g:02x}{b:02x}")
         }
 
         fn format_margin(m: &Margin) -> String {
@@ -91,37 +97,40 @@ impl CellFilter {
         }
 
         fn to_string(filters: &[CellFilter]) -> String {
-            filters.iter()
+            filters
+                .iter()
                 .map(CellFilter::to_string)
                 .collect::<Vec<String>>()
                 .join(", ")
         }
 
         match self {
-            CellFilter::All             => "all".to_string(),
-            CellFilter::Area(area)      => format!("area({})", area),
+            CellFilter::All => "all".to_string(),
+            CellFilter::Area(area) => format!("area({area})"),
             CellFilter::RefArea(ref_rect) => format!("ref_area({})", ref_rect.get()),
-            CellFilter::FgColor(color)  => format!("fg({})", to_hex(color)),
-            CellFilter::BgColor(color)  => format!("bg({})", to_hex(color)),
-            CellFilter::Inner(m)        => format!("inner({})", format_margin(m)),
-            CellFilter::Outer(m)        => format!("outer({})", format_margin(m)),
-            CellFilter::Text            => "text".to_string(),
-            CellFilter::AllOf(filters)  => format!("all_of({})", to_string(filters)),
-            CellFilter::AnyOf(filters)  => format!("any_of({})", to_string(filters)),
+            CellFilter::FgColor(color) => format!("fg({})", to_hex(color)),
+            CellFilter::BgColor(color) => format!("bg({})", to_hex(color)),
+            CellFilter::Inner(m) => format!("inner({})", format_margin(m)),
+            CellFilter::Outer(m) => format!("outer({})", format_margin(m)),
+            CellFilter::Text => "text".to_string(),
+            CellFilter::AllOf(filters) => format!("all_of({})", to_string(filters)),
+            CellFilter::AnyOf(filters) => format!("any_of({})", to_string(filters)),
             CellFilter::NoneOf(filters) => format!("none_of({})", to_string(filters)),
-            CellFilter::Not(filter)     => format!("!{}", filter.to_string()),
-            CellFilter::Layout(_, idx)  => format!("layout({})", idx),
-            CellFilter::PositionFn(_)   => "position_fn".to_string(),
-            CellFilter::EvalCell(_)     => "eval_cell".to_string(),
+            CellFilter::Not(filter) => format!("!{}", filter.to_string()),
+            CellFilter::Layout(_, idx) => format!("layout({idx})"),
+            CellFilter::PositionFn(_) => "position_fn".to_string(),
+            CellFilter::EvalCell(_) => "eval_cell".to_string(),
         }
     }
 }
 
-/// A predicate that evaluates cells based on their position and properties using a specified filter strategy.
+/// A predicate that evaluates cells based on their position and properties using a
+/// specified filter strategy.
 ///
-/// `CellPredicate` is created internally by `CellFilter`'s `selector` method and serves as the
-/// evaluation engine for cell filtering operations. It combines spatial awareness (via a rectangular area)
-/// with content-based filtering rules to determine which cells should be included in operations.
+/// `CellPredicate` is created internally by `CellFilter`'s `selector` method and serves
+/// as the evaluation engine for cell filtering operations. It combines spatial awareness
+/// (via a rectangular area) with content-based filtering rules to determine which cells
+/// should be included in operations.
 ///
 /// See also [crate::Shader::cell_iter].
 pub struct CellPredicate {
@@ -130,16 +139,17 @@ pub struct CellPredicate {
     /// (e.g., margins or layout sections).
     filter_area: Rect,
 
-    /// The filter strategy that defines the criteria cells must meet to be considered valid.
-    /// This strategy can combine multiple filters using logical operations (AND, OR, NOT)
-    /// and can include both position-based and content-based criteria.
+    /// The filter strategy that defines the criteria cells must meet to be considered
+    /// valid. This strategy can combine multiple filters using logical operations
+    /// (AND, OR, NOT) and can include both position-based and content-based criteria.
     strategy: CellFilter,
 }
 
 impl CellPredicate {
     /// Creates a new `CellPredicate` with the specified area and filter strategy.
     ///
-    /// The provided area may be modified based on the filter strategy (e.g., for margin-based filters).
+    /// The provided area may be modified based on the filter strategy (e.g., for
+    /// margin-based filters).
     ///
     /// # Arguments
     /// * `area` - The initial rectangular area for cell evaluation
@@ -152,21 +162,21 @@ impl CellPredicate {
 
     fn resolve_area(area: Rect, mode: &CellFilter) -> Rect {
         match mode {
-            CellFilter::All                 => area,
-            CellFilter::Area(r)             => area.intersection(*r),
-            CellFilter::RefArea(ref_rect)   => area.intersection(ref_rect.get()),
-            CellFilter::Inner(margin)       => area.inner(*margin),
-            CellFilter::Outer(margin)       => area.inner(*margin),
-            CellFilter::Text                => area,
-            CellFilter::AllOf(_)            => area,
-            CellFilter::AnyOf(_)            => area,
-            CellFilter::NoneOf(_)           => area,
-            CellFilter::Not(m)              => Self::resolve_area(area, m.as_ref()),
-            CellFilter::FgColor(_)          => area,
-            CellFilter::BgColor(_)          => area,
+            CellFilter::All => area,
+            CellFilter::Area(r) => area.intersection(*r),
+            CellFilter::RefArea(ref_rect) => area.intersection(ref_rect.get()),
+            CellFilter::Inner(margin) => area.inner(*margin),
+            CellFilter::Outer(margin) => area.inner(*margin),
+            CellFilter::Text => area,
+            CellFilter::AllOf(_) => area,
+            CellFilter::AnyOf(_) => area,
+            CellFilter::NoneOf(_) => area,
+            CellFilter::Not(m) => Self::resolve_area(area, m.as_ref()),
+            CellFilter::FgColor(_) => area,
+            CellFilter::BgColor(_) => area,
             CellFilter::Layout(layout, idx) => layout.split(area)[*idx as usize],
-            CellFilter::PositionFn(_)       => area,
-            CellFilter::EvalCell(_)         => area,
+            CellFilter::PositionFn(_) => area,
+            CellFilter::EvalCell(_) => area,
         }
     }
 
@@ -182,35 +192,41 @@ impl CellPredicate {
     /// # Returns
     /// `true` if the cell meets all filter criteria, `false` otherwise
     pub fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
-
         match &self.strategy {
-            CellFilter::All           => true,
-            CellFilter::Area(_)       => self.filter_area.contains(pos),
-            CellFilter::RefArea(_)    => self.filter_area.contains(pos),
-            CellFilter::Layout(_, _)  => self.filter_area.contains(pos),
-            CellFilter::Inner(_)      => self.filter_area.contains(pos),
-            CellFilter::Outer(_)      => !self.filter_area.contains(pos),
-            CellFilter::Text          => {
+            CellFilter::All => true,
+            CellFilter::Area(_) => self.filter_area.contains(pos),
+            CellFilter::RefArea(_) => self.filter_area.contains(pos),
+            CellFilter::Layout(_, _) => self.filter_area.contains(pos),
+            CellFilter::Inner(_) => self.filter_area.contains(pos),
+            CellFilter::Outer(_) => !self.filter_area.contains(pos),
+            CellFilter::Text => {
                 let ch = cell.symbol().chars().next().unwrap();
                 ch.is_alphabetic() || ch.is_numeric() || " ?!.,:;()".contains(ch)
             },
-            CellFilter::AllOf(s)      => s.iter()
-                .all(|mode| mode.selector(self.filter_area).is_valid(pos, cell)),
-            CellFilter::AnyOf(s)      => s.iter()
-                .any(|mode| mode.selector(self.filter_area).is_valid(pos, cell)),
-            CellFilter::NoneOf(s)     => s.iter()
-                .all(|mode| !mode.selector(self.filter_area).is_valid(pos, cell)),
-            CellFilter::Not(m)        => !m.selector(self.filter_area).is_valid(pos, cell),
+            CellFilter::AllOf(s) => s.iter().all(|mode| {
+                mode.selector(self.filter_area)
+                    .is_valid(pos, cell)
+            }),
+            CellFilter::AnyOf(s) => s.iter().any(|mode| {
+                mode.selector(self.filter_area)
+                    .is_valid(pos, cell)
+            }),
+            CellFilter::NoneOf(s) => s.iter().all(|mode| {
+                !mode
+                    .selector(self.filter_area)
+                    .is_valid(pos, cell)
+            }),
+            CellFilter::Not(m) => !m.selector(self.filter_area).is_valid(pos, cell),
             // CellFilter::Not(m)        => !self.valid_position(pos, m.as_ref()),
-            CellFilter::FgColor(c)    => cell.fg == *c,
-            CellFilter::BgColor(c)    => cell.fg == *c,
+            CellFilter::FgColor(c) => cell.fg == *c,
+            CellFilter::BgColor(c) => cell.fg == *c,
             CellFilter::PositionFn(f) => {
                 #[cfg(not(feature = "sendable"))]
                 return f.borrow()(pos);
                 #[cfg(feature = "sendable")]
                 return f.lock().unwrap()(pos);
             },
-            CellFilter::EvalCell(f)   => {
+            CellFilter::EvalCell(f) => {
                 #[cfg(not(feature = "sendable"))]
                 return f.borrow()(cell);
                 #[cfg(feature = "sendable")]
@@ -229,39 +245,23 @@ impl CellFilter {
 impl fmt::Debug for CellFilter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CellFilter::All            => write!(f, "All"),
-            CellFilter::Area(area)     => write!(f, "Area({:})", area),
+            CellFilter::All => write!(f, "All"),
+            CellFilter::Area(area) => write!(f, "Area({area:})"),
             CellFilter::RefArea(ref_rect) => write!(f, "RefArea({:?})", ref_rect.get()),
-            CellFilter::FgColor(color) => write!(f, "FgColor({:?})", color),
-            CellFilter::BgColor(color) => write!(f, "BgColor({:?})", color),
-            CellFilter::Inner(margin)  => write!(f, "Inner({:?})", margin),
-            CellFilter::Outer(margin)  => write!(f, "Outer({:?})", margin),
-            CellFilter::Text           => write!(f, "Text"),
-            CellFilter::AllOf(filters) => {
-                f.debug_tuple("AllOf")
-                    .field(filters)
-                    .finish()
-            },
-            CellFilter::AnyOf(filters) => {
-                f.debug_tuple("AnyOf")
-                    .field(filters)
-                    .finish()
-            },
-            CellFilter::NoneOf(filters) => {
-                f.debug_tuple("NoneOf")
-                    .field(filters)
-                    .finish()
-            },
-            CellFilter::Not(filter) => {
-                f.debug_tuple("Not")
-                    .field(filter)
-                    .finish()
-            },
+            CellFilter::FgColor(color) => write!(f, "FgColor({color:?})"),
+            CellFilter::BgColor(color) => write!(f, "BgColor({color:?})"),
+            CellFilter::Inner(margin) => write!(f, "Inner({margin:?})"),
+            CellFilter::Outer(margin) => write!(f, "Outer({margin:?})"),
+            CellFilter::Text => write!(f, "Text"),
+            CellFilter::AllOf(filters) => f.debug_tuple("AllOf").field(filters).finish(),
+            CellFilter::AnyOf(filters) => f.debug_tuple("AnyOf").field(filters).finish(),
+            CellFilter::NoneOf(filters) => f.debug_tuple("NoneOf").field(filters).finish(),
+            CellFilter::Not(filter) => f.debug_tuple("Not").field(filter).finish(),
             CellFilter::Layout(layout, idx) => {
-                write!(f, "Layout({:?}, {})", layout, idx)
+                write!(f, "Layout({layout:?}, {idx})")
             },
             CellFilter::PositionFn(_) => write!(f, "PositionFn(<function>)"),
-            CellFilter::EvalCell(_)   => write!(f, "EvalCell(<function>)"),
+            CellFilter::EvalCell(_) => write!(f, "EvalCell(<function>)"),
         }
     }
 }
@@ -291,13 +291,11 @@ impl PartialEq for CellFilter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::fx::effect_fn;
-    use crate::{Duration, EffectRenderer};
     use layout::Layout;
-    use ratatui::buffer::Buffer;
-    use ratatui::style::Style;
-    use ratatui::text::Span;
+    use ratatui::{buffer::Buffer, style::Style, text::Span};
+
+    use super::*;
+    use crate::{fx::effect_fn, Duration, EffectRenderer};
 
     #[test]
     fn test_cell_filter_to_string() {
@@ -337,7 +335,8 @@ mod tests {
         let filter = CellFilter::Not(Box::new(CellFilter::FgColor(Color::Red)));
         assert_eq!(filter.to_string(), "!fg(#800000)");
 
-        let filter = CellFilter::Layout(Layout::horizontal(&[]), 0);
+        let filter =
+            CellFilter::Layout(Layout::horizontal(&[] as &[ratatui::layout::Constraint]), 0);
         assert_eq!(filter.to_string(), "layout(0)");
 
         let filter = CellFilter::PositionFn(ref_count(|_| true));
@@ -353,12 +352,7 @@ mod tests {
 
     #[test]
     fn test_cell_filter_eval() {
-        let empty = Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]);
+        let empty = Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . "]);
         let fx = effect_fn((), 1, |_, _, cells| {
             for (_, c) in cells {
                 c.set_symbol("X");
@@ -368,40 +362,41 @@ mod tests {
         let mut buf = empty.clone();
         let filter = CellFilter::eval_cell(|cell| cell.symbol() == ".");
 
-        let area = buf.area().clone();
-        buf.render_effect(&mut fx.clone().with_filter(filter), area, Duration::from_millis(16));
+        let area = *buf.area();
+        buf.render_effect(
+            &mut fx.clone().with_filter(filter),
+            area,
+            Duration::from_millis(16),
+        );
 
-        assert_eq!(buf, Buffer::with_lines([
-            "X X X X ",
-            "X X X X ",
-            "X X X X ",
-            "X X X X ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["X X X X ", "X X X X ", "X X X X ", "X X X X ",])
+        );
 
         let mut buf = empty.clone();
         let filter = CellFilter::Not(Box::new(CellFilter::Area(Rect::new(0, 0, 8, 2))));
-        buf.render_effect(&mut fx.clone().with_filter(filter), area, Duration::from_millis(16));
+        buf.render_effect(
+            &mut fx.clone().with_filter(filter),
+            area,
+            Duration::from_millis(16),
+        );
 
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            "XXXXXXXX",
-            "XXXXXXXX",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", "XXXXXXXX", "XXXXXXXX",])
+        );
     }
 
     #[test]
     fn test_all_any_and_none_of() {
-        fn assert_filter(
-            buf: &Buffer,
-            filter: CellFilter,
-            expected: Buffer,
-        ) {
+        fn assert_filter(buf: &Buffer, filter: CellFilter, expected: Buffer) {
             let mut mark_fx = effect_fn((), 1, |_, _, cells| {
                 for (_, c) in cells {
                     c.set_symbol("X");
                 }
-            }).with_filter(filter);
+            })
+            .with_filter(filter);
 
             let mut clear_styling = effect_fn((), 1, |_, _, cells| {
                 for (_, c) in cells {
@@ -423,39 +418,28 @@ mod tests {
         buf.set_span(0, 1, &Span::from("......").style(red), 6);
         let buf = buf;
 
-        let filters = vec![
-            CellFilter::FgColor(Color::Red),
-            CellFilter::Inner(Margin::new(1, 1)),
-        ];
+        let filters = vec![CellFilter::FgColor(Color::Red), CellFilter::Inner(Margin::new(1, 1))];
 
-        assert_filter(&buf, CellFilter::AllOf(filters.clone()), Buffer::with_lines([
-            "......",
-            ".XXXX.",
-            "......",
-            "......",
-        ]));
-        assert_filter(&buf, CellFilter::AnyOf(filters.clone()), Buffer::with_lines([
-            "......",
-            "XXXXXX",
-            ".XXXX.",
-            "......",
-        ]));
-        assert_filter(&buf, CellFilter::NoneOf(filters.clone()), Buffer::with_lines([
-            "XXXXXX",
-            "......",
-            "X....X",
-            "XXXXXX",
-        ]));
+        assert_filter(
+            &buf,
+            CellFilter::AllOf(filters.clone()),
+            Buffer::with_lines(["......", ".XXXX.", "......", "......"]),
+        );
+        assert_filter(
+            &buf,
+            CellFilter::AnyOf(filters.clone()),
+            Buffer::with_lines(["......", "XXXXXX", ".XXXX.", "......"]),
+        );
+        assert_filter(
+            &buf,
+            CellFilter::NoneOf(filters.clone()),
+            Buffer::with_lines(["XXXXXX", "......", "X....X", "XXXXXX"]),
+        );
     }
 
     #[test]
     fn test_ref_area_filter() {
-        let empty = Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]);
+        let empty = Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . "]);
         let fx = effect_fn((), 1, |_, _, cells| {
             for (_, c) in cells {
                 c.set_symbol("X");
@@ -466,28 +450,32 @@ mod tests {
         let mut buf = empty.clone();
         let filter = CellFilter::RefArea(ref_rect.clone());
 
-        let area = buf.area().clone();
-        buf.render_effect(&mut fx.clone().with_filter(filter), area, Duration::from_millis(16));
+        let area = *buf.area();
+        buf.render_effect(
+            &mut fx.clone().with_filter(filter),
+            area,
+            Duration::from_millis(16),
+        );
 
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". XXXX. ",
-            ". XXXX. ",
-            ". . . . ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". XXXX. ", ". XXXX. ", ". . . . ",])
+        );
 
         // Test that changing the RefRect updates the filter area
         ref_rect.set(Rect::new(0, 0, 2, 2));
         let mut buf2 = empty.clone();
         let filter2 = CellFilter::RefArea(ref_rect.clone());
-        buf2.render_effect(&mut fx.clone().with_filter(filter2), area, Duration::from_millis(16));
+        buf2.render_effect(
+            &mut fx.clone().with_filter(filter2),
+            area,
+            Duration::from_millis(16),
+        );
 
-        assert_eq!(buf2, Buffer::with_lines([
-            "XX. . . ",
-            "XX. . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        assert_eq!(
+            buf2,
+            Buffer::with_lines(["XX. . . ", "XX. . . ", ". . . . ", ". . . . ",])
+        );
     }
 
     #[test]

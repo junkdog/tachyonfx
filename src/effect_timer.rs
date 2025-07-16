@@ -1,10 +1,10 @@
 use std::ops::Mul;
-use crate::Duration;
-use crate::interpolation::Interpolation;
+
+use crate::{interpolation::Interpolation, Duration};
 
 /// A struct for managing the timing and interpolation of effects.
-/// The `EffectTimer` controls the duration and progress of an effect, allowing it to be reversed,
-/// reset, and processed over time.
+/// The `EffectTimer` controls the duration and progress of an effect, allowing it to be
+/// reversed, reset, and processed over time.
 ///
 /// # Fields
 /// * `remaining` - The remaining duration of the effect.
@@ -27,12 +27,12 @@ pub struct EffectTimer {
     remaining: Duration,
     total: Duration,
     interpolation: Interpolation,
-    reverse: bool
+    reverse: bool,
 }
 
 impl EffectTimer {
-
-    /// Creates a new `EffectTimer` with the specified duration in milliseconds and interpolation method.
+    /// Creates a new `EffectTimer` with the specified duration in milliseconds and
+    /// interpolation method.
     ///
     /// # Arguments
     /// * `duration` - The duration of the effect in milliseconds.
@@ -46,10 +46,7 @@ impl EffectTimer {
     /// use tachyonfx::{EffectTimer, Interpolation};
     /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
     /// ```
-    pub fn from_ms(
-        duration: u32,
-        interpolation: Interpolation,
-    ) -> Self {
+    pub fn from_ms(duration: u32, interpolation: Interpolation) -> Self {
         Self::new(Duration::from_millis(duration as _), interpolation)
     }
 
@@ -67,15 +64,12 @@ impl EffectTimer {
     /// use tachyonfx::{Duration, EffectTimer, Interpolation};
     /// let timer = EffectTimer::new(Duration::from_millis(500), Interpolation::Linear);
     /// ```
-    pub fn new(
-        duration: Duration,
-        interpolation: Interpolation,
-    ) -> Self {
+    pub fn new(duration: Duration, interpolation: Interpolation) -> Self {
         Self {
             remaining: duration,
             total: duration,
             interpolation,
-            reverse: false
+            reverse: false,
         }
     }
 
@@ -124,7 +118,8 @@ impl EffectTimer {
         self.remaining = self.total;
     }
 
-    /// Computes the current alpha value based on the elapsed time and interpolation method.
+    /// Computes the current alpha value based on the elapsed time and interpolation
+    /// method.
     ///
     /// # Returns
     /// * The current alpha value as a `f32`.
@@ -162,7 +157,8 @@ impl EffectTimer {
     /// * `duration` - The amount of time to process.
     ///
     /// # Returns
-    /// * An `Option` containing the overflow duration if the timer has completed, or `None` if the timer is still running.
+    /// * An `Option` containing the overflow duration if the timer has completed, or
+    ///   `None` if the timer is still running.
     ///
     /// # Example
     /// ```

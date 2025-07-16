@@ -1,12 +1,15 @@
-//! Effects in tachyonfx operate on terminal cells after widgets have been rendered to the screen.
-//! When an effect is applied, it modifies properties of the already-rendered cells - like their
-//! colors, characters, or visibility. This means that the typical flow is:
+//! Effects in tachyonfx operate on terminal cells after widgets have been rendered to the
+//! screen. When an effect is applied, it modifies properties of the already-rendered
+//! cells - like their colors, characters, or visibility. This means that the typical flow
+//! is:
 //!
 //! 1. Render your widget to the screen
 //! 2. Apply effects to transform the rendered content
 //!
 //! ## Color Effects 🎨
-//! Color effects are used to modify or transition between colors, either for foreground text, background, or both. These are ideal for highlighting changes, drawing attention, or creating smooth visual transitions between states.
+//! Color effects are used to modify or transition between colors, either for foreground
+//! text, background, or both. These are ideal for highlighting changes, drawing
+//! attention, or creating smooth visual transitions between states.
 //!
 //! | Effect              | Description | Example  |
 //! |---------------------|-------------|----------|
@@ -18,7 +21,8 @@
 //! | [`hsl_shift_fg()`] 🌈 | Changes foreground HSL values          | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/hsl_shift_fg.gif) |
 //!
 //! ## Text/Character Effects ✍️
-//! Text effects modify the actual characters or their placement in the terminal. These are perfect for transitions, reveals, and dynamic text animations.
+//! Text effects modify the actual characters or their placement in the terminal. These
+//! are perfect for transitions, reveals, and dynamic text animations.
 //!
 //! | Effect                 | Description | Example  |
 //! |------------------------|-------------|----------|
@@ -33,7 +37,8 @@
 //! | [`sweep_out()`] ↔️     | Sweeps content with color    | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/sweep_out.gif) |
 //!
 //! ## Timing and Control Effects ⏱️
-//! Control effects modify how other effects behave over time. They're essential for creating complex animations and controlling the flow of multiple effects.
+//! Control effects modify how other effects behave over time. They're essential for
+//! creating complex animations and controlling the flow of multiple effects.
 //!
 //! | Effect              | Description | Example  |
 //! |---------------------|-------------|----------|
@@ -52,7 +57,8 @@
 //!
 //!
 //! ## Geometry Effects 📐
-//! Geometry effects modify the position or size of content. These are useful for creating dynamic layouts and transitions.
+//! Geometry effects modify the position or size of content. These are useful for creating
+//! dynamic layouts and transitions.
 //!
 //! | Effect                 | Description | Example  |
 //! |------------------------|-------------|----------|
@@ -61,7 +67,8 @@
 //! | [`resize_area()`] ⬌   | Resizes effect area   | N/A |
 //!
 //! ## Combination Effects 🔗
-//! Combination effects allow multiple effects to be composed together. These are crucial for creating complex animations.
+//! Combination effects allow multiple effects to be composed together. These are crucial
+//! for creating complex animations.
 //!
 //! | Effect              | Description | Example  |
 //! |---------------------|-------------|----------|
@@ -81,80 +88,90 @@
 //!
 //! Additional effects can be created by implementing the [Shader](crate::Shader) trait.
 
-use ratatui::buffer::{Buffer, Cell};
-use ratatui::layout::{Offset, Size};
-use ratatui::style::{Color, Style};
-
-use crate::effect::{Effect, IntoEffect};
-use crate::effect_timer::EffectTimer;
-use crate::fx::ansi256::Ansi256;
-use crate::fx::consume_tick::ConsumeTick;
-use crate::fx::containers::{ParallelEffect, SequentialEffect};
-use crate::fx::dissolve::Dissolve;
-use crate::fx::fade::FadeColors;
-use crate::fx::hsl_shift::HslShift;
-use crate::fx::never_complete::NeverComplete;
-use crate::fx::repeat::Repeat;
-use crate::fx::resize::ResizeArea;
-use crate::fx::sleep::Sleep;
-use crate::fx::sweep_in::SweepIn;
-use crate::fx::temporary::TemporaryEffect;
-use crate::fx::translate_buffer::TranslateBuffer;
-use crate::{CellIterator, ColorSpace, Duration, Motion, RefCount, RefRect, ThreadSafetyMarker};
 pub use direction::*;
-pub use glitch::Glitch;
 pub use dynamic_area::DynamicArea;
+pub use glitch::Glitch;
 use ping_pong::PingPong;
 use prolong::{Prolong, ProlongPosition};
+use ratatui::{
+    buffer::{Buffer, Cell},
+    layout::{Offset, Size},
+    style::{Color, Style},
+};
 pub use repeat::RepeatMode;
 pub use shader_fn::*;
 use slide::SlideCell;
 pub use temporary::IntoTemporaryEffect;
 
+use crate::{
+    effect::{Effect, IntoEffect},
+    effect_timer::EffectTimer,
+    fx::{
+        ansi256::Ansi256,
+        consume_tick::ConsumeTick,
+        containers::{ParallelEffect, SequentialEffect},
+        dissolve::Dissolve,
+        fade::FadeColors,
+        hsl_shift::HslShift,
+        never_complete::NeverComplete,
+        repeat::Repeat,
+        resize::ResizeArea,
+        sleep::Sleep,
+        sweep_in::SweepIn,
+        temporary::TemporaryEffect,
+        translate_buffer::TranslateBuffer,
+    },
+    CellIterator, ColorSpace, Duration, Motion, RefCount, RefRect, ThreadSafetyMarker,
+};
+
+mod alpha_xform;
 mod ansi256;
 mod consume_tick;
 pub(crate) mod containers;
+mod direction;
 mod dissolve;
+mod dynamic_area;
+mod explode;
 mod fade;
 mod glitch;
+mod hsl_shift;
 mod never_complete;
+mod offscreen_buffer;
 mod ping_pong;
+mod prolong;
 mod repeat;
 mod resize;
+mod shader_fn;
 mod sleep;
+mod slide;
+mod sliding_window_alpha;
 mod sweep_in;
 mod temporary;
 mod translate;
 mod translate_buffer;
-mod hsl_shift;
-mod shader_fn;
-mod slide;
-mod sliding_window_alpha;
-mod offscreen_buffer;
-mod prolong;
-mod direction;
 pub(crate) mod unique;
-mod explode;
-mod alpha_xform;
-mod dynamic_area;
 
 /// Creates a custom effect using a user-defined function.
 ///
-/// This function allows you to define custom effects by providing a closure that will be called
-/// with the current state, `ShaderFnContext`, and a cell iterator. You can use this closure
-/// to apply custom transformations or animations to the terminal cells. The function also takes
-/// an initial state that can be used to maintain state across invocations.
+/// This function allows you to define custom effects by providing a closure that will be
+/// called with the current state, `ShaderFnContext`, and a cell iterator. You can use
+/// this closure to apply custom transformations or animations to the terminal cells. The
+/// function also takes an initial state that can be used to maintain state across
+/// invocations.
 ///
 /// # Arguments
 /// * `state` - An initial state that will be passed to the closure on each invocation.
-/// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the
+///   effect.
 /// * `f` - A closure that defines the custom effect. The closure takes three parameters:
-///   * `state`: A mutable reference to the state provided during the creation of the effect.
+///   * `state`: A mutable reference to the state provided during the creation of the
+///     effect.
 ///   * `context`: A `ShaderFnContext` instance containing timing and area information.
 ///   * `cell_iter`: An iterator over the terminal cells.
 ///
 /// # Returns
-/// * An `Effect` instance that can be used with other effects or applied directly to terminal cells.
+/// * An `Effect` instance that can be used with other effects or applied directly to
+///   terminal cells.
 ///
 /// # Examples
 ///
@@ -178,8 +195,8 @@ mod dynamic_area;
 /// ```
 ///
 /// In this example, the custom effect function interpolates the foreground color of each
-/// cell to a new color over the specified duration. The effect is only applied to cells with
-/// a foreground color of `Color::DarkGray`.
+/// cell to a new color over the specified duration. The effect is only applied to cells
+/// with a foreground color of `Color::DarkGray`.
 ///
 /// Example from `examples/effect-showcase.rs`
 ///
@@ -206,7 +223,6 @@ mod dynamic_area;
 /// This example creates an effect that runs indefinitely and cycles the color of each
 /// foreground cell based on the elapsed time. Each cell's color is slightly offset by
 /// the cell's position.
-///
 pub fn effect_fn<F, S, T>(state: S, timer: T, f: F) -> Effect
 where
     S: Clone + ThreadSafetyMarker + 'static,
@@ -224,21 +240,25 @@ where
 
 /// Creates a custom effect using a user-defined function that operates on a buffer.
 ///
-/// This function allows you to define custom effects by providing a closure that will be called
-/// with the current state, `ShaderFnContext`, and a mutable buffer. You can use this closure
-/// to apply custom transformations or animations to the terminal buffer. The function also takes
-/// an initial state that can be used to maintain state across invocations.
+/// This function allows you to define custom effects by providing a closure that will be
+/// called with the current state, `ShaderFnContext`, and a mutable buffer. You can use
+/// this closure to apply custom transformations or animations to the terminal buffer. The
+/// function also takes an initial state that can be used to maintain state across
+/// invocations.
 ///
 /// # Arguments
 /// * `state` - An initial state that will be passed to the closure on each invocation.
-/// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the
+///   effect.
 /// * `f` - A closure that defines the custom effect. The closure takes three parameters:
-///   * `state`: A mutable reference to the state provided during the creation of the effect.
+///   * `state`: A mutable reference to the state provided during the creation of the
+///     effect.
 ///   * `context`: A `ShaderFnContext` instance containing timing and area information.
 ///   * `buffer`: A mutable reference to the terminal buffer.
 ///
 /// # Returns
-/// * An `Effect` instance that can be used with other effects or applied directly to terminal cells.
+/// * An `Effect` instance that can be used with other effects or applied directly to
+///   terminal cells.
 ///
 /// # Examples
 ///
@@ -336,10 +356,7 @@ pub fn hsl_shift<T: Into<EffectTimer>>(
 /// let fg_shift = [120.0, 25.0, 25.0];
 /// fx::hsl_shift(Some(fg_shift), None, timer);
 /// ```
-pub fn hsl_shift_fg<T: Into<EffectTimer>>(
-    hsl_fg_change: [f32; 3],
-    timer: T,
-) -> Effect {
+pub fn hsl_shift_fg<T: Into<EffectTimer>>(hsl_fg_change: [f32; 3], timer: T) -> Effect {
     hsl_shift(Some(hsl_fg_change), None, timer)
 }
 
@@ -360,11 +377,11 @@ pub fn term256_colors() -> Effect {
 /// # Arguments
 ///
 /// * `force` - Base explosion force determining how far cells move outward. Higher values
-///             create more dramatic explosions with cells moving farther from the center.
+///   create more dramatic explosions with cells moving farther from the center.
 ///
 /// * `force_rng_factor` - Randomization factor for explosion force. Higher values create
-///                        more varied and chaotic explosions, with some cells moving faster
-///                        than others. Set to 0.0 for uniform movement.
+///   more varied and chaotic explosions, with some cells moving faster than others. Set
+///   to 0.0 for uniform movement.
 ///
 /// * `timer` - Controls the duration and interpolation of the effect.
 ///
@@ -386,11 +403,7 @@ pub fn term256_colors() -> Effect {
 ///     fx::explode(15.0, 2.0, timer),
 /// ]);
 /// ```
-pub fn explode(
-    force: f32,
-    force_rng_factor: f32,
-    timer: impl Into<EffectTimer>,
-) -> Effect {
+pub fn explode(force: f32, force_rng_factor: f32, timer: impl Into<EffectTimer>) -> Effect {
     let mut replacement_cell = Cell::default();
     replacement_cell.set_fg(Color::Black);
     replacement_cell.set_bg(Color::Black);
@@ -408,11 +421,7 @@ pub fn explode(
 /// # Returns
 ///
 /// An `Effect` that shows the inner effect frozen at the specified alpha
-pub fn freeze_at(
-    alpha: f32,
-    set_raw_alpha: bool,
-    effect: Effect,
-) -> Effect {
+pub fn freeze_at(alpha: f32, set_raw_alpha: bool, effect: Effect) -> Effect {
     FreezeAt::new(alpha, set_raw_alpha, effect).into_effect()
 }
 
@@ -426,18 +435,17 @@ pub fn freeze_at(
 ///
 /// # Arguments
 ///
-/// * `alpha_start` - The lower bound of the alpha range (0.0-1.0). Values less than 0.0 are clamped to 0.0.
-/// * `alpha_end` - The upper bound of the alpha range (0.0-1.0). Values greater than 1.0 are clamped to 1.0.
+/// * `alpha_start` - The lower bound of the alpha range (0.0-1.0). Values less than 0.0
+///   are clamped to 0.0.
+/// * `alpha_end` - The upper bound of the alpha range (0.0-1.0). Values greater than 1.0
+///   are clamped to 1.0.
 /// * `effect` - The effect to remap.
 ///
 /// # Returns
 ///
-/// A new effect that remaps the original effect's alpha progression to the specified range.
-pub fn remap_alpha(
-    alpha_start: f32,
-    alpha_end: f32,
-    effect: Effect,
-) -> Effect {
+/// A new effect that remaps the original effect's alpha progression to the specified
+/// range.
+pub fn remap_alpha(alpha_start: f32, alpha_end: f32, effect: Effect) -> Effect {
     let range = alpha_start.max(0.0)..alpha_end.min(1.0);
     RemapAlpha::new(range, effect).into_effect()
 }
@@ -522,15 +530,22 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
     faded_color: C,
     timer: T,
 ) -> Effect {
-    sweep_in(direction.flipped(), gradient_length, randomness, faded_color, timer)
-        .reversed()
+    sweep_in(
+        direction.flipped(),
+        gradient_length,
+        randomness,
+        faded_color,
+        timer,
+    )
+    .reversed()
 }
 
 /// Creates an effect that sweeps in from a specified color with optional randomness.
 ///
 /// This function generates a sweeping effect that transitions from a specified color
-/// to the original content. The sweep can be applied in any of the four cardinal directions
-/// and includes options for gradient length and randomness to create more dynamic effects.
+/// to the original content. The sweep can be applied in any of the four cardinal
+/// directions and includes options for gradient length and randomness to create more
+/// dynamic effects.
 ///
 /// # Arguments
 ///
@@ -543,8 +558,9 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
 /// * `gradient_length` - The length of the gradient transition in cells. This determines
 ///   how smooth the transition is between the faded color and the original content.
 ///
-/// * `randomness` - The maximum random offset applied to each column or row of the effect.
-///   Higher values create a more irregular, "noisy" transition. Set to 0 for a uniform sweep.
+/// * `randomness` - The maximum random offset applied to each column or row of the
+///   effect. Higher values create a more irregular, "noisy" transition. Set to 0 for a
+///   uniform sweep.
 ///
 /// * `faded_color` - The color from which the content sweeps in.
 ///
@@ -608,21 +624,29 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
     faded_color: C,
     timer: T,
 ) -> Effect {
-    SweepIn::new(direction, gradient_length, randomness, faded_color.into(), timer.into())
-        .into_effect()
+    SweepIn::new(
+        direction,
+        gradient_length,
+        randomness,
+        faded_color.into(),
+        timer.into(),
+    )
+    .into_effect()
 }
 
-/// Creates an effect that slides terminal cells in from a specified direction with a gradient.
+/// Creates an effect that slides terminal cells in from a specified direction with a
+/// gradient.
 ///
-/// This function creates a sliding effect that moves terminal cells in from a specified direction.
-/// The effect can include a gradient length and a color behind the cells. The effect duration and
-/// timing are controlled by the provided timer.
+/// This function creates a sliding effect that moves terminal cells in from a specified
+/// direction. The effect can include a gradient length and a color behind the cells. The
+/// effect duration and timing are controlled by the provided timer.
 ///
 /// # Arguments
 /// * `direction` - The direction from which the cells slide in.
 /// * `gradient_length` - The length of the gradient used for the sliding effect.
 /// * `color_behind_cells` - The color behind the sliding cells.
-/// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the
+///   effect.
 ///
 /// # Returns
 /// * An `Effect` instance that applies the sliding-in effect.
@@ -650,21 +674,29 @@ pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
     color_behind_cells: C,
     timer: T,
 ) -> Effect {
-    slide_out(direction.flipped(), gradient_length, randomness, color_behind_cells, timer)
-        .reversed()
+    slide_out(
+        direction.flipped(),
+        gradient_length,
+        randomness,
+        color_behind_cells,
+        timer,
+    )
+    .reversed()
 }
 
-/// Creates an effect that slides terminal cells out to a specified direction with a gradient.
+/// Creates an effect that slides terminal cells out to a specified direction with a
+/// gradient.
 ///
-/// This function creates a sliding effect that moves terminal cells out to a specified direction.
-/// The effect can include a gradient length and a color behind the cells. The effect duration and
-/// timing are controlled by the provided timer.
+/// This function creates a sliding effect that moves terminal cells out to a specified
+/// direction. The effect can include a gradient length and a color behind the cells. The
+/// effect duration and timing are controlled by the provided timer.
 ///
 /// # Arguments
 /// * `direction` - The direction in which the cells slide out.
 /// * `gradient_length` - The length of the gradient used for the sliding effect.
 /// * `color_behind_cells` - The color behind the sliding cells.
-/// * `timer` - An `EffectTimer` instance to control the duration and timing of the effect.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the
+///   effect.
 ///
 /// # Returns
 /// * An `Effect` instance that applies the sliding-out effect.
@@ -695,8 +727,8 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
     let timer = match direction {
         Motion::LeftToRight => timer,
         Motion::RightToLeft => timer.reversed(),
-        Motion::UpToDown    => timer,
-        Motion::DownToUp    => timer.reversed(),
+        Motion::UpToDown => timer,
+        Motion::DownToUp => timer.reversed(),
     };
 
     SlideCell::builder()
@@ -717,16 +749,20 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 /// # Arguments
 /// * `fx` - An optional `Effect`, receives the .
-/// * `translate_by` - A tuple specifying the number of rows and columns to translate the effect by.
-/// * `timer` - An `EffectTimer` instance to control the duration and timing of the translation.
+/// * `translate_by` - A tuple specifying the number of rows and columns to translate the
+///   effect by.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the
+///   translation.
 ///
 /// # Returns
-/// * An `Effect` instance that applies the translation to the given effect or as a standalone effect.
+/// * An `Effect` instance that applies the translation to the given effect or as a
+///   standalone effect.
 ///
 /// # Usage Notes
-/// This effect should be applied before rendering any affected `ratatui` widgets. Other effects,
-/// such as `fx::dissolve` or `fx::slide_in`, are applied after rendering. You can manually retrieve
-/// the currently recalculated draw area using the `area()` function of the effect.
+/// This effect should be applied before rendering any affected `ratatui` widgets. Other
+/// effects, such as `fx::dissolve` or `fx::slide_in`, are applied after rendering. You
+/// can manually retrieve the currently recalculated draw area using the `area()` function
+/// of the effect.
 ///
 /// # Examples
 ///
@@ -749,23 +785,25 @@ pub fn translate<T: Into<EffectTimer>>(
     translate::Translate::new(fx, translate_by, timer.into()).into_effect()
 }
 
-/// Creates an effect that translates the contents of an auxiliary buffer onto the main buffer.
+/// Creates an effect that translates the contents of an auxiliary buffer onto the main
+/// buffer.
 ///
-/// This function creates a `TranslateBuffer` shader, which efficiently translates pre-rendered
-/// content without re-rendering it on every frame. It's particularly useful for large or complex
-/// content that doesn't change frequently.
+/// This function creates a `TranslateBuffer` shader, which efficiently translates
+/// pre-rendered content without re-rendering it on every frame. It's particularly useful
+/// for large or complex content that doesn't change frequently.
 ///
 /// # Arguments
 ///
 /// * `translate_by` - An `Offset` specifying the final translation amount.
-/// * `timer` - Specifies the duration and interpolation of the translation effect. Can be any type
-///   that implements `Into<EffectTimer>`.
-/// * `aux_buffer` - A shared reference to the auxiliary buffer containing the pre-rendered content
-///   to be translated.
+/// * `timer` - Specifies the duration and interpolation of the translation effect. Can be
+///   any type that implements `Into<EffectTimer>`.
+/// * `aux_buffer` - A shared reference to the auxiliary buffer containing the
+///   pre-rendered content to be translated.
 ///
 /// # Returns
 ///
-/// Returns an `Effect` that can be used with other effects or applied directly to a buffer.
+/// Returns an `Effect` that can be used with other effects or applied directly to a
+/// buffer.
 pub fn translate_buf<T: Into<EffectTimer>>(
     translate_by: Offset,
     aux_buffer: RefCount<Buffer>,
@@ -774,23 +812,29 @@ pub fn translate_buf<T: Into<EffectTimer>>(
     TranslateBuffer::new(aux_buffer, translate_by, timer.into()).into_effect()
 }
 
-/// Resizes the area of the wrapped effect to the specified dimensions over a specified duration.
+/// Resizes the area of the wrapped effect to the specified dimensions over a specified
+/// duration.
 ///
-/// This function creates a resizing effect that changes the dimensions of an existing effect's
-/// rendering area over the specified duration. If no effect is provided, only the resizing is applied.
+/// This function creates a resizing effect that changes the dimensions of an existing
+/// effect's rendering area over the specified duration. If no effect is provided, only
+/// the resizing is applied.
 ///
 /// # Arguments
 /// * `fx` - An optional `Effect`, receives the resized area.
-/// * `initial_size` - A `Size` instance specifying the initial dimensions of the effect area.
-/// * `timer` - An `EffectTimer` instance to control the duration and timing of the resizing.
+/// * `initial_size` - A `Size` instance specifying the initial dimensions of the effect
+///   area.
+/// * `timer` - An `EffectTimer` instance to control the duration and timing of the
+///   resizing.
 ///
 /// # Returns
-/// * An `Effect` instance that applies the resizing to the given effect or as a standalone effect.
+/// * An `Effect` instance that applies the resizing to the given effect or as a
+///   standalone effect.
 ///
 /// # Usage Notes
-/// This effect should be applied before rendering any affected `ratatui` widgets. Most other effects,
-/// such as `fx::dissolve` or `fx::slide_in`, are applied after rendering. You can manually retrieve
-/// the currently recalculated draw area using the `area()` function of the effect.
+/// This effect should be applied before rendering any affected `ratatui` widgets. Most
+/// other effects, such as `fx::dissolve` or `fx::slide_in`, are applied after rendering.
+/// You can manually retrieve the currently recalculated draw area using the `area()`
+/// function of the effect.
 ///
 /// # Examples
 ///
@@ -804,8 +848,8 @@ pub fn translate_buf<T: Into<EffectTimer>>(
 /// fx::resize_area(Some(effect), Size::new(20, 10), timer);
 /// ```
 ///
-/// This example creates a resizing effect that changes the dimensions of a fade-to-blue effect's
-/// rendering area to 20 by 10 over two seconds.
+/// This example creates a resizing effect that changes the dimensions of a fade-to-blue
+/// effect's rendering area to 20 by 10 over two seconds.
 pub fn resize_area<T: Into<EffectTimer>>(
     fx: Option<Effect>,
     initial_size: Size,
@@ -816,9 +860,9 @@ pub fn resize_area<T: Into<EffectTimer>>(
 
 /// Creates an effect that renders to an offscreen buffer.
 ///
-/// This function wraps an existing effect and redirects its rendering to a separate buffer,
-/// allowing for complex effects to be computed without affecting the main render buffer.
-/// The offscreen buffer can then be composited onto the main buffer as needed.
+/// This function wraps an existing effect and redirects its rendering to a separate
+/// buffer, allowing for complex effects to be computed without affecting the main render
+/// buffer. The offscreen buffer can then be composited onto the main buffer as needed.
 ///
 /// # Arguments
 /// * `fx` - The effect to be rendered offscreen.
@@ -850,8 +894,8 @@ pub fn resize_area<T: Into<EffectTimer>>(
 /// // Composite the offscreen buffer onto the main buffer as needed
 /// ```
 ///
-/// This example creates an offscreen buffer and applies a fade effect to it. The effect can be
-/// processed independently of the main render buffer, allowing for more complex or
+/// This example creates an offscreen buffer and applies a fade effect to it. The effect
+/// can be processed independently of the main render buffer, allowing for more complex or
 /// performance-intensive effects to be computed separately.
 pub fn offscreen_buffer(fx: Effect, render_target: RefCount<Buffer>) -> Effect {
     offscreen_buffer::OffscreenBuffer::new(fx, render_target).into_effect()
@@ -894,7 +938,7 @@ pub fn sequence(effects: &[Effect]) -> Effect {
 /// ```no_run
 /// use ratatui::prelude::Color;
 /// use tachyonfx::*;
-/// 
+///
 /// let c = Color::from_u32(0x504945);
 /// let timer = (1000, Interpolation::CircOut);
 /// fx::parallel(&[
@@ -923,20 +967,20 @@ pub fn parallel(effects: &[Effect]) -> Effect {
 /// fx::dissolve(1000); // linear interpolation
 /// ```
 pub fn dissolve<T: Into<EffectTimer>>(timer: T) -> Effect {
-    Dissolve::new(timer.into())
-        .into_effect()
+    Dissolve::new(timer.into()).into_effect()
 }
 
-/// Dissolves both the text and background to the specified style over the specified duration.
+/// Dissolves both the text and background to the specified style over the specified
+/// duration.
 ///
-/// This is similar to [`dissolve()`] but also transitions the background to match the target style.
+/// This is similar to [`dissolve()`] but also transitions the background to match the
+/// target style.
 ///
 /// # Arguments
 /// * `timer` - Controls the duration and interpolation of the effect
 /// * `style` - The target style to dissolve to
 pub fn dissolve_to<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
-    Dissolve::with_style(style, timer.into())
-        .into_effect()
+    Dissolve::with_style(style, timer.into()).into_effect()
 }
 
 /// The reverse of [dissolve()].
@@ -953,14 +997,14 @@ pub fn dissolve_to<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 /// fx::coalesce((1000, Interpolation::BounceOut));
 /// ```
 pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
-    Dissolve::new(timer.into().reversed())
-        .into_effect()
+    Dissolve::new(timer.into().reversed()).into_effect()
 }
 
-/// Reforms both the text and background to the specified style over the specified duration.
-/// The reverse of [dissolve_to()].
+/// Reforms both the text and background to the specified style over the specified
+/// duration. The reverse of [dissolve_to()].
 ///
-/// This is similar to [`coalesce`] but also transitions the background to match the target style.
+/// This is similar to [`coalesce`] but also transitions the background to match the
+/// target style.
 ///
 /// # Arguments
 /// * `timer` - Controls the duration and interpolation of the effect
@@ -981,8 +1025,7 @@ pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
 /// fx::coalesce_from(style, (1000, Interpolation::ExpoInOut));
 /// ```
 pub fn coalesce_from<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
-    Dissolve::with_style(style, timer.into().reversed())
-        .into_effect()
+    Dissolve::with_style(style, timer.into().reversed()).into_effect()
 }
 
 /// Fades the foreground color to the specified color over the specified duration.
@@ -1004,10 +1047,7 @@ pub fn coalesce_from<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 /// ```
 ///
 /// Fade out blake by targeting the author fg color.
-pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(
-    fg: C,
-    timer: T,
-) -> Effect {
+pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect {
     fade(Some(fg), None, timer.into(), false)
 }
 
@@ -1029,14 +1069,12 @@ pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(
 ///     .filter(filter);
 /// ```
 /// Fade in content, excluding borders, from the bg color.
-pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(
-    fg: C,
-    timer: T,
-) -> Effect {
+pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect {
     fade(Some(fg), None, timer.into(), true)
 }
 
-/// Fades to the specified the background and foreground colors over the specified duration.
+/// Fades to the specified the background and foreground colors over the specified
+/// duration.
 ///
 /// ## Example
 ///
@@ -1053,15 +1091,12 @@ pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(
 /// ```
 ///
 /// Fade the entire area to the out-of-bounds color.
-pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(
-    fg: C,
-    bg: C,
-    timer: T,
-) -> Effect {
+pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Effect {
     fade(Some(fg), Some(bg), timer.into(), false)
 }
 
-/// Fades from the specified the background and foreground colors over the specified duration.
+/// Fades from the specified the background and foreground colors over the specified
+/// duration.
 ///
 /// # Examples
 ///
@@ -1077,11 +1112,7 @@ pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(
 /// ```
 ///
 /// fade in the entire area from the out-of-bounds color
-pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(
-    fg: C,
-    bg: C,
-    timer: T,
-) -> Effect {
+pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Effect {
     fade(Some(fg), Some(bg), timer.into(), true)
 }
 
@@ -1092,8 +1123,8 @@ pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 /// # Arguments
 ///
-/// * `duration` - The duration of the sleep effect. This can be any type that
-///   can be converted into an `EffectTimer`.
+/// * `duration` - The duration of the sleep effect. This can be any type that can be
+///   converted into an `EffectTimer`.
 ///
 /// # Returns
 ///
@@ -1110,8 +1141,8 @@ pub fn sleep<T: Into<EffectTimer>>(duration: T) -> Effect {
 ///
 /// # Arguments
 ///
-/// * `duration` - The duration of the delay. This can be any type that can be
-///   converted into an `EffectTimer`.
+/// * `duration` - The duration of the delay. This can be any type that can be converted
+///   into an `EffectTimer`.
 /// * `effect` - The effect to be delayed.
 ///
 /// # Returns
@@ -1144,7 +1175,7 @@ pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
 /// # Arguments
 ///
 /// * `duration` - The additional duration to add before the effect starts. This can be
-///                any type that can be converted into an `EffectTimer`.
+///   any type that can be converted into an `EffectTimer`.
 /// * `effect` - The original effect to be prolonged.
 ///
 /// # Returns
@@ -1165,7 +1196,8 @@ pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
 /// let timer = (500, Interpolation::CircOut);
 /// fx::prolong_start(timer, fx::fade_from_fg(c, timer));
 /// ```
-///  This example holds the initial state of the fade effect for 500ms before starting the fade.
+///  This example holds the initial state of the fade effect for 500ms before starting the
+/// fade.
 ///
 /// ```
 /// use ratatui::style::Color;
@@ -1175,8 +1207,9 @@ pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
 ///     fx::fade_from_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear))
 /// );
 /// ```
-/// This example creates an effect that waits for 500ms before starting a fade effect from red to
-/// the original color over 1000ms. The total duration of this combined effect will be 1500ms.
+/// This example creates an effect that waits for 500ms before starting a fade effect from
+/// red to the original color over 1000ms. The total duration of this combined effect will
+/// be 1500ms.
 pub fn prolong_start<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
     Prolong::new(ProlongPosition::Start, duration.into(), effect).into_effect()
 }
@@ -1190,7 +1223,7 @@ pub fn prolong_start<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effec
 /// # Arguments
 ///
 /// * `duration` - The additional duration to add after the effect completes. This can be
-///                any type that can be converted into an `EffectTimer`.
+///   any type that can be converted into an `EffectTimer`.
 /// * `effect` - The original effect to be prolonged.
 ///
 /// # Returns
@@ -1211,7 +1244,8 @@ pub fn prolong_start<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effec
 /// let timer = (500, Interpolation::CircOut);
 /// fx::prolong_end(timer, fx::fade_to_fg(c, timer));
 /// ```
-/// This example holds the final state of the fade effect for another 500ms after it completes.
+/// This example holds the final state of the fade effect for another 500ms after it
+/// completes.
 ///
 /// ```
 /// use std::time::Duration;
@@ -1383,13 +1417,7 @@ where
     })
 }
 
-
-fn fade<C: Into<Color>>(
-    fg: Option<C>,
-    bg: Option<C>,
-    timer: EffectTimer,
-    reverse: bool,
-) -> Effect {
+fn fade<C: Into<Color>>(fg: Option<C>, bg: Option<C>, timer: EffectTimer, reverse: bool) -> Effect {
     if fg.is_none() && bg.is_none() {
         panic!("At least one of fg or bg must be provided");
     }
@@ -1402,7 +1430,6 @@ fn fade<C: Into<Color>>(
         .build()
         .into_effect()
 }
-
 
 #[cfg(feature = "sendable")]
 macro_rules! invoke_fn {
@@ -1420,44 +1447,37 @@ macro_rules! invoke_fn {
     };
 }
 
-pub (crate) use invoke_fn;
-use crate::fx::alpha_xform::{FreezeAt, RemapAlpha};
-use crate::fx::explode::Explode;
+pub(crate) use invoke_fn;
+
+use crate::fx::{
+    alpha_xform::{FreezeAt, RemapAlpha},
+    explode::Explode,
+};
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::Shader;
     use ratatui::prelude::Color;
 
-    const DIRECTIONS: [Motion; 4] = [
-        Motion::DownToUp,
-        Motion::UpToDown,
-        Motion::LeftToRight,
-        Motion::RightToLeft,
-    ];
+    use super::*;
+    use crate::Shader;
+
+    const DIRECTIONS: [Motion; 4] =
+        [Motion::DownToUp, Motion::UpToDown, Motion::LeftToRight, Motion::RightToLeft];
 
     #[test]
     fn test_name_fade() {
-        assert_eq!(
-            fade_to(Color::Red, Color::Green, 1000).name(),
-            "fade_to"
-        );
+        assert_eq!(fade_to(Color::Red, Color::Green, 1000).name(), "fade_to");
+
+        assert_eq!(fade_from_fg(Color::Red, 1000).name(), "fade_from");
 
         assert_eq!(
-            fade_from_fg(Color::Red, 1000).name(),
+            fade_to(Color::Red, Color::Green, 1000)
+                .reversed()
+                .name(),
             "fade_from"
         );
 
-        assert_eq!(
-            fade_to(Color::Red, Color::Green, 1000).reversed().name(),
-            "fade_from"
-        );
-
-        assert_eq!(
-            fade_from_fg(Color::Red, 1000).reversed().name(),
-            "fade_to"
-        );
+        assert_eq!(fade_from_fg(Color::Red, 1000).reversed().name(), "fade_to");
     }
 
     #[test]
@@ -1465,26 +1485,34 @@ mod tests {
         let c = Color::Red;
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_out(*dir, 1, 0, c, 1000).name(), "sweep_out",
-                "testing for direction={:?}", dir
+            assert_eq!(
+                sweep_out(*dir, 1, 0, c, 1000).name(),
+                "sweep_out",
+                "testing for direction={dir:?}",
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_out(*dir, 1, 0, c, 1000).reversed().name(), "sweep_in",
-                "testing reversed() for direction={:?}", dir
+            assert_eq!(
+                sweep_out(*dir, 1, 0, c, 1000).reversed().name(),
+                "sweep_in",
+                "testing reversed() for direction={dir:?}",
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_in(*dir, 1, 0, c, 1000).name(), "sweep_in",
-                "testing for direction={:?}", dir
+            assert_eq!(
+                sweep_in(*dir, 1, 0, c, 1000).name(),
+                "sweep_in",
+                "testing for direction={dir:?}",
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_in(*dir, 1, 0, c, 1000).reversed().name(), "sweep_out",
-                "testing reversed() for direction={:?}", dir
+            assert_eq!(
+                sweep_in(*dir, 1, 0, c, 1000).reversed().name(),
+                "sweep_out",
+                "testing reversed() for direction={dir:?}",
             );
         });
     }
@@ -1493,34 +1521,38 @@ mod tests {
     fn test_name_slide() {
         let c = Color::Red;
 
-        let directions = [
-            Motion::DownToUp,
-            Motion::UpToDown,
-            Motion::LeftToRight,
-            Motion::RightToLeft,
-        ];
+        let directions =
+            [Motion::DownToUp, Motion::UpToDown, Motion::LeftToRight, Motion::RightToLeft];
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_out(*dir, 1, 0, c, 1000).name(), "slide_out",
-                "testing for direction={:?}", dir
+            assert_eq!(
+                slide_out(*dir, 1, 0, c, 1000).name(),
+                "slide_out",
+                "testing for direction={dir:?}",
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_out(*dir, 1, 0, c, 1000).reversed().name(), "slide_in",
-                "testing reversed() for direction={:?}", dir
+            assert_eq!(
+                slide_out(*dir, 1, 0, c, 1000).reversed().name(),
+                "slide_in",
+                "testing reversed() for direction={dir:?}",
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_in(*dir, 1, 0, c, 1000).name(), "slide_in",
-                "testing for direction={:?}", dir
+            assert_eq!(
+                slide_in(*dir, 1, 0, c, 1000).name(),
+                "slide_in",
+                "testing for direction={dir:?}",
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_in(*dir, 1, 0, c, 1000).reversed().name(), "slide_out",
-                "testing reversed() for direction={:?}", dir
+            assert_eq!(
+                slide_in(*dir, 1, 0, c, 1000).reversed().name(),
+                "slide_out",
+                "testing reversed() for direction={dir:?}",
             );
         });
     }
@@ -1535,27 +1567,27 @@ mod tests {
 
         use crate::fx::{offscreen_buffer::OffscreenBuffer, translate::Translate};
 
-        verify_size(size_of::<EffectTimer>(),      12);
-        verify_size(size_of::<Ansi256>(),          10);
-        verify_size(size_of::<ConsumeTick>(),       1);
-        verify_size(size_of::<Dissolve>(),         88);
-        verify_size(size_of::<FadeColors>(),       80);
-        verify_size(size_of::<Glitch>(),          112);
-        verify_size(size_of::<HslShift>(),        104);
-        verify_size(size_of::<NeverComplete>(),    16);
-        verify_size(size_of::<OffscreenBuffer>(),  24);
-        verify_size(size_of::<ParallelEffect>(),   24);
-        verify_size(size_of::<PingPong>(),         72);
-        verify_size(size_of::<Prolong>(),          32);
-        verify_size(size_of::<Repeat>(),           32);
-        verify_size(size_of::<ResizeArea>(),       56);
+        verify_size(size_of::<EffectTimer>(), 12);
+        verify_size(size_of::<Ansi256>(), 10);
+        verify_size(size_of::<ConsumeTick>(), 1);
+        verify_size(size_of::<Dissolve>(), 88);
+        verify_size(size_of::<FadeColors>(), 80);
+        verify_size(size_of::<Glitch>(), 112);
+        verify_size(size_of::<HslShift>(), 104);
+        verify_size(size_of::<NeverComplete>(), 16);
+        verify_size(size_of::<OffscreenBuffer>(), 24);
+        verify_size(size_of::<ParallelEffect>(), 24);
+        verify_size(size_of::<PingPong>(), 72);
+        verify_size(size_of::<Prolong>(), 32);
+        verify_size(size_of::<Repeat>(), 32);
+        verify_size(size_of::<ResizeArea>(), 56);
         verify_size(size_of::<SequentialEffect>(), 32);
-        verify_size(size_of::<ShaderFn<()>>(),    112);
-        verify_size(size_of::<Sleep>(),            12);
-        verify_size(size_of::<SlideCell>(),        80);
-        verify_size(size_of::<SweepIn>(),          80);
-        verify_size(size_of::<TemporaryEffect>(),  32);
-        verify_size(size_of::<Translate>(),        72);
-        verify_size(size_of::<TranslateBuffer>(),  32);
+        verify_size(size_of::<ShaderFn<()>>(), 112);
+        verify_size(size_of::<Sleep>(), 12);
+        verify_size(size_of::<SlideCell>(), 80);
+        verify_size(size_of::<SweepIn>(), 80);
+        verify_size(size_of::<TemporaryEffect>(), 32);
+        verify_size(size_of::<Translate>(), 72);
+        verify_size(size_of::<TranslateBuffer>(), 32);
     }
 }

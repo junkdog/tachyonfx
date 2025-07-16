@@ -1,5 +1,5 @@
 // benches/color_conversion.rs
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use ratatui::style::Color;
 use tachyonfx::{color_from_hsl, color_to_hsl, ToRgbComponents};
 
@@ -9,12 +9,12 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
     // Create a diverse set of colors to test conversions
     // Include primary, secondary, various brightness and saturation levels
     let colors = [
-        Color::Rgb(255, 0, 0),    // Red
-        Color::Rgb(0, 255, 0),    // Green
-        Color::Rgb(0, 0, 255),    // Blue
-        Color::Rgb(255, 255, 0),  // Yellow
-        Color::Rgb(255, 0, 255),  // Magenta
-        Color::Rgb(0, 255, 255),  // Cyan
+        Color::Rgb(255, 0, 0),     // Red
+        Color::Rgb(0, 255, 0),     // Green
+        Color::Rgb(0, 0, 255),     // Blue
+        Color::Rgb(255, 255, 0),   // Yellow
+        Color::Rgb(255, 0, 255),   // Magenta
+        Color::Rgb(0, 255, 255),   // Cyan
         Color::Rgb(255, 255, 255), // White
         Color::Rgb(0, 0, 0),       // Black
         Color::Rgb(128, 128, 128), // Gray
@@ -31,7 +31,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
     group.bench_function("tachyonfx_color_to_hsl", |b| {
         b.iter(|| {
             for &color in &colors {
-                black_box(color_to_hsl(&color));
+                std::hint::black_box(color_to_hsl(&color));
             }
         })
     });
@@ -41,7 +41,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             for &color in &colors {
                 let (h, s, l) = color_to_hsl(&color);
-                black_box(color_from_hsl(h, s, l));
+                std::hint::black_box(color_from_hsl(h, s, l));
             }
         })
     });
@@ -53,7 +53,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                 let (r, g, b) = color.to_rgb();
                 let rgb = colorsys::Rgb::from([r as f64, g as f64, b as f64]);
                 let hsl: colorsys::Hsl = rgb.into();
-                black_box((hsl.hue(), hsl.saturation(), hsl.lightness()));
+                std::hint::black_box((hsl.hue(), hsl.saturation(), hsl.lightness()));
             }
         })
     });
@@ -68,7 +68,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
 
                 // Convert back to RGB
                 let rgb_back: colorsys::Rgb = hsl.into();
-                black_box(Color::Rgb(
+                std::hint::black_box(Color::Rgb(
                     rgb_back.red().round() as u8,
                     rgb_back.green().round() as u8,
                     rgb_back.blue().round() as u8,
@@ -82,7 +82,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             for &color in &colors {
                 let (h, s, l) = color_to_hsl(&color);
-                black_box(color_from_hsl(h, s, l));
+                std::hint::black_box(color_from_hsl(h, s, l));
             }
         })
     });
@@ -95,7 +95,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                 let rgb = colorsys::Rgb::from([r as f64, g as f64, b as f64]);
                 let hsl: colorsys::Hsl = rgb.into();
                 let rgb_back: colorsys::Rgb = hsl.into();
-                black_box(Color::Rgb(
+                std::hint::black_box(Color::Rgb(
                     rgb_back.red().round() as u8,
                     rgb_back.green().round() as u8,
                     rgb_back.blue().round() as u8,
@@ -111,7 +111,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
             for _ in 0..batch_size {
                 for &color in &colors {
                     let (h, s, l) = color_to_hsl(&color);
-                    black_box(color_from_hsl(h, s, l));
+                    std::hint::black_box(color_from_hsl(h, s, l));
                 }
             }
         })
@@ -126,7 +126,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                     let rgb = colorsys::Rgb::from([r as f64, g as f64, b as f64]);
                     let hsl: colorsys::Hsl = rgb.into();
                     let rgb_back: colorsys::Rgb = hsl.into();
-                    black_box(Color::Rgb(
+                    std::hint::black_box(Color::Rgb(
                         rgb_back.red().round() as u8,
                         rgb_back.green().round() as u8,
                         rgb_back.blue().round() as u8,

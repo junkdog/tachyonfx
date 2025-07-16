@@ -1,34 +1,35 @@
-mod dsl;
 mod arguments;
-mod environment;
-mod expressions;
+#[allow(clippy::module_inception)]
+mod dsl;
 mod dsl_format;
-mod method_chains;
-mod tokenizer;
-mod token_parsers;
-mod expr_promotion;
 mod dsl_writer;
+mod environment;
+mod expr_promotion;
+mod expressions;
+mod method_chains;
 mod parse_error;
+mod token_parsers;
 mod token_verification;
+mod tokenizer;
 
-use crate::dsl::expressions::{Expr, ExprSpan};
-use compact_str::CompactString;
 use std::fmt;
 
-use crate::dsl::token_parsers::parse_ast;
-use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 pub use arguments::Arguments;
+use compact_str::CompactString;
 pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
 use dsl_writer::DslWriter;
 
+use crate::dsl::{
+    expressions::{Expr, ExprSpan},
+    token_parsers::parse_ast,
+    tokenizer::{sanitize_tokens, tokenize},
+};
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
     #[error("Failed to tokenize the input at position {location}. Check for invalid characters or syntax.")]
-    TokenizationError {
-        location: ExprSpan,
-    },
+    TokenizationError { location: ExprSpan },
 
     #[error("Failed to parse expression at position {location}. This could be due to unexpected tokens or invalid syntax.")]
     TokenParseError { location: ExprSpan },
@@ -39,7 +40,9 @@ pub enum DslError {
     #[error("Unknown effect '{name}'. Check the effect name or register the effect with EffectDsl::register.")]
     UnknownEffect { name: CompactString, location: ExprSpan },
 
-    #[error("Variable '{name}' not found. Make sure it's declared before use with 'let {name} = ...'.")]
+    #[error(
+        "Variable '{name}' not found. Make sure it's declared before use with 'let {name} = ...'."
+    )]
     UnknownArgument { name: CompactString, location: ExprSpan },
 
     #[error("Cannot find variable '{name}' of type {expected}.")]
@@ -57,10 +60,7 @@ pub enum DslError {
     },
 
     #[error("Unknown function '{name}'. Check the function name or import the required module.")]
-    UnknownFunction {
-        name: CompactString,
-        location: ExprSpan,
-    },
+    UnknownFunction { name: CompactString, location: ExprSpan },
 
     #[error("Unknown struct '{name}'. Check the struct name or import the required module.")]
     UnknownStruct { name: CompactString, location: ExprSpan },
@@ -81,11 +81,7 @@ pub enum DslError {
     },
 
     #[error("Invalid number of arguments. Expected {expected}, got {actual}.")]
-    InvalidArgumentLength {
-        expected: usize,
-        actual: usize,
-        location: ExprSpan,
-    },
+    InvalidArgumentLength { expected: usize, actual: usize, location: ExprSpan },
 
     #[error("Invalid expression. Expected {expected}, but found {actual}.")]
     InvalidExpression {
@@ -98,24 +94,17 @@ pub enum DslError {
     BracketMismatch {
         bracket: char,
         location: ExprSpan,
-        bracket_type: &'static str,  // "opening" or "closing"
+        bracket_type: &'static str, // "opening" or "closing"
     },
 
     #[error("Missing semicolon after let statement. Add a ';' to terminate the statement.")]
-    MissingSemicolon {
-        location: ExprSpan,
-    },
+    MissingSemicolon { location: ExprSpan },
 
     #[error("Missing comma between elements. Add a ',' to separate items in the list.")]
-    MissingComma {
-        location: ExprSpan,
-    },
+    MissingComma { location: ExprSpan },
 
     #[error("{message}")]
-    SyntaxError {
-        message: CompactString,
-        location: ExprSpan,
-    },
+    SyntaxError { message: CompactString, location: ExprSpan },
 
     #[error("Value cannot be converted from {from} to {to}. The number is out of range for the target type.")]
     CastOverflow {
@@ -135,13 +124,11 @@ pub enum DslError {
     TooManyArguments {
         name: CompactString,
         count: usize,
-        location: ExprSpan
+        location: ExprSpan,
     },
 
     #[error("The effect '{name}' cannot be converted to DSL format.")]
-    EffectExpressionNotSupported {
-        name: &'static str,
-    },
+    EffectExpressionNotSupported { name: &'static str },
 
     #[error("The effect '{name}' can not be instantiated by the DSL.")]
     UnsupportedEffect {
@@ -150,26 +137,17 @@ pub enum DslError {
     },
 
     #[error("Array has incorrect length. Expected {expected} elements, got {actual}.")]
-    ArrayLengthMismatch {
-        expected: usize,
-        actual: usize,
-        location: ExprSpan,
-    },
+    ArrayLengthMismatch { expected: usize, actual: usize, location: ExprSpan },
 
     #[error("Invalid cell filter: '{name}'. Valid cell filters include CellFilter::Text, CellFilter::All, etc.")]
-    UnknownCellFilter {
-        name: CompactString,
-        location: ExprSpan,
-    },
+    UnknownCellFilter { name: CompactString, location: ExprSpan },
 }
-
-
 
 /// A parsed representation of a tachyonfx effect expression.
 ///
-/// `EffectExpression` provides a way to parse and represent effect descriptions in string form.
-/// This allows effects to be defined using a domain-specific language (DSL) syntax and later
-/// converted into actual effect instances.
+/// `EffectExpression` provides a way to parse and represent effect descriptions in string
+/// form. This allows effects to be defined using a domain-specific language (DSL) syntax
+/// and later converted into actual effect instances.
 ///
 /// # Examples
 ///
@@ -190,12 +168,12 @@ pub enum DslError {
 ///
 /// # See Also
 ///
-/// - [`Shader::to_dsl`](crate::Shader::to_dsl) for converting a shader to a DSL expression
+/// - [`Shader::to_dsl`](crate::Shader::to_dsl) for converting a shader to a DSL
+///   expression
 /// - [`DslError`] for possible error types
 pub struct EffectExpression {
     expr: Vec<Expr>,
 }
-
 
 impl EffectExpression {
     /// Parses a string into an `EffectExpression`.
@@ -224,21 +202,22 @@ impl EffectExpression {
 
 impl fmt::Display for EffectExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let dsl = self.expr.iter()
+        let dsl = self
+            .expr
+            .iter()
             .map(DslWriter::format)
             .collect::<Vec<_>>()
             .join("\n");
 
-        write!(f, "{}", dsl)
+        write!(f, "{dsl}")
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::fx;
-    use crate::fx::RepeatMode;
-    use crate::Shader;
     use indoc::indoc;
+
+    use crate::{fx, fx::RepeatMode, Shader};
 
     #[test]
     fn to_dsl_format_complex_tree() {
@@ -259,13 +238,11 @@ mod tests {
 
         let expr = fx::sequence(&[
             fx::dissolve(100),
-            fx::parallel(&[
-                fx::dissolve(200),
-                fx::dissolve(300),
-                fx::sleep(400),
-            ]),
+            fx::parallel(&[fx::dissolve(200), fx::dissolve(300), fx::sleep(400)]),
             fx::repeat(fx::dissolve(500), RepeatMode::Forever),
-        ]).to_dsl().expect("dsl expression from effect");
+        ])
+        .to_dsl()
+        .expect("dsl expression from effect");
 
         assert_eq!(expr.to_string(), expected);
     }

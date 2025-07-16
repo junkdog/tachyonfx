@@ -1,8 +1,11 @@
-use crate::features::acquire_ref;
-use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefCount, Shader, ThreadSafetyMarker};
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
 use std::fmt::Debug;
+
+use ratatui::{buffer::Buffer, layout::Rect};
+
+use crate::{
+    features::acquire_ref, CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefCount, Shader,
+    ThreadSafetyMarker,
+};
 
 pub type InstanceId = u32;
 
@@ -22,21 +25,14 @@ pub(crate) struct UniqueContext<K: Clone + ThreadSafetyMarker> {
 
 impl<K: Clone + ThreadSafetyMarker> UniqueContext<K> {
     pub(crate) fn new(key: impl Into<K>, instance_id: InstanceId) -> Self {
-        Self {
-            key: key.into(),
-            instance_id,
-        }
+        Self { key: key.into(), instance_id }
     }
 }
 
 impl<K: Clone + ThreadSafetyMarker> Unique<K> {
     pub(crate) fn new(id_context: RefCount<UniqueContext<K>>, fx: Effect) -> Self {
         let instance_id = acquire_ref(&id_context).instance_id;
-        Self {
-            id_context,
-            instance_id,
-            fx,
-        }
+        Self { id_context, instance_id, fx }
     }
 }
 

@@ -1,8 +1,10 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Offset, Position, Positions, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use std::{cell::RefCell, rc::Rc};
+
+use ratatui::{
+    buffer::Buffer,
+    layout::{Offset, Position, Positions, Rect},
+    style::{Color, Modifier, Style},
+};
 
 /// A trait for rendering the contents of one buffer onto another.
 ///
@@ -17,7 +19,6 @@ use ratatui::style::{Color, Modifier, Style};
 /// of the provided buffer. The `offset` parameter is used to correctly
 /// position the rendered content within the target buffer.
 pub trait BufferRenderer {
-
     /// Renders the contents of this buffer onto the provided buffer.
     ///
     /// # Arguments
@@ -31,26 +32,22 @@ pub trait BufferRenderer {
 
 impl BufferRenderer for Rc<RefCell<Buffer>> {
     fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
-        (*self.as_ref().borrow())
-            .render_buffer(offset, buf);
+        (*self.as_ref().borrow()).render_buffer(offset, buf);
     }
 
     fn render_buffer_region(&self, src_region: Rect, offset: Offset, buf: &mut Buffer) {
-        (*self.as_ref().borrow())
-            .render_buffer_region(src_region, offset, buf);
+        (*self.as_ref().borrow()).render_buffer_region(src_region, offset, buf);
     }
 }
 
 #[cfg(feature = "sendable")]
 impl BufferRenderer for crate::RefCount<Buffer> {
     fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
-        (*self.lock().unwrap())
-            .render_buffer(offset, buf);
+        (*self.lock().unwrap()).render_buffer(offset, buf);
     }
 
     fn render_buffer_region(&self, src_region: Rect, offset: Offset, buf: &mut Buffer) {
-        (*self.lock().unwrap())
-            .render_buffer_region(src_region, offset, buf);
+        (*self.lock().unwrap()).render_buffer_region(src_region, offset, buf);
     }
 }
 
@@ -64,18 +61,19 @@ impl BufferRenderer for Buffer {
     }
 }
 
-/// Copies the contents of a source buffer onto a destination buffer with a specified offset.
+/// Copies the contents of a source buffer onto a destination buffer with a specified
+/// offset.
 ///
 /// This function performs a "blit" operation, copying cells from the source buffer to the
-/// destination buffer. It handles clipping on all edges, ensuring that only the overlapping
-/// region is copied. The function also correctly handles negative offsets.
+/// destination buffer. It handles clipping on all edges, ensuring that only the
+/// overlapping region is copied. The function also correctly handles negative offsets.
 ///
 /// # Arguments
 ///
 /// * `src` - The source buffer to copy from.
 /// * `dst` - The destination buffer to copy into. This buffer is modified in-place.
 /// * `offset` - The offset at which to place the top-left corner of the source buffer
-///              relative to the destination buffer. Can be negative.
+///   relative to the destination buffer. Can be negative.
 ///
 /// # Behavior
 ///
@@ -83,30 +81,29 @@ impl BufferRenderer for Buffer {
 ///  leaving the destination cells unchanged.
 /// - If the offset would place the entire source buffer outside the bounds of the
 ///   destination buffer, no copying occurs.
-/// - The function clips the source buffer as necessary to fit within the destination buffer.
-/// - Negative offsets are handled by adjusting the starting position in the source buffer.
-pub fn blit_buffer(
-    src: &Buffer,
-    dst: &mut Buffer,
-    offset: Offset,
-) {
+/// - The function clips the source buffer as necessary to fit within the destination
+///   buffer.
+/// - Negative offsets are handled by adjusting the starting position in the source
+///   buffer.
+pub fn blit_buffer(src: &Buffer, dst: &mut Buffer, offset: Offset) {
     blit_buffer_region(src, src.area, dst, offset);
 }
 
-/// Copies the specified region of a source buffer onto a destination buffer with a specified offset.
+/// Copies the specified region of a source buffer onto a destination buffer with a
+/// specified offset.
 ///
 /// This function performs a "blit" operation, copying cells from the source buffer to the
-/// destination buffer. It handles clipping on all edges, ensuring that only the overlapping
-/// region is copied. The function also correctly handles negative offsets.
+/// destination buffer. It handles clipping on all edges, ensuring that only the
+/// overlapping region is copied. The function also correctly handles negative offsets.
 ///
 /// # Arguments
 ///
 /// * `src` - The source buffer to copy from.
-/// * `src_region` - The rectangular region within the source buffer to copy. This region will be
-///                 automatically clipped to the source buffer's bounds.
+/// * `src_region` - The rectangular region within the source buffer to copy. This region
+///   will be automatically clipped to the source buffer's bounds.
 /// * `dst` - The destination buffer to copy into. This buffer is modified in-place.
 /// * `offset` - The offset at which to place the top-left corner of the source region
-///              relative to the destination buffer. Can be negative.
+///   relative to the destination buffer. Can be negative.
 ///
 /// # Behavior
 ///
@@ -115,14 +112,11 @@ pub fn blit_buffer(
 ///   leaving the destination cells unchanged.
 /// - If the offset would place the entire source buffer outside the bounds of the
 ///   destination buffer, no copying occurs.
-/// - The function clips the source region as necessary to fit within the destination buffer.
-/// - Negative offsets are handled by adjusting the starting position in the source buffer.
-pub fn blit_buffer_region(
-    src: &Buffer,
-    src_region: Rect,
-    dst: &mut Buffer,
-    offset: Offset,
-) {
+/// - The function clips the source region as necessary to fit within the destination
+///   buffer.
+/// - Negative offsets are handled by adjusting the starting position in the source
+///   buffer.
+pub fn blit_buffer_region(src: &Buffer, src_region: Rect, dst: &mut Buffer, offset: Offset) {
     // clip source region to source buffer bounds
     let src_region = src_region.intersection(src.area);
 
@@ -144,9 +138,9 @@ pub fn blit_buffer_region(
 
 /// Converts a `Buffer` to an ANSI-encoded string representation.
 ///
-/// This function takes a `Buffer` and converts it to a string that includes ANSI escape codes
-/// for styling. The resulting string represents the content of the buffer with all styling
-/// information (colors and text modifiers) preserved.
+/// This function takes a `Buffer` and converts it to a string that includes ANSI escape
+/// codes for styling. The resulting string represents the content of the buffer with all
+/// styling information (colors and text modifiers) preserved.
 ///
 /// This implementation properly handles unicode characters that span multiple cells by:
 /// - Detecting and skipping space cells that follow multi-width characters
@@ -159,24 +153,28 @@ pub fn blit_buffer_region(
 /// # Returns
 ///
 /// A `String` containing the styled representation of the buffer's content.
-#[deprecated(since = "0.16.0", note = "use `buffer_to_ansi_string(buffer, false)` instead")]
+#[deprecated(
+    since = "0.16.0",
+    note = "use `buffer_to_ansi_string(buffer, false)` instead"
+)]
 pub fn render_as_ansi_string(buffer: &Buffer) -> String {
     buffer_to_ansi_string(buffer, false)
 }
 
-/// Converts a `Buffer` to an ANSI-encoded string representation with configurable width handling.
+/// Converts a `Buffer` to an ANSI-encoded string representation with configurable width
+/// handling.
 ///
-/// This function takes a `Buffer` and converts it to a string that includes ANSI escape codes
-/// for styling. The resulting string represents the content of the buffer with all styling
-/// information (colors and text modifiers) preserved.
+/// This function takes a `Buffer` and converts it to a string that includes ANSI escape
+/// codes for styling. The resulting string represents the content of the buffer with all
+/// styling information (colors and text modifiers) preserved.
 ///
 /// # Arguments
 ///
 /// * `buffer` - A reference to the `Buffer` to be converted.
-/// * `include_all_cells` - If `true`, includes every cell in the buffer grid, even those that 
-///   are spaces following multi-width characters. If `false`, properly handles unicode 
-///   characters by detecting and skipping space cells that follow multi-width characters 
-///   to avoid extra spaces in the output.
+/// * `include_all_cells` - If `true`, includes every cell in the buffer grid, even those
+///   that are spaces following multi-width characters. If `false`, properly handles
+///   unicode characters by detecting and skipping space cells that follow multi-width
+///   characters to avoid extra spaces in the output.
 ///
 /// # Returns
 ///
@@ -184,7 +182,7 @@ pub fn render_as_ansi_string(buffer: &Buffer) -> String {
 ///
 /// # Cell Handling Modes
 ///
-/// When `include_all_cells` is `false` (default behavior):
+/// When `include_all_cells` is `false` (default):
 /// - Skips space cells that follow multi-width characters (emoji, CJK characters, etc.)
 /// - Produces compact output suitable for display terminals
 /// - Example: "🦀test" renders as "🦀test" (no extra spaces)
@@ -195,7 +193,7 @@ pub fn render_as_ansi_string(buffer: &Buffer) -> String {
 /// - Example: "🦀test" might render as "🦀 test" (with spaces from the buffer grid)
 pub fn buffer_to_ansi_string(buffer: &Buffer, include_all_cells: bool) -> String {
     use unicode_width::UnicodeWidthStr;
-    
+
     let mut s = String::new();
     let mut style = Style::default();
 
@@ -203,7 +201,7 @@ pub fn buffer_to_ansi_string(buffer: &Buffer, include_all_cells: bool) -> String
         let mut x = 0;
         while x < buffer.area.width {
             let cell = buffer.cell(Position::new(x, y)).unwrap();
-            
+
             // Skip cells that are spaces following a multi-width character
             // to avoid extra spaces in unicode output (unless include_all_cells is true)
             if !include_all_cells && cell.symbol() == " " && x > 0 {
@@ -214,13 +212,13 @@ pub fn buffer_to_ansi_string(buffer: &Buffer, include_all_cells: bool) -> String
                     }
                 }
             }
-            
+
             if cell.style() != style {
                 s.push_str("\x1b[0m"); // reset
                 s.push_str(&escape_code_of(cell.style()));
                 style = cell.style();
             }
-            
+
             s.push_str(cell.symbol());
             x += 1;
         }
@@ -286,25 +284,25 @@ fn escape_code_of(style: Style) -> String {
 fn color_code(color: Color, foreground: bool) -> String {
     let base = if foreground { 38 } else { 48 };
     match color {
-        Color::Reset        => "\x1b[0m".to_string(),
-        Color::Black        => format!("\x1b[{};5;0m", base),
-        Color::Red          => format!("\x1b[{};5;1m", base),
-        Color::Green        => format!("\x1b[{};5;2m", base),
-        Color::Yellow       => format!("\x1b[{};5;3m", base),
-        Color::Blue         => format!("\x1b[{};5;4m", base),
-        Color::Magenta      => format!("\x1b[{};5;5m", base),
-        Color::Cyan         => format!("\x1b[{};5;6m", base),
-        Color::Gray         => format!("\x1b[{};5;7m", base),
-        Color::DarkGray     => format!("\x1b[{};5;8m", base),
-        Color::LightRed     => format!("\x1b[{};5;9m", base),
-        Color::LightGreen   => format!("\x1b[{};5;10m", base),
-        Color::LightYellow  => format!("\x1b[{};5;11m", base),
-        Color::LightBlue    => format!("\x1b[{};5;12m", base),
-        Color::LightMagenta => format!("\x1b[{};5;13m", base),
-        Color::LightCyan    => format!("\x1b[{};5;14m", base),
-        Color::White        => format!("\x1b[{};5;15m", base),
-        Color::Indexed(i)   => format!("\x1b[{};5;{}m", base, i),
-        Color::Rgb(r, g, b) => format!("\x1b[{};2;{};{};{}m", base, r, g, b),
+        Color::Reset => "\x1b[0m".to_string(),
+        Color::Black => format!("\x1b[{base};5;0m"),
+        Color::Red => format!("\x1b[{base};5;1m"),
+        Color::Green => format!("\x1b[{base};5;2m"),
+        Color::Yellow => format!("\x1b[{base};5;3m"),
+        Color::Blue => format!("\x1b[{base};5;4m"),
+        Color::Magenta => format!("\x1b[{base};5;5m"),
+        Color::Cyan => format!("\x1b[{base};5;6m"),
+        Color::Gray => format!("\x1b[{base};5;7m"),
+        Color::DarkGray => format!("\x1b[{base};5;8m"),
+        Color::LightRed => format!("\x1b[{base};5;9m"),
+        Color::LightGreen => format!("\x1b[{base};5;10m"),
+        Color::LightYellow => format!("\x1b[{base};5;11m"),
+        Color::LightBlue => format!("\x1b[{base};5;12m"),
+        Color::LightMagenta => format!("\x1b[{base};5;13m"),
+        Color::LightCyan => format!("\x1b[{base};5;14m"),
+        Color::White => format!("\x1b[{base};5;15m"),
+        Color::Indexed(i) => format!("\x1b[{base};5;{i}m"),
+        Color::Rgb(r, g, b) => format!("\x1b[{base};2;{r};{g};{b}m"),
     }
 }
 
@@ -315,11 +313,7 @@ struct ClipRegion {
 }
 
 impl ClipRegion {
-    fn new(
-        src_region: Rect,
-        dst_bounds: Rect,
-        dst_offset: Offset
-    ) -> Self {
+    fn new(src_region: Rect, dst_bounds: Rect, dst_offset: Offset) -> Self {
         let x_offset = dst_offset.x.min(0).unsigned_abs() as u16;
         let y_offset = dst_offset.y.min(0).unsigned_abs() as u16;
 
@@ -327,7 +321,7 @@ impl ClipRegion {
             dst_offset.x.max(0) as u16,
             dst_offset.y.max(0) as u16,
             src_region.width,
-            src_region.height
+            src_region.height,
         );
 
         // adjust source and destination regions based on clipping and bounds
@@ -340,7 +334,12 @@ impl ClipRegion {
             .min(src_region.height);
 
         Self {
-            src: Rect::new(src_region.x + x_offset, src_region.y + y_offset, width, height),
+            src: Rect::new(
+                src_region.x + x_offset,
+                src_region.y + y_offset,
+                width,
+                height,
+            ),
             dst: Rect::new(dst.x, dst.y, width, height),
         }
     }
@@ -373,28 +372,15 @@ impl ClipRegion {
 #[cfg(test)]
 mod tests {
     use ratatui::buffer::Buffer;
-    use crate::ref_count;
-    use super::*;
 
-    fn assert_buffer_to_buffer_copy(
-        offset: Offset,
-        expected: Buffer,
-    ) {
-        let aux_buffer = ref_count(Buffer::with_lines([
-            "abcd",
-            "efgh",
-            "ijkl",
-            "mnop",
-        ]));
+    use super::*;
+    use crate::ref_count;
+
+    fn assert_buffer_to_buffer_copy(offset: Offset, expected: Buffer) {
+        let aux_buffer = ref_count(Buffer::with_lines(["abcd", "efgh", "ijkl", "mnop"]));
 
         let mut buf = Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
+            ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",
             ". . . . ",
         ]);
 
@@ -408,29 +394,17 @@ mod tests {
         assert_buffer_to_buffer_copy(
             Offset { x: 0, y: 0 },
             Buffer::with_lines([
-                "abcd. . ",
-                "efgh. . ",
-                "ijkl. . ",
-                "mnop. . ",
+                "abcd. . ", "efgh. . ", "ijkl. . ", "mnop. . ", ". . . . ", ". . . . ", ". . . . ",
                 ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-            ])
+            ]),
         );
 
         assert_buffer_to_buffer_copy(
             Offset { x: 4, y: 3 },
             Buffer::with_lines([
+                ". . . . ", ". . . . ", ". . . . ", ". . abcd", ". . efgh", ". . ijkl", ". . mnop",
                 ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . abcd",
-                ". . efgh",
-                ". . ijkl",
-                ". . mnop",
-                ". . . . ",
-            ])
+            ]),
         );
     }
 
@@ -439,28 +413,16 @@ mod tests {
         assert_buffer_to_buffer_copy(
             Offset { x: -1, y: -2 },
             Buffer::with_lines([
-                "jkl . . ",
-                "nop . . ",
+                "jkl . . ", "nop . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",
                 ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-            ])
+            ]),
         );
         assert_buffer_to_buffer_copy(
             Offset { x: 6, y: 6 },
             Buffer::with_lines([
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . ab",
+                ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . ab",
                 ". . . ef",
-            ])
+            ]),
         );
     }
 
@@ -475,116 +437,107 @@ mod tests {
             "FFFFFFFFFF",
         ]));
 
-        let buffer = || Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]);
+        let buffer = || Buffer::with_lines([". . . . ", ". . . . ", ". . . . "]);
 
         // Test with no vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset::default(), &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            "AAAAAAAA",
-            "BBBBBBBB",
-            "CCCCCCCC",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["AAAAAAAA", "BBBBBBBB", "CCCCCCCC",])
+        );
 
         // Test with positive vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: 0, y: 2 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            "AAAAAAAA",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", "AAAAAAAA",])
+        );
 
         // Test with negative vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: 0, y: -2 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            "CCCCCCCC",
-            "DDDDDDDD",
-            "EEEEEEEE",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["CCCCCCCC", "DDDDDDDD", "EEEEEEEE",])
+        );
 
         // Test with both horizontal and vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: 2, y: 1 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". AAAAAA",
-            ". BBBBBB",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". AAAAAA", ". BBBBBB",])
+        );
 
         // Test with out-of-bounds vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: 0, y: 6 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . . . ",])
+        );
 
         // Test with large negative vertical and horizontal offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: -5, y: -5 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            "FFFFF . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["FFFFF . ", ". . . . ", ". . . . ",])
+        );
     }
 
     #[test]
-    fn test_render_as_ansi_string_unicode() {
-        // Test that set_stringn works properly with unicode and ANSI output doesn't have extra spaces
+    fn test_buffer_to_ansi_string_unicode() {
+        // Test that set_stringn works properly with unicode and ANSI output doesn't have extra
+        // spaces
         let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
         buffer.set_stringn(0, 0, "🦀test", 8, Style::default());
-        
-        let ansi_output = render_as_ansi_string(&buffer);
-        
+
+        let ansi_output = buffer_to_ansi_string(&buffer, false);
+
         // Should contain both the emoji and the text directly adjacent (no extra spaces)
         assert!(ansi_output.contains("🦀test"));
-        
-        // Test with CJK characters  
+
+        // Test with CJK characters
         let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
         buffer.set_stringn(0, 0, "世界test", 8, Style::default());
-        
-        let ansi_output = render_as_ansi_string(&buffer);
+
+        let ansi_output = buffer_to_ansi_string(&buffer, false);
         // Should be directly adjacent, no extra spaces between wide characters
         assert!(ansi_output.contains("世界test"));
-        
+
         // Test with styled unicode
         let mut buffer = Buffer::empty(Rect::new(0, 0, 6, 1));
         buffer.set_stringn(0, 0, "🦀", 2, Style::default().fg(Color::Red));
         buffer.set_stringn(2, 0, "test", 4, Style::default().fg(Color::Blue));
-        
-        let ansi_output = render_as_ansi_string(&buffer);
+
+        let ansi_output = buffer_to_ansi_string(&buffer, false);
         assert!(ansi_output.contains("🦀"));
         assert!(ansi_output.contains("test"));
         // Should contain both red and blue color codes
         assert!(ansi_output.contains("\x1b[38;5;1m")); // Red
         assert!(ansi_output.contains("\x1b[38;5;4m")); // Blue
         assert!(ansi_output.contains("\x1b[0m")); // Reset codes
-        
+
         // Test edge case: multi-width at end of line
         let mut buffer = Buffer::empty(Rect::new(0, 0, 3, 1));
         buffer.set_stringn(0, 0, "a🦀", 3, Style::default());
-        
-        let ansi_output = render_as_ansi_string(&buffer);
+
+        let ansi_output = buffer_to_ansi_string(&buffer, false);
         assert!(ansi_output.contains("a🦀"));
         assert!(!ansi_output.contains("a🦀 ")); // No trailing space
     }
 
     #[test]
-    fn test_render_as_ansi_string_spacing_demo() {
+    fn test_buffer_to_ansi_string_spacing_demo() {
         // Demonstrate the issue and solution with a clear example
         let mut buffer = Buffer::empty(Rect::new(0, 0, 12, 1));
         buffer.set_stringn(0, 0, "🦀🐍🌟hello", 12, Style::default());
-        
-        let ansi_output = render_as_ansi_string(&buffer);
-        
+
+        let ansi_output = buffer_to_ansi_string(&buffer, false);
+
         // Without proper width handling, this would be "🦀 🐍 🌟 hello" with spaces
         // With proper width handling, this should be "🦀🐍🌟hello" without extra spaces
         assert!(ansi_output.contains("🦀🐍🌟hello"));
@@ -598,131 +551,129 @@ mod tests {
         // Test the include_all_cells option
         let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
         buffer.set_stringn(0, 0, "🦀test", 8, Style::default());
-        
+
         // Default behavior: skip spaces after wide characters
-        let ansi_output_default = render_as_ansi_string(&buffer);
+        let ansi_output_default = buffer_to_ansi_string(&buffer, false);
         assert!(ansi_output_default.contains("🦀test"));
-        
+
         // Include all cells: include all cells from the buffer grid
         let ansi_output_all_cells = buffer_to_ansi_string(&buffer, true);
-        
+
         // With include_all_cells=true, we should get the space that follows the emoji
         // The exact output depends on how ratatui's set_stringn handles the wide character
         assert!(ansi_output_all_cells.contains("🦀"));
         assert!(ansi_output_all_cells.contains("test"));
-        
+
         // Test with CJK characters
         let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
         buffer.set_stringn(0, 0, "世界", 4, Style::default());
-        
-        let ansi_output_default = render_as_ansi_string(&buffer);
+
+        let ansi_output_default = buffer_to_ansi_string(&buffer, false);
         let ansi_output_all_cells = buffer_to_ansi_string(&buffer, true);
-        
+
         // Both should contain the characters, but all_cells might have spaces
         assert!(ansi_output_default.contains("世界"));
         // Note: The all_cells version might have the characters split by spaces
         // so we test for individual characters
         assert!(ansi_output_all_cells.contains("世") || ansi_output_all_cells.contains("界"));
-        
+
         // The all_cells version should be longer or equal (includes more spaces)
         assert!(ansi_output_all_cells.len() >= ansi_output_default.len());
     }
 
     #[test]
     fn test_blit_buffer_region() {
-        let buffer = || Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]);
+        let buffer =
+            || Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . "]);
 
-        let aux_buffer = Buffer::with_lines([
-            "abcd",
-            "efgh",
-            "ijkl",
-            "mnop",
-        ]);
+        let aux_buffer = Buffer::with_lines(["abcd", "efgh", "ijkl", "mnop"]);
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 2, 2), &mut buf, Offset::default());
-        assert_eq!(buf, Buffer::with_lines([
-            "fg. . . ",
-            "jk. . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(1, 1, 2, 2),
+            &mut buf,
+            Offset::default(),
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["fg. . . ", "jk. . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 2, 2), &mut buf, Offset { x: 4, y: 2 });
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . fg. ",
-            ". . jk. ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 2, 2), &mut buf, Offset {
+            x: 4,
+            y: 2,
+        });
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . fg. ", ". . jk. ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 3, 3), &mut buf, Offset { x: -1, y: -1 });
-        assert_eq!(buf, Buffer::with_lines([
-            "kl. . . ",
-            "op. . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 3, 3), &mut buf, Offset {
+            x: -1,
+            y: -1,
+        });
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["kl. . . ", "op. . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(2, 2, 3, 3), &mut buf, Offset::default());
-        assert_eq!(buf, Buffer::with_lines([
-            "kl. . . ",
-            "op. . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(2, 2, 3, 3),
+            &mut buf,
+            Offset::default(),
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["kl. . . ", "op. . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(0, 0, 2, 2), &mut buf, Offset { x: 6, y: 3 });
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . ab",
-            ". . . ef",
-        ]));
+        blit_buffer_region(&aux_buffer, Rect::new(0, 0, 2, 2), &mut buf, Offset {
+            x: 6,
+            y: 3,
+        });
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . ab", ". . . ef",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(0, 0, 2, 2), &mut buf, Offset { x: 8, y: 8 });
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(&aux_buffer, Rect::new(0, 0, 2, 2), &mut buf, Offset {
+            x: 8,
+            y: 8,
+        });
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 0, 0), &mut buf, Offset::default());
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(1, 1, 0, 0),
+            &mut buf,
+            Offset::default(),
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(0, 0, 4, 4), &mut buf, Offset::default());
-        assert_eq!(buf, Buffer::with_lines([
-            "abcd. . ",
-            "efgh. . ",
-            "ijkl. . ",
-            "mnop. . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(0, 0, 4, 4),
+            &mut buf,
+            Offset::default(),
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["abcd. . ", "efgh. . ", "ijkl. . ", "mnop. . ", ". . . . ",])
+        );
     }
 }

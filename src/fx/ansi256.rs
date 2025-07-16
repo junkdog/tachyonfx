@@ -1,10 +1,10 @@
-use crate::color_ext::AsIndexedColor;
-use crate::shader::Shader;
-use crate::{default_shader_impl, CellFilter};
-use crate::{Duration, LruCache};
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Position, Rect};
-use ratatui::style::Color;
+use ratatui::{
+    buffer::Buffer,
+    layout::{Position, Rect},
+    style::Color,
+};
+
+use crate::{default_shader_impl, shader::Shader, CellFilter, Duration, LruCache};
 
 #[derive(Clone, Default, Debug)]
 pub struct Ansi256 {
@@ -18,12 +18,7 @@ impl Shader for Ansi256 {
         "term256_colors"
     }
 
-    fn process(
-        &mut self,
-        _duration: Duration,
-        buf: &mut Buffer,
-        area: Rect,
-    ) -> Option<Duration> {
+    fn process(&mut self, _duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let mut fg_cache: LruCache<Color, Color, 4> = LruCache::default();
         let mut bg_cache: LruCache<Color, Color, 4> = LruCache::default();
 
@@ -31,8 +26,14 @@ impl Shader for Ansi256 {
         for y in area.top()..safe_area.bottom() {
             for x in area.left()..safe_area.right() {
                 let cell = buf.cell_mut(Position::new(x, y))?;
-                let fg = fg_cache.memoize(&cell.fg, |c| c.as_indexed_color());
-                let bg = bg_cache.memoize(&cell.bg, |c| c.as_indexed_color());
+                let fg = fg_cache.memoize(&cell.fg, |c| {
+                    #[allow(deprecated)]
+                    crate::color_ext::AsIndexedColor::as_indexed_color(c)
+                });
+                let bg = bg_cache.memoize(&cell.bg, |c| {
+                    #[allow(deprecated)]
+                    crate::color_ext::AsIndexedColor::as_indexed_color(c)
+                });
 
                 cell.set_fg(fg);
                 cell.set_bg(bg);
@@ -42,7 +43,9 @@ impl Shader for Ansi256 {
         None
     }
 
-    fn done(&self) -> bool { false }
+    fn done(&self) -> bool {
+        false
+    }
 
     fn filter(&mut self, _strategy: CellFilter) {}
 
@@ -60,6 +63,7 @@ mod tests {
     use crate::fx;
 
     #[test]
+    #[allow(deprecated)]
     fn to_dsl() {
         use crate::shader::Shader;
 

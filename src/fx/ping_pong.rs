@@ -1,8 +1,6 @@
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::{buffer::Buffer, layout::Rect};
 
-use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Shader};
-use crate::widget::EffectSpan;
+use crate::{widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, EffectTimer, Shader};
 
 #[derive(Clone, Debug)]
 pub struct PingPong {
@@ -26,12 +24,7 @@ impl Shader for PingPong {
         "ping_pong"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let overflow = self.fx.process(duration, buf, area);
 
         if overflow.is_some() && !self.is_reversing {
@@ -99,8 +92,6 @@ impl Shader for PingPong {
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-        crate::dsl::EffectExpression::parse(&format!(
-            "fx::ping_pong({})", self.fx.to_dsl()?)
-        )
+        crate::dsl::EffectExpression::parse(&format!("fx::ping_pong({})", self.fx.to_dsl()?))
     }
 }

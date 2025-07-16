@@ -1,24 +1,29 @@
+use std::{fs::File, io::Write, ops::Range};
+
 use bon::bon;
-use crate::widget::effect_span::effect_span_tree;
-use crate::widget::{CellFilterRegistry, ColorResolver, EffectSpan};
-use crate::{color_to_hsl, CellFilter, Duration, Effect, Shader};
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint, Layout, Position, Rect};
-use ratatui::style::{Color, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Widget};
-use std::fs::File;
-use std::io::Write;
-use std::ops::Range;
-use crate::color_space::color_from_hsl;
-use crate::widget::area_registry::AreaRegistry;
-use crate::widget::color_resolver::color_registry;
+use ratatui::{
+    buffer::Buffer,
+    layout::{Constraint, Layout, Position, Rect},
+    style::{Color, Style},
+    text::{Line, Span},
+    widgets::{Block, Widget},
+};
+
+use crate::{
+    color_space::color_from_hsl,
+    color_to_hsl,
+    widget::{
+        area_registry::AreaRegistry, color_resolver::color_registry, effect_span::effect_span_tree,
+        CellFilterRegistry, ColorResolver, EffectSpan,
+    },
+    CellFilter, Duration, Effect, Shader,
+};
 
 /// A widget that visualizes the timeline of effects in a `tachyonfx` Effect.
 ///
-/// `EffectTimeline` creates a graphical representation of the structure and timing of effects
-/// within the effect chain. It displays a hierarchical view of effects, their durations,
-/// and any cell filters applied to them.
+/// `EffectTimeline` creates a graphical representation of the structure and timing of
+/// effects within the effect chain. It displays a hierarchical view of effects, their
+/// durations, and any cell filters applied to them.
 #[derive(Clone)]
 pub struct EffectTimeline {
     span: EffectSpan,
@@ -35,25 +40,19 @@ pub struct EffectTimeline {
 
 #[bon]
 impl EffectTimeline {
-
     #[builder(finish_fn = build)]
     pub fn builder(
         effect: &Effect,
 
-        #[builder(default = 0.0..360.0)]
-        hue: Range<f64>,
+        #[builder(default = 0.0..360.0)] hue: Range<f64>,
 
-        #[builder(default = 52.0)]
-        saturation: f64,
+        #[builder(default = 52.0)] saturation: f64,
 
-        #[builder(default = 62.0)]
-        lightness: f64,
+        #[builder(default = 62.0)] lightness: f64,
 
-        #[builder(default = Style::default().fg(Color::DarkGray))]
-        interval_style: Style,
+        #[builder(default = Style::default().fg(Color::DarkGray))] interval_style: Style,
 
-        #[builder(default = Style::default().bg(Color::Black))]
-        chart_style: Style,
+        #[builder(default = Style::default().bg(Color::Black))] chart_style: Style,
 
         #[builder(default = Style::default().fg(color_from_hsl(40.0, 20.0, 35.0)))]
         area_column_style: Style,
@@ -115,12 +114,8 @@ impl EffectTimeline {
     ///
     /// A new `EffectTimeline` instance.
     #[deprecated(note = "Use `EffectTimeline::builder()` instead.")]
-    pub fn from(
-        effect: &Effect,
-    ) -> EffectTimeline {
-        Self::builder()
-            .effect(effect)
-            .build()
+    pub fn from(effect: &Effect) -> EffectTimeline {
+        Self::builder().effect(effect).build()
     }
 
     /// Renders the EffectTimeline to a file as an ANSI-encoded string.
@@ -130,11 +125,13 @@ impl EffectTimeline {
     /// then saved to the specified file path as an ANSI-encoded string.
     ///
     /// # Arguments
-    /// * `path` - A string slice that holds the path to the file where the output will be saved.
+    /// * `path` - A string slice that holds the path to the file where the output will be
+    ///   saved.
     /// * `width` - The width of the rendered timeline in characters.
     ///
     /// # Returns
-    /// * `std::io::Result<()>` - Ok(()) if the file was successfully written, or an error if there was a problem.
+    /// * `std::io::Result<()>` - Ok(()) if the file was successfully written, or an error
+    ///   if there was a problem.
     ///
     /// # Errors
     /// This function will return an error if:
@@ -156,7 +153,7 @@ impl EffectTimeline {
         let mut buffer = Buffer::empty(area);
 
         self.render(area, &mut buffer);
-        let content = crate::render_as_ansi_string(&buffer);
+        let content = crate::buffer_to_ansi_string(&buffer, false);
 
         let mut file = File::create(path)?;
         file.write_all(content.as_bytes())?;
@@ -223,7 +220,9 @@ impl EffectTimeline {
         // last
         let last_label = format!("{:?}ms", Duration::from_secs_f32(self.span.end).as_millis());
         let mut area = chart_row;
-        area.x = area.right().saturating_sub(last_label.chars().count() as u16);
+        area.x = area
+            .right()
+            .saturating_sub(last_label.chars().count() as u16);
         Span::from(last_label)
             .style(style)
             .render(area, buf);
@@ -235,49 +234,35 @@ impl EffectTimeline {
         &self,
         cell_filters: Vec<&CellFilter>,
         area: Rect,
-        buf: &mut Buffer
+        buf: &mut Buffer,
     ) {
         let style = self.cell_filter_column_style;
         for (filter, row) in cell_filters.iter().zip(area.rows()) {
             let s = self.cell_filter_resolver.id_of(filter);
-            Line::from(s)
-                .style(style)
-                .render(row, buf);
+            Line::from(s).style(style).render(row, buf);
         }
     }
 
-    fn render_areas_column(
-        &self,
-        areas: Vec<Option<Rect>>,
-        area: Rect,
-        buf: &mut Buffer
-    ) {
+    fn render_areas_column(&self, areas: Vec<Option<Rect>>, area: Rect, buf: &mut Buffer) {
         let style = self.area_column_style;
         for (a, row) in areas.into_iter().zip(area.rows()) {
             let s = self.area_resolver.id_of(a);
-            Line::from(s)
-                .style(style)
-                .render(row, buf);
+            Line::from(s).style(style).render(row, buf);
         }
     }
 
-    fn render_cell_filter_legend(
-        &self,
-        area: Rect,
-        buf: &mut Buffer
-    ) {
+    fn render_cell_filter_legend(&self, area: Rect, buf: &mut Buffer) {
         let col_style = self.cell_filter_column_style;
         let legend_style = self.cell_filter_legend_style;
 
-        self.cell_filter_resolver.entries()
+        self.cell_filter_resolver
+            .entries()
             .iter()
             .zip(area.rows())
             .for_each(|((id, filter), row)| {
                 let mut row = row;
 
-                Span::from(id)
-                    .style(col_style)
-                    .render(row, buf);
+                Span::from(id).style(col_style).render(row, buf);
 
                 row.x += 6;
                 Span::from(filter)
@@ -286,23 +271,18 @@ impl EffectTimeline {
             });
     }
 
-    fn render_areas_legend(
-        &self,
-        area: Rect,
-        buf: &mut Buffer
-    ) {
+    fn render_areas_legend(&self, area: Rect, buf: &mut Buffer) {
         let col_style = self.area_column_style;
         let legend_style = self.area_legend_style;
 
-        self.area_resolver.entries()
+        self.area_resolver
+            .entries()
             .iter()
             .zip(area.rows())
             .for_each(|((id, a), row)| {
                 let mut row = row;
 
-                Span::from(id)
-                    .style(col_style)
-                    .render(row, buf);
+                Span::from(id).style(col_style).render(row, buf);
 
                 row.x += 4;
                 Span::from(a.to_string())
@@ -325,7 +305,8 @@ impl EffectTimeline {
         let chart_rows: Vec<Rect> = chart_area.rows().collect();
         let colors = &self.color_resolver;
         let spans = self.span.iter().collect::<Vec<_>>();
-        self.span.iter()
+        self.span
+            .iter()
             .take(chart_area.height as usize)
             .zip(&chart_rows)
             .enumerate()
@@ -369,7 +350,11 @@ impl EffectTimeline {
 
     pub fn layout(&self, area: Rect) -> EffectTimelineRects {
         let tree = effect_span_tree(&self.color_resolver, &self.span);
-        let label_len = tree.iter().map(|l| l.width() as u16).max().unwrap_or(0);
+        let label_len = tree
+            .iter()
+            .map(|l| l.width() as u16)
+            .max()
+            .unwrap_or(0);
         let chart_rows = tree.len() as u16;
         let mut legend_rect = self.legend_rect();
         let mut clamped_area = area;
@@ -386,13 +371,15 @@ impl EffectTimeline {
             Constraint::Length(6),             // cell filter
             Constraint::Length(areas_col_w),   // overridden areas
             Constraint::Percentage(100),       // chart
-        ]).split(clamped_area);
+        ])
+        .split(clamped_area);
 
         let layout_legend = Layout::horizontal([
             Constraint::Length(self.legend_cell_filter_width()),
             Constraint::Length(LEGEND_PADDING),
             Constraint::Length(self.legend_areas_width()),
-        ]).split(legend_rect);
+        ])
+        .split(legend_rect);
 
         EffectTimelineRects {
             tree: layout[0],
@@ -416,7 +403,8 @@ impl EffectTimeline {
     }
 
     fn legend_cell_filter_width(&self) -> u16 {
-        self.cell_filter_resolver.entries()
+        self.cell_filter_resolver
+            .entries()
             .iter()
             .map(|(id, cf)| id.chars().count() + 1 + cf.chars().count())
             .map(|n| n as u16)
@@ -425,7 +413,8 @@ impl EffectTimeline {
     }
 
     fn legend_areas_width(&self) -> u16 {
-        self.area_resolver.entries()
+        self.area_resolver
+            .entries()
             .iter()
             .map(|(id, a)| id.chars().count() + 1 + a.chars().count())
             .map(|n| n as u16)
@@ -451,7 +440,7 @@ const LEGEND_PADDING: u16 = 5;
 impl Widget for EffectTimeline {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
-        Self: Sized
+        Self: Sized,
     {
         let tree = effect_span_tree(&self.color_resolver, &self.span);
         let layout = self.layout(area);
@@ -466,15 +455,15 @@ impl Widget for EffectTimeline {
             .for_each(|(effect, row)| effect.render(row, buf));
 
         // cell filter column
-        let filters: Vec<_> = self.span.iter()
+        let filters: Vec<_> = self
+            .span
+            .iter()
             .map(|span| &span.cell_filter)
             .collect();
         self.render_cell_filter_column(filters, layout.cell_filter, buf);
 
         // overridden effect areas column
-        let areas: Vec<_> = self.span.iter()
-            .map(|span| span.area)
-            .collect();
+        let areas: Vec<_> = self.span.iter().map(|span| span.area).collect();
         self.render_areas_column(areas, layout.areas, buf);
 
         // chart
@@ -507,7 +496,7 @@ fn as_background_area_line(bar: &str, base_color: Color) -> Line<'static> {
             Span::from(first).style(Style::default().fg(color)),
             Span::from(" ".repeat(n - 2)).style(Style::default().bg(color)),
             Span::from(last).style(Style::default().fg(color)),
-        ])
+        ]),
     }
 }
 
@@ -533,16 +522,14 @@ impl EffectTimelineRects {
     }
 }
 
-fn span_as_bar_line(
-    span: &EffectSpan,
-    scale_time_to_cell: f32
-) -> String {
-    let (start, end) = (span.start * scale_time_to_cell, span.end * scale_time_to_cell);
+fn span_as_bar_line(span: &EffectSpan, scale_time_to_cell: f32) -> String {
+    let (start, end) = (
+        span.start * scale_time_to_cell,
+        span.end * scale_time_to_cell,
+    );
 
     match end as u16 - start as u16 {
-        0 => {
-            (if start.round() > start { "▐" } else { "█"}).to_string()
-        },
+        0 => (if start.round() > start { "▐" } else { "█" }).to_string(),
         n => {
             let l = if start.round() > start { "▐" } else { "█" };
             let r = if end.round() < end { "▌" } else { "█" };
@@ -551,20 +538,23 @@ fn span_as_bar_line(
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+    use ratatui::{prelude::Margin, style::Color::Black};
+
     use super::*;
-    use crate::fx::{never_complete, parallel, repeating, sequence, with_duration};
-    use crate::CellFilter::{AllOf, Inner, Not, Outer, Text};
-    use crate::Interpolation::{BounceIn, BounceOut, CircInOut, ElasticOut, QuadOut};
-    use crate::{fx, render_as_ansi_string, CellFilter, Motion};
-    use ratatui::prelude::Margin;
-    use ratatui::style::Color::Black;
+    use crate::{
+        buffer_to_ansi_string, fx,
+        fx::{never_complete, parallel, repeating, sequence, with_duration},
+        CellFilter,
+        CellFilter::{AllOf, Inner, Not, Outer, Text},
+        Interpolation::{BounceIn, BounceOut, CircInOut, ElasticOut, QuadOut},
+        Motion,
+    };
 
     fn example_complex_fx() -> Effect {
         let margin = Margin::new(1, 1);
-        let border_text        = AllOf(vec![Outer(margin), Text]);
+        let border_text = AllOf(vec![Outer(margin), Text]);
         let border_decorations = AllOf(vec![Outer(margin), Not(Text.into())]);
 
         let short = Duration::from_millis(220);
@@ -581,31 +571,38 @@ mod tests {
                     with_duration(short * time_scale, never_complete(fx::dissolve(0))),
                     fx::coalesce((duration, BounceOut)),
                 ]),
-                fx::fade_from(gray, gray, duration * time_scale)
-            ]).with_filter(border_decorations),
-
+                fx::fade_from(gray, gray, duration * time_scale),
+            ])
+            .with_filter(border_decorations),
             // window title and shortcuts
             sequence(&[
-                with_duration(duration * time_scale, never_complete(fx::fade_to(gray, gray, 0))),
+                with_duration(
+                    duration * time_scale,
+                    never_complete(fx::fade_to(gray, gray, 0)),
+                ),
                 fx::fade_from(gray, gray, (320 * time_scale, QuadOut)),
-            ]).with_filter(border_text),
-
+            ])
+            .with_filter(border_text),
             // content area
             sequence(&[
-                with_duration(Duration::from_millis(270) * time_scale, parallel(&[
-                    never_complete(fx::dissolve(0)), // hiding icons/emoji
-                    never_complete(fx::fade_to(bg, bg, 0)),
-                ])),
+                with_duration(
+                    Duration::from_millis(270) * time_scale,
+                    parallel(&[
+                        never_complete(fx::dissolve(0)), // hiding icons/emoji
+                        never_complete(fx::fade_to(bg, bg, 0)),
+                    ]),
+                ),
                 parallel(&[
                     fx::coalesce(Duration::from_millis(220) * time_scale),
-                    fx::fade_from(bg, bg, (250 * time_scale, QuadOut))
+                    fx::fade_from(bg, bg, (250 * time_scale, QuadOut)),
                 ]),
                 fx::sleep(3000),
                 parallel(&[
                     fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
                     fx::dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
                 ]),
-            ]).with_filter(Inner(margin)),
+            ])
+            .with_filter(Inner(margin)),
         ]))
     }
 
@@ -625,16 +622,19 @@ mod tests {
         timeline.render(area, &mut buf);
 
         clear_styling(&mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            "sequence        * ██████████████████████",
-            "├ sweep_out     * █████      ▏         ▕",
-            "├ sweep_in      * ▏    ▐█████▏         ▕",
-            "├ sweep_out     * ▏          █████     ▕",
-            "└ sweep_in      * ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▐█████",
-            "                  0ms        4000m8000ms",
-            "                                        ",
-            "                 * all                  ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([
+                "sequence        * ██████████████████████",
+                "├ sweep_out     * █████      ▏         ▕",
+                "├ sweep_in      * ▏    ▐█████▏         ▕",
+                "├ sweep_out     * ▏          █████     ▕",
+                "└ sweep_in      * ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▐█████",
+                "                  0ms        4000m8000ms",
+                "                                        ",
+                "                 * all                  ",
+            ])
+        );
     }
 
     #[test]
@@ -647,14 +647,19 @@ mod tests {
         let fx = fx::repeating(
             parallel(&[
                 sequence(&[
-                    fx::timed_never_complete(Duration::from_millis(1000), fx::fade_to(cyan, cyan, 0)),
-                    fx::timed_never_complete(Duration::from_millis(2500),
-                        fx::fade_from(cyan, cyan, (400, QuadOut))
+                    fx::timed_never_complete(
+                        Duration::from_millis(1000),
+                        fx::fade_to(cyan, cyan, 0),
+                    ),
+                    fx::timed_never_complete(
+                        Duration::from_millis(2500),
+                        fx::fade_from(cyan, cyan, (400, QuadOut)),
                     ),
                     fx::fade_to(Black, Black, (500, CircInOut)),
                 ]),
                 fx::slide_in(Motion::UpToDown, 10, 0, Black, (900, QuadOut)),
-            ]).with_filter(content_area),
+            ])
+            .with_filter(content_area),
         );
 
         let timeline = EffectTimeline::builder().effect(&fx).build();
@@ -664,23 +669,26 @@ mod tests {
 
         clear_styling(&mut buf);
 
-        assert_eq!(buf, Buffer::with_lines([
-            "repeat                     * ███████████████████████████████████████████████████",
-            "└ parallel                 * ███████████████████████████████████████████████████",
-            "  ├ sequence               * ███████████████████████████████████████████████████",
-            "  │ ├ with_duration    cf-01 ████████████     ▏                ▏               ▕",
-            "  │ │ └ never_complete cf-01 █                ▏                ▏               ▕",
-            "  │ │   └ fade_to      cf-01 █▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
-            "  │ ├ with_duration    cf-01 ▏           ▐███████████████████████████████      ▕",
-            "  │ │ └ never_complete cf-01 ▏           ▐    ▏                ▏               ▕",
-            "  │ │   └ fade_from    cf-01 ▁▁▁▁▁▁▁▁▁▁▁▁▐████▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
-            "  │ └ fade_to          cf-01 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▐██████",
-            "  └ slide_in           cf-01 ██████████▌▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
-            "                             0ms              1333ms           2666ms     4000ms",
-            "                                                                                ",
-            "                                  * all                                         ",
-            "                              cf-01 layout(1)                                   ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([
+                "repeat                     * ███████████████████████████████████████████████████",
+                "└ parallel                 * ███████████████████████████████████████████████████",
+                "  ├ sequence               * ███████████████████████████████████████████████████",
+                "  │ ├ with_duration    cf-01 ████████████     ▏                ▏               ▕",
+                "  │ │ └ never_complete cf-01 █                ▏                ▏               ▕",
+                "  │ │   └ fade_to      cf-01 █▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+                "  │ ├ with_duration    cf-01 ▏           ▐███████████████████████████████      ▕",
+                "  │ │ └ never_complete cf-01 ▏           ▐    ▏                ▏               ▕",
+                "  │ │   └ fade_from    cf-01 ▁▁▁▁▁▁▁▁▁▁▁▁▐████▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+                "  │ └ fade_to          cf-01 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▐██████",
+                "  └ slide_in           cf-01 ██████████▌▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+                "                             0ms              1333ms           2666ms     4000ms",
+                "                                                                                ",
+                "                                  * all                                         ",
+                "                              cf-01 layout(1)                                   ",
+            ])
+        );
     }
 
     fn clear_styling(buf: &mut Buffer) {
@@ -694,17 +702,18 @@ mod tests {
     #[test]
     fn print_widget_to_stdout() {
         let fx = example_complex_fx();
-        let timeline = EffectTimeline::builder()
-            .effect(&fx)
-            .build();
+        let timeline = EffectTimeline::builder().effect(&fx).build();
         let area = Rect::new(0, 0, 100, 35);
 
-        timeline.clone().save_to_file("effect_timeline.txt", 110).unwrap();
+        timeline
+            .clone()
+            .save_to_file("effect_timeline.txt", 110)
+            .unwrap();
 
         let mut buf = Buffer::empty(area);
         timeline.render(area, &mut buf);
 
-        let ansi_escaped_string = render_as_ansi_string(&buf);
-        println!("{}", ansi_escaped_string);
+        let ansi_escaped_string = buffer_to_ansi_string(&buf, false);
+        println!("{ansi_escaped_string}");
     }
 }

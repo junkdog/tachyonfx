@@ -1,49 +1,40 @@
-use crate::dsl::DslError;
-use crate::dsl::expressions::ExprSpan;
-use crate::dsl::tokenizer::{Token, TokenKind};
+use crate::dsl::{
+    expressions::ExprSpan,
+    tokenizer::{Token, TokenKind},
+    DslError,
+};
 
-pub(super) fn verify_tokens(
-    tokens: Vec<Token>,
-) -> Result<Vec<Token>, DslError> {
+pub(super) fn verify_tokens(tokens: Vec<Token>) -> Result<Vec<Token>, DslError> {
     verify_brackets(tokens)
         .and_then(verify_semicolons)
         .and_then(verify_commas)
 }
 
-fn verify_brackets(
-    tokens: Vec<Token>,
-) -> Result<Vec<Token>, DslError> {
+fn verify_brackets(tokens: Vec<Token>) -> Result<Vec<Token>, DslError> {
     let mut stack: Vec<&Token> = Vec::new();
 
-    const LEFT_BRACKETS: [TokenKind; 3] = [
-        TokenKind::LeftParen,
-        TokenKind::LeftBracket,
-        TokenKind::LeftBrace,
-    ];
+    const LEFT_BRACKETS: [TokenKind; 3] =
+        [TokenKind::LeftParen, TokenKind::LeftBracket, TokenKind::LeftBrace];
 
-    const RIGHT_BRACKETS: [TokenKind; 3] = [
-        TokenKind::RightParen,
-        TokenKind::RightBracket,
-        TokenKind::RightBrace,
-    ];
+    const RIGHT_BRACKETS: [TokenKind; 3] =
+        [TokenKind::RightParen, TokenKind::RightBracket, TokenKind::RightBrace];
 
-    let rhs = |t: &TokenKind| {
-        match t {
-            TokenKind::LeftParen => TokenKind::RightParen,
-            TokenKind::LeftBracket => TokenKind::RightBracket,
-            TokenKind::LeftBrace => TokenKind::RightBrace,
-            _ => unreachable!(),
-        }
+    let rhs = |t: &TokenKind| match t {
+        TokenKind::LeftParen => TokenKind::RightParen,
+        TokenKind::LeftBracket => TokenKind::RightBracket,
+        TokenKind::LeftBrace => TokenKind::RightBrace,
+        _ => unreachable!(),
     };
 
-    let bracket_mismatch = |t: &Token, bracket_type: &'static str| -> Result<Vec<Token>, DslError> {
-        let bracket = t.text.chars().next().unwrap();
-        Err(DslError::BracketMismatch {
-            bracket,
-            location: ExprSpan::new(t.span.0, t.span.1),
-            bracket_type,
-        })
-    };
+    let bracket_mismatch =
+        |t: &Token, bracket_type: &'static str| -> Result<Vec<Token>, DslError> {
+            let bracket = t.text.chars().next().unwrap();
+            Err(DslError::BracketMismatch {
+                bracket,
+                location: ExprSpan::new(t.span.0, t.span.1),
+                bracket_type,
+            })
+        };
 
     for token in &tokens {
         if LEFT_BRACKETS.contains(&token.kind) {
@@ -70,16 +61,14 @@ fn verify_brackets(
     Ok(tokens)
 }
 
-fn verify_semicolons(
-    tokens: Vec<Token>,
-) -> Result<Vec<Token>, DslError> {
+fn verify_semicolons(tokens: Vec<Token>) -> Result<Vec<Token>, DslError> {
     if tokens.is_empty() {
         return Ok(tokens);
     }
 
     // Check for consecutive semicolons
     for i in 1..tokens.len() {
-        if tokens[i].kind == TokenKind::Semicolon && tokens[i-1].kind == TokenKind::Semicolon {
+        if tokens[i].kind == TokenKind::Semicolon && tokens[i - 1].kind == TokenKind::Semicolon {
             return Err(DslError::SyntaxError {
                 message: "Multiple consecutive semicolons".into(),
                 location: ExprSpan::new(tokens[i].span.0, tokens[i].span.1),
@@ -98,12 +87,16 @@ fn verify_semicolons(
 
             while j < tokens.len() {
                 match tokens[j].kind {
-                    TokenKind::LeftParen | TokenKind::LeftBrace | TokenKind::LeftBracket => depth += 1,
+                    TokenKind::LeftParen | TokenKind::LeftBrace | TokenKind::LeftBracket => {
+                        depth += 1
+                    },
                     TokenKind::RightParen | TokenKind::RightBrace | TokenKind::RightBracket => {
-                        if depth > 0 { depth -= 1; }
+                        if depth > 0 {
+                            depth -= 1;
+                        }
                     },
                     TokenKind::Semicolon if depth == 0 => break,
-                    _ => {}
+                    _ => {},
                 }
                 j += 1;
             }
@@ -112,7 +105,7 @@ fn verify_semicolons(
             // at the end of the file, we're missing a semicolon
             if j == tokens.len() && i < tokens.len() - 2 {
                 return Err(DslError::MissingSemicolon {
-                    location: ExprSpan::new(tokens[j-1].span.1, tokens[j-1].span.1 + 1),
+                    location: ExprSpan::new(tokens[j - 1].span.1, tokens[j - 1].span.1 + 1),
                 });
             }
         }
@@ -121,10 +114,7 @@ fn verify_semicolons(
     Ok(tokens)
 }
 
-
-fn verify_commas(
-    tokens: Vec<Token>,
-) -> Result<Vec<Token>, DslError> {
+fn verify_commas(tokens: Vec<Token>) -> Result<Vec<Token>, DslError> {
     if tokens.is_empty() {
         return Ok(tokens);
     }
@@ -138,38 +128,48 @@ fn verify_commas(
                 // push opening delimiter onto stack
                 stack.push((token.kind, i));
             },
-            
+
             TokenKind::RightBracket | TokenKind::RightParen | TokenKind::RightBrace => {
                 if let Some((opening, _)) = stack.last() {
                     // check if matching opening delimiter
-                    let is_matching = match (opening, token.kind) {
-                        (TokenKind::LeftBracket, TokenKind::RightBracket) => true,
-                        (TokenKind::LeftParen, TokenKind::RightParen) => true,
-                        (TokenKind::LeftBrace, TokenKind::RightBrace) => true,
-                        _ => false
-                    };
+                    let is_matching = matches!(
+                        (opening, token.kind),
+                        (TokenKind::LeftBracket, TokenKind::RightBracket)
+                            | (TokenKind::LeftParen, TokenKind::RightParen)
+                            | (TokenKind::LeftBrace, TokenKind::RightBrace)
+                    );
 
                     if is_matching {
                         stack.pop();
                     }
                 }
             },
-            
+
             // A token that might need a comma before it
-            TokenKind::Identifier | TokenKind::StringLiteral | TokenKind::IntLiteral | 
-            TokenKind::FloatLiteral | TokenKind::HexLiteral => {
+            TokenKind::Identifier
+            | TokenKind::StringLiteral
+            | TokenKind::IntLiteral
+            | TokenKind::FloatLiteral
+            | TokenKind::HexLiteral => {
                 // if we're inside brackets/parens, we might need a comma
                 if !stack.is_empty() {
                     let (delimiter_kind, last_delimiter_pos) = *stack.last().unwrap();
-                    
-                    // only check for missing commas in arrays and parameter lists, not in struct initializations
-                    if delimiter_kind == TokenKind::LeftBracket || delimiter_kind == TokenKind::LeftParen {
-                        // If the last token was also an expression-like token, we might be missing a comma
-                        if is_expression_token(last_token_kind) && !is_opening_delimiter(last_token_kind) {
+
+                    // only check for missing commas in arrays and parameter lists, not in struct
+                    // initializations
+                    if delimiter_kind == TokenKind::LeftBracket
+                        || delimiter_kind == TokenKind::LeftParen
+                    {
+                        // If the last token was also an expression-like token, we might be missing
+                        // a comma
+                        if is_expression_token(last_token_kind)
+                            && !is_opening_delimiter(last_token_kind)
+                        {
                             // but we don't need a comma right after an opening delimiter
-                            if last_delimiter_pos != i - 1 { // Not immediately after the opening delimiter
+                            if last_delimiter_pos != i - 1 {
+                                // Not immediately after the opening delimiter
                                 return Err(DslError::MissingComma {
-                                    location: ExprSpan::new(tokens[i-1].span.1, token.span.0),
+                                    location: ExprSpan::new(tokens[i - 1].span.1, token.span.0),
                                 });
                             }
                         }
@@ -177,7 +177,7 @@ fn verify_commas(
                 }
             },
 
-            _ => {}
+            _ => {},
         }
 
         // Update for next iteration
@@ -188,13 +188,22 @@ fn verify_commas(
 }
 
 fn is_expression_token(kind: TokenKind) -> bool {
-    matches!(kind,
-        TokenKind::Identifier | TokenKind::StringLiteral | TokenKind::IntLiteral |
-        TokenKind::FloatLiteral | TokenKind::HexLiteral | TokenKind::RightBrace |
-        TokenKind::RightBracket | TokenKind::RightParen
+    matches!(
+        kind,
+        TokenKind::Identifier
+            | TokenKind::StringLiteral
+            | TokenKind::IntLiteral
+            | TokenKind::FloatLiteral
+            | TokenKind::HexLiteral
+            | TokenKind::RightBrace
+            | TokenKind::RightBracket
+            | TokenKind::RightParen
     )
 }
 
 fn is_opening_delimiter(kind: TokenKind) -> bool {
-    matches!(kind, TokenKind::LeftBracket | TokenKind::LeftParen | TokenKind::LeftBrace)
+    matches!(
+        kind,
+        TokenKind::LeftBracket | TokenKind::LeftParen | TokenKind::LeftBrace
+    )
 }

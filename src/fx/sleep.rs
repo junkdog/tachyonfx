@@ -1,10 +1,9 @@
-use crate::{default_shader_impl, Duration};
 use ratatui::layout::Rect;
 
-use crate::effect_timer::EffectTimer;
-use crate::shader::Shader;
-use crate::widget::EffectSpan;
-use crate::CellFilter;
+use crate::{
+    default_shader_impl, effect_timer::EffectTimer, shader::Shader, widget::EffectSpan, CellFilter,
+    Duration,
+};
 
 #[derive(Clone, Debug)]
 pub struct Sleep {
@@ -24,7 +23,9 @@ impl Shader for Sleep {
         "sleep"
     }
 
-    fn area(&self) -> Option<Rect> { None }
+    fn area(&self) -> Option<Rect> {
+        None
+    }
     fn set_area(&mut self, _area: Rect) {}
     fn filter(&mut self, _strategy: CellFilter) {}
 
@@ -42,9 +43,10 @@ impl Shader for Sleep {
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-        crate::dsl::EffectExpression::parse(
-            &format!("fx::sleep({})", self.timer.duration().as_millis())
-        )
+        crate::dsl::EffectExpression::parse(&format!(
+            "fx::sleep({})",
+            self.timer.duration().as_millis()
+        ))
     }
 }
 
@@ -59,4 +61,3 @@ mod tests {
         assert_eq!(dsl, "fx::sleep(1000)");
     }
 }
-

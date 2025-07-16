@@ -1,12 +1,12 @@
 use ratatui::layout::Rect;
-use crate::{RangeSampler, SimpleRng};
 
+use crate::{RangeSampler, SimpleRng};
 
 /// Specifies the direction of movement for visual effects like sweeps and slides.
 ///
-/// This enum defines the four cardinal directions that effects can move in. It is used by various
-/// effects to determine their direction of animation, such as sweep effects, slide transitions,
-/// and other directional visual effects.
+/// This enum defines the four cardinal directions that effects can move in. It is used by
+/// various effects to determine their direction of animation, such as sweep effects,
+/// slide transitions, and other directional visual effects.
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum Motion {
     /// Movement from left to right
@@ -32,8 +32,8 @@ impl Motion {
         match self {
             Self::LeftToRight => Self::RightToLeft,
             Self::RightToLeft => Self::LeftToRight,
-            Self::UpToDown    => Self::DownToUp,
-            Self::DownToUp    => Self::UpToDown,
+            Self::UpToDown => Self::DownToUp,
+            Self::DownToUp => Self::UpToDown,
         }
     }
 
@@ -62,8 +62,9 @@ pub(crate) struct DirectionalVariance {
 impl DirectionalVariance {
     /// Creates a new `DirectionalVariance` instance.
     ///
-    /// This method initializes a `DirectionalVariance` with a seed based on the given area's dimensions,
-    /// the specified direction for the sliding effect, and the maximum variance allowed.
+    /// This method initializes a `DirectionalVariance` with a seed based on the given
+    /// area's dimensions, the specified direction for the sliding effect, and the
+    /// maximum variance allowed.
     ///
     /// # Arguments
     ///
@@ -74,11 +75,7 @@ impl DirectionalVariance {
     /// # Returns
     ///
     /// A new `DirectionalVariance` instance.
-    pub(super) fn from(
-        area: Rect,
-        direction: Motion,
-        max: u16
-    ) -> Self {
+    pub(super) fn from(area: Rect, direction: Motion, max: u16) -> Self {
         Self {
             rng: SimpleRng::new(((area.width as u32) << 16) | area.height as u32),
             direction,
@@ -105,8 +102,8 @@ impl DirectionalVariance {
         match self.direction {
             Motion::LeftToRight => (variance, 0),
             Motion::RightToLeft => (-variance, 0),
-            Motion::UpToDown    => (0, variance),
-            Motion::DownToUp    => (0, -variance),
+            Motion::UpToDown => (0, variance),
+            Motion::DownToUp => (0, -variance),
         }
     }
 }

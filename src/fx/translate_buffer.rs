@@ -1,6 +1,8 @@
 use compact_str::ToCompactString;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Offset, Rect};
+use ratatui::{
+    buffer::Buffer,
+    layout::{Offset, Rect},
+};
 
 use crate::{BufferRenderer, CellFilter, Duration, EffectTimer, Interpolatable, RefCount, Shader};
 
@@ -27,16 +29,8 @@ impl TranslateBuffer {
     /// * `translate_by` - The final offset to translate the buffer by.
     /// * `timer` - The timer controlling the duration and interpolation of the effect.
     /// * `aux_buffer` - The auxiliary buffer containing the pre-rendered content.
-    pub fn new(
-        aux_buffer: RefCount<Buffer>,
-        translate_by: Offset,
-        timer: EffectTimer,
-    ) -> Self {
-        Self {
-            timer,
-            aux_buffer,
-            translate_by,
-        }
+    pub fn new(aux_buffer: RefCount<Buffer>, translate_by: Offset, timer: EffectTimer) -> Self {
+        Self { timer, aux_buffer, translate_by }
     }
 }
 
@@ -45,12 +39,7 @@ impl Shader for TranslateBuffer {
         "translate_by_buf"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        _area: Rect
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, _area: Rect) -> Option<Duration> {
         let overflow = self.timer.process(duration);
         let alpha = self.timer.alpha();
 
@@ -72,9 +61,7 @@ impl Shader for TranslateBuffer {
         None
     }
 
-    fn set_area(&mut self, _area: Rect) {
-
-    }
+    fn set_area(&mut self, _area: Rect) {}
 
     fn filter(&mut self, _strategy: CellFilter) {
         // not applicable
@@ -98,37 +85,32 @@ impl Shader for TranslateBuffer {
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-        Err(crate::dsl::DslError::UnsupportedEffect {
-            name: self.name().to_compact_string(),
-        })
+        Err(crate::dsl::DslError::UnsupportedEffect { name: self.name().to_compact_string() })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ratatui::widgets::{Block, Borders, Widget};
+
+    use super::*;
     use crate::{ref_count, CenteredShrink, Interpolation};
 
     fn translate_buffer_fx(translate_by: Offset) -> TranslateBuffer {
         let screen = Rect::new(0, 0, 20, 10);
         let aux_buffer = ref_count(Buffer::empty(screen));
-        TranslateBuffer::new(aux_buffer, translate_by, EffectTimer::from_ms(100, Interpolation::Linear))
+        TranslateBuffer::new(
+            aux_buffer,
+            translate_by,
+            EffectTimer::from_ms(100, Interpolation::Linear),
+        )
     }
 
-    fn assert_translation(
-        translate_by: Offset,
-        percent: u8,
-        expected: Buffer,
-    ) {
+    fn assert_translation(translate_by: Offset, percent: u8, expected: Buffer) {
         assert_translation_fx(translate_buffer_fx(translate_by), percent, expected);
     }
 
-    fn assert_translation_fx(
-        mut fx: TranslateBuffer,
-        percent: u8,
-        expected: Buffer,
-    ) {
+    fn assert_translation_fx(mut fx: TranslateBuffer, percent: u8, expected: Buffer) {
         let screen = Rect::new(0, 0, 20, 10);
         let content = screen.inner_centered(10, 4);
 
@@ -152,241 +134,313 @@ mod tests {
 
     #[test]
     fn test_translate_within_bounds() {
-        assert_translation(Offset { x: 0, y: 3 }, 0, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "     ┌hello───┐     ",
-            "     │        │     ",
-            "     │        │     ",
-            "     └────────┘     ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation(Offset { x: 0, y: 3 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "     ┌hello───┐     ",
-            "     │        │     ",
-            "     │        │     ",
-            "     └────────┘     ",
-        ]));
-        assert_translation(Offset { x: 0, y: -3 }, 100, Buffer::with_lines([
-            "     ┌hello───┐     ",
-            "     │        │     ",
-            "     │        │     ",
-            "     └────────┘     ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation(Offset { x: -5, y: -3 }, 100, Buffer::with_lines([
-            "┌hello───┐          ",
-            "│        │          ",
-            "│        │          ",
-            "└────────┘          ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation(Offset { x: 5, y: 3 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "          ┌hello───┐",
-            "          │        │",
-            "          │        │",
-            "          └────────┘",
-        ]));
+        assert_translation(
+            Offset { x: 0, y: 3 },
+            0,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "     ┌hello───┐     ",
+                "     │        │     ",
+                "     │        │     ",
+                "     └────────┘     ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: 0, y: 3 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "     ┌hello───┐     ",
+                "     │        │     ",
+                "     │        │     ",
+                "     └────────┘     ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: 0, y: -3 },
+            100,
+            Buffer::with_lines([
+                "     ┌hello───┐     ",
+                "     │        │     ",
+                "     │        │     ",
+                "     └────────┘     ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: -5, y: -3 },
+            100,
+            Buffer::with_lines([
+                "┌hello───┐          ",
+                "│        │          ",
+                "│        │          ",
+                "└────────┘          ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: 5, y: 3 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "          ┌hello───┐",
+                "          │        │",
+                "          │        │",
+                "          └────────┘",
+            ]),
+        );
     }
 
     #[test]
     fn test_translate_reversed() {
         let mut fx = translate_buffer_fx(Offset { x: -5, y: -3 });
         fx.reverse();
-        assert_translation_fx(fx, 0, Buffer::with_lines([
-            "┌hello───┐          ",
-            "│        │          ",
-            "│        │          ",
-            "└────────┘          ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation_fx(
+            fx,
+            0,
+            Buffer::with_lines([
+                "┌hello───┐          ",
+                "│        │          ",
+                "│        │          ",
+                "└────────┘          ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
 
         let mut fx = translate_buffer_fx(Offset { x: 5, y: 3 });
         fx.reverse();
-        assert_translation_fx(fx, 0, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "          ┌hello───┐",
-            "          │        │",
-            "          │        │",
-            "          └────────┘",
-        ]));
+        assert_translation_fx(
+            fx,
+            0,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "          ┌hello───┐",
+                "          │        │",
+                "          │        │",
+                "          └────────┘",
+            ]),
+        );
     }
 
     #[test]
     fn test_translate_oob() {
         // down
-        assert_translation(Offset { x: 0, y: 5 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "     ┌hello───┐     ",
-            "     │        │     ",
-        ]));
-        assert_translation(Offset { x: 0, y: 6 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "     ┌hello───┐     ",
-        ]));
-        assert_translation(Offset { x: 0, y: 7 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            Offset { x: 0, y: 5 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "     ┌hello───┐     ",
+                "     │        │     ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: 0, y: 6 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "     ┌hello───┐     ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: 0, y: 7 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
 
         // up
-        assert_translation(Offset { x: 0, y: -5 }, 100, Buffer::with_lines([
-            "     │        │     ",
-            "     └────────┘     ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation(Offset { x: 0, y: -7 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            Offset { x: 0, y: -5 },
+            100,
+            Buffer::with_lines([
+                "     │        │     ",
+                "     └────────┘     ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: 0, y: -7 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
 
         // right
-        assert_translation(Offset { x: 7, y: 0 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "            ┌hello──",
-            "            │       ",
-            "            │       ",
-            "            └───────",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation(Offset { x: 12, y: 0 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                 ┌he",
-            "                 │  ",
-            "                 │  ",
-            "                 └──",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation(Offset { x: 15, y: 0 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            Offset { x: 7, y: 0 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "            ┌hello──",
+                "            │       ",
+                "            │       ",
+                "            └───────",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: 12, y: 0 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                 ┌he",
+                "                 │  ",
+                "                 │  ",
+                "                 └──",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: 15, y: 0 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
 
         // left
-        assert_translation(Offset { x: -7, y: 0 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "ello───┐            ",
-            "       │            ",
-            "       │            ",
-            "───────┘            ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation(Offset { x: -12, y: 0 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "──┐                 ",
-            "  │                 ",
-            "  │                 ",
-            "──┘                 ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
-        assert_translation(Offset { x: -15, y: 0 }, 100, Buffer::with_lines([
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-            "                    ",
-        ]));
+        assert_translation(
+            Offset { x: -7, y: 0 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "ello───┐            ",
+                "       │            ",
+                "       │            ",
+                "───────┘            ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: -12, y: 0 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "──┐                 ",
+                "  │                 ",
+                "  │                 ",
+                "──┘                 ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
+        assert_translation(
+            Offset { x: -15, y: 0 },
+            100,
+            Buffer::with_lines([
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+                "                    ",
+            ]),
+        );
     }
 }

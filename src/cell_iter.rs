@@ -1,5 +1,8 @@
-use ratatui::buffer::{Buffer, Cell};
-use ratatui::layout::{Position, Rect};
+use ratatui::{
+    buffer::{Buffer, Cell},
+    layout::{Position, Rect},
+};
+
 use crate::{CellFilter, CellPredicate};
 
 pub struct CellIterator<'a> {
@@ -10,11 +13,7 @@ pub struct CellIterator<'a> {
 }
 
 impl<'a> CellIterator<'a> {
-    pub fn new(
-        buf: &'a mut Buffer,
-        area: Rect,
-        cell_filter: Option<CellFilter>,
-    ) -> Self {
+    pub fn new(buf: &'a mut Buffer, area: Rect, cell_filter: Option<CellFilter>) -> Self {
         Self {
             current: 0,
             area: area.intersection(buf.area),

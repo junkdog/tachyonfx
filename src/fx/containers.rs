@@ -1,10 +1,9 @@
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Rect};
-use crate::{CellFilter, ColorSpace, Duration, EffectTimer};
-use crate::effect::Effect;
-use crate::widget::EffectSpan;
-use crate::Interpolation::Linear;
-use crate::shader::Shader;
+use ratatui::{buffer::Buffer, layout::Rect};
+
+use crate::{
+    effect::Effect, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
+    EffectTimer, Interpolation::Linear,
+};
 
 #[derive(Default, Clone, Debug)]
 pub struct SequentialEffect {
@@ -43,7 +42,7 @@ impl Shader for ParallelEffect {
                 None => remaining = None,
                 Some(d) if remaining.is_some() => {
                     remaining = Some(d.min(remaining.unwrap()));
-                }
+                },
                 _ => (),
             }
         }
@@ -64,11 +63,15 @@ impl Shader for ParallelEffect {
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.effects.iter_mut().for_each(|e| e.set_area(area));
+        self.effects
+            .iter_mut()
+            .for_each(|e| e.set_area(area));
     }
 
     fn filter(&mut self, filter: CellFilter) {
-        self.effects.iter_mut().for_each(|e| e.filter(filter.clone()));
+        self.effects
+            .iter_mut()
+            .for_each(|e| e.filter(filter.clone()));
     }
 
     fn reverse(&mut self) {
@@ -80,7 +83,8 @@ impl Shader for ParallelEffect {
     }
 
     fn timer(&self) -> Option<EffectTimer> {
-        self.effects.iter()
+        self.effects
+            .iter()
             .filter_map(|fx| fx.timer())
             .map(|t| t.duration())
             .max()
@@ -96,14 +100,14 @@ impl Shader for ParallelEffect {
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        let children = self.effects.iter()
+        let children = self
+            .effects
+            .iter()
             .map(|e| e.as_effect_span(offset))
             .collect();
 
         EffectSpan::new(self, offset, children)
     }
-
-
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
@@ -111,7 +115,9 @@ impl Shader for ParallelEffect {
     }
 
     fn set_color_space(&mut self, color_space: ColorSpace) {
-        self.effects.iter_mut().for_each(|e| e.set_color_space(color_space));
+        self.effects
+            .iter_mut()
+            .for_each(|e| e.set_color_space(color_space));
     }
 }
 
@@ -120,13 +126,7 @@ impl Shader for SequentialEffect {
         "sequence"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect,
-    ) -> Option<Duration> {
-
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let mut remaining = Some(duration);
         while remaining.is_some() && !self.done() {
             let effect = &mut self.effects[self.current];
@@ -154,21 +154,29 @@ impl Shader for SequentialEffect {
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.effects.iter_mut().for_each(|e| e.set_area(area));
+        self.effects
+            .iter_mut()
+            .for_each(|e| e.set_area(area));
     }
 
     fn filter(&mut self, filter: CellFilter) {
-        self.effects.iter_mut().for_each(|e| e.filter(filter.clone()));
+        self.effects
+            .iter_mut()
+            .for_each(|e| e.filter(filter.clone()));
     }
 
     fn reverse(&mut self) {
         self.effects.iter_mut().for_each(Effect::reverse)
     }
 
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        None
+    }
 
     fn timer(&self) -> Option<EffectTimer> {
-        let duration: Duration = self.effects.iter()
+        let duration: Duration = self
+            .effects
+            .iter()
             .map(|fx| fx.timer())
             .filter(|t| t.is_some())
             .map(|t| t.unwrap().duration())
@@ -181,7 +189,9 @@ impl Shader for SequentialEffect {
         }
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> { None }
+    fn cell_filter(&self) -> Option<CellFilter> {
+        None
+    }
 
     fn reset(&mut self) {
         self.current = 0;
@@ -189,15 +199,22 @@ impl Shader for SequentialEffect {
     }
 
     fn set_color_space(&mut self, color_space: ColorSpace) {
-        self.effects.iter_mut().for_each(|e| e.set_color_space(color_space));
+        self.effects
+            .iter_mut()
+            .for_each(|e| e.set_color_space(color_space));
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         let mut acc = Duration::ZERO;
-        let children = self.effects.iter()
+        let children = self
+            .effects
+            .iter()
             .map(|e| {
                 let span = e.as_effect_span(offset + acc);
-                acc += e.timer().map(|t| t.duration()).unwrap_or_default();
+                acc += e
+                    .timer()
+                    .map(|t| t.duration())
+                    .unwrap_or_default();
                 span
             })
             .collect();
@@ -214,10 +231,11 @@ impl Shader for SequentialEffect {
 #[cfg(feature = "dsl")]
 fn to_dsl(
     name: &'static str,
-    effects: &[Effect]
+    effects: &[Effect],
 ) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
     use crate::dsl::EffectExpression;
-    let effects = effects.iter()
+    let effects = effects
+        .iter()
         .map(|e| e.to_dsl())
         .map(|dsl| dsl.map(|e| e.to_string()))
         .collect::<Result<Vec<_>, _>>()?;
@@ -227,11 +245,10 @@ fn to_dsl(
 
 #[cfg(test)]
 mod tests {
-    use ratatui::layout::Margin;
-    use ratatui::style::Color;
-    use crate::fx::fade_to_fg;
-    use crate::ShaderExt;
+    use ratatui::{layout::Margin, style::Color};
+
     use super::*;
+    use crate::{fx::fade_to_fg, ShaderExt};
 
     #[test]
     fn test_cell_filter_propagation() {
@@ -239,26 +256,21 @@ mod tests {
 
         let mut effect = SequentialEffect::new(vec![
             fx.clone().with_filter(CellFilter::All),
-            fx.clone().with_filter(CellFilter::Inner(Margin::new(1, 1))),
+            fx.clone()
+                .with_filter(CellFilter::Inner(Margin::new(1, 1))),
             fx.clone(),
         ]);
 
         // same effect as calling Effect::filter
         effect.propagate_filter(CellFilter::Text);
 
-        assert_eq!(
-            effect.effects[0].cell_filter().unwrap(),
-            CellFilter::All
-        );
+        assert_eq!(effect.effects[0].cell_filter().unwrap(), CellFilter::All);
         assert_eq!(
             effect.effects[1].cell_filter().unwrap(),
             CellFilter::Inner(Margin::new(1, 1))
         );
-        assert_eq!(
-            effect.effects[2].cell_filter().unwrap(),
-            CellFilter::Text
-        );
-        assert_eq!(effect.done(), false);
+        assert_eq!(effect.effects[2].cell_filter().unwrap(), CellFilter::Text);
+        assert!(!effect.done());
     }
 }
 
@@ -266,6 +278,7 @@ mod tests {
 #[cfg(feature = "dsl")]
 mod dsl_tests {
     use indoc::indoc;
+
     use crate::{fx, Shader};
 
     #[test]

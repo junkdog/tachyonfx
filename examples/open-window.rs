@@ -1,22 +1,35 @@
-use std::error::Error;
-use std::io::Stdout;
-use std::{io, vec};
+use std::{error::Error, io, io::Stdout, vec};
 
-use crossterm::event::{Event, KeyCode, KeyEventKind};
-use crossterm::event;
-use ratatui::backend::CrosstermBackend;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint, Layout, Margin, Rect, Size};
-use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{BorderType, Borders, Clear, StatefulWidget, Widget};
-use ratatui::{text, Frame};
-
-use tachyonfx::{CellFilter, CellFilter::{AllOf, Inner, Not, Outer}, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, Motion, Shader, fx, fx::{never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration}, color_from_hsl};
+use crossterm::{
+    event,
+    event::{Event, KeyCode, KeyEventKind},
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    buffer::Buffer,
+    layout::{Constraint, Layout, Margin, Rect, Size},
+    style::{Color, Modifier, Style},
+    text,
+    text::{Line, Span},
+    widgets::{BorderType, Borders, Clear, StatefulWidget, Widget},
+    Frame,
+};
+use tachyonfx::{
+    color_from_hsl, fx,
+    fx::{
+        never_complete, parallel, repeating, sequence, sleep, timed_never_complete, with_duration,
+    },
+    CellFilter,
+    CellFilter::{AllOf, Inner, Not, Outer},
+    CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, Motion, Shader,
+};
 use CellFilter::Text;
 use Interpolation::*;
-use crate::gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Light2, YellowBright};
-use crate::window::OpenWindow;
+
+use crate::{
+    gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Light2, YellowBright},
+    window::OpenWindow,
+};
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
@@ -40,8 +53,9 @@ impl App {
         Self {
             last_tick: Duration::ZERO,
             win_left: HelloWorldPopupState::new(
-                fx::ping_pong( // pre-render fx
-                    fx::translate(Some(fx::sleep(1300)), (0, 20), (1200, QuartInOut))
+                fx::ping_pong(
+                    // pre-render fx
+                    fx::translate(Some(fx::sleep(1300)), (0, 20), (1200, QuartInOut)),
                 ),
                 glitchy_window_fx(Dark0Hard),
                 Style::default()
@@ -54,9 +68,11 @@ impl App {
                     .bg(Dark0.into()),
             ),
             win_right: HelloWorldPopupState::new(
-                fx::repeating(
-                    fx::resize_area(Some(fx::sleep(4000)), Size::new(35, 1), (500, SineInOut)),
-                ),
+                fx::repeating(fx::resize_area(
+                    Some(fx::sleep(4000)),
+                    Size::new(35, 1),
+                    (500, SineInOut),
+                )),
                 stylized_window_fx(),
                 Style::default()
                     .fg(Dark0.into())
@@ -90,10 +106,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_app(
-    terminal: &mut Terminal,
-    mut app: App,
-) -> io::Result<()> {
+fn run_app(terminal: &mut Terminal, mut app: App) -> io::Result<()> {
     let mut last_frame_instant = std::time::Instant::now();
     loop {
         app.last_tick = last_frame_instant.elapsed().into();
@@ -103,21 +116,19 @@ fn run_app(
         while last_frame_instant.elapsed() < StdDuration::from_millis(32) {
             if event::poll(StdDuration::from_millis(5))? {
                 if let Event::Key(key) = event::read()? {
-                    if key.kind == KeyEventKind::Press {
-                        if key.code == KeyCode::Esc { return Ok(()) }
+                    if key.kind == KeyEventKind::Press && key.code == KeyCode::Esc {
+                        return Ok(());
                     }
                 }
             }
         }
-
     }
 }
 
-fn ui(
-    f: &mut Frame,
-    app: &mut App,
-) {
-    if f.area().height == 0 { return; }
+fn ui(f: &mut Frame, app: &mut App) {
+    if f.area().height == 0 {
+        return;
+    }
 
     Clear.render(f.area(), f.buffer_mut());
 
@@ -126,15 +137,12 @@ fn ui(
 
     let mut popup_area_l = area[0].inner_centered(45, 7);
     popup_area_l.y = area[0].height / 2;
-    HelloWorldPopup::new(app.last_tick)
-        .render(popup_area_l, f.buffer_mut(), &mut app.win_left);
+    HelloWorldPopup::new(app.last_tick).render(popup_area_l, f.buffer_mut(), &mut app.win_left);
 
     let mut popup_area_r = area[1].inner_centered(45, 7);
     popup_area_r.y = area[1].height / 2;
-    HelloWorldPopup::new(app.last_tick)
-        .render(popup_area_r, f.buffer_mut(), &mut app.win_right);
+    HelloWorldPopup::new(app.last_tick).render(popup_area_r, f.buffer_mut(), &mut app.win_right);
 }
-
 
 struct HelloWorldPopup {
     last_tick: Duration,
@@ -165,8 +173,7 @@ impl HelloWorldPopupState {
             Style::default()
                 .fg(BlueBright.into())
                 .add_modifier(Modifier::BOLD),
-            Style::default()
-                .fg(Light2.into())
+            Style::default().fg(Light2.into()),
         ];
 
         let text = text::Text::from(vec![
@@ -180,8 +187,6 @@ impl HelloWorldPopupState {
 
         let title_style = border_style.add_modifier(Modifier::BOLD);
 
-        
-        
         let title = Line::from(vec![
             // Span::from("┫").style(border_style),
             Span::from(" ").style(title_style),
@@ -189,7 +194,6 @@ impl HelloWorldPopupState {
             Span::from(" ").style(title_style),
             // Span::from("┣").style(border_style),
         ]);
-
 
         let window_fx = OpenWindow::builder()
             .title(title)
@@ -208,7 +212,7 @@ impl HelloWorldPopupState {
 
 fn glitchy_window_fx<C: Into<Color>>(bg: C) -> Effect {
     let margin = Margin::new(1, 1);
-    let border_text        = AllOf(vec![Outer(margin), Text]);
+    let border_text = AllOf(vec![Outer(margin), Text]);
     let border_decorations = AllOf(vec![Outer(margin), Not(Text.into())]);
 
     let bg = bg.into();
@@ -227,31 +231,38 @@ fn glitchy_window_fx<C: Into<Color>>(bg: C) -> Effect {
                 with_duration(short * time_scale, never_complete(fx::dissolve(0))),
                 fx::coalesce((duration, BounceOut)),
             ]),
-            fx::fade_from(Dark0, Dark0, duration * time_scale)
-        ]).with_filter(border_decorations),
-
+            fx::fade_from(Dark0, Dark0, duration * time_scale),
+        ])
+        .with_filter(border_decorations),
         // window title and shortcuts
         sequence(&[
-            with_duration(duration * time_scale, never_complete(fx::fade_to(Dark0, Dark0, 0))),
+            with_duration(
+                duration * time_scale,
+                never_complete(fx::fade_to(Dark0, Dark0, 0)),
+            ),
             fx::fade_from(Dark0, Dark0, (320 * time_scale, QuadOut)),
-        ]).with_filter(border_text),
-
+        ])
+        .with_filter(border_text),
         // content area
         sequence(&[
-            with_duration(Duration::from_millis(270) * time_scale, parallel(&[
-                never_complete(fx::dissolve(0)), // hiding icons/emoji
-                never_complete(fx::fade_to(bg, bg, 0)),
-            ])),
+            with_duration(
+                Duration::from_millis(270) * time_scale,
+                parallel(&[
+                    never_complete(fx::dissolve(0)), // hiding icons/emoji
+                    never_complete(fx::fade_to(bg, bg, 0)),
+                ]),
+            ),
             parallel(&[
                 fx::coalesce(Duration::from_millis(220) * time_scale),
-                fx::fade_from(bg, bg, (250 * time_scale, QuadOut))
+                fx::fade_from(bg, bg, (250 * time_scale, QuadOut)),
             ]),
             sleep(3000),
             parallel(&[
                 fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
                 fx::dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
             ]),
-        ]).with_filter(Inner(margin)),
+        ])
+        .with_filter(Inner(margin)),
     ]))
 }
 
@@ -262,42 +273,42 @@ fn stylized_window_fx() -> Effect {
     let cyan = color_from_hsl(180.0, 100.0, 50.0);
     repeating(parallel(&[
         // content area
-        sequence(&[
-            parallel(&[
-                sequence(&[
-                    with_duration(Duration::from_millis(1000), parallel(&[
-                        never_complete(fx::fade_to(cyan, cyan, 0)),
-                    ])),
-                    timed_never_complete(Duration::from_millis(2500),
-                        fx::fade_from(cyan, cyan, (400, QuadOut))
-                    ),
-                    fx::fade_to(Color::Black, Color::Black, (500, CircInOut)),
-                ]),
-                fx::slide_in(Motion::UpToDown, 10, 0, Dark0, (900, QuadOut)),
+        sequence(&[parallel(&[
+            sequence(&[
+                with_duration(
+                    Duration::from_millis(1000),
+                    parallel(&[never_complete(fx::fade_to(cyan, cyan, 0))]),
+                ),
+                timed_never_complete(
+                    Duration::from_millis(2500),
+                    fx::fade_from(cyan, cyan, (400, QuadOut)),
+                ),
+                fx::fade_to(Color::Black, Color::Black, (500, CircInOut)),
             ]),
-        ]).with_filter(content_area),
+            fx::slide_in(Motion::UpToDown, 10, 0, Dark0, (900, QuadOut)),
+        ])])
+        .with_filter(content_area),
     ]))
 }
 
 impl StatefulWidget for HelloWorldPopup {
     type State = HelloWorldPopupState;
 
-    fn render(
-        self,
-        area: Rect,
-        buf: &mut Buffer,
-        state: &mut Self::State
-    ) {
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         buf.render_effect(&mut state.window_fx, area, self.last_tick);
         if state.window_fx.area().is_none() {
             return;
         }
 
-        let content_area = state.window_fx.area()
+        let content_area = state
+            .window_fx
+            .area()
             .unwrap_or(area)
             .inner(Margin::new(1, 1));
 
         state.text.clone().render(content_area, buf);
-        state.window_fx.processing_content_fx(self.last_tick, buf, content_area);
+        state
+            .window_fx
+            .processing_content_fx(self.last_tick, buf, content_area);
     }
 }

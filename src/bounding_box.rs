@@ -25,7 +25,7 @@ impl BoundingBox {
 
     pub(crate) fn as_rect(&self, screen: Rect) -> Option<Rect> {
         match () {
-            _ if self.x + self.width < screen.x as f32  => None,
+            _ if self.x + self.width < screen.x as f32 => None,
             _ if self.y + self.height < screen.y as f32 => None,
             _ if self.x > (screen.x + screen.width) as f32 => None,
             _ if self.y > (screen.y + screen.height) as f32 => None,
@@ -36,7 +36,7 @@ impl BoundingBox {
                     self.x.max(0.0).round() as u16,
                     self.y.max(0.0).round() as u16,
                     self.width.round() as u16 - dx,
-                    self.height.round() as u16 - dy
+                    self.height.round() as u16 - dy,
                 ))
             },
         }

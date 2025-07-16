@@ -1,9 +1,11 @@
 // benches/cell_filter.rs
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use ratatui::{buffer::Buffer, layout::Rect};
-use ratatui::layout::Margin;
-use ratatui::prelude::Color;
-use tachyonfx::{CellFilter, Duration, fx, Shader};
+use criterion::{criterion_group, criterion_main, Criterion};
+use ratatui::{
+    buffer::Buffer,
+    layout::{Margin, Rect},
+    prelude::Color,
+};
+use tachyonfx::{fx, CellFilter, Duration, Shader};
 
 pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
     // Define a large buffer size for consistent measurement
@@ -21,10 +23,10 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
                 // This is the absolute baseline - just iterating through the buffer
                 for y in 0..height {
                     for x in 0..width {
-                        black_box(&buffer[(x, y)]);
+                        std::hint::black_box(&buffer[(x, y)]);
                     }
                 }
-            }
+            },
         );
     });
 
@@ -36,15 +38,19 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
                 let effect = fx::effect_fn((), 1, |_, _, cells| {
                     // Just iterate over the cells with black_box to prevent optimizations
                     for (pos, cell) in cells {
-                        black_box(pos);
-                        black_box(cell);
+                        std::hint::black_box(pos);
+                        std::hint::black_box(cell);
                     }
                 });
                 (buffer, effect)
             },
             |(mut buffer, mut effect)| {
-                effect.process(black_box(Duration::from_millis(16)), &mut buffer, area);
-            }
+                effect.process(
+                    std::hint::black_box(Duration::from_millis(16)),
+                    &mut buffer,
+                    area,
+                );
+            },
         );
     });
 
@@ -56,15 +62,20 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
                 let effect = fx::effect_fn((), 1, |_, _, cells| {
                     // Just iterate over the cells with black_box to prevent optimizations
                     for (pos, cell) in cells {
-                        black_box(pos);
-                        black_box(cell);
+                        std::hint::black_box(pos);
+                        std::hint::black_box(cell);
                     }
-                }).with_filter(CellFilter::All);
+                })
+                .with_filter(CellFilter::All);
                 (buffer, effect)
             },
             |(mut buffer, mut effect)| {
-                effect.process(black_box(Duration::from_millis(16)), &mut buffer, area);
-            }
+                effect.process(
+                    std::hint::black_box(Duration::from_millis(16)),
+                    &mut buffer,
+                    area,
+                );
+            },
         );
     });
 
@@ -76,21 +87,25 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
                 let effect = fx::effect_fn((), 1, |_, _, cells| {
                     // Just iterate over the cells with black_box to prevent optimizations
                     for (pos, cell) in cells {
-                        black_box(pos);
-                        black_box(cell);
+                        std::hint::black_box(pos);
+                        std::hint::black_box(cell);
                     }
-                }).with_filter(CellFilter::AllOf(vec![
+                })
+                .with_filter(CellFilter::AllOf(vec![
                     CellFilter::FgColor(Color::Red),
                     CellFilter::Inner(Margin::new(1, 1)),
                 ]));
                 (buffer, effect)
             },
             |(mut buffer, mut effect)| {
-                effect.process(black_box(Duration::from_millis(16)), &mut buffer, area);
-            }
+                effect.process(
+                    std::hint::black_box(Duration::from_millis(16)),
+                    &mut buffer,
+                    area,
+                );
+            },
         );
     });
-
 
     group.finish();
 }

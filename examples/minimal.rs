@@ -8,7 +8,11 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Clear},
 };
-use tachyonfx::{fx::{self, Glitch}, CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation, IntoEffect, Motion, Shader, SimpleRng};
+use tachyonfx::{
+    fx::{self, Glitch},
+    CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation, IntoEffect,
+    Motion, Shader, SimpleRng,
+};
 
 fn main() -> io::Result<()> {
     let mut terminal = ratatui::init();
@@ -35,7 +39,7 @@ fn main() -> io::Result<()> {
         )),
         // then we coalesce the text back to its original state
         // (note that EffectTimers can be constructed from a tuple of duration and interpolation)
-        fx::coalesce((800, Interpolation::SineOut))
+        fx::coalesce((800, Interpolation::SineOut)),
     ]);
 
     loop {

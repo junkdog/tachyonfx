@@ -1,17 +1,22 @@
-use crate::shader::Shader;
-use crate::simple_rng::{RangeSampler, SimpleRng};
-use crate::{CellFilter, Duration, EffectTimer};
+use std::{fmt::Debug, ops::Range};
+
 use bon::{builder, Builder};
 use compact_str::ToCompactString;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Position, Rect};
-use std::fmt::Debug;
-use std::ops::Range;
+use ratatui::{
+    buffer::Buffer,
+    layout::{Position, Rect},
+};
 
+use crate::{
+    shader::Shader,
+    simple_rng::{RangeSampler, SimpleRng},
+    CellFilter, Duration, EffectTimer,
+};
 
 /// Type of glitch transformation to apply to a cell.
 #[derive(Clone, Debug)]
-pub enum GlitchType { // fixme: make non-public again
+pub enum GlitchType {
+    // fixme: make non-public again
     ChangeCase,
     ChangeCharByValue(i8),
 }
@@ -42,21 +47,24 @@ pub struct Glitch {
 }
 
 impl Glitch {
-    fn ensure_population(
-        &mut self,
-        screen: &Rect,
-    ) {
-        let total_cells = (screen.width as f32 * screen.height as f32 * self.cell_glitch_ratio)
-            .round() as u32;
+    fn ensure_population(&mut self, screen: &Rect) {
+        let total_cells =
+            (screen.width as f32 * screen.height as f32 * self.cell_glitch_ratio).round() as u32;
 
         let current_population = self.glitch_cells.len() as u32;
         if current_population < total_cells {
             for _ in 0..(total_cells - current_population) {
                 let cell = GlitchCell::builder()
-                    .cell_idx(self.rng.gen_range(0..(screen.width * screen.height) as usize))
+                    .cell_idx(
+                        self.rng
+                            .gen_range(0..(screen.width * screen.height) as usize),
+                    )
                     .glitch(self.glitch_type())
                     .glitch_remaining_ms(self.rng.gen_range(self.action_ms.clone()))
-                    .presleep_remaining_ms(self.rng.gen_range(self.action_start_delay_ms.clone()))
+                    .presleep_remaining_ms(
+                        self.rng
+                            .gen_range(self.action_start_delay_ms.clone()),
+                    )
                     .build();
                 self.glitch_cells.push(cell);
             }
@@ -90,62 +98,69 @@ impl Shader for Glitch {
         "glitch"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect,
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         // ensure glitch population meets the cell_glitch_ratio
         self.ensure_population(&area);
 
         // subtract durations
         let last_frame_ms = duration.as_millis();
-        self.glitch_cells.iter_mut().for_each(|cell| Self::update_cell(cell, last_frame_ms as _));
+        self.glitch_cells
+            .iter_mut()
+            .for_each(|cell| Self::update_cell(cell, last_frame_ms as _));
 
         // remove invalid cells (e.g., from resizing)
-        self.glitch_cells.retain(|cell| cell.cell_idx < buf.content.len());
+        self.glitch_cells
+            .retain(|cell| cell.cell_idx < buf.content.len());
 
         let selector = self.selection.selector(area);
 
         // apply glitches to buffer
-        self.glitch_cells.iter().filter(|c| c.presleep_remaining_ms == 0).for_each(|cell| {
-            let x = cell.cell_idx % area.width as usize;
-            let y = cell.cell_idx / area.width as usize;
-            let pos = Position::new(area.x + x as u16, area.y + y as u16);
-            let c  = buf.cell_mut(Position::new(area.x + x as u16, area.y + y as u16)).unwrap();
+        self.glitch_cells
+            .iter()
+            .filter(|c| c.presleep_remaining_ms == 0)
+            .for_each(|cell| {
+                let x = cell.cell_idx % area.width as usize;
+                let y = cell.cell_idx / area.width as usize;
+                let pos = Position::new(area.x + x as u16, area.y + y as u16);
+                let c = buf
+                    .cell_mut(Position::new(area.x + x as u16, area.y + y as u16))
+                    .unwrap();
 
-            if !selector.is_valid(pos, c) {
-                return;
-            }
-
-            match cell.glitch {
-                GlitchType::ChangeCase if c.symbol().is_ascii() => {
-                    let ch = c.symbol().chars().next().unwrap();
-                    c.set_char(if ch.is_ascii_uppercase() {
-                        ch.to_ascii_lowercase()
-                    } else {
-                        ch.to_ascii_uppercase()
-                    });
+                if !selector.is_valid(pos, c) {
+                    return;
                 }
-                GlitchType::ChangeCharByValue(v) if c.symbol().len() == 1 => {
-                    if c.symbol().chars().next().is_some_and(|ch| ch == ' ') {
-                        return;
-                    }
 
-                    c.set_char(if v > 0 {
-                        c.symbol().as_bytes()[0]
-                            .saturating_add(v as u8)
-                            .clamp(32, 255) as char
-                    } else {
-                        c.symbol().as_bytes()[0]
-                            .saturating_sub(v.unsigned_abs())
-                            .clamp(32, 255) as char
-                    });
+                match cell.glitch {
+                    GlitchType::ChangeCase if c.symbol().is_ascii() => {
+                        let ch = c.symbol().chars().next().unwrap();
+                        c.set_char(if ch.is_ascii_uppercase() {
+                            ch.to_ascii_lowercase()
+                        } else {
+                            ch.to_ascii_uppercase()
+                        });
+                    },
+                    GlitchType::ChangeCharByValue(v) if c.symbol().len() == 1 => {
+                        if c.symbol()
+                            .chars()
+                            .next()
+                            .is_some_and(|ch| ch == ' ')
+                        {
+                            return;
+                        }
+
+                        c.set_char(if v > 0 {
+                            c.symbol().as_bytes()[0]
+                                .saturating_add(v as u8)
+                                .clamp(32, 255) as char
+                        } else {
+                            c.symbol().as_bytes()[0]
+                                .saturating_sub(v.unsigned_abs())
+                                .clamp(32, 255) as char
+                        });
+                    },
+                    _ => {},
                 }
-                _ => {}
-            }
-        });
+            });
 
         // remove expired glitches
         self.glitch_cells.retain(Self::is_running);
@@ -173,7 +188,9 @@ impl Shader for Glitch {
         self.selection = strategy;
     }
 
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        None
+    }
 
     fn cell_filter(&self) -> Option<CellFilter> {
         Some(self.selection.clone())
@@ -187,8 +204,6 @@ impl Shader for Glitch {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::DslError;
 
-        Err(DslError::UnsupportedEffect {
-            name: self.name().to_compact_string()
-        })
+        Err(DslError::UnsupportedEffect { name: self.name().to_compact_string() })
     }
 }

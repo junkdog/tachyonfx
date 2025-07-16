@@ -1,10 +1,9 @@
-use crate::widget::EffectSpan;
-use crate::{RangeSampler, SimpleRng};
+use std::{collections::BTreeSet, ops::Range};
+
 use bon::builder;
 use ratatui::prelude::Color;
-use std::collections::BTreeSet;
-use std::ops::Range;
-use crate::color_space::color_from_hsl;
+
+use crate::{color_space::color_from_hsl, widget::EffectSpan, RangeSampler, SimpleRng};
 
 #[derive(Clone)]
 pub(crate) struct ColorResolver {
@@ -22,18 +21,23 @@ pub(crate) fn color_registry(
 }
 
 impl ColorResolver {
-    fn from(
-        root_span: &EffectSpan,
-        hue: Range<f64>,
-        saturation: f64,
-        lightness: f64,
-    ) -> Self {
-        assert!(hue.start >= 0.0 && hue.end <= 360.0, "hue range must be between 0 and 360");
-        assert!((0.0..=100.0).contains(&saturation), "saturation must be between 0 and 100");
-        assert!((0.0..=100.0).contains(&lightness), "lightness must be between 0 and 100");
+    fn from(root_span: &EffectSpan, hue: Range<f64>, saturation: f64, lightness: f64) -> Self {
+        assert!(
+            hue.start >= 0.0 && hue.end <= 360.0,
+            "hue range must be between 0 and 360"
+        );
+        assert!(
+            (0.0..=100.0).contains(&saturation),
+            "saturation must be between 0 and 100"
+        );
+        assert!(
+            (0.0..=100.0).contains(&lightness),
+            "lightness must be between 0 and 100"
+        );
 
         let effect_spans: Vec<&EffectSpan> = root_span.iter().collect();
-        let effect_identifiers: BTreeSet<String> = effect_spans.iter()
+        let effect_identifiers: BTreeSet<String> = effect_spans
+            .iter()
             .map(|span| span.label.clone())
             .map(|label| id_of(&label).to_string())
             .collect();
@@ -49,20 +53,20 @@ impl ColorResolver {
         let mut lcg = SimpleRng::default();
         shuffle(&mut colors, &mut lcg);
 
-        let effect_to_color = effect_identifiers.iter()
+        let effect_to_color = effect_identifiers
+            .iter()
             .enumerate()
             .map(|(idx, effect)| (effect.clone(), colors[idx]))
             .collect();
 
-        Self {
-            effect_to_color,
-        }
+        Self { effect_to_color }
     }
 
     pub(crate) fn color_of(&self, effect: &str) -> Color {
         let id = id_of(effect);
 
-        self.effect_to_color.iter()
+        self.effect_to_color
+            .iter()
             .find(|(label, _)| label == id)
             .map(|(_, color)| *color)
             .unwrap_or_else(|| panic!("effect not found: {id}"))

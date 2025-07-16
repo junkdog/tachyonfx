@@ -1,20 +1,19 @@
 use std::fmt::Debug;
-use crate::cell_iter::CellIterator;
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
 
-use crate::widget::EffectSpan;
-use crate::{CellFilter, ColorSpace, Duration, ThreadSafetyMarker};
-use crate::EffectTimer;
+use ratatui::{buffer::Buffer, layout::Rect};
 
+use crate::{
+    cell_iter::CellIterator, widget::EffectSpan, CellFilter, ColorSpace, Duration, EffectTimer,
+    ThreadSafetyMarker,
+};
 
 /// A trait representing a shader-like object that can be processed for a duration.
 /// The `Shader` trait defines the interface for objects that can apply visual effects
 /// to terminal cells over time.
 ///
-/// When implementing this trait, you typically only need to override `execute()`. The default
-/// `process()` implementation handles timer management and calls `execute()` with the current
-/// alpha value. Only override `process()` if you need custom timer handling.
+/// When implementing this trait, you typically only need to override `execute()`. The
+/// default `process()` implementation handles timer management and calls `execute()` with
+/// the current alpha value. Only override `process()` if you need custom timer handling.
 pub trait Shader: ThreadSafetyMarker + Debug {
     fn name(&self) -> &'static str;
 
@@ -23,17 +22,18 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// 2. Calls `execute()` with the current alpha value
     /// 3. Returns any overflow duration
     ///
-    /// Most effects should use this default implementation and implement `execute()` instead.
-    /// Only override this if you need custom timer handling.
+    /// Most effects should use this default implementation and implement `execute()`
+    /// instead. Only override this if you need custom timer handling.
     ///
     /// # Arguments
     /// * `duration` - The duration to process the shader for.
     /// * `buf` - A mutable reference to the `Buffer` where the shader will be applied.
-    /// * `area` - The rectangular area within the buffer where the shader will be applied.
+    /// * `area` - The rectangular area within the buffer where the shader will be
+    ///   applied.
     ///
     /// # Returns
-    /// * An `Option` containing the overflow duration if the shader is done, or `None`
-    ///   if it is still running.
+    /// * An `Option` containing the overflow duration if the shader is done, or `None` if
+    ///   it is still running.
     ///
     /// # Example
     /// ```no_compile
@@ -46,13 +46,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// let mut buffer = Buffer::empty(area);
     /// let overflow = shader.process(Duration::from_millis(100), &mut buffer, area);
     /// ```
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect,
-    ) -> Option<Duration> {
-        let overflow= self.timer_mut()
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
+        let overflow = self
+            .timer_mut()
             .map(|t| t.process(duration))
             .unwrap_or(None);
 
@@ -61,36 +57,31 @@ pub trait Shader: ThreadSafetyMarker + Debug {
         overflow
     }
 
-    /// Executes the shader effect after the `duration` has been applied to the timer. This is the
-    /// main implementation point for most effects, and is called by the default `process()`
+    /// Executes the shader effect after the `duration` has been applied to the timer.
+    /// This is the main implementation point for most effects, and is called by the
+    /// default `process()`
     ///
     /// # Arguments
-    /// * `duration` - The duration to process the shader for. If a timer is associated with
-    ///                the shader, it has already been updated with this duration.
+    /// * `duration` - The duration to process the shader for. If a timer is associated
+    ///   with the shader, it has already been updated with this duration.
     /// * `alpha` - The alpha value indicating the progress of the shader effect.
-    /// * `area` - The rectangular area within the buffer where the shader will be applied.
+    /// * `area` - The rectangular area within the buffer where the shader will be
+    ///   applied.
     /// * `buf` - A mutable reference to the `Buffer` where the shader will be applied.
     #[allow(unused_variables)]
-    fn execute(
-        &mut self,
-        duration: Duration,
-        area: Rect,
-        buf: &mut Buffer,
-    ) {}
+    fn execute(&mut self, duration: Duration, area: Rect, buf: &mut Buffer) {}
 
-    /// Creates an iterator over the cells in the specified area, filtered by the shader's cell filter.
+    /// Creates an iterator over the cells in the specified area, filtered by the shader's
+    /// cell filter.
     ///
     /// # Arguments
     /// * `buf` - A mutable reference to the `Buffer` where the shader will be applied.
-    /// * `area` - The rectangular area within the buffer where the shader will be applied.
+    /// * `area` - The rectangular area within the buffer where the shader will be
+    ///   applied.
     ///
     /// # Returns
     /// * A [CellIterator] over the cells in the specified area.
-    fn cell_iter<'a>(
-        &mut self,
-        buf: &'a mut Buffer,
-        area: Rect,
-    ) -> CellIterator<'a> {
+    fn cell_iter<'a>(&mut self, buf: &'a mut Buffer, area: Rect) -> CellIterator<'a> {
         CellIterator::new(buf, area, self.cell_filter())
     }
 
@@ -104,7 +95,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///
     /// # Returns
     /// * `true` if the shader is running, `false` otherwise.
-    fn running(&self) -> bool { !self.done() }
+    fn running(&self) -> bool {
+        !self.done()
+    }
 
     /// Creates a boxed clone of the shader.
     ///
@@ -155,7 +148,8 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// Returns a mutable reference to the shader's timer, if any.
     ///
     /// # Returns
-    /// * An `Option` containing a mutable reference to the shader's `EffectTimer`, or `None` if not applicable.
+    /// * An `Option` containing a mutable reference to the shader's `EffectTimer`, or
+    ///   `None` if not applicable.
     ///
     /// # Example
     /// ```no_compile
@@ -164,32 +158,40 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///     timer.reset();
     /// }
     /// ```
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        None
+    }
 
     /// Returns the timer associated with this shader effect.
     ///
-    /// This method is primarily used for visualization purposes, such as in the `EffectTimeline` widget.
-    /// It provides information about the duration and timing of the effect.
+    /// This method is primarily used for visualization purposes, such as in the
+    /// `EffectTimeline` widget. It provides information about the duration and timing
+    /// of the effect.
     ///
     /// # Returns
     /// An `Option<EffectTimer>`:
     /// - `Some(EffectTimer)` if the shader has an associated timer.
-    /// - `None` if the shader doesn't have a specific duration (e.g., for indefinite effects).
+    /// - `None` if the shader doesn't have a specific duration (e.g., for indefinite
+    ///   effects).
     ///
     /// # Notes
-    /// - For composite effects (like parallel or sequential effects), this may return an approximation
-    ///   of the total duration based on the timers of child effects.
+    /// - For composite effects (like parallel or sequential effects), this may return an
+    ///   approximation of the total duration based on the timers of child effects.
     /// - Some effects may modify the returned timer to reflect their specific behavior
     ///   (e.g., a ping-pong effect might double the duration).
-    /// - The returned timer should reflect the total expected duration of the effect, which may differ
-    ///   from the current remaining time.
-    fn timer(&self) -> Option<EffectTimer> { None }
+    /// - The returned timer should reflect the total expected duration of the effect,
+    ///   which may differ from the current remaining time.
+    fn timer(&self) -> Option<EffectTimer> {
+        None
+    }
 
     /// Returns the cell selection strategy for the shader, if any.
     ///
     /// # Returns
     /// * An `Option` containing the shader's `CellFilter`, or `None` if not applicable.
-    fn cell_filter(&self) -> Option<CellFilter> { None }
+    fn cell_filter(&self) -> Option<CellFilter> {
+        None
+    }
 
     #[deprecated(since = "0.11.0", note = "Use `cell_filter()` instead")]
     fn cell_selection(&self) -> Option<CellFilter> {
@@ -200,11 +202,15 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     #[allow(unused_variables)]
     fn set_color_space(&mut self, color_space: ColorSpace) {}
 
-    /// Gets the current color space. Returns the default color space (HSL) if not supported.
-    fn color_space(&self) -> ColorSpace { ColorSpace::default() }
+    /// Gets the current color space. Returns the default color space (HSL) if not
+    /// supported.
+    fn color_space(&self) -> ColorSpace {
+        ColorSpace::default()
+    }
 
     /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and
-    /// [fx::repeat](fx/fn.repeat.html) to reset the hosted shader effect to its initial state.
+    /// [fx::repeat](fx/fn.repeat.html) to reset the hosted shader effect to its initial
+    /// state.
     fn reset(&mut self) {
         if let Some(timer) = self.timer_mut() {
             timer.reset();
@@ -230,9 +236,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::DslError;
-        Err(DslError::EffectExpressionNotSupported {
-            name: self.name(),
-        })
+        Err(DslError::EffectExpressionNotSupported { name: self.name() })
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
@@ -326,4 +330,3 @@ macro_rules! default_shader_impl {
         }
     };
 }
-

@@ -1,29 +1,30 @@
-use std::error::Error;
-use std::io::Stdout;
-use std::time::Instant;
-use std::io;
+use std::{error::Error, io, io::Stdout, time::Instant};
 
-use crossterm::event::{Event, KeyCode, KeyEventKind};
-use crossterm::event;
-use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Constraint, Layout, Margin};
-use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{Block, Clear, Widget};
-use ratatui::Frame;
-
-use crate::gruvbox::Gruvbox;
-use crate::gruvbox::Gruvbox::{Dark0Hard, Dark0Soft, Light4};
-use tachyonfx::{fx::{
-    self,
-    never_complete,
-    parallel,
-    sequence,
-    Glitch,
-}, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect, Motion, Shader, SimpleRng};
+use crossterm::{
+    event,
+    event::{Event, KeyCode, KeyEventKind},
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Layout, Margin},
+    style::{Color, Modifier, Style},
+    text::{Line, Span, Text},
+    widgets::{Block, Clear, Widget},
+    Frame,
+};
+use tachyonfx::{
+    color_from_hsl,
+    fx::{self, never_complete, parallel, sequence, Glitch},
+    CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect,
+    Motion, Shader, SimpleRng,
+};
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
-use tachyonfx::color_from_hsl;
+
+use crate::gruvbox::{
+    Gruvbox,
+    Gruvbox::{Dark0Hard, Dark0Soft, Light4},
+};
 
 #[path = "common/gruvbox.rs"]
 mod gruvbox;
@@ -36,7 +37,7 @@ type StdDuration = std::time::Duration;
 struct App {
     active_effect: (&'static str, Effect),
     active_effect_idx: usize,
-    last_tick: Duration
+    last_tick: Duration,
 }
 
 impl App {
@@ -46,7 +47,7 @@ impl App {
         Self {
             active_effect,
             active_effect_idx: 0,
-            last_tick: Duration::ZERO
+            last_tick: Duration::ZERO,
         }
     }
 }
@@ -69,11 +70,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_app(
-    terminal: &mut Terminal,
-    mut app: App,
-    effects: EffectsRepository
-) -> io::Result<()> {
+fn run_app(terminal: &mut Terminal, mut app: App, effects: EffectsRepository) -> io::Result<()> {
     let mut last_frame_instant = Instant::now();
     let mut rng = SimpleRng::default();
 
@@ -86,7 +83,7 @@ fn run_app(
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        KeyCode::Esc       => return Ok(()),
+                        KeyCode::Esc => return Ok(()),
                         KeyCode::Char('r') => {
                             let fx_idx = (rng.gen() % effects.len() as u32) as usize;
                             app.active_effect = effects.get_effect(fx_idx);
@@ -97,15 +94,20 @@ fn run_app(
                         },
                         KeyCode::Char('s') => {
                             let duration = Duration::from_secs(7);
-                            app.active_effect = ("scramble", fx::with_duration(duration, Glitch::builder()
-                                .cell_glitch_ratio(1f32)
-                                .action_start_delay_ms(0..3000)
-                                .action_ms(8000..10_000)
-                                .build()
-                                .into_effect())
+                            app.active_effect = (
+                                "scramble",
+                                fx::with_duration(
+                                    duration,
+                                    Glitch::builder()
+                                        .cell_glitch_ratio(1f32)
+                                        .action_start_delay_ms(0..3000)
+                                        .action_ms(8000..10_000)
+                                        .build()
+                                        .into_effect(),
+                                ),
                             );
                         },
-                        KeyCode::Enter     => {
+                        KeyCode::Enter => {
                             let fx_idx = (app.active_effect_idx + 1) % effects.len();
                             app.active_effect = effects.get_effect(fx_idx);
                             app.active_effect_idx = fx_idx;
@@ -120,7 +122,7 @@ fn run_app(
                             app.active_effect_idx = fx_idx;
                         },
 
-                        _ => {}
+                        _ => {},
                     }
                 }
             }
@@ -128,10 +130,7 @@ fn run_app(
     }
 }
 
-fn ui(
-    f: &mut Frame,
-    app: &mut App,
-) {
+fn ui(f: &mut Frame, app: &mut App) {
     let screen_bg: Color = Dark0Hard.into();
     let bg: Color = Dark0Soft.into();
 
@@ -145,26 +144,22 @@ fn ui(
         .style(Style::default().bg(bg))
         .render(content_area, f.buffer_mut());
 
-
-    let anim_style = [
-        Style::default().fg(Orange.into()),
-        Style::default().fg(OrangeBright.into())
-    ];
+    let anim_style = [Style::default().fg(Orange.into()), Style::default().fg(OrangeBright.into())];
     let text_style = Style::default().fg(Light3.into());
     let shortcut_style = [
-        Style::default().fg(Gruvbox::YellowBright.into()).add_modifier(Modifier::BOLD),
-        Style::default().fg(Light4.into())
+        Style::default()
+            .fg(Gruvbox::YellowBright.into())
+            .add_modifier(Modifier::BOLD),
+        Style::default().fg(Light4.into()),
     ];
 
-    let layout = Layout::vertical([
-        Constraint::Length(2),
-        Constraint::Length(7),
-        Constraint::Length(6),
-    ]).split(content_area.inner(Margin::new(1, 1)));
+    let layout =
+        Layout::vertical([Constraint::Length(2), Constraint::Length(7), Constraint::Length(6)])
+            .split(content_area.inner(Margin::new(1, 1)));
 
     let active_animation: Line = Line::from(vec![
         Span::from("Active animation: ").style(anim_style[0]),
-        Span::from(app.active_effect.0).style(anim_style[1])
+        Span::from(app.active_effect.0).style(anim_style[1]),
     ]);
 
     let main_text = Text::from(vec![
@@ -174,12 +169,13 @@ fn ui(
         Line::from(""),
         Line::from("The text in this window will undergo a random transition"),
         Line::from("when any of the following keys are pressed:"),
-    ]).style(text_style);
+    ])
+    .style(text_style);
 
     let shortcut = |key: &'static str, desc: &'static str| {
         Line::from(vec![
             Span::from(key).style(shortcut_style[0]),
-            Span::from(desc).style(shortcut_style[1])
+            Span::from(desc).style(shortcut_style[1]),
         ])
     };
 
@@ -203,7 +199,7 @@ fn ui(
 }
 
 struct EffectsRepository {
-    effects: Vec<(&'static str, Effect)>
+    effects: Vec<(&'static str, Effect)>,
 }
 
 impl EffectsRepository {
@@ -234,43 +230,62 @@ impl EffectsRepository {
                     let color = color_from_hsl(hue, 100.0, 50.0);
                     cell.set_fg(color);
                 });
-        }).with_filter(CellFilter::FgColor(Light3.into()));
+        })
+        .with_filter(CellFilter::FgColor(Light3.into()));
 
         let effects = vec![
-            ("sweep in",
-                fx::sweep_in(Motion::LeftToRight, 30, 0, screen_bg, (slow, QuadOut))),
-            ("irregular sweep out/sweep in", sequence(&[
-                fx::sweep_out(Motion::DownToUp, 5, 20, bg, (2000, QuadOut)),
-                fx::sweep_in(Motion::UpToDown, 5, 20, bg, (2000, QuadOut)),
-                fx::sweep_out(Motion::UpToDown, 5, 20, bg, (2000, QuadOut)),
-                fx::sweep_in(Motion::DownToUp, 5, 20, bg, (2000, QuadOut)),
-            ])),
-            ("coalesce", fx::sequence(&[
-                fx::coalesce((medium, CubicOut)),
-                fx::sleep(medium),
-                fx::prolong_end(medium, fx::dissolve_to(Style::default().bg(screen_bg.color()), medium)),
-            ])),
-            ("slide in/out", fx::repeating(sequence(&[
-                parallel(&[
-                    fx::fade_from_fg(bg, (2000, ExpoInOut)),
-                    fx::slide_in(Motion::UpToDown, 20, 0, Dark0Hard, medium),
+            (
+                "sweep in",
+                fx::sweep_in(Motion::LeftToRight, 30, 0, screen_bg, (slow, QuadOut)),
+            ),
+            (
+                "irregular sweep out/sweep in",
+                sequence(&[
+                    fx::sweep_out(Motion::DownToUp, 5, 20, bg, (2000, QuadOut)),
+                    fx::sweep_in(Motion::UpToDown, 5, 20, bg, (2000, QuadOut)),
+                    fx::sweep_out(Motion::UpToDown, 5, 20, bg, (2000, QuadOut)),
+                    fx::sweep_in(Motion::DownToUp, 5, 20, bg, (2000, QuadOut)),
                 ]),
-                fx::sleep(medium),
-                fx::prolong_end(medium,
-                    fx::slide_out(Motion::LeftToRight, 80, 0, Dark0Hard, medium),
-                ),
-            ]))),
-            ("change hue, saturation and lightness", sequence(&[
-                fx::hsl_shift_fg([360.0, 0.0, 0.0], medium),
-                fx::hsl_shift_fg([0.0, -100.0, 0.0], medium),
-                fx::hsl_shift_fg([0.0, -100.0, 0.0], medium).reversed(),
-                fx::hsl_shift_fg([0.0, 100.0, 0.0], medium),
-                fx::hsl_shift_fg([0.0, 100.0, 0.0], medium).reversed(),
-                fx::hsl_shift_fg([0.0, 0.0, -100.0], medium),
-                fx::hsl_shift_fg([0.0, 0.0, -100.0], medium).reversed(),
-                fx::hsl_shift_fg([0.0, 0.0, 100.0], medium),
-                fx::hsl_shift_fg([0.0, 0.0, 100.0], medium).reversed(),
-            ])),
+            ),
+            (
+                "coalesce",
+                fx::sequence(&[
+                    fx::coalesce((medium, CubicOut)),
+                    fx::sleep(medium),
+                    fx::prolong_end(
+                        medium,
+                        fx::dissolve_to(Style::default().bg(screen_bg.color()), medium),
+                    ),
+                ]),
+            ),
+            (
+                "slide in/out",
+                fx::repeating(sequence(&[
+                    parallel(&[
+                        fx::fade_from_fg(bg, (2000, ExpoInOut)),
+                        fx::slide_in(Motion::UpToDown, 20, 0, Dark0Hard, medium),
+                    ]),
+                    fx::sleep(medium),
+                    fx::prolong_end(
+                        medium,
+                        fx::slide_out(Motion::LeftToRight, 80, 0, Dark0Hard, medium),
+                    ),
+                ])),
+            ),
+            (
+                "change hue, saturation and lightness",
+                sequence(&[
+                    fx::hsl_shift_fg([360.0, 0.0, 0.0], medium),
+                    fx::hsl_shift_fg([0.0, -100.0, 0.0], medium),
+                    fx::hsl_shift_fg([0.0, -100.0, 0.0], medium).reversed(),
+                    fx::hsl_shift_fg([0.0, 100.0, 0.0], medium),
+                    fx::hsl_shift_fg([0.0, 100.0, 0.0], medium).reversed(),
+                    fx::hsl_shift_fg([0.0, 0.0, -100.0], medium),
+                    fx::hsl_shift_fg([0.0, 0.0, -100.0], medium).reversed(),
+                    fx::hsl_shift_fg([0.0, 0.0, 100.0], medium),
+                    fx::hsl_shift_fg([0.0, 0.0, 100.0], medium).reversed(),
+                ]),
+            ),
             ("custom color cycle", never_complete(custom_color_cycle)),
         ];
 

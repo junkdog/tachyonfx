@@ -1,10 +1,12 @@
 use std::ops::Range;
 #[cfg(not(feature = "web-time"))]
 use std::time::SystemTime;
+
 #[cfg(feature = "web-time")]
 use web_time::SystemTime;
 
-/// A simple pseudo-random number generator using the Linear Congruential Generator algorithm.
+/// A simple pseudo-random number generator using the Linear Congruential Generator
+/// algorithm.
 ///
 /// This RNG is fast and uses minimal memory, and is definitely not suitable for
 /// cryptographic purposes or high-quality randomness.
@@ -40,7 +42,10 @@ impl SimpleRng {
     ///
     /// A pseudo-random u32 value.
     pub fn gen(&mut self) -> u32 {
-        self.state = self.state.wrapping_mul(Self::A).wrapping_add(Self::C);
+        self.state = self
+            .state
+            .wrapping_mul(Self::A)
+            .wrapping_add(Self::C);
         self.state
     }
 
@@ -54,7 +59,7 @@ impl SimpleRng {
     /// A pseudo-random f32 value in the range [0, 1).
     pub fn gen_f32(&mut self) -> f32 {
         const EXPONENT: u32 = 0x3f800000; // 1.0f32
-        let mantissa = self.gen() >> 9;   // 23 bits of randomness
+        let mantissa = self.gen() >> 9; // 23 bits of randomness
 
         f32::from_bits(EXPONENT | mantissa) - 1.0
     }
@@ -116,7 +121,10 @@ impl RangeSampler<usize> for SimpleRng {
 impl RangeSampler<f32> for SimpleRng {
     fn gen_range(&mut self, range: Range<f32>) -> f32 {
         let range_size = range.end - range.start;
-        assert!(range_size > 0.0, "range.end must be greater than range.start");
+        assert!(
+            range_size > 0.0,
+            "range.end must be greater than range.start"
+        );
 
         range.start + self.gen_f32() % range_size
     }
@@ -143,6 +151,7 @@ impl RangeSampler<i32> for SimpleRng {
 #[cfg(test)]
 mod tests {
     use std::panic;
+
     use super::*;
 
     const RETRY_COUNT: usize = 5;
@@ -153,12 +162,12 @@ mod tests {
     {
         let mut success = false;
         for _ in 0..RETRY_COUNT {
-            if panic::catch_unwind(|| test()).is_ok() {
+            if panic::catch_unwind(&test).is_ok() {
                 success = true;
                 break;
             }
         }
-        assert!(success, "Test failed after {} attempts", RETRY_COUNT);
+        assert!(success, "Test failed after {RETRY_COUNT} attempts");
     }
 
     #[test]
@@ -185,7 +194,7 @@ mod tests {
 
         for _ in 0..1000 {
             let value = lcg.gen_f32();
-            assert!(value >= 0.0 && value < 1.0);
+            assert!((0.0..1.0).contains(&value));
         }
     }
 
@@ -196,7 +205,7 @@ mod tests {
 
         for _ in 0..1000 {
             let value = lcg.gen_range(range.clone());
-            assert!(value >= 10 && value < 20);
+            assert!((10..20).contains(&value));
         }
     }
 
@@ -207,7 +216,7 @@ mod tests {
 
         for _ in 0..1000 {
             let value = lcg.gen_range(range.clone());
-            assert!(value >= 0.0 && value < 1.0);
+            assert!((0.0..1.0).contains(&value));
         }
     }
 
@@ -215,6 +224,7 @@ mod tests {
     #[should_panic(expected = "range.end must be greater than range.start")]
     fn test_gen_range_invalid() {
         let mut lcg = SimpleRng::new(12345);
+        #[allow(clippy::reversed_empty_ranges)]
         lcg.gen_range(20..10);
     }
 
@@ -227,6 +237,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unnecessary_cast)] // misidentified by clippy
     fn test_uniform_distribution_u32() {
         run_test(|| {
             let mut lcg = SimpleRng::new(12345);
@@ -240,13 +251,16 @@ mod tests {
 
             let expected = num_samples / 10;
             for &count in &counts {
-                assert!((count as i32 - expected as i32).abs() < 500,
-                    "Distribution is not uniform: {:?}", counts);
+                assert!(
+                    (count as i32 - expected as i32).abs() < 500,
+                    "Distribution is not uniform: {counts:?}"
+                );
             }
         });
     }
 
     #[test]
+    #[allow(clippy::unnecessary_cast)] // misidentified by clippy
     fn test_uniform_distribution_f32() {
         run_test(|| {
             let mut lcg = SimpleRng::new(12345);
@@ -261,8 +275,10 @@ mod tests {
 
             let expected = num_samples / 10;
             for &count in &counts {
-                assert!((count as i32 - expected as i32).abs() < 500,
-                    "Distribution is not uniform: {:?}", counts);
+                assert!(
+                    (count as i32 - expected as i32).abs() < 500,
+                    "Distribution is not uniform: {counts:?}"
+                );
             }
         });
     }
@@ -273,7 +289,10 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(10));
         let lcg2 = SimpleRng::default();
 
-        assert_ne!(lcg1.state, lcg2.state, "Default LCGs should have different seeds");
+        assert_ne!(
+            lcg1.state, lcg2.state,
+            "Default LCGs should have different seeds"
+        );
     }
 
     #[test]
@@ -290,7 +309,7 @@ mod tests {
 
         for _ in 0..1000 {
             let value = lcg.gen_range(range.clone());
-            assert!(value >= -10 && value < 10);
+            assert!(range.contains(&value));
         }
     }
 }

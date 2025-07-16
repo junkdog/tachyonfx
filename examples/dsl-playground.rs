@@ -1,10 +1,15 @@
+use std::{
+    error::Error,
+    io,
+    time::{Duration as StdDuration, Instant},
+};
+
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Clear, Paragraph},
     Frame, Terminal,
 };
-use std::{error::Error, io, time::{Duration as StdDuration, Instant}};
 use tachyonfx::{dsl::EffectDsl, CenteredShrink, Duration, Effect, EffectRenderer, Shader};
 use tui_textarea::TextArea;
 
@@ -89,7 +94,6 @@ parallel(&[
 */
 "#;
 
-
 fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = ratatui::init();
     let mut app = App::new();
@@ -115,7 +119,12 @@ struct App<'a> {
 
 impl App<'_> {
     fn new() -> Self {
-        let mut editor = TextArea::new(DEFAULT_DSL_CODE.lines().map(|s| s.to_string()).collect());
+        let mut editor = TextArea::new(
+            DEFAULT_DSL_CODE
+                .lines()
+                .map(|s| s.to_string())
+                .collect(),
+        );
         editor.set_style(theme_editor_style());
         Self {
             editor,
@@ -136,17 +145,17 @@ impl App<'_> {
             .bind("blake_area", self.blake_area)          // the Blake quote widget
             .bind("mascot_area", self.mascot_area)        // the Ratatui mascot area
             .bind("full_area", self.full_effect_area)     // the entire preview area
-            .compile(&self.editor.lines().join("\n"));    // compile the effect
+            .compile(&self.editor.lines().join("\n")); // compile the effect
 
         match dsl_result {
             Ok(effect) => {
                 self.compiled_effect = Some(effect);
                 self.compilation_error = None;
-            }
+            },
             Err(err) => {
                 self.compiled_effect = None;
-                self.compilation_error = Some(format!("{}", err));
-            }
+                self.compilation_error = Some(format!("{err}"));
+            },
         }
     }
 
@@ -171,12 +180,12 @@ impl App<'_> {
                 // compile effect
                 (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
                     self.update_effect();
-                }
+                },
 
                 // forward key to the editor
                 _ => {
                     self.editor.input(key);
-                }
+                },
             }
         }
         true
@@ -191,10 +200,10 @@ fn tick_app(terminal: &mut Terminal<impl Backend>, app: &mut App) -> io::Result<
         // define layout with main areas; we persist the areas
         // so that we can bind them to the DSL compiler instance
         let layout = Layout::vertical([
-                Constraint::Length(35), // increased height for effect preview area
-                Constraint::Min(1),     // editor area
-            ])
-            .split(f.area());
+            Constraint::Length(35), // increased height for effect preview area
+            Constraint::Min(1),     // editor area
+        ])
+        .split(f.area());
 
         app.full_effect_area = layout[0];
         ui(f, app, &layout, elapsed)
@@ -247,10 +256,8 @@ fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
 
     // --- setup the Blake quote text ---
     let content = Text::from(vec![
-        Line::from("You never know what is enough unless")
-            .alignment(Alignment::Center),
-        Line::from("you know what is more than enough")
-            .alignment(Alignment::Center),
+        Line::from("You never know what is enough unless").alignment(Alignment::Center),
+        Line::from("you know what is more than enough").alignment(Alignment::Center),
         Line::from(""),
         Line::from("— William Blake, Proverbs of Hell")
             .style(theme_author_style())
@@ -302,8 +309,7 @@ fn ui(f: &mut Frame, app: &mut App, layout: &[Rect], elapsed: Duration) {
             4,
         );
 
-        let error_block = Block::default()
-            .style(theme_error_style());
+        let error_block = Block::default().style(theme_error_style());
 
         f.render_widget(Clear, error_area);
         f.render_widget(error_block, error_area);
@@ -327,18 +333,15 @@ fn theme_quote_style() -> Style {
 }
 
 fn theme_mascot_style() -> Style {
-    Style::default()
-        .bg(Gruvbox::Dark0Soft.color())
+    Style::default().bg(Gruvbox::Dark0Soft.color())
 }
 
 fn theme_mascot_text_style() -> Style {
-    Style::default()
-        .fg(Gruvbox::YellowBright.color())
+    Style::default().fg(Gruvbox::YellowBright.color())
 }
 
 fn theme_author_style() -> Style {
-    Style::default()
-        .fg(Gruvbox::YellowBright.color())
+    Style::default().fg(Gruvbox::YellowBright.color())
 }
 
 fn theme_editor_style() -> Style {

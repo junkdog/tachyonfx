@@ -1,11 +1,17 @@
-use crate::dsl::arguments::FromDslExpr;
-use crate::dsl::expressions::{Expr, ExprSpan};
-use crate::dsl::{Arguments, DslError, EffectDsl};
+use std::{
+    any::{type_name, Any},
+    cell::RefCell,
+    collections::BTreeMap,
+    fmt,
+};
+
 use compact_str::{CompactString, ToCompactString};
-use std::any::{type_name, Any};
-use std::cell::RefCell;
-use std::collections::BTreeMap;
-use std::fmt;
+
+use crate::dsl::{
+    arguments::FromDslExpr,
+    expressions::{Expr, ExprSpan},
+    Arguments, DslError, EffectDsl,
+};
 
 pub(super) struct DslEnv {
     globals: BTreeMap<CompactString, Box<dyn Any>>,
@@ -30,19 +36,17 @@ impl DslEnv {
         this
     }
 
-    pub(super) fn bind_local<K>(
-        &self, name: K,
-        expr: Expr,
-    ) where K: Into<CompactString> {
+    pub(super) fn bind_local<K>(&self, name: K, expr: Expr)
+    where
+        K: Into<CompactString>,
+    {
         let name = name.into();
         let span = expr.span();
 
-        let expr = Expr::LetBinding {
-            name: name.clone(),
-            let_expr: Box::new(expr),
-            span
-        };
-        self.locals.borrow_mut().insert(name, Box::new(expr));
+        let expr = Expr::LetBinding { name: name.clone(), let_expr: Box::new(expr), span };
+        self.locals
+            .borrow_mut()
+            .insert(name, Box::new(expr));
     }
 
     pub(super) fn bound_var<'dsl, T: Clone + FromDslExpr + 'static>(
@@ -60,8 +64,8 @@ impl DslEnv {
                     // avoid reporting the span of the declaration of the variable,
                     // we want the use site
                     Err(DslError::WrongArgumentType { expected, actual, location: use_site })
-                }
-                e => e
+                },
+                e => e,
             })?
         } else {
             self.bound_global(name.as_str(), use_site)
@@ -73,18 +77,18 @@ impl DslEnv {
         K: AsRef<str>,
         T: Clone + 'static,
     {
-        self.globals.get(name.as_ref())
-            .ok_or_else(|| DslError::UnknownArgument {
-                name: name.as_ref().into(),
-                location: span
+        self.globals
+            .get(name.as_ref())
+            .ok_or_else(|| DslError::UnknownArgument { name: name.as_ref().into(), location: span })
+            .and_then(|v| {
+                v.downcast_ref()
+                    .cloned()
+                    .ok_or_else(|| DslError::NoSuchVariable {
+                        name: name.as_ref().to_compact_string(),
+                        expected: type_name::<T>(),
+                        location: span,
+                    })
             })
-            .and_then(|v| v.downcast_ref().cloned().ok_or_else(||
-                DslError::NoSuchVariable {
-                    name: name.as_ref().to_compact_string(),
-                    expected: type_name::<T>(),
-                    location: span
-                }
-            ))
     }
 
     pub(super) fn let_expr(&self, name: impl AsRef<str>) -> Option<Expr> {

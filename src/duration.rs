@@ -5,11 +5,14 @@ pub type Duration = std::time::Duration;
 pub type Duration = duration::Duration;
 
 #[cfg(not(feature = "std-duration"))]
+#[allow(clippy::module_inception)]
 pub mod duration {
     // Your custom Duration implementation goes here
 
-    use std::iter::Sum;
-    use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
+    use std::{
+        iter::Sum,
+        ops::{Add, AddAssign, Mul, Sub, SubAssign},
+    };
 
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
     pub struct Duration {
@@ -126,7 +129,9 @@ pub mod duration {
         type Output = Duration;
 
         fn mul(self, rhs: f32) -> Duration {
-            Duration { milliseconds: (self.milliseconds as f32 * rhs) as u32 }
+            Duration {
+                milliseconds: (self.milliseconds as f32 * rhs) as u32,
+            }
         }
     }
 
@@ -135,7 +140,6 @@ pub mod duration {
             iter.fold(Self::ZERO, Add::add)
         }
     }
-
 
     #[cfg(not(feature = "web-time"))]
     impl From<std::time::Duration> for Duration {
@@ -196,12 +200,15 @@ pub mod duration {
 
         #[test]
         fn test_duration_sum() {
-            let durations = vec![
+            let durations = [
                 Duration::from_millis(100),
                 Duration::from_millis(200),
                 Duration::from_millis(300),
             ];
-            assert_eq!(durations.iter().copied().sum::<Duration>(), Duration::from_millis(600));
+            assert_eq!(
+                durations.iter().copied().sum::<Duration>(),
+                Duration::from_millis(600)
+            );
         }
 
         #[test]

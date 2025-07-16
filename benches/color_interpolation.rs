@@ -1,5 +1,5 @@
 // benches/color_interpolation.rs
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use ratatui::style::Color;
 use tachyonfx::{ColorSpace, LruCache, ToRgbComponents};
 
@@ -51,17 +51,18 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
 
                     // Animation progress
                     let alpha = 0.5;
-                    black_box(ColorSpace::Hsl.lerp(&theme_color, &target, alpha));
+                    std::hint::black_box(ColorSpace::Hsl.lerp(&theme_color, &target, alpha));
                 }
             }
         });
     });
 
     // Benchmark with cache size 8 for HSL conversion
-    group.bench_with_input(BenchmarkId::new("cached_hsl_size_8", "ui-pattern"), &(), |b, _| {
-        b.iter_with_setup(
-            LruCache::<Color, (f32, f32, f32), 8>::new,
-            |mut cache| {
+    group.bench_with_input(
+        BenchmarkId::new("cached_hsl_size_8", "ui-pattern"),
+        &(),
+        |b, _| {
+            b.iter_with_setup(LruCache::<Color, (f32, f32, f32), 8>::new, |mut cache| {
                 // Simulate 100 frames of animation
                 for _ in 0..100 {
                     // Theme colors used in every frame
@@ -75,18 +76,24 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
 
                         // Animation progress
                         let alpha = 0.5;
-                        black_box(cache.lerp(&theme_color, &target, ColorSpace::Hsl, alpha));
+                        std::hint::black_box(cache.lerp(
+                            &theme_color,
+                            &target,
+                            ColorSpace::Hsl,
+                            alpha,
+                        ));
                     }
                 }
-            },
-        )
-    });
+            })
+        },
+    );
 
     // Benchmark with cache size 16 for HSL conversion
-    group.bench_with_input(BenchmarkId::new("cached_hsl_size_16", "ui-pattern"), &(), |b, _| {
-        b.iter_with_setup(
-            LruCache::<Color, (f32, f32, f32), 16>::new,
-            |mut cache| {
+    group.bench_with_input(
+        BenchmarkId::new("cached_hsl_size_16", "ui-pattern"),
+        &(),
+        |b, _| {
+            b.iter_with_setup(LruCache::<Color, (f32, f32, f32), 16>::new, |mut cache| {
                 // Simulate 100 frames of animation
                 for _ in 0..100 {
                     // Theme colors used in every frame
@@ -100,18 +107,24 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
 
                         // Animation progress
                         let alpha = 0.5;
-                        black_box(cache.lerp(&theme_color, &target, ColorSpace::Hsl, alpha));
+                        std::hint::black_box(cache.lerp(
+                            &theme_color,
+                            &target,
+                            ColorSpace::Hsl,
+                            alpha,
+                        ));
                     }
                 }
-            },
-        )
-    });
+            })
+        },
+    );
 
     // Cache the entire lerp operation result
-    group.bench_with_input(BenchmarkId::new("cached_full_lerp_size_8", "ui-pattern"), &(), |b, _| {
-        b.iter_with_setup(
-            LruCache::<LerpKey, Color, 8>::new,
-            |mut cache| {
+    group.bench_with_input(
+        BenchmarkId::new("cached_full_lerp_size_8", "ui-pattern"),
+        &(),
+        |b, _| {
+            b.iter_with_setup(LruCache::<LerpKey, Color, 8>::new, |mut cache| {
                 // Simulate 100 frames of animation
                 for _ in 0..100 {
                     // Theme colors used in every frame
@@ -130,22 +143,22 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
                         let key = LerpKey::new(theme_color, target, alpha);
 
                         // Get or compute the interpolated color
-                        let result = cache.memoize(&key, |_| {
-                            ColorSpace::Hsl.lerp(&theme_color, &target, alpha)
-                        });
+                        let result = cache
+                            .memoize(&key, |_| ColorSpace::Hsl.lerp(&theme_color, &target, alpha));
 
-                        black_box(result);
+                        std::hint::black_box(result);
                     }
                 }
-            },
-        )
-    });
+            })
+        },
+    );
 
     // Cache the entire lerp operation result with a larger cache
-    group.bench_with_input(BenchmarkId::new("cached_full_lerp_size_16", "ui-pattern"), &(), |b, _| {
-        b.iter_with_setup(
-            LruCache::<LerpKey, Color, 16>::new,
-            |mut cache| {
+    group.bench_with_input(
+        BenchmarkId::new("cached_full_lerp_size_16", "ui-pattern"),
+        &(),
+        |b, _| {
+            b.iter_with_setup(LruCache::<LerpKey, Color, 16>::new, |mut cache| {
                 // Simulate 100 frames of animation
                 for _ in 0..100 {
                     // Theme colors used in every frame
@@ -164,23 +177,19 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
                         let key = LerpKey::new(theme_color, target, alpha);
 
                         // Get or compute the interpolated color
-                        let result = cache.memoize(&key, |_| {
-                            ColorSpace::Hsl.lerp(&theme_color, &target, alpha)
-                        });
+                        let result = cache
+                            .memoize(&key, |_| ColorSpace::Hsl.lerp(&theme_color, &target, alpha));
 
-                        black_box(result);
+                        std::hint::black_box(result);
                     }
                 }
-            },
-        )
-    });
+            })
+        },
+    );
 
     group.finish();
 }
 
 // Register both benchmarks with Criterion
-criterion_group!(
-    benches,
-    ui_like_color_pattern_benchmark
-);
+criterion_group!(benches, ui_like_color_pattern_benchmark);
 criterion_main!(benches);

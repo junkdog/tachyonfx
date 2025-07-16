@@ -1,5 +1,4 @@
-use crate::CellFilter;
-use crate::widget::EffectSpan;
+use crate::{widget::EffectSpan, CellFilter};
 
 #[derive(Clone)]
 pub(crate) struct CellFilterRegistry {
@@ -8,11 +7,10 @@ pub(crate) struct CellFilterRegistry {
 
 impl CellFilterRegistry {
     pub(crate) fn from(root_span: &EffectSpan) -> Self {
-        let mut this = Self {
-            filters: vec![CellFilter::All.to_string()],
-        };
+        let mut this = Self { filters: vec![CellFilter::All.to_string()] };
 
-        root_span.iter()
+        root_span
+            .iter()
             .map(|span| &span.cell_filter)
             .for_each(|filter| this.register(filter));
 
@@ -21,7 +19,9 @@ impl CellFilterRegistry {
 
     pub(crate) fn id_of(&self, filter: &CellFilter) -> String {
         let sought = filter.to_string();
-        let filter_idx = self.filters.iter()
+        let filter_idx = self
+            .filters
+            .iter()
             .position(|f| f == &sought)
             .unwrap();
 
@@ -35,9 +35,10 @@ impl CellFilterRegistry {
         }
     }
 
-
     pub(crate) fn entries(&self) -> Vec<(String, String)> {
-        self.filters.iter().enumerate()
+        self.filters
+            .iter()
+            .enumerate()
             .map(|(idx, filter)| (format_id(idx), filter.clone()))
             .collect()
     }
@@ -47,6 +48,6 @@ fn format_id(idx: usize) -> String {
     if idx == 0 {
         "    *".to_string()
     } else {
-        format!("cf-{:02}", idx)
+        format!("cf-{idx:02}")
     }
 }

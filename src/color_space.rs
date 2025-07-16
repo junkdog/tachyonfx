@@ -1,10 +1,9 @@
 use ratatui::style::Color;
-use crate::color_ext::ToRgbComponents;
-use crate::lru_cache::LruCache;
+
+use crate::{color_ext::ToRgbComponents, lru_cache::LruCache};
 
 /// Defines the color space to use for color interpolation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ColorSpace {
     /// Linear RGB interpolation (fastest but not perceptually uniform)
     Rgb,
@@ -74,19 +73,19 @@ pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
 }
 
 impl<const N: usize> LruCache<Color, (f32, f32, f32), N> {
-    pub fn lerp(
-        &mut self,
-        from: &Color,
-        to: &Color,
-        color_space: ColorSpace,
-        alpha: f32
-    ) -> Color {
+    pub fn lerp(&mut self, from: &Color, to: &Color, color_space: ColorSpace, alpha: f32) -> Color {
         use ColorSpace::*;
 
         let (a, b) = match color_space {
             Rgb => return ColorSpace::lerp_rgb(from.to_rgb(), to.to_rgb(), alpha),
-            Hsl => (self.memoize(from, color_to_hsl), self.memoize(to, color_to_hsl)),
-            Hsv => (self.memoize(from, color_to_hsv), self.memoize(to, color_to_hsv)),
+            Hsl => (
+                self.memoize(from, color_to_hsl),
+                self.memoize(to, color_to_hsl),
+            ),
+            Hsv => (
+                self.memoize(from, color_to_hsv),
+                self.memoize(to, color_to_hsv),
+            ),
         };
 
         match color_space {
@@ -108,11 +107,7 @@ impl ColorSpace {
         }
     }
 
-    fn lerp_rgb(
-        (r1, g1, b1): (u8, u8, u8),
-        (r2, g2, b2): (u8, u8, u8),
-        alpha: f32
-    ) -> Color {
+    fn lerp_rgb((r1, g1, b1): (u8, u8, u8), (r2, g2, b2): (u8, u8, u8), alpha: f32) -> Color {
         let alpha = (alpha * 0x1_0000 as f32) as u32;
         let inv_alpha = 0x1_0000 - alpha;
 
@@ -123,11 +118,7 @@ impl ColorSpace {
         Color::Rgb(r, g, b)
     }
 
-    fn lerp_hsv(
-        (h1, s1, v1): (f32, f32, f32),
-        (h2, s2, v2): (f32, f32, f32),
-        alpha: f32
-    ) -> Color {
+    fn lerp_hsv((h1, s1, v1): (f32, f32, f32), (h2, s2, v2): (f32, f32, f32), alpha: f32) -> Color {
         // Calculate hue difference, taking the shortest path
         let mut h_diff = h2 - h1;
 
@@ -141,8 +132,12 @@ impl ColorSpace {
         // Calculate the interpolated hue
         let mut h = h1 + h_diff * alpha;
         // Normalize to 0-360 range
-        if h < 0.0 { h += 360.0; }
-        if h >= 360.0 { h -= 360.0; }
+        if h < 0.0 {
+            h += 360.0;
+        }
+        if h >= 360.0 {
+            h -= 360.0;
+        }
 
         let s = s1 + (s2 - s1) * alpha;
         let v = v1 + (v2 - v1) * alpha;
@@ -151,11 +146,7 @@ impl ColorSpace {
         Color::Rgb(r, g, b)
     }
 
-    fn lerp_hsl(
-        (h1, s1, l1): (f32, f32, f32),
-        (h2, s2, l2): (f32, f32, f32),
-        alpha: f32
-    ) -> Color {
+    fn lerp_hsl((h1, s1, l1): (f32, f32, f32), (h2, s2, l2): (f32, f32, f32), alpha: f32) -> Color {
         // Calculate hue difference, taking the shortest path
         let mut h_diff = h2 - h1;
 
@@ -169,8 +160,12 @@ impl ColorSpace {
         // Calculate the interpolated hue
         let mut h = h1 + h_diff * alpha;
         // Normalize to 0-360 range
-        if h < 0.0 { h += 360.0; }
-        if h >= 360.0 { h -= 360.0; }
+        if h < 0.0 {
+            h += 360.0;
+        }
+        if h >= 360.0 {
+            h -= 360.0;
+        }
 
         let s = s1 + (s2 - s1) * alpha;
         let l = l1 + (l2 - l1) * alpha;
@@ -217,9 +212,11 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
     let h = h % 360.0;
 
     if s <= 0.0 {
-        return ((v * 255.0).round() as u8,
+        return (
             (v * 255.0).round() as u8,
-            (v * 255.0).round() as u8);
+            (v * 255.0).round() as u8,
+            (v * 255.0).round() as u8,
+        );
     }
 
     let h = h / 60.0;
@@ -239,9 +236,11 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
         _ => (v, p, q),
     };
 
-    ((r * 255.0).round() as u8,
+    (
+        (r * 255.0).round() as u8,
         (g * 255.0).round() as u8,
-        (b * 255.0).round() as u8)
+        (b * 255.0).round() as u8,
+    )
 }
 
 fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
@@ -262,11 +261,7 @@ fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     }
 
     // Saturation calculation
-    let s = if l <= 0.5 {
-        delta / (max + min)
-    } else {
-        delta / (2.0 - max - min)
-    };
+    let s = if l <= 0.5 { delta / (max + min) } else { delta / (2.0 - max - min) };
 
     // Hue calculation
     let h = if max == r {
@@ -291,11 +286,7 @@ pub(crate) fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
         return (gray, gray, gray);
     }
 
-    let q = if l < 0.5 {
-        l * (1.0 + s)
-    } else {
-        l + s - l * s
-    };
+    let q = if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
 
     let p = 2.0 * l - q;
 
@@ -323,13 +314,12 @@ pub(crate) fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
 
     let h = h / 360.0;
 
-    let r = to_rgb_component(h + 1.0/3.0);
+    let r = to_rgb_component(h + 1.0 / 3.0);
     let g = to_rgb_component(h);
-    let b = to_rgb_component(h - 1.0/3.0);
+    let b = to_rgb_component(h - 1.0 / 3.0);
 
     (r, g, b)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -337,11 +327,14 @@ mod tests {
 
     // Helper function to assert approximate equality for floats
     fn assert_approx_eq(a: f32, b: f32, epsilon: f32) {
-        assert!((a - b).abs() < epsilon, "Expected {} to be approximately equal to {}", a, b);
+        assert!(
+            (a - b).abs() < epsilon,
+            "Expected {a} to be approximately equal to {b}"
+        );
     }
 
     // Helper function to assert approximate equality for RGB values
-    fn assert_rgb_eq(a: (u8, u8, u8), b: (u8, u8, u8),) {
+    fn assert_rgb_eq(a: (u8, u8, u8), b: (u8, u8, u8)) {
         let a = Color::Rgb(a.0, a.1, a.2);
         let b = Color::Rgb(b.0, b.1, b.2);
         assert_eq!(a, b);
@@ -513,7 +506,8 @@ mod tests {
                     // RGB -> HSV -> RGB
                     let (h, s, v) = rgb_to_hsv(*r, *g, *b);
                     let rgb_from_hsv = hsv_to_rgb(h, s, v);
-                    assert_rgb_eq(original, rgb_from_hsv); // Allow 1 unit difference due to rounding
+                    assert_rgb_eq(original, rgb_from_hsv); // Allow 1 unit difference due
+                                                           // to rounding
                 }
             }
         }
@@ -551,7 +545,8 @@ mod tests {
     #[test]
     fn test_interpolate_hsl() {
         // Test interpolating between red and blue
-        // At 50%, we should get purple (HSL interpolation goes the shortest way around the color wheel)
+        // At 50%, we should get purple (HSL interpolation goes the shortest way around the color
+        // wheel)
         let from = Color::Rgb(255, 0, 0); // Red
         let to = Color::Rgb(0, 0, 255); // Blue
 

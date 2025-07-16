@@ -38,6 +38,7 @@ pub trait AsIndexedColor {
     fn as_indexed_color(&self) -> Color;
 }
 
+#[allow(deprecated)]
 impl AsIndexedColor for Color {
     fn as_indexed_color(&self) -> Color {
         let (r, g, b) = self.to_rgb();
@@ -72,7 +73,7 @@ fn indexed_color_to_rgb(index: u8) -> u32 {
                 0xFFFFFF, // 15: bright White
             ];
             BASIC_COLORS[index as usize]
-        }
+        },
 
         // 216-color cube (16-231)
         16..=231 => {
@@ -92,7 +93,7 @@ fn indexed_color_to_rgb(index: u8) -> u32 {
             };
 
             to_rgb(r) << 16 | to_rgb(g) << 8 | to_rgb(b)
-        }
+        },
 
         // 24 grayscale colors (232-255)
         232..=255 => {
@@ -100,6 +101,6 @@ fn indexed_color_to_rgb(index: u8) -> u32 {
             // linear interpolation from 8 to 238
             let gray = (8 + gray_index * 10) as u32;
             (gray << 16) | (gray << 8) | gray
-        }
+        },
     }
 }

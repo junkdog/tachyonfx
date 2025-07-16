@@ -1,9 +1,9 @@
-use crate::effect::Effect;
-use crate::shader::Shader;
-use crate::widget::EffectSpan;
-use crate::{CellFilter, ColorSpace, Duration, EffectTimer};
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::{buffer::Buffer, layout::Rect};
+
+use crate::{
+    effect::Effect, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
+    EffectTimer,
+};
 
 #[derive(Clone, Debug)]
 pub struct NeverComplete {
@@ -26,10 +26,18 @@ impl Shader for NeverComplete {
         None
     }
 
-    fn done(&self) -> bool                      { false }
-    fn clone_box(&self) -> Box<dyn Shader>      { Box::new(self.clone()) }
-    fn area(&self) -> Option<Rect>              { self.effect.area() }
-    fn set_area(&mut self, area: Rect)          { self.effect.set_area(area) }
+    fn done(&self) -> bool {
+        false
+    }
+    fn clone_box(&self) -> Box<dyn Shader> {
+        Box::new(self.clone())
+    }
+    fn area(&self) -> Option<Rect> {
+        self.effect.area()
+    }
+    fn set_area(&mut self, area: Rect) {
+        self.effect.set_area(area)
+    }
 
     fn filter(&mut self, strategy: CellFilter) {
         self.effect.filter(strategy);
@@ -67,15 +75,17 @@ impl Shader for NeverComplete {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::EffectExpression;
         let nested = self.effect.to_dsl()?;
-        EffectExpression::parse(&format!("fx::never_complete({})", nested))
+        EffectExpression::parse(&format!("fx::never_complete({nested})"))
     }
 }
 
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use crate::fx::{consume_tick, never_complete};
-    use crate::Shader;
+    use crate::{
+        fx::{consume_tick, never_complete},
+        Shader,
+    };
 
     #[test]
     fn to_dsl() {

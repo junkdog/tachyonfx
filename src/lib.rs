@@ -4,26 +4,26 @@
 //! appeal of terminal applications, offering capabilities such as color transformations,
 //! animations, and complex effect combinations.
 
-mod interpolation;
-mod effect;
-mod shader;
-mod effect_timer;
-mod cell_iter;
-mod color_mapper;
-mod color_ext;
-mod rect_ext;
-mod render_effect;
-mod motion;
 mod bounding_box;
 mod buffer_renderer;
 mod cell_filter;
-mod simple_rng;
-mod duration;
-mod features;
-mod effect_manager;
+mod cell_iter;
+mod color_ext;
+mod color_mapper;
 mod color_space;
+mod duration;
+mod effect;
+mod effect_manager;
+mod effect_timer;
+mod features;
+mod interpolation;
 mod lru_cache;
+mod motion;
+mod rect_ext;
 mod ref_rect;
+mod render_effect;
+mod shader;
+mod simple_rng;
 
 pub mod fx;
 pub mod widget;
@@ -32,29 +32,29 @@ pub mod widget;
 #[doc = include_str!("../docs/dsl.md")]
 pub mod dsl;
 
+pub use buffer_renderer::*;
+pub use cell_filter::{CellFilter, CellPredicate};
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
+pub use color_ext::ToRgbComponents;
 #[allow(deprecated)]
 pub use color_mapper::ColorMapper;
-pub use cell_filter::{CellFilter, CellPredicate};
-pub use effect::{Effect, IntoEffect};
-pub use effect_timer::EffectTimer;
-pub use rect_ext::CenteredShrink;
-pub use render_effect::EffectRenderer;
-pub use effect_manager::EffectManager;
-pub use shader::Shader;
-pub use interpolation::*;
-pub use buffer_renderer::*;
-pub use simple_rng::*;
-pub use duration::Duration;
-pub use motion::*;
-pub use features::{ref_count, RefCount, ThreadSafetyMarker};
-pub use lru_cache::LruCache;
 pub use color_space::*;
-pub use color_ext::ToRgbComponents;
-pub use ref_rect::RefRect;
-
+pub use duration::Duration;
+#[allow(unused_imports)] // not actually unused, misidentified by clippy
 pub(crate) use effect::ShaderExt;
+pub use effect::{Effect, IntoEffect};
+pub use effect_manager::EffectManager;
+pub use effect_timer::EffectTimer;
+pub use features::{ref_count, RefCount, ThreadSafetyMarker};
+pub use interpolation::*;
+pub use lru_cache::LruCache;
+pub use motion::*;
+pub use rect_ext::CenteredShrink;
+pub use ref_rect::RefRect;
+pub use render_effect::EffectRenderer;
+pub use shader::Shader;
+pub use simple_rng::*;
 
 #[cfg(all(feature = "std-duration", feature = "web-time"))]
 compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");

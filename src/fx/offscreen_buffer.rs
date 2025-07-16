@@ -1,8 +1,7 @@
-use crate::widget::EffectSpan;
-use crate::{CellFilter, ColorSpace, Duration, Effect, RefCount, Shader};
 use compact_str::ToCompactString;
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::{buffer::Buffer, layout::Rect};
+
+use crate::{widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, RefCount, Shader};
 
 #[derive(Clone, Debug)]
 pub struct OffscreenBuffer {
@@ -21,18 +20,15 @@ impl Shader for OffscreenBuffer {
         "offscreen_buffer"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        _buf: &mut Buffer,
-        _area: Rect
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, _buf: &mut Buffer, _area: Rect) -> Option<Duration> {
         let area = self.area().unwrap(); // guaranteed to be Some
-        #[cfg(not(feature = "sendable"))] {
+        #[cfg(not(feature = "sendable"))]
+        {
             let target = &mut self.render_target.as_ref().borrow_mut();
             self.fx.process(duration, target, area);
         };
-        #[cfg(feature = "sendable")] {
+        #[cfg(feature = "sendable")]
+        {
             let mut target = self.render_target.lock().unwrap();
             self.fx.process(duration, &mut target, area);
         };
@@ -50,14 +46,16 @@ impl Shader for OffscreenBuffer {
 
     #[cfg(not(feature = "sendable"))]
     fn area(&self) -> Option<Rect> {
-        self.fx.area()
+        self.fx
+            .area()
             .unwrap_or_else(|| *self.render_target.as_ref().borrow().area())
             .into()
     }
 
     #[cfg(feature = "sendable")]
     fn area(&self) -> Option<Rect> {
-        self.fx.area()
+        self.fx
+            .area()
             .unwrap_or_else(|| self.render_target.lock().unwrap().area)
             .into()
     }
@@ -81,9 +79,7 @@ impl Shader for OffscreenBuffer {
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::DslError;
-        Err(DslError::UnsupportedEffect {
-            name: self.name().to_compact_string(),
-        })
+        Err(DslError::UnsupportedEffect { name: self.name().to_compact_string() })
     }
 
     fn set_color_space(&mut self, color_space: ColorSpace) {

@@ -1,9 +1,12 @@
-use crate::effect_timer::EffectTimer;
-use crate::shader::Shader;
-use crate::simple_rng::SimpleRng;
-use crate::{default_shader_impl, CellFilter, Duration, LruCache};
-use ratatui::buffer::{Buffer, Cell};
-use ratatui::layout::{Position, Rect};
+use ratatui::{
+    buffer::{Buffer, Cell},
+    layout::{Position, Rect},
+};
+
+use crate::{
+    default_shader_impl, effect_timer::EffectTimer, shader::Shader, simple_rng::SimpleRng,
+    CellFilter, Duration, LruCache,
+};
 
 #[derive(Clone, Debug)]
 pub struct Explode {
@@ -12,6 +15,7 @@ pub struct Explode {
     force_rng_factor: f32,
     area: Option<Rect>,
     cell_filter: Option<CellFilter>,
+    #[allow(clippy::type_complexity)]
     sorted_cells: LruCache<Rect, Vec<(Position, (f32, f32))>, 1>,
     replacement_cell: Cell,
     lcg: SimpleRng,
@@ -38,12 +42,13 @@ impl Explode {
         }
     }
 
-    fn explosion_char(
-        alpha: f32,
-    ) -> char {
+    fn explosion_char(alpha: f32) -> char {
         // EXPLODED is 18 characters long
         let explosion_index = (alpha * 17.0).round() as usize;
-        let explosion_char = EXPLODED.chars().nth(explosion_index).unwrap_or('X');
+        let explosion_char = EXPLODED
+            .chars()
+            .nth(explosion_index)
+            .unwrap_or('X');
         explosion_char
     }
 }
@@ -66,7 +71,8 @@ impl Shader for Explode {
             let center_x = area.x as f32 + area.width as f32 / 2.0;
             let center_y = area.y as f32 + area.height as f32 / 2.0;
 
-            let mut cells = Vec::with_capacity(safe_area.width as usize * safe_area.height as usize);
+            let mut cells =
+                Vec::with_capacity(safe_area.width as usize * safe_area.height as usize);
             for y in safe_area.top()..safe_area.bottom() {
                 for x in safe_area.left()..safe_area.right() {
                     let pos = Position::new(x, y);
@@ -85,14 +91,20 @@ impl Shader for Explode {
             }
 
             cells.sort_by(|(_, (dx, dy)), (_, (dx2, dy2))| {
-                (dx + dy).partial_cmp(&(dx2 + dy2)).unwrap_or(std::cmp::Ordering::Equal)
+                (dx + dy)
+                    .partial_cmp(&(dx2 + dy2))
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
 
             cells
         });
 
-        let cell_filter = self.cell_filter.as_ref().unwrap_or(&CellFilter::All).selector(safe_area);
-        for (pos, (dx, dy)) in cells.into_iter() {
+        let cell_filter = self
+            .cell_filter
+            .as_ref()
+            .unwrap_or(&CellFilter::All)
+            .selector(safe_area);
+        for (pos, (dx, dy)) in cells.iter() {
             let pos = *pos;
             let (dx, dy) = (*dx, *dy);
 
@@ -123,7 +135,7 @@ impl Shader for Explode {
                     buf[new_pos].set_char(Self::explosion_char(alpha));
                 }
             }
-        };
+        }
     }
 
     #[cfg(feature = "dsl")]
@@ -139,10 +151,7 @@ impl Shader for Explode {
     }
 }
 
-fn into_pos(
-    x: f32,
-    y: f32,
-) -> Option<Position> {
+fn into_pos(x: f32, y: f32) -> Option<Position> {
     if x.is_sign_negative() || y.is_sign_negative() {
         None
     } else {

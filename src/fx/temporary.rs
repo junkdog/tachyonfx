@@ -1,11 +1,13 @@
-use crate::effect::{Effect, IntoEffect};
-use crate::effect_timer::EffectTimer;
-use crate::interpolation::Interpolation::Linear;
-use crate::shader::Shader;
-use crate::widget::EffectSpan;
-use crate::{CellFilter, ColorSpace, Duration};
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::{buffer::Buffer, layout::Rect};
+
+use crate::{
+    effect::{Effect, IntoEffect},
+    effect_timer::EffectTimer,
+    interpolation::Interpolation::Linear,
+    shader::Shader,
+    widget::EffectSpan,
+    CellFilter, ColorSpace, Duration,
+};
 
 #[derive(Clone, Debug)]
 pub struct TemporaryEffect {
@@ -24,12 +26,7 @@ impl Shader for TemporaryEffect {
         "with_duration"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let remaining = self.timer.process(duration);
         let effect_area = self.effect.area().unwrap_or(area);
         self.effect.process(duration, buf, effect_area);
@@ -88,7 +85,8 @@ impl Shader for TemporaryEffect {
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
-        EffectExpression::parse(&format!("fx::with_duration({}, {})",
+        EffectExpression::parse(&format!(
+            "fx::with_duration({}, {})",
             self.timer.duration().dsl_format(),
             self.effect.to_dsl()?
         ))
@@ -105,12 +103,12 @@ impl IntoTemporaryEffect for Effect {
     }
 }
 
-
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use crate::{fx, Duration, Shader};
     use indoc::indoc;
+
+    use crate::{fx, Duration, Shader};
 
     #[test]
     fn to_dsl() {

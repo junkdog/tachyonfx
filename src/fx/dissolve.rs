@@ -1,10 +1,9 @@
-use crate::effect_timer::EffectTimer;
-use crate::shader::Shader;
-use crate::simple_rng::SimpleRng;
-use crate::{default_shader_impl, CellFilter, Duration};
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use ratatui::style::Style;
+use ratatui::{buffer::Buffer, layout::Rect, style::Style};
+
+use crate::{
+    default_shader_impl, effect_timer::EffectTimer, shader::Shader, simple_rng::SimpleRng,
+    CellFilter, Duration,
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct Dissolve {
@@ -16,19 +15,11 @@ pub struct Dissolve {
 }
 
 impl Dissolve {
-    pub fn new(
-        lifetime: EffectTimer,
-    ) -> Self {
-        Self {
-            timer: lifetime,
-            ..Self::default()
-        }
+    pub fn new(lifetime: EffectTimer) -> Self {
+        Self { timer: lifetime, ..Self::default() }
     }
 
-    pub fn with_style(
-        style: Style,
-        lifetime: EffectTimer,
-    ) -> Self {
+    pub fn with_style(style: Style, lifetime: EffectTimer) -> Self {
         Self {
             dissolved_style: Some(style),
             timer: lifetime,
@@ -42,10 +33,10 @@ impl Shader for Dissolve {
 
     fn name(&self) -> &'static str {
         match (self.dissolved_style, self.timer.is_reversed()) {
-            (Some(_), true)  => "coalesce_from",
+            (Some(_), true) => "coalesce_from",
             (Some(_), false) => "dissolve_to",
-            (None, true)     => "coalesce",
-            (None, false)    => "dissolve",
+            (None, true) => "coalesce",
+            (None, false) => "dissolve",
         }
     }
 
@@ -54,8 +45,7 @@ impl Shader for Dissolve {
         let cell_iter = self.cell_iter(buf, area);
         let mut lcg = self.lcg;
 
-        let dissolved_cells = cell_iter
-            .filter(|_| alpha > lcg.gen_f32());
+        let dissolved_cells = cell_iter.filter(|_| alpha > lcg.gen_f32());
 
         if let Some(style) = self.dissolved_style {
             dissolved_cells.for_each(|(_, c)| {
@@ -74,13 +64,13 @@ impl Shader for Dissolve {
         use crate::dsl::{DslFormat, EffectExpression};
 
         if self.dissolved_style.is_none() {
-            EffectExpression::parse(&format!(
-                "fx::{}({})",
-                self.name(),
-                self.timer.dsl_format(),
-            ))
+            EffectExpression::parse(&format!("fx::{}({})", self.name(), self.timer.dsl_format(),))
         } else {
-            let style = self.dissolved_style.as_ref().unwrap().dsl_format();
+            let style = self
+                .dissolved_style
+                .as_ref()
+                .unwrap()
+                .dsl_format();
             EffectExpression::parse(&format!(
                 "fx::{}({}, {})",
                 self.name(),
@@ -94,46 +84,42 @@ impl Shader for Dissolve {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use crate::Interpolation::SineOut;
-    use crate::{fx, EffectTimer, Shader};
     use indoc::indoc;
     use ratatui::style::Style;
 
+    use crate::{fx, EffectTimer, Interpolation::SineOut, Shader};
+
     #[test]
     fn dsl_format_dissolve() {
-        assert_eq!(
-            fx::dissolve(1000).to_dsl().unwrap().to_string(),
-            indoc! {
-                "fx::dissolve(EffectTimer::from_ms(1000, Interpolation::Linear))"
-            }
-        );
+        assert_eq!(fx::dissolve(1000).to_dsl().unwrap().to_string(), indoc! {
+            "fx::dissolve(EffectTimer::from_ms(1000, Interpolation::Linear))"
+        });
     }
 
     #[test]
     fn dsl_format_coalesce() {
-        assert_eq!(
-            fx::coalesce(1000).to_dsl().unwrap().to_string(),
-            indoc! {
-                "fx::coalesce(EffectTimer::from_ms(1000, Interpolation::Linear))"
-            }
-        );
+        assert_eq!(fx::coalesce(1000).to_dsl().unwrap().to_string(), indoc! {
+            "fx::coalesce(EffectTimer::from_ms(1000, Interpolation::Linear))"
+        });
     }
 
     #[test]
     fn dsl_format_dissolve_to() {
-        let dissolve = fx::dissolve_to(Style::default(), EffectTimer::from_ms(100, SineOut)).to_dsl().unwrap();
-        assert_eq!(
-            dissolve.to_string(),
-            indoc! {
-                "fx::dissolve_to(Style::new(), EffectTimer::from_ms(100, Interpolation::SineOut))"
-            }
-        );
+        let dissolve = fx::dissolve_to(Style::default(), EffectTimer::from_ms(100, SineOut))
+            .to_dsl()
+            .unwrap();
+        assert_eq!(dissolve.to_string(), indoc! {
+            "fx::dissolve_to(Style::new(), EffectTimer::from_ms(100, Interpolation::SineOut))"
+        });
     }
 
     #[test]
     fn dsl_format_coalesce_from() {
         assert_eq!(
-            fx::coalesce_from(Style::default(), 1000).to_dsl().unwrap().to_string(),
+            fx::coalesce_from(Style::default(), 1000)
+                .to_dsl()
+                .unwrap()
+                .to_string(),
             indoc! {
                 "fx::coalesce_from(Style::new(), EffectTimer::from_ms(1000, Interpolation::Linear))"
             }

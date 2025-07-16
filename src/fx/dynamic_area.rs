@@ -1,6 +1,6 @@
+use ratatui::{buffer::Buffer, layout::Rect};
+
 use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefRect, Shader};
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
 
 /// A shader wrapper that applies effects to a dynamically changing rectangular area.
 ///
@@ -8,9 +8,10 @@ use ratatui::layout::Rect;
 /// in real-time. Unlike regular effects which have static areas, `DynamicArea` uses a
 /// shared, mutable area reference that can be updated during effect execution.
 ///
-/// This is particularly useful in terminal UIs where widget areas frequently change due to:
+/// This is particularly useful in terminal UIs where widget areas frequently change due
+/// to:
 /// - Window resizing
-/// - Dynamic layout updates  
+/// - Dynamic layout updates
 /// - Responsive design adjustments
 /// - Content-driven sizing
 ///
@@ -52,7 +53,8 @@ impl DynamicArea {
     ///
     /// # Arguments
     ///
-    /// * `area` - A shared reference to the rectangular area where the effect will be applied
+    /// * `area` - A shared reference to the rectangular area where the effect will be
+    ///   applied
     /// * `fx` - The effect to wrap with dynamic area capabilities
     ///
     /// # Returns

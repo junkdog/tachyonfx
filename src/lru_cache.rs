@@ -60,7 +60,7 @@ where
         K: Default,
         V: Default,
     {
-        assert!(N > 0,   "Cache size must be greater than 0");
+        assert!(N > 0, "Cache size must be greater than 0");
         assert!(N < 256, "Cache size must be less than 256");
         Self {
             index: array::from_fn(|_| Default::default()),
@@ -71,12 +71,12 @@ where
         }
     }
 
-    /// Retrieves a value from the cache, or computes and caches it using the provided function.
-    /// Note that this method returns a clone of the value.
+    /// Retrieves a value from the cache, or computes and caches it using the provided
+    /// function. Note that this method returns a clone of the value.
     ///
     /// If the key exists in the cache, its value is returned and marked as recently used.
-    /// If the key doesn't exist, the function `f` is called to compute the value, which is
-    /// then stored in the cache before being returned.
+    /// If the key doesn't exist, the function `f` is called to compute the value, which
+    /// is then stored in the cache before being returned.
     ///
     /// When the cache is full, the least recently used entry is replaced.
     ///
@@ -88,19 +88,19 @@ where
     /// # Returns
     ///
     /// The value associated with the key, either from the cache or newly computed
-    pub fn memoize(
-        &mut self,
-        key: &K,
-        f: impl FnOnce(&K) -> V,
-    ) -> V where V: Clone {
+    pub fn memoize(&mut self, key: &K, f: impl FnOnce(&K) -> V) -> V
+    where
+        V: Clone,
+    {
         self.memoize_ref(key, f).clone()
     }
 
-    /// Retrieves a reference from the cache, or computes and caches it using the provided function.
+    /// Retrieves a reference from the cache, or computes and caches it using the provided
+    /// function.
     ///
     /// If the key exists in the cache, its value is returned and marked as recently used.
-    /// If the key doesn't exist, the function `f` is called to compute the value, which is
-    /// then stored in the cache before being returned.
+    /// If the key doesn't exist, the function `f` is called to compute the value, which
+    /// is then stored in the cache before being returned.
     ///
     /// When the cache is full, the least recently used entry is replaced.
     ///
@@ -112,23 +112,24 @@ where
     /// # Returns
     ///
     /// The value associated with the key, either from the cache or newly computed
-    pub fn memoize_ref(
-        &mut self,
-        key: &K,
-        f: impl FnOnce(&K) -> V,
-    ) -> &V {
+    pub fn memoize_ref(&mut self, key: &K, f: impl FnOnce(&K) -> V) -> &V {
         self.counter += 1;
         if self.counter == 0xffff {
             self.normalize();
-            self.counter = self.entries.iter()
+            self.counter = self
+                .entries
+                .iter()
                 .map(|(_, counter)| *counter)
                 .max()
                 .unwrap_or(0)
         }
 
         // Find the entry with the matching key
-        let pos = self.index.iter().enumerate()
-            .find(|(_, &ref k)| k == key)
+        let pos = self
+            .index
+            .iter()
+            .enumerate()
+            .find(|(_, k)| *k == key)
             .map(|(i, _)| i);
 
         match pos {
@@ -137,7 +138,7 @@ where
 
                 self.entries[idx].1 = self.counter;
                 &self.entries[idx].0
-            }
+            },
             None => {
                 self.cache_misses += 1;
 
@@ -145,7 +146,7 @@ where
                 self.index[idx] = key.clone();
                 self.entries[idx] = (f(key), self.counter);
                 &self.entries[idx].0
-            }
+            },
         }
     }
 
@@ -160,18 +161,22 @@ where
     }
 
     fn normalize(&mut self) {
-        let min_offset = self.entries.iter()
+        let min_offset = self
+            .entries
+            .iter()
             .map(|(_, counter)| *counter)
             .min()
             .unwrap_or(0);
 
-        self.entries.iter_mut()
+        self.entries
+            .iter_mut()
             .for_each(|(_, counter)| *counter -= min_offset);
     }
 
     // Helper method to find the index of the least recently used entry
     fn find_lru_index(&self) -> usize {
-        self.entries.iter()
+        self.entries
+            .iter()
             .enumerate()
             .min_by(|(_, (_, a)), (_, (_, b))| a.cmp(b))
             .map(|(i, _)| i)
@@ -188,7 +193,6 @@ where
         Self::new()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -278,11 +282,23 @@ mod tests {
 
         // Verify "a", "c", and "d" are still in the cache
         let mut compute_count = 0;
-        cache.memoize(&"a", |_| { compute_count += 1; 1 });
-        cache.memoize(&"b", |_| { compute_count += 1; 2 });
-        cache.memoize(&"d", |_| { compute_count += 1; 4 });
+        cache.memoize(&"a", |_| {
+            compute_count += 1;
+            1
+        });
+        cache.memoize(&"b", |_| {
+            compute_count += 1;
+            2
+        });
+        cache.memoize(&"d", |_| {
+            compute_count += 1;
+            4
+        });
 
-        assert_eq!(compute_count, 0, "Keys 'a', 'b', and 'd' should still be cached");
+        assert_eq!(
+            compute_count, 0,
+            "Keys 'a', 'b', and 'd' should still be cached"
+        );
     }
 
     #[test]
@@ -306,7 +322,10 @@ mod tests {
             1
         });
 
-        assert_eq!(compute_count, 0, "Key 'a' should have been retained during normalization");
+        assert_eq!(
+            compute_count, 0,
+            "Key 'a' should have been retained during normalization"
+        );
     }
 
     #[test]

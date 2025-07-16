@@ -1,8 +1,6 @@
-use crate::widget::EffectSpan;
-use crate::shader::Shader;
-use crate::{CellFilter, ColorSpace, Duration, EffectTimer};
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::{buffer::Buffer, layout::Rect};
+
+use crate::{shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration, EffectTimer};
 
 /// Represents an effect that can be applied to terminal cells.
 /// The `Effect` struct wraps a shader, allowing it to be configured
@@ -16,12 +14,14 @@ impl Effect {
     /// Creates a new `Effect` with the specified shader.
     ///
     /// # Arguments
-    /// * `shader` - The shader to be used for the effect. It must implement the `Shader` trait and have a static lifetime.
+    /// * `shader` - The shader to be used for the effect. It must implement the `Shader`
+    ///   trait and have a static lifetime.
     ///
     /// # Returns
     /// * A new `Effect` instance.
     pub fn new<S>(shader: S) -> Self
-        where S: Shader + 'static
+    where
+        S: Shader + 'static,
     {
         Self { shader: Box::new(shader) }
     }
@@ -56,9 +56,9 @@ impl Effect {
     /// * A new `Effect` instance with the specified filter.
     ///
     /// /// # Notes
-    /// This method only applies the filter if the effect doesn't already have a filter set,
-    /// preserving any existing filters during effect composition.
-    /// 
+    /// This method only applies the filter if the effect doesn't already have a filter
+    /// set, preserving any existing filters during effect composition.
+    ///
     /// # Example
     /// ```
     /// use ratatui::style::Color;
@@ -78,7 +78,6 @@ impl Effect {
     pub fn with_cell_selection(&self, mode: CellFilter) -> Self {
         self.clone().with_filter(mode)
     }
-
 
     pub fn color_space(&self) -> ColorSpace {
         self.shader.color_space()
@@ -103,7 +102,6 @@ impl Effect {
         cloned
     }
 }
-
 
 impl Clone for Effect {
     fn clone(&self) -> Self {
@@ -178,26 +176,25 @@ impl Shader for Effect {
     }
 }
 
-
 pub trait IntoEffect {
     fn into_effect(self) -> Effect;
 }
 
 impl<S> IntoEffect for S
-    where S: Shader + 'static
+where
+    S: Shader + 'static,
 {
     fn into_effect(self) -> Effect {
         Effect::new(self)
     }
 }
 
-
 pub(crate) trait ShaderExt {
     /// Propagates the cell filter to the shader if it is not already set.
     fn propagate_filter(&mut self, cell_filter: CellFilter);
 }
 
-impl <S: Shader + 'static> ShaderExt for S {
+impl<S: Shader + 'static> ShaderExt for S {
     fn propagate_filter(&mut self, cell_filter: CellFilter) {
         if self.cell_filter().is_none() {
             self.filter(cell_filter);

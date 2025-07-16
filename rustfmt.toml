@@ -1,0 +1,53 @@
+# Rustfmt configuration for tachyonfx project
+
+# Basic formatting
+edition = "2021"
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+
+# Comment handling
+format_code_in_doc_comments = false
+normalize_comments = false
+normalize_doc_attributes = false
+wrap_comments = true
+comment_width = 90
+
+# Arrays and alignment
+indent_style = "Block"
+array_width = 90
+fn_call_width = 60
+
+# Match expressions
+match_arm_leading_pipes = "Never"
+match_block_trailing_comma = true
+
+# Imports
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+reorder_imports = true
+reorder_modules = true
+
+# Other preferences
+use_field_init_shorthand = true
+use_try_shorthand = true
+trailing_comma = "Vertical"
+trailing_semicolon = true
+
+# Struct formatting
+struct_lit_single_line = true
+struct_lit_width = 50
+struct_variant_width = 50
+
+# Function and impl formatting
+fn_single_line = false
+where_single_line = false
+single_line_let_else_max_width = 50
+brace_style = "SameLineWhere"
+
+# Chain formatting
+chain_width = 50
+single_line_if_else_max_width = 80
+
+# Expression handling
+overflow_delimited_expr = true

@@ -1,4 +1,5 @@
 use ratatui::layout::{Position, Rect};
+
 use crate::{ref_count, RefCount};
 
 /// A reference-counted, mutable rectangle that can be shared between multiple effects.
@@ -14,13 +15,13 @@ use crate::{ref_count, RefCount};
 /// use ratatui::layout::Rect;
 ///
 /// let ref_rect = RefRect::new(Rect::new(0, 0, 10, 5));
-/// 
+///
 /// // Multiple components can share the same area reference
 /// let shared_rect = ref_rect.clone();
-/// 
+///
 /// // Update the area from one component
 /// ref_rect.set(Rect::new(5, 5, 20, 10));
-/// 
+///
 /// // All sharing components see the update
 /// assert_eq!(shared_rect.get(), Rect::new(5, 5, 20, 10));
 /// ```
@@ -106,8 +107,9 @@ impl Default for RefRect {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ratatui::layout::{Position, Rect};
+
+    use super::*;
 
     #[test]
     fn test_ref_rect_new_and_get() {
@@ -120,10 +122,10 @@ mod tests {
     fn test_ref_rect_set() {
         let initial_rect = Rect::new(10, 20, 30, 40);
         let new_rect = Rect::new(5, 15, 25, 35);
-        
+
         let ref_rect = RefRect::new(initial_rect);
         assert_eq!(ref_rect.get(), initial_rect);
-        
+
         ref_rect.set(new_rect);
         assert_eq!(ref_rect.get(), new_rect);
     }
@@ -132,19 +134,19 @@ mod tests {
     fn test_ref_rect_clone_shares_state() {
         let initial_rect = Rect::new(10, 20, 30, 40);
         let new_rect = Rect::new(5, 15, 25, 35);
-        
+
         let ref_rect1 = RefRect::new(initial_rect);
         let ref_rect2 = ref_rect1.clone();
-        
+
         // Both should have the same initial value
         assert_eq!(ref_rect1.get(), initial_rect);
         assert_eq!(ref_rect2.get(), initial_rect);
-        
+
         // Changing one should affect the other
         ref_rect1.set(new_rect);
         assert_eq!(ref_rect1.get(), new_rect);
         assert_eq!(ref_rect2.get(), new_rect);
-        
+
         // And vice versa
         let third_rect = Rect::new(1, 2, 3, 4);
         ref_rect2.set(third_rect);
@@ -156,12 +158,12 @@ mod tests {
     fn test_ref_rect_contains() {
         let rect = Rect::new(10, 20, 30, 40);
         let ref_rect = RefRect::new(rect);
-        
+
         // Position inside the rect
         assert!(ref_rect.contains(Position::new(15, 25)));
         assert!(ref_rect.contains(Position::new(10, 20))); // top-left corner
         assert!(ref_rect.contains(Position::new(39, 59))); // bottom-right corner (exclusive)
-        
+
         // Position outside the rect
         assert!(!ref_rect.contains(Position::new(5, 15)));
         assert!(!ref_rect.contains(Position::new(40, 60)));

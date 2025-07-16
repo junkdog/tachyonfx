@@ -1,17 +1,19 @@
-use crate::features::acquire_mut;
-use crate::fx::unique::{Unique, UniqueContext};
-use crate::{ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng, ThreadSafetyMarker};
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use std::collections::BTreeMap;
-use std::fmt::Debug;
+use std::{collections::BTreeMap, fmt::Debug};
+
+use ratatui::{buffer::Buffer, layout::Rect};
+
+use crate::{
+    features::acquire_mut,
+    fx::unique::{Unique, UniqueContext},
+    ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng, ThreadSafetyMarker,
+};
 
 /// Manages a collection of terminal UI effects, including uniquely identified
 /// effects that can be replaced/cancelled by new effects with the same id.
 ///
-/// The `EffectManager` provides lifecycle management for both regular effects and unique effects.
-/// Regular effects run until completion, while unique effects can be cancelled when a new effect
-/// with the same identifier is added.
+/// The `EffectManager` provides lifecycle management for both regular effects and unique
+/// effects. Regular effects run until completion, while unique effects can be cancelled
+/// when a new effect with the same identifier is added.
 #[derive(Default)]
 pub struct EffectManager<K: Clone + Ord + ThreadSafetyMarker + 'static> {
     effects: Vec<Effect>,
@@ -22,22 +24,25 @@ pub struct EffectManager<K: Clone + Ord + ThreadSafetyMarker + 'static> {
 #[allow(dead_code)]
 impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// Creates a unique effect that will cancel any existing effect with the same key.
-    /// The effect must be added to the manager using [`add_effect`] in order to be processed.
+    /// The effect must be added to the manager using [`add_effect`] in order to be
+    /// processed.
     ///
     /// When a new unique effect is created with a key that matches an existing effect,
     /// the existing effect will be marked as complete on the next processing cycle.
     ///
     /// # Arguments
-    /// * `key` - A unique identifier for the effect. If an effect with this key already exists,
-    ///           the existing effect will be cancelled.
+    /// * `key` - A unique identifier for the effect. If an effect with this key already
+    ///   exists, the existing effect will be cancelled.
     /// * `fx` - The effect to be wrapped with unique identification.
     ///
     /// # Returns
-    /// A new effect that includes unique identification logic. The effect must still be added
-    /// to the manager to be processed.
+    /// A new effect that includes unique identification logic. The effect must still be
+    /// added to the manager to be processed.
     pub fn unique(&mut self, key: impl Into<K>, fx: impl Into<Effect>) -> Effect {
         let key = key.into();
-        let ctx = self.uniques.entry(key.clone())
+        let ctx = self
+            .uniques
+            .entry(key.clone())
             .and_modify(|ctx| acquire_mut(ctx).instance_id = self.rng.gen())
             .or_insert_with(|| ref_count(UniqueContext::new(key.clone(), self.rng.gen())))
             .clone();
@@ -61,9 +66,10 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// Any existing effect with the same key will be cancelled.
     ///
     /// # Arguments
-    /// * `key` - A unique identifier for the effect. If an effect with this key already exists,
-    ///           the existing effect will be cancelled.
-    /// * `fx` - The effect to be wrapped with unique identification and added to the manager.
+    /// * `key` - A unique identifier for the effect. If an effect with this key already
+    ///   exists, the existing effect will be cancelled.
+    /// * `fx` - The effect to be wrapped with unique identification and added to the
+    ///   manager.
     pub fn add_unique_effect(&mut self, key: impl Into<K>, fx: impl Into<Effect>) {
         let fx = self.unique(key, fx);
         self.add_effect(fx);
@@ -87,17 +93,19 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
         });
 
         // clear orphaned unique effects;
-        self.uniques.retain(|_, ctx| RefCount::strong_count(ctx) > 1);
+        self.uniques
+            .retain(|_, ctx| RefCount::strong_count(ctx) > 1);
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Debug;
+
+    use ratatui::{buffer::Buffer, layout::Rect};
+
     use super::*;
     use crate::{CellFilter, Shader};
-    use ratatui::buffer::Buffer;
-    use ratatui::layout::Rect;
-    use std::fmt::Debug;
 
     #[test]
     fn test_process_effects_removes_completed() {
@@ -116,13 +124,25 @@ mod tests {
 
         // process once - should remove the first effect
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         assert_eq!(manager.effects.len(), 1);
 
         // process twice more - should remove the second effect
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         assert_eq!(manager.effects.len(), 0);
     }
@@ -137,7 +157,11 @@ mod tests {
 
         // process once
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         assert_eq!(manager.effects.len(), 1);
 
@@ -146,7 +170,11 @@ mod tests {
         manager.add_effect(effect2);
 
         // process again - the first effect should be cancelled and removed
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         // only the second effect should remain
         assert_eq!(manager.effects.len(), 1);
@@ -169,7 +197,11 @@ mod tests {
 
         // process once - the first effect should be cancelled
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         // only the second effect should remain
         assert_eq!(manager.effects.len(), 1);
@@ -183,7 +215,11 @@ mod tests {
         manager.add_unique_effect("test", counter_effect(1));
 
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         // the effect is completed and removed
         assert_eq!(manager.effects.len(), 0);
@@ -210,7 +246,11 @@ mod tests {
 
         // process - the first key1 effect should be cancelled, but key2 should remain
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         // we should have 2 effects: the key2 effect and the new key1 effect
         assert_eq!(manager.effects.len(), 2);
@@ -230,16 +270,29 @@ mod tests {
     }
 
     impl Shader for CounterShader {
-        fn name(&self) -> &'static str { "counter" }
+        fn name(&self) -> &'static str {
+            "counter"
+        }
 
-        fn process(&mut self, _duration: Duration, _buf: &mut Buffer, _area: Rect) -> Option<Duration> {
+        fn process(
+            &mut self,
+            _duration: Duration,
+            _buf: &mut Buffer,
+            _area: Rect,
+        ) -> Option<Duration> {
             self.count += 1;
             None
         }
 
-        fn done(&self) -> bool { self.count >= self.done_after }
-        fn clone_box(&self) -> Box<dyn Shader> { Box::new(self.clone()) }
-        fn area(&self) -> Option<Rect> { None }
+        fn done(&self) -> bool {
+            self.count >= self.done_after
+        }
+        fn clone_box(&self) -> Box<dyn Shader> {
+            Box::new(self.clone())
+        }
+        fn area(&self) -> Option<Rect> {
+            None
+        }
         fn set_area(&mut self, _area: Rect) {}
         fn filter(&mut self, _filter: CellFilter) {}
     }
@@ -249,10 +302,11 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "sendable"))]
     fn test_effect_manager_with_zero_duration_shader_fn() {
+        use std::{cell::RefCell, rc::Rc};
+
         use crate::fx;
-        use std::cell::RefCell;
-        use std::rc::Rc;
 
         let mut manager = EffectManager::<String>::default();
         let call_count = Rc::new(RefCell::new(0));
@@ -272,24 +326,37 @@ mod tests {
         manager.process_effects(Duration::from_millis(1), &mut buffer, area);
 
         // The effect should have been called at least once and then completed/removed
-        assert_eq!(*call_count.borrow(), 1, "Effect should have been called once");
-        assert_eq!(manager.effects.len(), 0, "Effect should be removed after completion");
+        assert_eq!(
+            *call_count.borrow(),
+            1,
+            "Effect should have been called once"
+        );
+        assert_eq!(
+            manager.effects.len(),
+            0,
+            "Effect should be removed after completion"
+        );
     }
 
     #[test]
+    #[cfg(not(feature = "sendable"))]
     fn test_effect_manager_with_normal_duration_shader_fn() {
+        use std::{cell::RefCell, rc::Rc};
+
         use crate::fx;
-        use std::cell::RefCell;
-        use std::rc::Rc;
 
         let mut manager = EffectManager::<String>::default();
         let call_count = Rc::new(RefCell::new(0));
         let call_count_clone = call_count.clone();
 
         // Create an effect with 100ms duration
-        let effect = fx::effect_fn((), Duration::from_millis(100), move |_state, _ctx, _cells| {
-            *call_count_clone.borrow_mut() += 1;
-        });
+        let effect = fx::effect_fn(
+            (),
+            Duration::from_millis(100),
+            move |_state, _ctx, _cells| {
+                *call_count_clone.borrow_mut() += 1;
+            },
+        );
 
         manager.add_effect(effect);
         assert_eq!(manager.effects.len(), 1);
@@ -305,14 +372,19 @@ mod tests {
         // Process for another 60ms (total 110ms) - effect should complete
         manager.process_effects(Duration::from_millis(60), &mut buffer, area);
         assert_eq!(*call_count.borrow(), 2);
-        assert_eq!(manager.effects.len(), 0, "Effect should be completed and removed");
+        assert_eq!(
+            manager.effects.len(),
+            0,
+            "Effect should be completed and removed"
+        );
     }
 
     #[test]
+    #[cfg(not(feature = "sendable"))]
     fn test_multiple_zero_duration_shader_fn_effects() {
+        use std::{cell::RefCell, rc::Rc};
+
         use crate::fx;
-        use std::cell::RefCell;
-        use std::rc::Rc;
 
         let mut manager = EffectManager::<String>::default();
         let call_count = Rc::new(RefCell::new(0));
@@ -334,7 +406,15 @@ mod tests {
         manager.process_effects(Duration::from_millis(1), &mut buffer, area);
 
         // Total call count should be 0+1 + 1+1 + 2+1 = 6
-        assert_eq!(*call_count.borrow(), 6, "All effects should have been called");
-        assert_eq!(manager.effects.len(), 0, "All effects should be completed and removed");
+        assert_eq!(
+            *call_count.borrow(),
+            6,
+            "All effects should have been called"
+        );
+        assert_eq!(
+            manager.effects.len(),
+            0,
+            "All effects should be completed and removed"
+        );
     }
 }
