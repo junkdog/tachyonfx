@@ -20,6 +20,8 @@
 
 ### Fixed
 - `render_as_ansi_string()` now properly handles unicode characters by detecting and skipping space cells that follow multi-width characters, eliminating extra spaces in ANSI output for emoji and CJK text.
+- `LruCache`: fixed cache lookup logic to prevent false cache hits when looking up `Color::Reset` keys. The cache now correctly distinguishes between uninitialized entries (which default to `Color::Reset`) and actually cached `Color::Reset` values, ensuring effects work properly on cells with `Color::Reset` colors.
+- `CellFilter::BgColor`: fixed bug where background color filtering was incorrectly checking the foreground color (`cell.fg`) instead of the background color (`cell.bg`).
 
 ## tachyonfx 0.15.0 - 2025-04-27
 

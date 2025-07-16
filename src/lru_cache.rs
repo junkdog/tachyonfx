@@ -65,7 +65,7 @@ where
         Self {
             index: array::from_fn(|_| Default::default()),
             entries: array::from_fn(|_| Default::default()),
-            counter: 0,
+            counter: 1, // Start at 1 so that 0 means uninitialized
             cache_misses: 0,
             cache_hits: 0,
         }
@@ -121,15 +121,15 @@ where
                 .iter()
                 .map(|(_, counter)| *counter)
                 .max()
-                .unwrap_or(0)
+                .unwrap_or(1) // 1 == valid entry
         }
 
-        // Find the entry with the matching key
+        // Find the entry with the matching key (but only if it's been used before)
         let pos = self
             .index
             .iter()
             .enumerate()
-            .find(|(_, k)| *k == key)
+            .find(|(i, k)| *k == key && self.entries[*i].1 > 0)
             .map(|(i, _)| i);
 
         match pos {
@@ -165,12 +165,15 @@ where
             .entries
             .iter()
             .map(|(_, counter)| *counter)
+            .filter(|&c| c > 0) // Only consider used entries
             .min()
-            .unwrap_or(0);
+            .unwrap_or(1);
 
-        self.entries
-            .iter_mut()
-            .for_each(|(_, counter)| *counter -= min_offset);
+        self.entries.iter_mut().for_each(|(_, counter)| {
+            if *counter > 0 {
+                *counter -= min_offset - 1; // Subtract min_offset but keep it >= 1
+            }
+        });
     }
 
     // Helper method to find the index of the least recently used entry

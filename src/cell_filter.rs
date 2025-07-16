@@ -219,7 +219,7 @@ impl CellPredicate {
             CellFilter::Not(m) => !m.selector(self.filter_area).is_valid(pos, cell),
             // CellFilter::Not(m)        => !self.valid_position(pos, m.as_ref()),
             CellFilter::FgColor(c) => cell.fg == *c,
-            CellFilter::BgColor(c) => cell.fg == *c,
+            CellFilter::BgColor(c) => cell.bg == *c,
             CellFilter::PositionFn(f) => {
                 #[cfg(not(feature = "sendable"))]
                 return f.borrow()(pos);
