@@ -31,14 +31,14 @@ mod sendable {
 }
 
 #[cfg(feature = "sendable")]
-pub(crate) fn acquire_mut<K: Clone + ThreadSafetyMarker>(
+pub(crate) fn acquire_mut(
     ctx: &RefCount<UniqueContext>,
 ) -> std::sync::MutexGuard<'_, UniqueContext> {
     ctx.lock().unwrap()
 }
 
 #[cfg(feature = "sendable")]
-pub(crate) fn acquire_ref<K: Clone + ThreadSafetyMarker>(
+pub(crate) fn acquire_ref(
     ctx: &RefCount<UniqueContext>,
 ) -> std::sync::MutexGuard<'_, UniqueContext> {
     ctx.lock().unwrap()
