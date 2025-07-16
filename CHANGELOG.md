@@ -2,6 +2,8 @@
 
 ## unreleased
 
+## tachyonfx 0.16.0 - 2025-07-16
+
 ### Added
 - `fx::dynamic_area`: wraps effects with dynamic area capabilities for responsive layouts.
 - `RefRect`: a reference-counted, mutable rectangle for sharing areas between components.
@@ -24,6 +26,7 @@
 - `LruCache`: fixed cache lookup logic to prevent false cache hits when looking up `Color::Reset` keys. The cache now correctly distinguishes between uninitialized entries (which default to `Color::Reset`) and actually cached `Color::Reset` values, ensuring effects work properly on cells with `Color::Reset` colors.
 - `CellFilter::BgColor`: fixed bug where background color filtering was incorrectly checking the foreground color (`cell.fg`) instead of the background color (`cell.bg`).
 - `Color::Reset` handling in effects: introduced `ColorCache` to properly handle `Color::Reset` in color interpolation operations. `Color::Reset` is now treated as `Color::White` for foreground colors and `Color::Black` for background colors during interpolation, matching typical terminal defaults. This ensures effects work correctly on cells with reset colors, which commonly occurs when widgets don't have explicit styling.
+
 
 ## tachyonfx 0.15.0 - 2025-04-27
 

@@ -186,7 +186,7 @@ main() {
     log_info "Next version: $next_version"
     
     # Build cargo-release arguments
-    local -a release_args=("--$increment_type")
+    local -a release_args=("$increment_type")
     
     if [[ "$dry_run" == true ]]; then
         release_args+=(--dry-run)

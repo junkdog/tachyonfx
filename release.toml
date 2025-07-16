@@ -5,7 +5,7 @@ consolidate-commits = true
 # Custom commit/tag messages
 pre-release-commit-message = "chore: release tachyonfx {{version}}"
 tag-message = "🚀 Release {{version}}"
-tag-prefix = "glim-"
+tag-prefix = "tachyonfx-"
 
 dependent-version = "upgrade"
 owners = ["junkdog"]
