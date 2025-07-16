@@ -223,7 +223,7 @@ main() {
             log_info "  cargo publish"
         fi
         log_info "Don't forget to push the tag:"
-        log_info "  git push origin glim-$next_version"
+        log_info "  git push origin tachyonfx-$next_version"
     fi
 }
 
