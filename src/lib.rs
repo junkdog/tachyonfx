@@ -8,6 +8,7 @@ mod bounding_box;
 mod buffer_renderer;
 mod cell_filter;
 mod cell_iter;
+mod color_cache;
 mod color_ext;
 mod color_mapper;
 mod color_space;
@@ -36,6 +37,7 @@ pub use buffer_renderer::*;
 pub use cell_filter::{CellFilter, CellPredicate};
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
+pub use color_cache::ColorCache;
 pub use color_ext::ToRgbComponents;
 #[allow(deprecated)]
 pub use color_mapper::ColorMapper;

@@ -1,10 +1,9 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Position, Rect},
-    style::Color,
 };
 
-use crate::{default_shader_impl, shader::Shader, CellFilter, Duration, LruCache};
+use crate::{default_shader_impl, shader::Shader, CellFilter, ColorCache, Duration};
 
 #[derive(Clone, Default, Debug)]
 pub struct Ansi256 {
@@ -19,18 +18,17 @@ impl Shader for Ansi256 {
     }
 
     fn process(&mut self, _duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
-        let mut fg_cache: LruCache<Color, Color, 4> = LruCache::default();
-        let mut bg_cache: LruCache<Color, Color, 4> = LruCache::default();
+        let mut color_cache: ColorCache<4> = ColorCache::new();
 
         let safe_area = area.intersection(buf.area);
         for y in area.top()..safe_area.bottom() {
             for x in area.left()..safe_area.right() {
                 let cell = buf.cell_mut(Position::new(x, y))?;
-                let fg = fg_cache.memoize(&cell.fg, |c| {
+                let fg = color_cache.memoize_fg(&cell.fg, |c| {
                     #[allow(deprecated)]
                     crate::color_ext::AsIndexedColor::as_indexed_color(c)
                 });
-                let bg = bg_cache.memoize(&cell.bg, |c| {
+                let bg = color_cache.memoize_bg(&cell.bg, |c| {
                     #[allow(deprecated)]
                     crate::color_ext::AsIndexedColor::as_indexed_color(c)
                 });

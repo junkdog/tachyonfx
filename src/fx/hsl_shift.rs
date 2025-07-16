@@ -3,7 +3,7 @@ use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 
 use crate::{
     color_space::color_from_hsl, color_to_hsl, default_shader_impl, effect_timer::EffectTimer,
-    shader::Shader, CellFilter, Duration, Interpolatable, LruCache,
+    shader::Shader, CellFilter, ColorCache, Duration, Interpolatable,
 };
 
 #[derive(Builder, Clone, Default, Debug)]
@@ -39,16 +39,15 @@ impl Shader for HslShift {
         };
 
         let cell_iter = self.cell_iter(buf, area);
-        let mut fg_cache: LruCache<Color, Color, 8> = LruCache::default();
-        let mut bg_cache: LruCache<Color, Color, 8> = LruCache::default();
+        let mut color_cache: ColorCache<8> = ColorCache::new();
 
         for (_, cell) in cell_iter {
             if let Some(hsl_mod) = self.hsl_mod_fg {
-                let fg = fg_cache.memoize(&cell.fg, |c| hsl_lerp(*c, hsl_mod));
+                let fg = color_cache.memoize_fg(&cell.fg, |c| hsl_lerp(*c, hsl_mod));
                 cell.set_fg(fg);
             }
             if let Some(hsl_mod) = self.hsl_mod_bg {
-                let bg = bg_cache.memoize(&cell.bg, |c| hsl_lerp(*c, hsl_mod));
+                let bg = color_cache.memoize_bg(&cell.bg, |c| hsl_lerp(*c, hsl_mod));
                 cell.set_bg(bg);
             }
         }

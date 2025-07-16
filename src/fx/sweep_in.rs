@@ -81,12 +81,15 @@ impl Shader for SweepIn {
                 a => {
                     let faded = self.faded_color;
                     let mod_a = CircOut.alpha(a);
-                    let fg = fg_cache.memoize(&(cell.fg, a), |(c, _)| {
-                        self.color_space.lerp(&faded, c, mod_a)
-                    });
-                    let bg = bg_cache.memoize(&(cell.bg, a), |(c, _)| {
-                        self.color_space.lerp(&faded, c, mod_a)
-                    });
+                    let fg_key =
+                        if cell.fg == Color::Reset { (Color::White, a) } else { (cell.fg, a) };
+                    let bg_key =
+                        if cell.bg == Color::Reset { (Color::Black, a) } else { (cell.bg, a) };
+
+                    let fg =
+                        fg_cache.memoize(&fg_key, |(c, _)| self.color_space.lerp(&faded, c, mod_a));
+                    let bg =
+                        bg_cache.memoize(&bg_key, |(c, _)| self.color_space.lerp(&faded, c, mod_a));
 
                     cell.set_fg(fg);
                     cell.set_bg(bg);

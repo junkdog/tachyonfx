@@ -8,6 +8,7 @@
 - `fx::dispatch_event`: dispatches an event immediately when an effect starts, enabling coordination between visual effects and application logic.
 - `fx::run_once`: wraps another effect and ensures it runs exactly once before reporting completion. Particularly useful for zero-duration effects in sequences and parallel compositions.
 - `buffer_to_ansi_string()`: new function that replaces `render_as_ansi_string()` with configurable width handling for double-width characters.
+- `ColorCache`: specialized LRU cache for color interpolation operations that automatically handles `Color::Reset` with appropriate fallback colors (white for foreground, black for background).
 
 ### DSL
 - `RefRect` constructors (`RefRect::new`, `RefRect::default`) are now available in DSL expressions.
@@ -22,6 +23,7 @@
 - `render_as_ansi_string()` now properly handles unicode characters by detecting and skipping space cells that follow multi-width characters, eliminating extra spaces in ANSI output for emoji and CJK text.
 - `LruCache`: fixed cache lookup logic to prevent false cache hits when looking up `Color::Reset` keys. The cache now correctly distinguishes between uninitialized entries (which default to `Color::Reset`) and actually cached `Color::Reset` values, ensuring effects work properly on cells with `Color::Reset` colors.
 - `CellFilter::BgColor`: fixed bug where background color filtering was incorrectly checking the foreground color (`cell.fg`) instead of the background color (`cell.bg`).
+- `Color::Reset` handling in effects: introduced `ColorCache` to properly handle `Color::Reset` in color interpolation operations. `Color::Reset` is now treated as `Color::White` for foreground colors and `Color::Black` for background colors during interpolation, matching typical terminal defaults. This ensures effects work correctly on cells with reset colors, which commonly occurs when widgets don't have explicit styling.
 
 ## tachyonfx 0.15.0 - 2025-04-27
 

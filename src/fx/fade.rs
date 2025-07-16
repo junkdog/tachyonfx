@@ -2,8 +2,8 @@ use bon::{builder, Builder};
 use ratatui::{buffer::Buffer, layout::Rect, prelude::Color};
 
 use crate::{
-    default_shader_impl, effect_timer::EffectTimer, shader::Shader, CellFilter, ColorSpace,
-    Duration, LruCache,
+    default_shader_impl, effect_timer::EffectTimer, shader::Shader, CellFilter, ColorCache,
+    ColorSpace, Duration,
 };
 
 #[derive(Builder, Clone, Debug)]
@@ -32,17 +32,18 @@ impl Shader for FadeColors {
         let alpha = self.timer.alpha();
 
         let cell_iter = self.cell_iter(buf, area);
-        let mut fg_cache: LruCache<Color, Color, 8> = LruCache::new();
-        let mut bg_cache: LruCache<Color, Color, 8> = LruCache::new();
+        let mut color_cache: ColorCache<8> = ColorCache::new();
 
         cell_iter.for_each(|(_, cell)| {
             if let Some(fg) = self.fg.as_ref() {
-                let color = fg_cache.memoize(&cell.fg, |c| self.color_space.lerp(c, fg, alpha));
+                let color =
+                    color_cache.memoize_fg(&cell.fg, |c| self.color_space.lerp(c, fg, alpha));
                 cell.set_fg(color);
             }
 
             if let Some(bg) = self.bg.as_ref() {
-                let color = bg_cache.memoize(&cell.bg, |c| self.color_space.lerp(c, bg, alpha));
+                let color =
+                    color_cache.memoize_bg(&cell.bg, |c| self.color_space.lerp(c, bg, alpha));
                 cell.set_bg(color);
             }
         });
