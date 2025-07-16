@@ -52,6 +52,7 @@
 //! | [`remap_alpha()`] 🔁 | Remaps an effect's alpha progression to operate within a smaller range | N/A |
 //! | [`repeat()`] 🔁 | Repeats effect by count or duration     | N/A |
 //! | [`repeating()`] 🔁 | Repeats an effect indefinitely       | N/A |
+//! | [`run_once()`] 🔂 | Ensures wrapped effect runs exactly once | N/A |
 //! | [`sleep()`] 💤 | Pauses for specified duration            | N/A |
 //! | [`with_duration()`] ⏱️ | Applies duration limit to effect | N/A |
 //!
@@ -116,6 +117,7 @@ use crate::{
         never_complete::NeverComplete,
         repeat::Repeat,
         resize::ResizeArea,
+        run_once::RunOnce,
         sleep::Sleep,
         sweep_in::SweepIn,
         temporary::TemporaryEffect,
@@ -141,6 +143,7 @@ mod ping_pong;
 mod prolong;
 mod repeat;
 mod resize;
+mod run_once;
 mod shader_fn;
 mod sleep;
 mod slide;
@@ -1277,6 +1280,45 @@ pub fn consume_tick() -> Effect {
     ConsumeTick::default().into_effect()
 }
 
+/// Creates an effect that wraps another effect and ensures it runs exactly once before
+/// reporting completion.
+///
+/// This function is particularly useful for zero-duration effects that need to be
+/// included in sequences or parallel compositions. Without this wrapper, zero-duration
+/// effects would be skipped entirely in such compositions.
+///
+/// The wrapped effect will execute once, regardless of its completion status, after which
+/// the RunOnce effect will report completion.
+///
+/// # Arguments
+///
+/// * `effect` - The effect to wrap and run exactly once
+///
+/// # Returns
+///
+/// An `Effect` that ensures the wrapped effect runs exactly once before completing.
+///
+/// # Examples
+///
+/// ```rust
+/// use tachyonfx::fx;
+/// use ratatui::style::Color;
+///
+/// // Ensure a zero-duration effect runs in a sequence
+/// let zero_duration_effect = fx::effect_fn((), 0, |_, _, _| {
+///     // Some instant transformation
+/// });
+///
+/// fx::sequence(&[
+///     fx::fade_to_fg(Color::Red, 1000),
+///     fx::run_once(zero_duration_effect),
+///     fx::fade_to_fg(Color::Blue, 1000),
+/// ]);
+/// ```
+pub fn run_once(effect: Effect) -> Effect {
+    RunOnce::new(effect).into_effect()
+}
+
 /// An effect that forces the wrapped effect to never report completion,
 /// effectively making it run indefinitely.
 ///
@@ -1410,11 +1452,11 @@ pub fn dispatch_event<T>(sender: std::sync::mpsc::Sender<T>, event: T) -> Effect
 where
     T: Clone + std::fmt::Debug + ThreadSafetyMarker + 'static,
 {
-    effect_fn_buf(Some(event), 0, move |e, _, _| {
+    run_once(effect_fn_buf(Some(event), 0, move |e, _, _| {
         if let Some(e) = e.take() {
             let _ = sender.send(e);
         }
-    })
+    }))
 }
 
 fn fade<C: Into<Color>>(fg: Option<C>, bg: Option<C>, timer: EffectTimer, reverse: bool) -> Effect {

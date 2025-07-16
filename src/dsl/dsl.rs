@@ -15,7 +15,7 @@ use crate::{
         DslError,
     },
     fx,
-    fx::{consume_tick, dissolve, never_complete, ping_pong, repeating},
+    fx::{consume_tick, dissolve, never_complete, ping_pong, repeating, run_once},
     Effect,
 };
 
@@ -342,6 +342,7 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("prolong_start", compilers::prolong_start)
         .register("remap_alpha", compilers::remap_alpha)
         .register("repeat", compilers::repeat)
+        .register("run_once", |args| run_once(args.effect()?).into())
         .register("sleep", compilers::sleep)
         .register("repeating", |args| repeating(args.effect()?).into())
         .register("slide_in", compilers::slide_in)
@@ -612,6 +613,7 @@ mod tests {
             fx::repeat(fx::dissolve((1000, Linear)), RepeatMode::Times(3)),
             fx::remap_alpha(0.3, 0.6, fx::dissolve((1000, Linear))),
             fx::repeating(fx::dissolve((1000, Linear))),
+            fx::run_once(fx::dissolve((1000, Linear))),
             fx::sleep((1000, Linear)),
             fx::slide_in(Motion::LeftToRight, 10, 5, color, (1000, Linear)),
             fx::slide_out(Motion::UpToDown, 10, 5, color, (1000, Linear)),
