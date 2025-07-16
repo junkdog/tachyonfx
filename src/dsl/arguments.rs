@@ -6,7 +6,7 @@ use crate::dsl::DslError;
 use crate::fx::RepeatMode;
 use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect};
 use compact_str::{CompactString, ToCompactString};
-use ratatui::layout::{Constraint, Direction, Layout, Margin, Offset, Rect};
+use ratatui::layout::{Constraint, Direction, Layout, Margin, Offset, Rect, Size};
 use ratatui::prelude::{Color, Style};
 use ratatui::style::Modifier;
 use std::collections::{BTreeMap, VecDeque};
@@ -545,6 +545,34 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns a `Size`.
+    pub fn size(&mut self) -> Result<Size, DslError> {
+        match self.next("size")? {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } if name == "Size::new" => {
+                let mut inner_args = self.nested_args(args, 2, span)?;
+                let width = inner_args.read_u16()?;
+                let height = inner_args.read_u16()?;
+                Ok(Size::new(width, height))
+            },
+            Expr::StructInit { name, fields, span } => {
+                if name == "Size" {
+                    let fields = struct_fields("Size", &["width", "height"], fields)?;
+                    Ok(Size {
+                        width: self.extract_field("width", &fields, Arguments::read_u16, span)?,
+                        height: self.extract_field("height", &fields, Arguments::read_u16, span)?,
+                    })
+                } else {
+                    Err(DslError::UnknownStruct {
+                        name: name.to_compact_string(),
+                        location: span,
+                    })
+                }
+            }
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e                            => self.expected_type_expr("size", e),
+        }
+    }
+
     /// Consumes the next argument and returns a `Vec<T>`.
     #[allow(private_bounds)]
     pub fn array<T: Clone + FromDslExpr + 'static>(
@@ -899,6 +927,7 @@ impl_from_args!(Margin, margin);
 impl_from_args!(Rect, rect);
 impl_from_args!(RefRect, ref_rect);
 impl_from_args!(Offset, offset);
+impl_from_args!(Size, size);
 
 // Effect related
 impl_from_args!(Effect, effect);
@@ -922,7 +951,7 @@ mod tests {
     use crate::dsl::DslError;
     use crate::{CellFilter, Motion, RefRect};
     use compact_str::ToCompactString;
-    use ratatui::layout::{Margin, Offset, Rect};
+    use ratatui::layout::{Margin, Offset, Rect, Size};
     use ratatui::prelude::Color;
     use std::collections::VecDeque;
     use std::fmt::Debug;
@@ -1331,5 +1360,26 @@ mod tests {
         ])"#;
         
         assert_result(input, expected, Arguments::cell_filter);
+    }
+
+    #[test]
+    fn test_size_constructor_parsing() {
+        // Test Size::new constructor
+        let expected = Size::new(80, 24);
+        assert_result("Size::new(80, 24)", expected, Arguments::size);
+    }
+
+    #[test]
+    fn test_size_struct_init_parsing() {
+        // Test Size struct initialization
+        let expected = Size { width: 120, height: 40 };
+        assert_result("Size { width: 120, height: 40 }", expected, Arguments::size);
+    }
+
+    #[test]
+    fn test_offset_struct_init_parsing() {
+        // Test Offset struct initialization  
+        let expected = Offset { x: 5, y: -3 };
+        assert_result("Offset { x: 5, y: -3 }", expected, Arguments::offset);
     }
 }
