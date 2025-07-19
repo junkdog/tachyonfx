@@ -12,8 +12,7 @@ A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. B
 
 ## ✨ Features
 
-- **25 unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
-- **Shader-like API** — effects operate on rendered cells, allowing complex visual transformations
+- **27 unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
 - **Effect composition** — chain and combine effects for sophisticated animations
 - **Interactive browser editor** — design and preview effects in real-time with [TachyonFX FTL][tfx-ftl]
 - **Runtime effect compilation** — create effects from strings using the built-in DSL
