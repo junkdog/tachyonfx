@@ -10,6 +10,8 @@ A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. B
 
 ![demo](images/demo-0.6.0.gif)
 
+**➡️ [Try exabind](https://junkdog.github.io/exabind/) - experience tachyonfx in your browser without installing anything!**
+
 ## ✨ Features
 
 - **27 unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
