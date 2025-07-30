@@ -78,6 +78,8 @@ fn main() -> io::Result<()> {
 
 Explore the examples to see effects in action:
 
+### Built-in Examples
+
 ```bash
 # Basic effects showcase
 cargo run --example basic-effects
@@ -90,7 +92,32 @@ cargo run --example fx-chart
 
 # Minimal setup example
 cargo run --example minimal
+
+# Community Examples
+cargo run --example claude-makes      # Interactive multi-state demo
+cargo run --example mgs-terminal      # Metal Gear Solid themed terminal
+cargo run --example penguin           # Complete penguin game
+cargo run --example new-effects-showcase  # Enhanced effects demonstration
+
+# Standalone Projects
+cd examples/chess && cargo run        # Chess game
+cd examples/rust-rpg && cargo run     # RPG game
 ```
+
+### Community Examples
+
+The community has contributed several advanced examples showcasing tachyonfx's capabilities:
+
+- **`claude-makes`** - A comprehensive interactive demo with boot sequences, effect showcases, and multiple game modes
+- **`mgs-terminal`** - Metal Gear Solid themed terminal with AI integration and animated chat interface
+- **`penguin`** - Complete 2D platformer game with physics, collision detection, and multiple game states
+- **`new-effects-showcase`** - Enhanced effects demonstration with interactive cycling
+
+These examples demonstrate advanced usage patterns including:
+- Complex state management
+- Game development with physics
+- External API integration
+- Rich visual effects and animations
 
 ## 🎯 Getting Started
 

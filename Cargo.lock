@@ -859,6 +859,7 @@ dependencies = [
  "indoc",
  "ratatui",
  "regex",
+ "serde_json",
  "simple-easing",
  "thiserror",
  "tui-textarea",

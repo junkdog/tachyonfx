@@ -30,6 +30,7 @@ indoc = "2.0.6"
 crossterm = "0.28.1"
 tui-textarea = "0.7.0"
 criterion = "0.6.0"
+serde_json = "1.0"
 
 [features]
 default = ["crossterm", "dsl"]
