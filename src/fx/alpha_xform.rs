@@ -1,3 +1,8 @@
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, vec};
+#[cfg(not(feature = "std"))]
+use core::ops::Range;
+#[cfg(feature = "std")]
 use std::ops::Range;
 
 use ratatui::{buffer::Buffer, layout::Rect};

@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use core::array;
+#[cfg(feature = "std")]
 use std::array;
 
 const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
@@ -212,13 +215,24 @@ where
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(feature = "std"))]
+    use alloc::{
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+    #[cfg(not(feature = "std"))]
+    use core::cell::Cell;
+    #[cfg(feature = "std")]
+    use std::cell::Cell;
+
     use super::*;
 
     #[test]
     fn test_memoize_adds_entry() {
         let mut cache: LruCache<&str, i32, 5> = LruCache::new();
 
-        let compute_called = std::cell::Cell::new(0);
+        let compute_called = Cell::new(0);
         let result = cache.memoize(&"key1", |_| {
             compute_called.set(compute_called.get() + 1);
             42
@@ -231,7 +245,7 @@ mod tests {
     #[test]
     fn test_cache_hit_reuses_value() {
         let mut cache: LruCache<&str, i32, 5> = LruCache::new();
-        let compute_count = std::cell::Cell::new(0);
+        let compute_count = Cell::new(0);
 
         // First call computes the value
         let val1 = cache.memoize(&"key1", |_| {
@@ -263,7 +277,7 @@ mod tests {
         cache.memoize(&4, |k| k * 10);
 
         // Checking if key 1 is recomputed to verify it was evicted
-        let computation_occurred = std::cell::Cell::new(false);
+        let computation_occurred = Cell::new(false);
         cache.memoize(&1, |k| {
             computation_occurred.set(true);
             k * 10

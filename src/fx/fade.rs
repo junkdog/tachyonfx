@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::boxed::Box;
+
 use bon::{builder, Builder};
 use ratatui::{buffer::Buffer, layout::Rect, prelude::Color};
 

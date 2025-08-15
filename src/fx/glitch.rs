@@ -1,3 +1,8 @@
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, vec::Vec};
+#[cfg(not(feature = "std"))]
+use core::{fmt::Debug, ops::Range};
+#[cfg(feature = "std")]
 use std::{fmt::Debug, ops::Range};
 
 use bon::{builder, Builder};

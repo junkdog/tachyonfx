@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, vec, vec::Vec};
+
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{

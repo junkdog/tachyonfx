@@ -1,5 +1,8 @@
+#[cfg(not(feature = "std"))]
+use core::ops::Range;
+#[cfg(feature = "std")]
 use std::ops::Range;
-#[cfg(not(feature = "web-time"))]
+#[cfg(all(feature = "std", not(feature = "web-time")))]
 use std::time::SystemTime;
 
 #[cfg(feature = "web-time")]
@@ -76,6 +79,7 @@ impl SimpleRng {
     }
 }
 
+#[cfg(any(feature = "std", feature = "web-time"))]
 impl Default for SimpleRng {
     fn default() -> Self {
         let seed = SystemTime::now()
@@ -84,6 +88,14 @@ impl Default for SimpleRng {
             .as_nanos() as u32;
 
         SimpleRng::new(seed)
+    }
+}
+
+#[cfg(not(any(feature = "std", feature = "web-time")))]
+impl Default for SimpleRng {
+    fn default() -> Self {
+        // Use a fixed seed in no-std environments where SystemTime is unavailable
+        SimpleRng::new(0x12345678)
     }
 }
 
@@ -150,12 +162,16 @@ impl RangeSampler<i32> for SimpleRng {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(feature = "std"))]
+    use core::panic;
+    #[cfg(feature = "std")]
     use std::panic;
 
     use super::*;
 
     const RETRY_COUNT: usize = 5;
 
+    #[cfg(feature = "std")]
     fn run_test<F>(test: F)
     where
         F: Fn() + panic::RefUnwindSafe,
@@ -168,6 +184,15 @@ mod tests {
             }
         }
         assert!(success, "Test failed after {RETRY_COUNT} attempts");
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn run_test<F>(test: F)
+    where
+        F: Fn(),
+    {
+        // In no-std environments, we can't catch panics, so just run the test once
+        test();
     }
 
     #[test]
@@ -284,9 +309,16 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(feature = "std", feature = "web-time"))] // Only run when we have SystemTime
     fn test_default_lcg() {
         let lcg1 = SimpleRng::default();
+        #[cfg(feature = "std")]
         std::thread::sleep(std::time::Duration::from_millis(10));
+        #[cfg(all(feature = "web-time", not(feature = "std")))]
+        {
+            // In web environments, we can't sleep, but we can just create another RNG
+            // The timestamp should be different enough to produce different seeds
+        }
         let lcg2 = SimpleRng::default();
 
         assert_ne!(

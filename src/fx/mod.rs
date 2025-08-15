@@ -1448,9 +1448,10 @@ pub fn dynamic_area(area: RefRect, effect: Effect) -> Effect {
 /// - Coordinating between visual effects and business logic
 /// - Implementing effect-driven UI updates
 /// - Creating reactive effect chains
+#[cfg(feature = "std")]
 pub fn dispatch_event<T>(sender: std::sync::mpsc::Sender<T>, event: T) -> Effect
 where
-    T: Clone + std::fmt::Debug + ThreadSafetyMarker + 'static,
+    T: Clone + core::fmt::Debug + ThreadSafetyMarker + 'static,
 {
     run_once(effect_fn_buf(Some(event), 0, move |e, _, _| {
         if let Some(e) = e.take() {

@@ -1,3 +1,8 @@
+#[cfg(not(feature = "std"))]
+use core::mem;
+#[cfg(feature = "std")]
+use std::mem;
+
 use ratatui::{
     buffer::{Buffer, Cell},
     layout::{Position, Rect},
@@ -188,7 +193,7 @@ impl<'a> Iterator for CellIterator<'a> {
         while self.current < area {
             let (pos, cell) = self.cell_mut()?;
             // enforce cell's lifetime. this is safe because `buf` is guaranteed to outlive `'a`
-            let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
+            let cell: &'a mut Cell = unsafe { mem::transmute(cell) };
             self.current += 1;
 
             if let Some(predicate) = &self.predicate {

@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, vec};
+
 use compact_str::ToCompactString;
 use ratatui::{buffer::Buffer, layout::Rect};
 

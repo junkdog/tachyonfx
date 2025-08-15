@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::boxed::Box;
+
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration, EffectTimer};

@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use core::ops::Mul;
+#[cfg(feature = "std")]
 use std::ops::Mul;
 
 use crate::{interpolation::Interpolation, Duration};

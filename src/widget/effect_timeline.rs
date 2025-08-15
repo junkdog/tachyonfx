@@ -1,3 +1,13 @@
+#[cfg(not(feature = "std"))]
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
+#[cfg(not(feature = "std"))]
+use core::ops::Range;
+#[cfg(feature = "std")]
 use std::{fs::File, io::Write, ops::Range};
 
 use bon::bon;
@@ -145,6 +155,7 @@ impl EffectTimeline {
     /// let timeline = EffectTimeline::builder().effect(&effect).build();
     /// timeline.save_to_file("effect_timeline.txt", 100)?;
     /// ```
+    #[cfg(feature = "std")]
     pub fn save_to_file(self, path: &str, width: u16) -> std::io::Result<()> {
         let layout = self.layout(Rect::new(0, 0, width, 200));
         let height = layout.areas_legend.y + layout.areas_legend.height;
@@ -700,6 +711,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")] // println! is only available with std
     fn print_widget_to_stdout() {
         let fx = example_complex_fx();
         let timeline = EffectTimeline::builder().effect(&fx).build();

@@ -1,3 +1,10 @@
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, vec::Vec};
+#[cfg(not(feature = "std"))]
+use core::cmp::Ordering;
+#[cfg(feature = "std")]
+use std::cmp::Ordering;
+
 use ratatui::{
     buffer::{Buffer, Cell},
     layout::{Position, Rect},
@@ -93,7 +100,7 @@ impl Shader for Explode {
             cells.sort_by(|(_, (dx, dy)), (_, (dx2, dy2))| {
                 (dx + dy)
                     .partial_cmp(&(dx2 + dy2))
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .unwrap_or(Ordering::Equal)
             });
 
             cells

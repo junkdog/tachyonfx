@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use core::ops::Range;
+#[cfg(feature = "std")]
 use std::ops::Range;
 
 use ratatui::layout::{Position, Rect};

@@ -4,6 +4,27 @@
 //! appeal of terminal applications, offering capabilities such as color transformations,
 //! animations, and complex effect combinations.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+// Feature validation
+#[cfg(all(feature = "std-duration", feature = "web-time"))]
+compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");
+
+#[cfg(all(feature = "std-duration", not(feature = "std")))]
+compile_error!("Feature 'std-duration' requires 'std' feature");
+
+#[cfg(all(feature = "crossterm", not(feature = "std")))]
+compile_error!("Feature 'crossterm' requires 'std' feature");
+
+#[cfg(all(feature = "dsl", feature = "no-std"))]
+compile_error!("DSL feature is not supported in no-std environments. Use either 'dsl' with 'std' or disable 'dsl' for no-std builds.");
+
+#[cfg(all(feature = "std-duration", feature = "web-time"))]
+compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");
+
 mod bounding_box;
 mod buffer_renderer;
 mod cell_filter;
@@ -29,6 +50,7 @@ mod simple_rng;
 pub mod fx;
 pub mod widget;
 
+mod collections;
 #[cfg(feature = "dsl")]
 #[doc = include_str!("../docs/dsl.md")]
 pub mod dsl;
@@ -57,6 +79,3 @@ pub use ref_rect::RefRect;
 pub use render_effect::EffectRenderer;
 pub use shader::Shader;
 pub use simple_rng::*;
-
-#[cfg(all(feature = "std-duration", feature = "web-time"))]
-compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");

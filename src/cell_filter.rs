@@ -1,3 +1,13 @@
+#[cfg(not(feature = "std"))]
+use alloc::{
+    boxed::Box,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
+#[cfg(not(feature = "std"))]
+use core::fmt;
+#[cfg(feature = "std")]
 use std::fmt;
 
 use ratatui::{
@@ -291,6 +301,9 @@ impl PartialEq for CellFilter {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(feature = "std"))]
+    use alloc::vec;
+
     use layout::Layout;
     use ratatui::{buffer::Buffer, style::Style, text::Span};
 

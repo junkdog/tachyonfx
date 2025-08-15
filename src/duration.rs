@@ -9,6 +9,12 @@ pub type Duration = duration::Duration;
 pub mod duration {
     // Your custom Duration implementation goes here
 
+    #[cfg(not(feature = "std"))]
+    use core::{
+        iter::Sum,
+        ops::{Add, AddAssign, Mul, Sub, SubAssign},
+    };
+    #[cfg(feature = "std")]
     use std::{
         iter::Sum,
         ops::{Add, AddAssign, Mul, Sub, SubAssign},
@@ -141,7 +147,7 @@ pub mod duration {
         }
     }
 
-    #[cfg(not(feature = "web-time"))]
+    #[cfg(all(feature = "std", not(feature = "web-time")))]
     impl From<std::time::Duration> for Duration {
         fn from(d: std::time::Duration) -> Self {
             Self { milliseconds: d.as_millis() as u32 }
@@ -155,7 +161,7 @@ pub mod duration {
         }
     }
 
-    #[cfg(not(feature = "web-time"))]
+    #[cfg(all(feature = "std", not(feature = "web-time")))]
     impl From<Duration> for std::time::Duration {
         fn from(d: Duration) -> Self {
             std::time::Duration::from_millis(d.milliseconds as u64)

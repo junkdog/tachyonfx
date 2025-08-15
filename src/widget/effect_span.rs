@@ -1,3 +1,12 @@
+#[cfg(not(feature = "std"))]
+use alloc::{
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
+#[cfg(not(feature = "std"))]
+use core::fmt;
+#[cfg(feature = "std")]
 use std::fmt;
 
 use ratatui::{layout::Rect, prelude::Line, style::Style, text::Span};

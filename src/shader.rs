@@ -1,3 +1,8 @@
+#[cfg(not(feature = "std"))]
+use alloc::{boxed::Box, vec::Vec};
+#[cfg(not(feature = "std"))]
+use core::fmt::Debug;
+#[cfg(feature = "std")]
 use std::fmt::Debug;
 
 use ratatui::{buffer::Buffer, layout::Rect};
