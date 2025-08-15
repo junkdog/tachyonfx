@@ -6,7 +6,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(not(feature = "std"))]
 extern crate alloc;
 
 // Feature validation
@@ -50,7 +49,6 @@ mod simple_rng;
 pub mod fx;
 pub mod widget;
 
-mod collections;
 #[cfg(feature = "dsl")]
 #[doc = include_str!("../docs/dsl.md")]
 pub mod dsl;

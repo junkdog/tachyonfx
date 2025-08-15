@@ -1,9 +1,5 @@
-#[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec::Vec};
-#[cfg(not(feature = "std"))]
 use core::cmp::Ordering;
-#[cfg(feature = "std")]
-use std::cmp::Ordering;
 
 use ratatui::{
     buffer::{Buffer, Cell},

@@ -1,4 +1,3 @@
-#[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, vec, vec::Vec};
 
 use compact_str::ToCompactString;

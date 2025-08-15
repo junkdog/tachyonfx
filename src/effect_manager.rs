@@ -1,9 +1,5 @@
-#[cfg(not(feature = "std"))]
 use alloc::{collections::BTreeMap, vec::Vec};
-#[cfg(not(feature = "std"))]
 use core::fmt::Debug;
-#[cfg(feature = "std")]
-use std::{collections::BTreeMap, fmt::Debug};
 
 use ratatui::{buffer::Buffer, layout::Rect};
 
@@ -105,15 +101,11 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(not(feature = "std"))]
     use alloc::{
         boxed::Box,
         string::{String, ToString},
     };
-    #[cfg(not(feature = "std"))]
     use core::fmt::Debug;
-    #[cfg(feature = "std")]
-    use std::fmt::Debug;
 
     use ratatui::{buffer::Buffer, layout::Rect};
 
@@ -317,12 +309,8 @@ mod tests {
     #[test]
     #[cfg(not(feature = "sendable"))]
     fn test_effect_manager_with_zero_duration_shader_fn() {
-        #[cfg(not(feature = "std"))]
         use alloc::rc::Rc;
-        #[cfg(not(feature = "std"))]
         use core::cell::RefCell;
-        #[cfg(feature = "std")]
-        use std::{cell::RefCell, rc::Rc};
 
         use crate::fx;
 
@@ -359,12 +347,8 @@ mod tests {
     #[test]
     #[cfg(not(feature = "sendable"))]
     fn test_effect_manager_with_normal_duration_shader_fn() {
-        #[cfg(not(feature = "std"))]
         use alloc::rc::Rc;
-        #[cfg(not(feature = "std"))]
         use core::cell::RefCell;
-        #[cfg(feature = "std")]
-        use std::{cell::RefCell, rc::Rc};
 
         use crate::fx;
 
@@ -405,12 +389,8 @@ mod tests {
     #[test]
     #[cfg(not(feature = "sendable"))]
     fn test_multiple_zero_duration_shader_fn_effects() {
-        #[cfg(not(feature = "std"))]
         use alloc::rc::Rc;
-        #[cfg(not(feature = "std"))]
         use core::cell::RefCell;
-        #[cfg(feature = "std")]
-        use std::{cell::RefCell, rc::Rc};
 
         use crate::fx;
 

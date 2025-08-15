@@ -1,7 +1,4 @@
-#[cfg(not(feature = "std"))]
 use core::ops::Range;
-#[cfg(feature = "std")]
-use std::ops::Range;
 #[cfg(all(feature = "std", not(feature = "web-time")))]
 use std::time::SystemTime;
 

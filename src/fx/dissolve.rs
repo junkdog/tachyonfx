@@ -1,4 +1,3 @@
-#[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
 
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};

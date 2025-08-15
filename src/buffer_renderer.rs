@@ -1,14 +1,9 @@
-#[cfg(not(feature = "std"))]
 use alloc::{
     format,
     rc::Rc,
     string::{String, ToString},
-    vec::Vec,
 };
-#[cfg(not(feature = "std"))]
 use core::cell::RefCell;
-#[cfg(feature = "std")]
-use std::{cell::RefCell, rc::Rc};
 
 use ratatui::{
     buffer::Buffer,

@@ -1613,6 +1613,12 @@ mod tests {
         verify_size(size_of::<EffectTimer>(), 12);
         verify_size(size_of::<Ansi256>(), 10);
         verify_size(size_of::<ConsumeTick>(), 1);
+
+        // Size differs between std and no-std builds due to different underlying types
+        #[cfg(feature = "std")]
+        verify_size(size_of::<Dissolve>(), 96);
+        #[cfg(not(feature = "std"))]
+
         verify_size(size_of::<Dissolve>(), 88);
         verify_size(size_of::<FadeColors>(), 80);
         verify_size(size_of::<Glitch>(), 112);

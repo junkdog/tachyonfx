@@ -1,13 +1,9 @@
-#[cfg(not(feature = "std"))]
 use alloc::{
     collections::BTreeSet,
     string::{String, ToString},
     vec::Vec,
 };
-#[cfg(not(feature = "std"))]
 use core::ops::Range;
-#[cfg(feature = "std")]
-use std::{collections::BTreeSet, ops::Range};
 
 use bon::builder;
 use ratatui::prelude::Color;
@@ -101,7 +97,6 @@ fn shuffle<T>(vec: &mut [T], rng: &mut SimpleRng) {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(not(feature = "std"))]
     use alloc::vec;
 
     use super::*;

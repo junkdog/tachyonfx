@@ -1,7 +1,4 @@
-#[cfg(not(feature = "std"))]
 use core::array;
-#[cfg(feature = "std")]
-use std::array;
 
 const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
 const UNINITIALIZED_TIMESTAMP: u16 = 0;
@@ -215,16 +212,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    #[cfg(not(feature = "std"))]
     use alloc::{
         string::{String, ToString},
         vec,
         vec::Vec,
     };
-    #[cfg(not(feature = "std"))]
     use core::cell::Cell;
-    #[cfg(feature = "std")]
-    use std::cell::Cell;
 
     use super::*;
 

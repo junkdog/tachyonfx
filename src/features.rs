@@ -21,12 +21,8 @@ mod sendable {
 
 #[cfg(not(feature = "sendable"))]
 mod sendable {
-    #[cfg(not(feature = "std"))]
     use alloc::rc::Rc;
-    #[cfg(not(feature = "std"))]
     use core::cell::RefCell;
-    #[cfg(feature = "std")]
-    use std::{cell::RefCell, rc::Rc};
 
     pub trait ThreadSafetyMarker {}
     impl<T> ThreadSafetyMarker for T {}

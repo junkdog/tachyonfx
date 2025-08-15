@@ -9,13 +9,7 @@ pub type Duration = duration::Duration;
 pub mod duration {
     // Your custom Duration implementation goes here
 
-    #[cfg(not(feature = "std"))]
     use core::{
-        iter::Sum,
-        ops::{Add, AddAssign, Mul, Sub, SubAssign},
-    };
-    #[cfg(feature = "std")]
-    use std::{
         iter::Sum,
         ops::{Add, AddAssign, Mul, Sub, SubAssign},
     };

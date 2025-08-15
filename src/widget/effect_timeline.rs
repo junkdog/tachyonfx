@@ -1,14 +1,12 @@
-#[cfg(not(feature = "std"))]
 use alloc::{
     format,
     string::{String, ToString},
     vec,
     vec::Vec,
 };
-#[cfg(not(feature = "std"))]
 use core::ops::Range;
 #[cfg(feature = "std")]
-use std::{fs::File, io::Write, ops::Range};
+use std::{fs::File, io::Write};
 
 use bon::bon;
 use ratatui::{

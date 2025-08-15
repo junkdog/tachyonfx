@@ -1,7 +1,4 @@
-#[cfg(not(feature = "std"))]
 use core::mem;
-#[cfg(feature = "std")]
-use std::mem;
 
 use ratatui::{
     buffer::{Buffer, Cell},
