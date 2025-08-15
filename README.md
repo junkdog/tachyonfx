@@ -82,9 +82,6 @@ Explore the examples to see effects in action:
 # Basic effects showcase
 cargo run --example basic-effects
 
-# Interactive DSL playground  
-cargo run --example dsl-playground
-
 # Effect timeline visualization
 cargo run --example fx-chart
 
