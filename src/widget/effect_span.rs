@@ -127,7 +127,7 @@ impl EffectSpan {
         span
     }
 
-    pub(crate) fn iter(&self) -> EffectSpanIterator {
+    pub(crate) fn iter(&self) -> EffectSpanIterator<'_> {
         EffectSpanIterator::new(self)
     }
 }

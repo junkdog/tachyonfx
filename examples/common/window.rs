@@ -22,7 +22,7 @@ pub struct OpenWindow {
 }
 
 impl OpenWindow {
-    fn window_block(&self) -> Block {
+    fn window_block(&self) -> Block<'_> {
         Block::new()
             .borders(Borders::ALL)
             .title_style(self.title_style)

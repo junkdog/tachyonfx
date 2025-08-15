@@ -151,7 +151,7 @@ impl EffectDsl {
     ///     fx::fade_to_fg(fg_color, (1000, Linear))
     /// "#);
     /// ```
-    pub fn compiler(&self) -> DslCompiler {
+    pub fn compiler(&self) -> DslCompiler<'_> {
         DslCompiler { dsl: self, environment: DslEnv::new() }
     }
 

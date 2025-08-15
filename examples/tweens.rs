@@ -292,7 +292,7 @@ impl InterpolationWidgetState {
             .collect();
     }
 
-    fn dataset(&self) -> Vec<Dataset> {
+    fn dataset(&self) -> Vec<Dataset<'_>> {
         let name = format!("{:?}", idx_to_tween(self.tween_idx));
 
         let data_0 = Dataset::default()

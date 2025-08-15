@@ -81,7 +81,7 @@ pub(super) fn sanitize_tokens(tokens: Vec<Token>) -> Vec<Token> {
         .collect::<Vec<_>>()
 }
 
-pub(super) fn tokenize(input: &str) -> Result<Vec<Token>, DslError> {
+pub(super) fn tokenize(input: &str) -> Result<Vec<Token<'_>>, DslError> {
     let result = anpa::core::parse(tokens(), input);
     if !result.state.is_empty() {
         let consumed = input.len() - result.state.len();
