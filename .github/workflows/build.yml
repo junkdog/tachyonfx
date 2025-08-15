@@ -28,12 +28,12 @@ jobs:
             cargo-flags: ""
             additional-name: "web-time"
             additional-features: "web-time"
-          # no-std variants (only sendable is compatible)
+          # no-std variants (sendable is incompatible - requires std)
           - name: "no-std"
             features: "no-std"
             cargo-flags: "--no-default-features"
-            additional-name: "sendable"
-            additional-features: "sendable"
+            additional-name: "base"
+            additional-features: ""
 
     runs-on: ubuntu-latest
     name: "build & test (${{ matrix.name }} + ${{ matrix.additional-name }})"
@@ -48,10 +48,20 @@ jobs:
       run: cargo test --verbose --lib ${{ matrix.cargo-flags }} --features="${{ matrix.features }}"
     
     - name: Build (${{ matrix.name }} + ${{ matrix.additional-name }})
-      run: cargo build --verbose ${{ matrix.cargo-flags }} --features="${{ matrix.features }},${{ matrix.additional-features }}"
+      run: |
+        if [ -n "${{ matrix.additional-features }}" ]; then
+          cargo build --verbose ${{ matrix.cargo-flags }} --features="${{ matrix.features }},${{ matrix.additional-features }}"
+        else
+          cargo build --verbose ${{ matrix.cargo-flags }} --features="${{ matrix.features }}"
+        fi
     
     - name: Test (${{ matrix.name }} + ${{ matrix.additional-name }})
-      run: cargo test --verbose --lib ${{ matrix.cargo-flags }} --features="${{ matrix.features }},${{ matrix.additional-features }}"
+      run: |
+        if [ -n "${{ matrix.additional-features }}" ]; then
+          cargo test --verbose --lib ${{ matrix.cargo-flags }} --features="${{ matrix.features }},${{ matrix.additional-features }}"
+        else
+          cargo test --verbose --lib ${{ matrix.cargo-flags }} --features="${{ matrix.features }}"
+        fi
 
   clippy:
     runs-on: ubuntu-latest
