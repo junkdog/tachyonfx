@@ -1,4 +1,5 @@
-use std::fmt;
+use core::fmt;
+use std::error;
 
 use crate::dsl::DslError;
 
@@ -217,8 +218,8 @@ impl fmt::Display for DslParseError {
     }
 }
 
-impl std::error::Error for DslParseError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl error::Error for DslParseError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         Some(&self.source)
     }
 }

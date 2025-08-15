@@ -1,3 +1,9 @@
+#![allow(
+    clippy::std_instead_of_core,
+    clippy::std_instead_of_alloc,
+    clippy::alloc_instead_of_core
+)]
+
 // benches/color_interpolation.rs
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use ratatui::style::Color;

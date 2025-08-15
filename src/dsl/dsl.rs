@@ -1,4 +1,4 @@
-use std::{fmt, fmt::Formatter};
+use alloc::{fmt, fmt::Formatter};
 
 use compact_str::CompactString;
 
@@ -534,6 +534,7 @@ impl fmt::Debug for EffectCompiler {
 }
 
 #[cfg(test)]
+#[allow(clippy::std_instead_of_alloc)]
 mod tests {
     use std::collections::VecDeque;
 

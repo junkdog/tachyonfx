@@ -12,7 +12,7 @@ mod token_parsers;
 mod token_verification;
 mod tokenizer;
 
-use std::fmt;
+use alloc::fmt;
 
 pub use arguments::Arguments;
 use compact_str::CompactString;

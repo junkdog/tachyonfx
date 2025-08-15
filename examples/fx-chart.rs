@@ -1,3 +1,9 @@
+#![allow(
+    clippy::std_instead_of_core,
+    clippy::std_instead_of_alloc,
+    clippy::alloc_instead_of_core
+)]
+
 use std::{cell::RefCell, error::Error, io, io::Stdout, rc::Rc, sync::mpsc, thread};
 
 use crossterm::{

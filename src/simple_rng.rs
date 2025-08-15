@@ -307,10 +307,14 @@ mod tests {
 
     #[test]
     #[cfg(any(feature = "std", feature = "web-time"))] // Only run when we have SystemTime
+    #[allow(clippy::std_instead_of_core)]
     fn test_default_lcg() {
         let lcg1 = SimpleRng::default();
         #[cfg(feature = "std")]
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        {
+            let duration = std::time::Duration::from_millis(10);
+            std::thread::sleep(duration);
+        }
         #[cfg(all(feature = "web-time", not(feature = "std")))]
         {
             // In web environments, we can't sleep, but we can just create another RNG

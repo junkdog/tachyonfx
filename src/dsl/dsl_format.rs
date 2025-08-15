@@ -220,7 +220,7 @@ impl DslFormat for Margin {
 
 impl DslFormat for CellFilter {
     fn dsl_format(&self) -> CompactString {
-        use std::borrow::Borrow;
+        use core::borrow::Borrow;
 
         fn format(filters: &[CellFilter]) -> CompactString {
             filters

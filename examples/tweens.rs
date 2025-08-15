@@ -1,3 +1,9 @@
+#![allow(
+    clippy::std_instead_of_core,
+    clippy::std_instead_of_alloc,
+    clippy::alloc_instead_of_core
+)]
+
 use std::{error::Error, io, io::Stdout, panic, time::Instant, vec};
 
 use crossterm::{

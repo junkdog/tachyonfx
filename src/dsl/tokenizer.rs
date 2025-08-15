@@ -1,4 +1,4 @@
-use std::{fmt::Formatter, ops::Range};
+use core::{fmt, fmt::Formatter, ops::Range};
 
 use anpa::{
     combinators::{
@@ -238,8 +238,8 @@ fn token<'a>(kind: TokenKind, p: impl StrParser<'a, &'a str>) -> impl StrParser<
     count_consumed(p).map(move |(len, s): (_, &str)| Token::new(kind, s, 0..len))
 }
 
-impl std::fmt::Display for Token<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:?} ", self.text)
     }
 }
