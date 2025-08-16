@@ -33,7 +33,6 @@ criterion = "0.7.0"
 [features]
 default = ["std", "crossterm", "dsl"]
 std = ["thiserror/std", "ratatui/std", "bon/std"]
-no-std = []
 crossterm = ["std", "ratatui/crossterm"]
 dsl = ["dep:anpa"]
 sendable = []

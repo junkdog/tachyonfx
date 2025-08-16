@@ -28,9 +28,8 @@ jobs:
             cargo-flags: ""
             additional-name: "web-time"
             additional-features: "web-time"
-          # no-std variants (sendable is incompatible - requires std)
           - name: "no-std"
-            features: "no-std"
+            features: ""
             cargo-flags: "--no-default-features"
             additional-name: "base"
             additional-features: ""
