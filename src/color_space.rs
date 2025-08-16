@@ -108,14 +108,14 @@ impl ColorSpace {
     }
 
     fn lerp_rgb((r1, g1, b1): (u8, u8, u8), (r2, g2, b2): (u8, u8, u8), alpha: f32) -> Color {
+        let alpha = alpha.clamp(0.0, 1.0);
         let alpha = (alpha * 0x1_0000 as f32) as u32;
         let inv_alpha = 0x1_0000 - alpha;
 
-        let r = ((r1 as u32 * inv_alpha + r2 as u32 * alpha) >> 16) as u8;
-        let g = ((g1 as u32 * inv_alpha + g2 as u32 * alpha) >> 16) as u8;
-        let b = ((b1 as u32 * inv_alpha + b2 as u32 * alpha) >> 16) as u8;
+        let lerp =
+            |c1: u8, c2: u8| -> u8 { ((c1 as u32 * inv_alpha + c2 as u32 * alpha) >> 16) as u8 };
 
-        Color::Rgb(r, g, b)
+        Color::Rgb(lerp(r1, r2), lerp(g1, g2), lerp(b1, b2))
     }
 
     fn lerp_hsv((h1, s1, v1): (f32, f32, f32), (h2, s2, v2): (f32, f32, f32), alpha: f32) -> Color {
