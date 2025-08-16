@@ -2,6 +2,9 @@
 
 ## unreleased
 
+### Changed
+- Updated ratatui dependency to `>=0.29.0` for compatibility with both 0.29.x stable and 0.30-alpha releases.
+
 ### Removed
 - Removed `dsl-playground` as it was a poor example of the DSL and of little value.
 
