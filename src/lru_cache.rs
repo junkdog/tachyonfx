@@ -1,5 +1,9 @@
 use std::array;
 
+const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
+const UNINITIALIZED_TIMESTAMP: u16 = 0;
+const INITIAL_TIMESTAMP: u16 = 1;
+
 /// A fixed-size LRU (Least Recently Used) cache with const generic capacity.
 ///
 /// This cache stores key-value pairs and automatically evicts the least recently
@@ -50,6 +54,11 @@ impl<K, V, const N: usize> LruCache<K, V, N>
 where
     K: PartialEq + Clone + Default,
 {
+    const _VALIDATE_SIZE: () = assert!(
+        N > 0 && N <= MAX_CACHE_SIZE,
+        "Cache size must be between 1 and 255"
+    );
+
     /// Creates a new empty LRU cache with the specified capacity.
     ///
     /// # Panics
@@ -60,12 +69,14 @@ where
         K: Default,
         V: Default,
     {
-        assert!(N > 0, "Cache size must be greater than 0");
-        assert!(N < 256, "Cache size must be less than 256");
+        // force evaluation of the const assertion
+        #[allow(clippy::let_unit_value)]
+        let _ = Self::_VALIDATE_SIZE;
+
         Self {
             index: array::from_fn(|_| Default::default()),
             entries: array::from_fn(|_| Default::default()),
-            counter: 1, // Start at 1 so that 0 means uninitialized
+            counter: INITIAL_TIMESTAMP,
             cache_misses: 0,
             cache_hits: 0,
         }
@@ -124,15 +135,7 @@ where
                 .unwrap_or(1) // 1 == valid entry
         }
 
-        // Find the entry with the matching key (but only if it's been used before)
-        let pos = self
-            .index
-            .iter()
-            .enumerate()
-            .find(|(i, k)| *k == key && self.entries[*i].1 > 0)
-            .map(|(i, _)| i);
-
-        match pos {
+        match self.find_key_index(key) {
             Some(idx) => {
                 self.cache_hits += 1;
 
@@ -165,23 +168,33 @@ where
             .entries
             .iter()
             .map(|(_, counter)| *counter)
-            .filter(|&c| c > 0) // Only consider used entries
+            .filter(|&c| c != UNINITIALIZED_TIMESTAMP) // Only consider used entries
             .min()
             .unwrap_or(1);
 
         self.entries.iter_mut().for_each(|(_, counter)| {
-            if *counter > 0 {
+            if *counter != UNINITIALIZED_TIMESTAMP {
                 *counter -= min_offset - 1; // Subtract min_offset but keep it >= 1
             }
         });
     }
 
+    #[inline(always)]
+    fn find_key_index(&self, key: &K) -> Option<usize> {
+        self.index
+            .iter()
+            .enumerate()
+            .find(|(i, k)| *k == key && self.entries[*i].1 > 0)
+            .map(|(i, _)| i)
+    }
+
     // Helper method to find the index of the least recently used entry
+    #[inline(always)]
     fn find_lru_index(&self) -> usize {
         self.entries
             .iter()
             .enumerate()
-            .min_by(|(_, (_, a)), (_, (_, b))| a.cmp(b))
+            .min_by_key(|(_, (_, timestamp))| *timestamp)
             .map(|(i, _)| i)
             .unwrap_or(0)
     }
@@ -365,12 +378,6 @@ mod tests {
         // Check if large value is cached correctly
         let retrieved = cache.memoize(&1, |_| vec![1u8; 1024]);
         assert_eq!(retrieved, large_value);
-    }
-
-    #[test]
-    #[should_panic(expected = "Cache size must be greater than 0")]
-    fn test_zero_size_cache_panics() {
-        let _cache: LruCache<i32, i32, 0> = LruCache::new();
     }
 
     #[test]

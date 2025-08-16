@@ -112,6 +112,42 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
         },
     );
 
+    // Benchmark with cache size 8 for HSL conversion
+    group.bench_with_input(
+        BenchmarkId::new("cached_rgb_linear_size_8", "ui-pattern"),
+        &(),
+        |b, _| {
+            b.iter_with_setup(LruCache::<Color, (f32, f32, f32), 8>::new, |mut cache| {
+                run_animation_loop(&theme_colors, |theme_color, target| {
+                    std::hint::black_box(cache.lerp(
+                        &theme_color,
+                        &target,
+                        ColorSpace::Rgb,
+                        INTERPOLATION_ALPHA,
+                    ));
+                });
+            })
+        },
+    );
+
+    // Benchmark with cache size 16 for HSL conversion
+    group.bench_with_input(
+        BenchmarkId::new("cached_rgb_linear_size_16", "ui-pattern"),
+        &(),
+        |b, _| {
+            b.iter_with_setup(LruCache::<Color, (f32, f32, f32), 16>::new, |mut cache| {
+                run_animation_loop(&theme_colors, |theme_color, target| {
+                    std::hint::black_box(cache.lerp(
+                        &theme_color,
+                        &target,
+                        ColorSpace::Rgb,
+                        INTERPOLATION_ALPHA,
+                    ));
+                });
+            })
+        },
+    );
+
     // Cache the entire lerp operation result
     group.bench_with_input(
         BenchmarkId::new("cached_full_lerp_size_8", "ui-pattern"),
