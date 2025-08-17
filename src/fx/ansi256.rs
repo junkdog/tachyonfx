@@ -24,11 +24,11 @@ impl Shader for Ansi256 {
         for y in area.top()..safe_area.bottom() {
             for x in area.left()..safe_area.right() {
                 let cell = buf.cell_mut(Position::new(x, y))?;
-                let fg = color_cache.memoize_fg(&cell.fg, |c| {
+                let fg = color_cache.memoize_fg(cell.fg, cell.fg, 1.0, |c| {
                     #[allow(deprecated)]
                     crate::color_ext::AsIndexedColor::as_indexed_color(c)
                 });
-                let bg = color_cache.memoize_bg(&cell.bg, |c| {
+                let bg = color_cache.memoize_bg(cell.bg, cell.bg, 1.0, |c| {
                     #[allow(deprecated)]
                     crate::color_ext::AsIndexedColor::as_indexed_color(c)
                 });

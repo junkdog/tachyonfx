@@ -36,14 +36,16 @@ impl Shader for FadeColors {
 
         cell_iter.for_each(|(_, cell)| {
             if let Some(fg) = self.fg.as_ref() {
-                let color =
-                    color_cache.memoize_fg(&cell.fg, |c| self.color_space.lerp(c, fg, alpha));
+                let color = color_cache.memoize_fg(cell.fg, *fg, alpha, |_| {
+                    self.color_space.lerp(&cell.fg, fg, alpha)
+                });
                 cell.set_fg(color);
             }
 
             if let Some(bg) = self.bg.as_ref() {
-                let color =
-                    color_cache.memoize_bg(&cell.bg, |c| self.color_space.lerp(c, bg, alpha));
+                let color = color_cache.memoize_bg(cell.bg, *bg, alpha, |_| {
+                    self.color_space.lerp(&cell.bg, bg, alpha)
+                });
                 cell.set_bg(color);
             }
         });

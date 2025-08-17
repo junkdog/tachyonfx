@@ -1,7 +1,7 @@
 // benches/color_interpolation.rs
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use ratatui::style::Color;
-use tachyonfx::{ColorSpace, LruCache, ToRgbComponents};
+use tachyonfx::{ColorCache, ColorSpace, LruCache, ToRgbComponents};
 
 // Constants for benchmark parameters
 const ANIMATION_FRAMES: usize = 100;
@@ -63,6 +63,7 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
         Color::Rgb(180, 180, 180),
     ];
 
+    // group.bench_with_input(BenchmarkId::new("raw_hsl_lerp", "ui-pattern"), &(), |b, _| {
     // Direct interpolation benchmark
     group.bench_with_input(BenchmarkId::new("direct", "ui-pattern"), &(), |b, _| {
         b.iter(|| {
@@ -75,6 +76,18 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
             });
         });
     });
+
+    // group.bench_with_input(BenchmarkId::new("raw_rgb_lerp", "ui-pattern"), &(), |b, _| {
+    //     b.iter(|| {
+    //         run_animation_loop(&theme_colors, |theme_color, target| {
+    //             std::hint::black_box(ColorSpace::Hsl.lerp(
+    //                 &theme_color,
+    //                 &target,
+    //                 INTERPOLATION_ALPHA,
+    //             ));
+    //         });
+    //     });
+    // });
 
     // Benchmark with cache size 8 for HSL conversion
     group.bench_with_input(
@@ -106,6 +119,42 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
                         &target,
                         ColorSpace::Hsl,
                         INTERPOLATION_ALPHA,
+                    ));
+                });
+            })
+        },
+    );
+
+    // Benchmark with cache size 16 for HSL conversion
+    group.bench_with_input(
+        BenchmarkId::new("cache_rev2_hsl_size_16", "ui-pattern"),
+        &(),
+        |b, _| {
+            b.iter_with_setup(ColorCache::new, |mut cache: ColorCache<16>| {
+                run_animation_loop(&theme_colors, |theme_color, target| {
+                    std::hint::black_box(cache.memoize_fg(
+                        theme_color,
+                        target,
+                        INTERPOLATION_ALPHA,
+                        |c| ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA),
+                    ));
+                });
+            })
+        },
+    );
+
+    // Benchmark with cache size 16 for HSL conversion
+    group.bench_with_input(
+        BenchmarkId::new("cache_rev2_hsl_size_8", "ui-pattern"),
+        &(),
+        |b, _| {
+            b.iter_with_setup(ColorCache::new, |mut cache: ColorCache<8>| {
+                run_animation_loop(&theme_colors, |theme_color, target| {
+                    std::hint::black_box(cache.memoize_fg(
+                        theme_color,
+                        target,
+                        INTERPOLATION_ALPHA,
+                        |c| ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA),
                     ));
                 });
             })

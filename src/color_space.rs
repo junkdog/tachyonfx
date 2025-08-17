@@ -72,10 +72,11 @@ pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
     rgb_to_hsl(r, g, b)
 }
 
+pub type ColorSpaceLruCache<const N: usize> = LruCache<Color, (f32, f32, f32), N>;
+
 impl<const N: usize> LruCache<Color, (f32, f32, f32), N> {
     pub fn lerp(&mut self, from: &Color, to: &Color, color_space: ColorSpace, alpha: f32) -> Color {
         use ColorSpace::*;
-
         let (a, b) = match color_space {
             Rgb => return ColorSpace::lerp_rgb(from.to_rgb(), to.to_rgb(), alpha),
             Hsl => (
@@ -94,11 +95,46 @@ impl<const N: usize> LruCache<Color, (f32, f32, f32), N> {
             Rgb => unreachable!("Handled above"),
         }
     }
+
+    // pub fn lerp_with_lru<const M: usize>(
+    pub fn lerp_2<const M: usize>(
+        &mut self,
+        lru_cache: &mut LruCache<(Color, Color, f32), Color, M>,
+        from: &Color,
+        to: &Color,
+        color_space: ColorSpace,
+        alpha: f32,
+    ) -> Color {
+        use ColorSpace::*;
+
+        match color_space {
+            Rgb => lru_cache.memoize(&(*from, *to, alpha), |(from, to, alpha)| {
+                ColorSpace::lerp_rgb(from.to_rgb(), to.to_rgb(), *alpha)
+            }),
+            Hsl => {
+                let from = self.memoize(from, color_to_hsl);
+                let to = self.memoize(to, color_to_hsl);
+                ColorSpace::lerp_hsl(from, to, alpha)
+            },
+            Hsv => {
+                let from = self.memoize(from, color_to_hsl);
+                let to = self.memoize(to, color_to_hsl);
+                ColorSpace::lerp_hsv(from, to, alpha)
+            },
+        }
+    }
 }
 
 impl ColorSpace {
     pub fn lerp(&self, from: &Color, to: &Color, alpha: f32) -> Color {
         use ColorSpace::*;
+
+        let alpha = alpha.clamp(0.0, 1.0);
+        if alpha == 0.0 {
+            return *from;
+        } else if alpha == 1.0 {
+            return *to;
+        }
 
         match self {
             Rgb => Self::lerp_rgb(from.to_rgb(), to.to_rgb(), alpha),
@@ -108,7 +144,6 @@ impl ColorSpace {
     }
 
     fn lerp_rgb((r1, g1, b1): (u8, u8, u8), (r2, g2, b2): (u8, u8, u8), alpha: f32) -> Color {
-        let alpha = alpha.clamp(0.0, 1.0);
         let alpha = (alpha * 0x1_0000 as f32) as u32;
         let inv_alpha = 0x1_0000 - alpha;
 

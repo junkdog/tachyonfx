@@ -43,11 +43,13 @@ impl Shader for HslShift {
 
         for (_, cell) in cell_iter {
             if let Some(hsl_mod) = self.hsl_mod_fg {
-                let fg = color_cache.memoize_fg(&cell.fg, |c| hsl_lerp(*c, hsl_mod));
+                let fg =
+                    color_cache.memoize_fg(cell.fg, cell.fg, alpha, |_| hsl_lerp(cell.fg, hsl_mod));
                 cell.set_fg(fg);
             }
             if let Some(hsl_mod) = self.hsl_mod_bg {
-                let bg = color_cache.memoize_bg(&cell.bg, |c| hsl_lerp(*c, hsl_mod));
+                let bg =
+                    color_cache.memoize_bg(cell.bg, cell.bg, alpha, |_| hsl_lerp(cell.bg, hsl_mod));
                 cell.set_bg(bg);
             }
         }
