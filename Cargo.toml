@@ -69,3 +69,7 @@ harness = false
 [[bench]]
 name = "cell_filter"
 harness = false
+
+[[bench]]
+name = "cell_iteration"
+harness = false

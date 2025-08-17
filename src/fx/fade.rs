@@ -34,7 +34,7 @@ impl Shader for FadeColors {
         let cell_iter = self.cell_iter(buf, area);
         let mut color_cache: ColorCache<Color, 8> = ColorCache::new();
 
-        cell_iter.for_each(|(_, cell)| {
+        cell_iter.for_each_cell(|_, cell| {
             if let Some(fg) = self.fg.as_ref() {
                 let color = color_cache
                     .memoize_fg(cell.fg, *fg, |_| self.color_space.lerp(&cell.fg, fg, alpha));
