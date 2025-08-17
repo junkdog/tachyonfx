@@ -208,6 +208,9 @@ impl<'a> Iterator for CellIterator<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(feature = "std"))]
+    use alloc::{vec, vec::Vec};
+
     use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 
     use super::*;
