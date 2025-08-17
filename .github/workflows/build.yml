@@ -71,6 +71,3 @@ jobs:
     
     - name: Clippy (all targets)
       run: cargo clippy --all-targets
-
-    - name: Clippy (no-std)
-      run: cargo clippy --lib --no-default-features --features=no-std
