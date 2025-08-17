@@ -4,35 +4,70 @@ use ratatui::prelude::Color;
 
 use crate::lru_cache::LruCache;
 
-/// A specialized cache for color interpolation operations that handles `Color::Reset`
-/// with appropriate fallback colors.
+/// A specialized stack-based cache for color transformation operations that handles
+/// `Color::Reset` with appropriate fallback colors.
 ///
 /// This cache wraps two [`LruCache`] instances (one for foreground, one for background)
 /// and automatically maps `Color::Reset` to semantically appropriate fallback colors:
 /// - Foreground: `Color::Reset` → `Color::White` (typical terminal default)
 /// - Background: `Color::Reset` → `Color::Black` (typical terminal default)
 ///
-/// This ensures that color interpolation operations work correctly when dealing with
+/// This ensures that color transformation operations work correctly when dealing with
 /// cells that have reset colors, while maintaining cache efficiency.
 ///
-/// # Example
+/// ## Context Parameter
+///
+/// The `Context` generic parameter allows you to provide additional discriminating
+/// information for cache entries. The cache key consists of the source color plus
+/// the context, ensuring that different transformations are cached separately.
+///
+/// ### When to use different context types:
+///
+/// - **`ColorCache<Color, N>`**: Use when the transformation depends on a target color.
+///   Different target colors should produce different results for the same source color.
+///   Example: fading from Red to Blue vs Red to Green.
+///
+/// - **`ColorCache<(), N>`**: Use when the transformation depends only on the source
+///   color. The same source color always produces the same result regardless of other
+///   factors. Example: HSL shifts that are applied uniformly.
+///
+/// - **`ColorCache<(Color, u8), N>`**: Use for complex transformations that depend on
+///   multiple parameters. Example: alpha-aware blending operations where alpha is
+///   converted to u8 for stable caching (e.g., `(alpha * 255.0).round() as u8`).
+///
+/// # Examples
 ///
 /// ```rust
 /// use tachyonfx::{ColorCache, ColorSpace};
 /// use ratatui::prelude::Color;
 ///
-/// let mut cache = ColorCache::<Color, 8>::new();
+/// // Example 1: Target-dependent transformation (fading to specific colors)
+/// let mut fade_cache = ColorCache::<Color, 8>::new();
 /// let target_color = Color::Cyan;
 ///
-/// // This will treat Color::Reset as Color::White for foreground interpolation
-/// let result = cache.memoize_fg(Color::Reset, target_color, |c| {
-///     ColorSpace::Rgb.lerp(c, &target_color, 0.5)
+/// let result = fade_cache.memoize_fg(Color::Red, target_color, |source| {
+///     ColorSpace::Rgb.lerp(source, &target_color, 0.5)
 /// });
+/// // Cache key: (Red, Cyan) - different from (Red, Blue)
 ///
-/// // This will treat Color::Reset as Color::Black for background interpolation
-/// let result = cache.memoize_bg(Color::Reset, target_color, |c| {
-///     ColorSpace::Rgb.lerp(c, &target_color, 0.5)
+/// // Example 2: Source-only transformation (uniform HSL shift)
+/// let mut hsl_cache = ColorCache::<(), 8>::new();
+///
+/// let result = hsl_cache.memoize_fg(Color::Red, (), |source| {
+///     // Apply consistent HSL transformation
+///     ColorSpace::Hsl.lerp(source, &Color::Yellow, 0.3)
 /// });
+/// // Cache key: (Red, ()) - same for all Red inputs
+///
+/// // Example 3: Alpha-aware transformation (using u8 for stable caching)
+/// let mut alpha_cache = ColorCache::<u8, 16>::new();
+/// let alpha = 0.75f32;
+/// let alpha_key = (alpha.clamp(0.0, 1.0) * 255.0) as u8; // Convert f32 to u8
+///
+/// let result = alpha_cache.memoize_fg(Color::Blue, alpha_key, |source| {
+///     ColorSpace::Rgb.lerp(source, &Color::White, alpha)
+/// });
+/// // Cache key: (Blue, 191) - stable u8 representation of 0.75
 /// ```
 pub struct ColorCache<Context, const N: usize>
 where
@@ -68,7 +103,6 @@ where
     /// # Returns
     ///
     /// The computed color, either from cache or newly computed
-    // pub fn memoize_fg<F, ID>(&mut self, from: Color, to: Color, alpha: f32, f: F) -> Color
     pub fn memoize_fg<F>(&mut self, from: Color, context: Context, f: F) -> Color
     where
         F: FnOnce(&Color) -> Color,
@@ -93,7 +127,6 @@ where
     /// # Returns
     ///
     /// The computed color, either from cache or newly computed
-    // pub fn memoize_bg<F>(&mut self, from: Color, to: Color, alpha: f32, f: F) -> Color
     pub fn memoize_bg<F>(&mut self, from: Color, context: Context, f: F) -> Color
     where
         F: FnOnce(&Color) -> Color,

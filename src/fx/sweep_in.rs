@@ -88,7 +88,7 @@ impl Shader for SweepIn {
                         cell.bg = Color::Black
                     };
 
-                    let cache_key = (mod_a.clamp(0.0, 1.0) * 255.0) as u8; //CacheKey::new(faded, alpha);
+                    let cache_key = (mod_a.clamp(0.0, 1.0).round() * 255.0) as u8;
                     let fg = color_cache.memoize_fg(cell.fg, cache_key, |c| {
                         self.color_space.lerp(&faded, c, mod_a)
                     });

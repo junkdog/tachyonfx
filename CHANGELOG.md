@@ -2,6 +2,22 @@
 
 ## unreleased
 
+### Breaking Changes
+- **Major ColorCache API overhaul**: The `ColorCache` API has been completely redesigned for improved flexibility and performance:
+  - **Generic signature change**: `ColorCache<Context, const N: usize>` from `ColorCache<const N: usize>`
+  - **Method signature changes**: 
+    - Old: `memoize_fg(from: Color, to: Color, alpha: f32, f: F) -> Color`
+    - New: `memoize_fg(from: Color, context: Context, f: F) -> Color`
+    - Removed `to: Color` and `alpha: f32` parameters, replaced with generic `context: Context` parameter
+  - **Benefits**: More flexible caching strategies, better performance through granular cache discrimination, cleaner API with explicit context parameters
+
+### Added
+- **Improved ColorCache naming**: 
+  - `LerpKey` renamed to `CacheKey` for better semantic clarity
+  - Generic parameter `ID` renamed to `Context` to better convey its purpose
+  - Method parameter `key_id` renamed to `context` for clarity
+  - `CacheKey` is now exported for advanced usage patterns
+
 ### Changed
 - Updated ratatui dependency to `>=0.29.0` for compatibility with both 0.29.x stable and 0.30-alpha releases.
 
