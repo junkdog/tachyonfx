@@ -1618,7 +1618,6 @@ mod tests {
         #[cfg(feature = "std")]
         verify_size(size_of::<Dissolve>(), 96);
         #[cfg(not(feature = "std"))]
-
         verify_size(size_of::<Dissolve>(), 88);
         verify_size(size_of::<FadeColors>(), 80);
         verify_size(size_of::<Glitch>(), 112);
