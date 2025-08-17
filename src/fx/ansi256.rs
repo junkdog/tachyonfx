@@ -18,17 +18,17 @@ impl Shader for Ansi256 {
     }
 
     fn process(&mut self, _duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
-        let mut color_cache: ColorCache<4> = ColorCache::new();
+        let mut color_cache: ColorCache<(), 4> = ColorCache::new();
 
         let safe_area = area.intersection(buf.area);
         for y in area.top()..safe_area.bottom() {
             for x in area.left()..safe_area.right() {
                 let cell = buf.cell_mut(Position::new(x, y))?;
-                let fg = color_cache.memoize_fg(cell.fg, cell.fg, 1.0, |c| {
+                let fg = color_cache.memoize_fg(cell.fg, (), |c| {
                     #[allow(deprecated)]
                     crate::color_ext::AsIndexedColor::as_indexed_color(c)
                 });
-                let bg = color_cache.memoize_bg(cell.bg, cell.bg, 1.0, |c| {
+                let bg = color_cache.memoize_bg(cell.bg, (), |c| {
                     #[allow(deprecated)]
                     crate::color_ext::AsIndexedColor::as_indexed_color(c)
                 });

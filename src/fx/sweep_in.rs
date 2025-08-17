@@ -7,8 +7,8 @@ use Interpolation::CircOut;
 
 use crate::{
     default_shader_impl, effect_timer::EffectTimer, fx::sliding_window_alpha::SlidingWindowAlpha,
-    interpolation::Interpolation, shader::Shader, CellFilter, ColorSpace, DirectionalVariance,
-    Duration, LruCache, Motion,
+    interpolation::Interpolation, shader::Shader, CellFilter, ColorCache, ColorSpace,
+    DirectionalVariance, Duration, Motion,
 };
 
 #[derive(Clone, Debug)]
@@ -68,8 +68,7 @@ impl Shader for SweepIn {
 
         let mut axis_jitter = DirectionalVariance::from(area, direction, self.randomness_extent);
 
-        let mut fg_cache: LruCache<(Color, f32), Color, 4> = LruCache::default();
-        let mut bg_cache: LruCache<(Color, f32), Color, 4> = LruCache::default();
+        let mut color_cache: ColorCache<u8, 8> = ColorCache::new();
 
         let mut apply_alpha = |cell: &mut Cell, pos: Position| {
             match window_alpha.alpha(pos) {
@@ -81,15 +80,21 @@ impl Shader for SweepIn {
                 a => {
                     let faded = self.faded_color;
                     let mod_a = CircOut.alpha(a);
-                    let fg_key =
-                        if cell.fg == Color::Reset { (Color::White, a) } else { (cell.fg, a) };
-                    let bg_key =
-                        if cell.bg == Color::Reset { (Color::Black, a) } else { (cell.bg, a) };
 
-                    let fg =
-                        fg_cache.memoize(&fg_key, |(c, _)| self.color_space.lerp(&faded, c, mod_a));
-                    let bg =
-                        bg_cache.memoize(&bg_key, |(c, _)| self.color_space.lerp(&faded, c, mod_a));
+                    if cell.fg == Color::Reset {
+                        cell.fg = Color::White
+                    };
+                    if cell.bg == Color::Reset {
+                        cell.bg = Color::Black
+                    };
+
+                    let cache_key = (mod_a.clamp(0.0, 1.0) * 255.0) as u8; //CacheKey::new(faded, alpha);
+                    let fg = color_cache.memoize_fg(cell.fg, cache_key, |c| {
+                        self.color_space.lerp(&faded, c, mod_a)
+                    });
+                    let bg = color_cache.memoize_bg(cell.bg, cache_key, |c| {
+                        self.color_space.lerp(&faded, c, mod_a)
+                    });
 
                     cell.set_fg(fg);
                     cell.set_bg(bg);

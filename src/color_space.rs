@@ -1,6 +1,6 @@
 use ratatui::style::Color;
 
-use crate::{color_ext::ToRgbComponents, lru_cache::LruCache};
+use crate::color_ext::ToRgbComponents;
 
 /// Defines the color space to use for color interpolation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -70,59 +70,6 @@ pub fn color_to_hsv(color: &Color) -> (f32, f32, f32) {
 pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
     let (r, g, b) = color.to_rgb();
     rgb_to_hsl(r, g, b)
-}
-
-pub type ColorSpaceLruCache<const N: usize> = LruCache<Color, (f32, f32, f32), N>;
-
-impl<const N: usize> LruCache<Color, (f32, f32, f32), N> {
-    pub fn lerp(&mut self, from: &Color, to: &Color, color_space: ColorSpace, alpha: f32) -> Color {
-        use ColorSpace::*;
-        let (a, b) = match color_space {
-            Rgb => return ColorSpace::lerp_rgb(from.to_rgb(), to.to_rgb(), alpha),
-            Hsl => (
-                self.memoize(from, color_to_hsl),
-                self.memoize(to, color_to_hsl),
-            ),
-            Hsv => (
-                self.memoize(from, color_to_hsv),
-                self.memoize(to, color_to_hsv),
-            ),
-        };
-
-        match color_space {
-            Hsl => ColorSpace::lerp_hsl(a, b, alpha),
-            Hsv => ColorSpace::lerp_hsv(a, b, alpha),
-            Rgb => unreachable!("Handled above"),
-        }
-    }
-
-    // pub fn lerp_with_lru<const M: usize>(
-    pub fn lerp_2<const M: usize>(
-        &mut self,
-        lru_cache: &mut LruCache<(Color, Color, f32), Color, M>,
-        from: &Color,
-        to: &Color,
-        color_space: ColorSpace,
-        alpha: f32,
-    ) -> Color {
-        use ColorSpace::*;
-
-        match color_space {
-            Rgb => lru_cache.memoize(&(*from, *to, alpha), |(from, to, alpha)| {
-                ColorSpace::lerp_rgb(from.to_rgb(), to.to_rgb(), *alpha)
-            }),
-            Hsl => {
-                let from = self.memoize(from, color_to_hsl);
-                let to = self.memoize(to, color_to_hsl);
-                ColorSpace::lerp_hsl(from, to, alpha)
-            },
-            Hsv => {
-                let from = self.memoize(from, color_to_hsl);
-                let to = self.memoize(to, color_to_hsl);
-                ColorSpace::lerp_hsv(from, to, alpha)
-            },
-        }
-    }
 }
 
 impl ColorSpace {

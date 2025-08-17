@@ -1,6 +1,7 @@
+use std::fmt::Debug;
+
 use ratatui::prelude::Color;
 
-// Removed unused imports
 use crate::lru_cache::LruCache;
 
 /// A specialized cache for color interpolation operations that handles `Color::Reset`
@@ -20,25 +21,31 @@ use crate::lru_cache::LruCache;
 /// use tachyonfx::{ColorCache, ColorSpace};
 /// use ratatui::prelude::Color;
 ///
-/// let mut cache = ColorCache::<8>::new();
+/// let mut cache = ColorCache::<Color, 8>::new();
 /// let target_color = Color::Cyan;
 ///
 /// // This will treat Color::Reset as Color::White for foreground interpolation
-/// let result = cache.memoize_fg(Color::Reset, target_color, 0.5, |c| {
+/// let result = cache.memoize_fg(Color::Reset, target_color, |c| {
 ///     ColorSpace::Rgb.lerp(c, &target_color, 0.5)
 /// });
 ///
 /// // This will treat Color::Reset as Color::Black for background interpolation
-/// let result = cache.memoize_bg(Color::Reset, target_color, 0.5, |c| {
+/// let result = cache.memoize_bg(Color::Reset, target_color, |c| {
 ///     ColorSpace::Rgb.lerp(c, &target_color, 0.5)
 /// });
 /// ```
-pub struct ColorCache<const N: usize> {
-    fg_cache: LruCache<LerpKey, Color, N>,
-    bg_cache: LruCache<LerpKey, Color, N>,
+pub struct ColorCache<Context, const N: usize>
+where
+    Context: Debug + Clone + Copy + PartialEq + Eq + Default,
+{
+    fg_cache: LruCache<CacheKey<Context>, Color, N>,
+    bg_cache: LruCache<CacheKey<Context>, Color, N>,
 }
 
-impl<const N: usize> ColorCache<N> {
+impl<Context, const N: usize> ColorCache<Context, N>
+where
+    Context: Debug + Clone + Copy + PartialEq + Eq + Default,
+{
     /// Creates a new `ColorCache` with empty foreground and background caches.
     pub fn new() -> Self {
         Self {
@@ -54,19 +61,20 @@ impl<const N: usize> ColorCache<N> {
     ///
     /// # Arguments
     ///
-    /// * `key` - The source color to compute from
+    /// * `from` - The source color to compute from
+    /// * `context` - Context data for cache key differentiation
     /// * `f` - Function that computes the result color from the effective key
     ///
     /// # Returns
     ///
     /// The computed color, either from cache or newly computed
-    pub fn memoize_fg<F>(&mut self, from: Color, to: Color, alpha: f32, f: F) -> Color
+    // pub fn memoize_fg<F, ID>(&mut self, from: Color, to: Color, alpha: f32, f: F) -> Color
+    pub fn memoize_fg<F>(&mut self, from: Color, context: Context, f: F) -> Color
     where
         F: FnOnce(&Color) -> Color,
     {
         let from = if from == Color::Reset { Color::White } else { from };
-        let to = if to == Color::Reset { Color::White } else { to };
-        let key = LerpKey::new(from, to, alpha);
+        let key = CacheKey::new(from, context);
 
         self.fg_cache.memoize(&key, |key| f(&key.from))
     }
@@ -78,19 +86,20 @@ impl<const N: usize> ColorCache<N> {
     ///
     /// # Arguments
     ///
-    /// * `key` - The source color to compute from
+    /// * `from` - The source color to compute from
+    /// * `context` - Context data for cache key differentiation
     /// * `f` - Function that computes the result color from the effective key
     ///
     /// # Returns
     ///
     /// The computed color, either from cache or newly computed
-    pub fn memoize_bg<F>(&mut self, from: Color, to: Color, alpha: f32, f: F) -> Color
+    // pub fn memoize_bg<F>(&mut self, from: Color, to: Color, alpha: f32, f: F) -> Color
+    pub fn memoize_bg<F>(&mut self, from: Color, context: Context, f: F) -> Color
     where
         F: FnOnce(&Color) -> Color,
     {
         let from = if from == Color::Reset { Color::Black } else { from };
-        let to = if to == Color::Reset { Color::Black } else { to };
-        let key = LerpKey::new(from, to, alpha);
+        let key = CacheKey::new(from, context);
 
         self.bg_cache.memoize(&key, |key| f(&key.from))
     }
@@ -116,31 +125,25 @@ impl<const N: usize> ColorCache<N> {
     }
 }
 
-impl<const N: usize> Default for ColorCache<N> {
+impl<Context, const N: usize> Default for ColorCache<Context, N>
+where
+    Context: Debug + Clone + Copy + PartialEq + Eq + Default,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// A composite key for caching complete lerp operations
+/// A composite key for caching color operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-//FIXME: rename `to` to `identifier` and make it generic over anything
-struct LerpKey {
+struct CacheKey<T> {
     from: Color,
-    to: Color,
-    // We'll use a u8 to represent alpha with 0-255 precision
-    // This avoids floating point equality issues in cache lookups
-    alpha_byte: u8,
+    context: T,
 }
 
-impl LerpKey {
-    fn new(from: Color, to: Color, alpha: f32) -> Self {
-        Self {
-            from,
-            to,
-            // Convert 0.0-1.0 to 0-255
-            alpha_byte: (alpha * 255.0).round() as u8,
-        }
+impl<T> CacheKey<T> {
+    fn new(from: Color, context: T) -> Self {
+        Self { from, context }
     }
 }
 
@@ -151,18 +154,18 @@ mod tests {
 
     #[test]
     fn test_fg_color_reset_mapping() {
-        let mut cache = ColorCache::<4>::new();
+        let mut cache = ColorCache::<Color, 4>::new();
         let target = Color::Cyan;
 
         // First call should compute the value
-        let result1 = cache.memoize_fg(Color::Reset, target, 0.5, |c| {
+        let result1 = cache.memoize_fg(Color::Reset, target, |c| {
             // Should receive Color::White instead of Color::Reset
             assert_eq!(*c, Color::White);
             ColorSpace::Rgb.lerp(c, &target, 0.5)
         });
 
         // Second call should hit cache
-        let result2 = cache.memoize_fg(Color::Reset, target, 0.5, |_c| {
+        let result2 = cache.memoize_fg(Color::Reset, target, |_c| {
             panic!("Should not be called - should hit cache");
         });
 
@@ -173,18 +176,18 @@ mod tests {
 
     #[test]
     fn test_bg_color_reset_mapping() {
-        let mut cache = ColorCache::<4>::new();
+        let mut cache = ColorCache::<Color, 4>::new();
         let target = Color::Cyan;
 
         // First call should compute the value
-        let result1 = cache.memoize_bg(Color::Reset, target, 0.5, |c| {
+        let result1 = cache.memoize_bg(Color::Reset, target, |c| {
             // Should receive Color::Black instead of Color::Reset
             assert_eq!(*c, Color::Black);
             ColorSpace::Rgb.lerp(c, &target, 0.5)
         });
 
         // Second call should hit cache
-        let result2 = cache.memoize_bg(Color::Reset, target, 0.5, |_c| {
+        let result2 = cache.memoize_bg(Color::Reset, target, |_c| {
             panic!("Should not be called - should hit cache");
         });
 
@@ -195,11 +198,11 @@ mod tests {
 
     #[test]
     fn test_non_reset_colors_passthrough() {
-        let mut cache = ColorCache::<4>::new();
+        let mut cache = ColorCache::<Color, 4>::new();
         let source = Color::Red;
         let target = Color::Blue;
 
-        let result = cache.memoize_fg(source, target, 0.5, |c| {
+        let result = cache.memoize_fg(source, target, |c| {
             // Should receive the original color
             assert_eq!(*c, source);
             ColorSpace::Rgb.lerp(c, &target, 0.5)
@@ -213,15 +216,15 @@ mod tests {
 
     #[test]
     fn test_separate_fg_bg_caches() {
-        let mut cache = ColorCache::<4>::new();
+        let mut cache = ColorCache::<Color, 4>::new();
         let target = Color::White;
 
         // These should be cached separately
-        let fg_result = cache.memoize_fg(Color::Reset, target, 0.5, |c| {
+        let fg_result = cache.memoize_fg(Color::Reset, target, |c| {
             ColorSpace::Rgb.lerp(c, &target, 0.5)
         });
 
-        let bg_result = cache.memoize_bg(Color::Reset, target, 0.5, |c| {
+        let bg_result = cache.memoize_bg(Color::Reset, target, |c| {
             ColorSpace::Rgb.lerp(c, &target, 0.5)
         });
 

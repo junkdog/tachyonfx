@@ -8,9 +8,9 @@ const ANIMATION_FRAMES: usize = 100;
 const INTERPOLATION_ALPHA: f32 = 0.5;
 const COLOR_OFFSET: u8 = 10;
 
-/// A composite key for caching complete lerp operations
+/// A composite key for caching complete lerp operations (legacy benchmark format)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-struct LerpKey {
+struct LegacyLerpKey {
     from: Color,
     to: Color,
     // We'll use a u8 to represent alpha with 0-255 precision
@@ -18,7 +18,7 @@ struct LerpKey {
     alpha_byte: u8,
 }
 
-impl LerpKey {
+impl LegacyLerpKey {
     fn new(from: Color, to: Color, alpha: f32) -> Self {
         Self {
             from,
@@ -77,85 +77,16 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
         });
     });
 
-    // group.bench_with_input(BenchmarkId::new("raw_rgb_lerp", "ui-pattern"), &(), |b, _| {
-    //     b.iter(|| {
-    //         run_animation_loop(&theme_colors, |theme_color, target| {
-    //             std::hint::black_box(ColorSpace::Hsl.lerp(
-    //                 &theme_color,
-    //                 &target,
-    //                 INTERPOLATION_ALPHA,
-    //             ));
-    //         });
-    //     });
-    // });
-
-    // Benchmark with cache size 8 for HSL conversion
-    group.bench_with_input(
-        BenchmarkId::new("cached_hsl_size_8", "ui-pattern"),
-        &(),
-        |b, _| {
-            b.iter_with_setup(LruCache::<Color, (f32, f32, f32), 8>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.lerp(
-                        &theme_color,
-                        &target,
-                        ColorSpace::Hsl,
-                        INTERPOLATION_ALPHA,
-                    ));
-                });
-            })
-        },
-    );
-
-    // Benchmark with cache size 16 for HSL conversion
-    group.bench_with_input(
-        BenchmarkId::new("cached_hsl_size_16", "ui-pattern"),
-        &(),
-        |b, _| {
-            b.iter_with_setup(LruCache::<Color, (f32, f32, f32), 16>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.lerp(
-                        &theme_color,
-                        &target,
-                        ColorSpace::Hsl,
-                        INTERPOLATION_ALPHA,
-                    ));
-                });
-            })
-        },
-    );
-
     // Benchmark with cache size 16 for HSL conversion
     group.bench_with_input(
         BenchmarkId::new("cache_rev2_hsl_size_16", "ui-pattern"),
         &(),
         |b, _| {
-            b.iter_with_setup(ColorCache::new, |mut cache: ColorCache<16>| {
+            b.iter_with_setup(ColorCache::<Color, 16>::new, |mut cache| {
                 run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.memoize_fg(
-                        theme_color,
-                        target,
-                        INTERPOLATION_ALPHA,
-                        |c| ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA),
-                    ));
-                });
-            })
-        },
-    );
-
-    // Benchmark with cache size 16 for HSL conversion
-    group.bench_with_input(
-        BenchmarkId::new("cache_rev2_hsl_size_8", "ui-pattern"),
-        &(),
-        |b, _| {
-            b.iter_with_setup(ColorCache::new, |mut cache: ColorCache<8>| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.memoize_fg(
-                        theme_color,
-                        target,
-                        INTERPOLATION_ALPHA,
-                        |c| ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA),
-                    ));
+                    std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
+                        ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
+                    }));
                 });
             })
         },
@@ -163,35 +94,14 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
 
     // Benchmark with cache size 8 for HSL conversion
     group.bench_with_input(
-        BenchmarkId::new("cached_rgb_linear_size_8", "ui-pattern"),
+        BenchmarkId::new("cache_rev2_hsl_size_8", "ui-pattern"),
         &(),
         |b, _| {
-            b.iter_with_setup(LruCache::<Color, (f32, f32, f32), 8>::new, |mut cache| {
+            b.iter_with_setup(ColorCache::<Color, 8>::new, |mut cache| {
                 run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.lerp(
-                        &theme_color,
-                        &target,
-                        ColorSpace::Rgb,
-                        INTERPOLATION_ALPHA,
-                    ));
-                });
-            })
-        },
-    );
-
-    // Benchmark with cache size 16 for HSL conversion
-    group.bench_with_input(
-        BenchmarkId::new("cached_rgb_linear_size_16", "ui-pattern"),
-        &(),
-        |b, _| {
-            b.iter_with_setup(LruCache::<Color, (f32, f32, f32), 16>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.lerp(
-                        &theme_color,
-                        &target,
-                        ColorSpace::Rgb,
-                        INTERPOLATION_ALPHA,
-                    ));
+                    std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
+                        ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
+                    }));
                 });
             })
         },
@@ -202,9 +112,9 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
         BenchmarkId::new("cached_full_lerp_size_8", "ui-pattern"),
         &(),
         |b, _| {
-            b.iter_with_setup(LruCache::<LerpKey, Color, 8>::new, |mut cache| {
+            b.iter_with_setup(LruCache::<LegacyLerpKey, Color, 8>::new, |mut cache| {
                 run_animation_loop(&theme_colors, |theme_color, target| {
-                    let key = LerpKey::new(theme_color, target, INTERPOLATION_ALPHA);
+                    let key = LegacyLerpKey::new(theme_color, target, INTERPOLATION_ALPHA);
                     let result = cache.memoize(&key, |_| {
                         ColorSpace::Hsl.lerp(&theme_color, &target, INTERPOLATION_ALPHA)
                     });
@@ -219,9 +129,9 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
         BenchmarkId::new("cached_full_lerp_size_16", "ui-pattern"),
         &(),
         |b, _| {
-            b.iter_with_setup(LruCache::<LerpKey, Color, 16>::new, |mut cache| {
+            b.iter_with_setup(LruCache::<LegacyLerpKey, Color, 16>::new, |mut cache| {
                 run_animation_loop(&theme_colors, |theme_color, target| {
-                    let key = LerpKey::new(theme_color, target, INTERPOLATION_ALPHA);
+                    let key = LegacyLerpKey::new(theme_color, target, INTERPOLATION_ALPHA);
                     let result = cache.memoize(&key, |_| {
                         ColorSpace::Hsl.lerp(&theme_color, &target, INTERPOLATION_ALPHA)
                     });
