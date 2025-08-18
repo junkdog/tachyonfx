@@ -10,6 +10,10 @@
     - Old: `memoize_fg(from: Color, to: Color, alpha: f32, f: F) -> Color`
     - New: `memoize_fg(from: Color, context: Context, f: F) -> Color`
     - Removed `to: Color` and `alpha: f32` parameters, replaced with generic `context: Context` parameter
+- **CellFilter API optimization**: The `Shader::cell_filter()` method now returns `Option<&CellFilter>` instead of
+  `Option<CellFilter>` to avoid unnecessary cloning:
+  - **Method signature change**: `fn cell_filter(&self) -> Option<&CellFilter>` (was `Option<CellFilter>`)
+  - **Performance improvement**: Eliminates cloning in `CellFilter::selector()` while maintaining safety
 
 ### Added
 - `CellIterator::for_each_cell()`: Performance-optimized method for iterating over cells without division and

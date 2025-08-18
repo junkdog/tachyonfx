@@ -81,7 +81,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///
     /// # Returns
     /// * A [CellIterator] over the cells in the specified area.
-    fn cell_iter<'a>(&mut self, buf: &'a mut Buffer, area: Rect) -> CellIterator<'a> {
+    fn cell_iter<'a>(&'a mut self, buf: &'a mut Buffer, area: Rect) -> CellIterator<'a> {
         CellIterator::new(buf, area, self.cell_filter())
     }
 
@@ -189,13 +189,13 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///
     /// # Returns
     /// * An `Option` containing the shader's `CellFilter`, or `None` if not applicable.
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         None
     }
 
     #[deprecated(since = "0.11.0", note = "Use `cell_filter()` instead")]
     fn cell_selection(&self) -> Option<CellFilter> {
-        self.cell_filter()
+        self.cell_filter().cloned()
     }
 
     /// Sets the color space used for color interpolation
@@ -307,8 +307,8 @@ macro_rules! default_shader_impl {
             self.cell_filter = Some(strategy);
         }
 
-        fn cell_filter(&self) -> Option<CellFilter> {
-            self.cell_filter.clone()
+        fn cell_filter(&self) -> Option<&CellFilter> {
+            self.cell_filter.as_ref()
         }
     };
 

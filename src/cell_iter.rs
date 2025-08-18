@@ -58,7 +58,7 @@ use crate::{CellFilter, CellPredicate};
 ///
 /// let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 5));
 /// let filter = CellFilter::FgColor(Color::Red);
-/// let mut iter = CellIterator::new(&mut buffer, Rect::new(0, 0, 10, 5), Some(filter));
+/// let mut iter = CellIterator::new(&mut buffer, Rect::new(0, 0, 10, 5), Some(&filter));
 ///
 /// iter.for_each_cell(|pos, cell| {
 ///     // Only processes cells with red foreground color
@@ -69,7 +69,7 @@ pub struct CellIterator<'a> {
     current: u32,
     area: Rect,
     buf: &'a mut Buffer,
-    predicate: Option<CellPredicate>,
+    predicate: Option<CellPredicate<'a>>,
 }
 
 impl<'a> CellIterator<'a> {
@@ -98,16 +98,16 @@ impl<'a> CellIterator<'a> {
     ///
     /// // With filtering
     /// let filter = CellFilter::Inner(ratatui::layout::Margin::new(1, 1));
-    /// let iter = CellIterator::new(&mut buffer, Rect::new(0, 0, 10, 5), Some(filter));
+    /// let iter = CellIterator::new(&mut buffer, Rect::new(0, 0, 10, 5), Some(&filter));
     /// ```
-    pub fn new(buf: &'a mut Buffer, area: Rect, cell_filter: Option<CellFilter>) -> Self {
+    pub fn new(buf: &'a mut Buffer, area: Rect, cell_filter: Option<&'a CellFilter>) -> Self {
         Self {
             current: 0,
             area: area.intersection(buf.area),
             buf,
             predicate: cell_filter
-                .filter(|f| *f != CellFilter::All)
-                .map(|f| f.selector(area)),
+                .filter(|f| **f != CellFilter::All)
+                .map(|f| CellPredicate::new(area, f)),
         }
     }
 

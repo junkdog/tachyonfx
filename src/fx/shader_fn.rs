@@ -138,16 +138,16 @@ impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let overflow = self.timer.process(duration);
 
+        let cell_filter = self.cell_filter.as_ref().cloned();
+
         match self.code.clone() {
             ShaderFnSignature::Iter(f) => {
-                let cells = self.cell_iter(buf, area);
-                let ctx =
-                    ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
+                let cells = CellIterator::new(buf, area, self.cell_filter.as_ref());
+                let ctx = ShaderFnContext::new(area, cell_filter, duration, &self.timer);
                 invoke_fn!(f, &mut self.state, ctx, cells)
             },
             ShaderFnSignature::Buffer(f) => {
-                let ctx =
-                    ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
+                let ctx = ShaderFnContext::new(area, cell_filter, duration, &self.timer);
                 invoke_fn!(f, &mut self.state, ctx, buf)
             },
         }
@@ -175,8 +175,8 @@ impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
         self.cell_filter = Some(filter);
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        self.cell_filter.clone()
+    fn cell_filter(&self) -> Option<&CellFilter> {
+        self.cell_filter.as_ref()
     }
 
     fn reset(&mut self) {

@@ -194,10 +194,8 @@ mod examples {
         fx::effect_fn_buf(no_state, timer, |_state, context, buf| {
             let offset = context.timer.remaining().as_millis() as usize / 30;
 
-            let cell_pred = context
-                .filter
-                .unwrap_or(CellFilter::All)
-                .selector(buf.area);
+            let filter = context.filter.unwrap_or(CellFilter::All);
+            let cell_pred = filter.selector(buf.area);
             for (i, pos) in buf.area.positions().enumerate() {
                 let cell = &mut buf[pos];
                 if !cell_pred.is_valid(pos, cell) {

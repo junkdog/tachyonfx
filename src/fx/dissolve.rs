@@ -42,12 +42,13 @@ impl Shader for Dissolve {
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
         let alpha = self.timer.alpha();
-        let cell_iter = self.cell_iter(buf, area);
         let mut lcg = self.lcg;
+        let dissolved_style = self.dissolved_style;
 
+        let cell_iter = self.cell_iter(buf, area);
         let dissolved_cells = cell_iter.filter(|_| alpha > lcg.gen_f32());
 
-        if let Some(style) = self.dissolved_style {
+        if let Some(style) = dissolved_style {
             dissolved_cells.for_each(|(_, c)| {
                 c.set_char(' ');
                 c.set_style(style);

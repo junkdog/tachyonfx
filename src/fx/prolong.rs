@@ -97,7 +97,7 @@ impl Shader for Prolong {
         Some(EffectTimer::new(self_duration + inner_duration, Linear))
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.inner.cell_filter()
     }
 

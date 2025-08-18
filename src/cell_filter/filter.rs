@@ -125,8 +125,8 @@ impl CellFilter {
         }
     }
 
-    pub fn selector(&self, area: Rect) -> CellPredicate {
-        CellPredicate::new(area, self.clone())
+    pub fn selector(&self, area: Rect) -> CellPredicate<'_> {
+        CellPredicate::new(area, self)
     }
 }
 

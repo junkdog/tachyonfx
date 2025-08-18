@@ -155,7 +155,7 @@ impl Shader for Effect {
         self.shader.timer_mut()
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.shader.cell_filter()
     }
 

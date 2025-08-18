@@ -83,7 +83,7 @@ impl Shader for FreezeAt {
         self.fx.timer()
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.fx.cell_filter()
     }
 
@@ -183,7 +183,7 @@ impl Shader for RemapAlpha {
         Some(self.timer)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.fx.cell_filter()
     }
 

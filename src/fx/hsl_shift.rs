@@ -38,15 +38,18 @@ impl Shader for HslShift {
             color_from_hsl(h, s, l)
         };
 
+        let hsl_mod_fg = self.hsl_mod_fg;
+        let hsl_mod_bg = self.hsl_mod_bg;
+
         let cell_iter = self.cell_iter(buf, area);
         let mut color_cache: ColorCache<(), 8> = ColorCache::new();
 
         cell_iter.for_each_cell(|_, cell| {
-            if let Some(hsl_mod) = self.hsl_mod_fg {
+            if let Some(hsl_mod) = hsl_mod_fg {
                 let fg = color_cache.memoize_fg(cell.fg, (), |_| hsl_lerp(cell.fg, hsl_mod));
                 cell.set_fg(fg);
             }
-            if let Some(hsl_mod) = self.hsl_mod_bg {
+            if let Some(hsl_mod) = hsl_mod_bg {
                 let bg = color_cache.memoize_bg(cell.bg, (), |_| hsl_lerp(cell.bg, hsl_mod));
                 cell.set_bg(bg);
             }

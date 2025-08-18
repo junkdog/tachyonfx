@@ -192,8 +192,8 @@ impl Shader for Glitch {
         None
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        Some(self.selection.clone())
+    fn cell_filter(&self) -> Option<&CellFilter> {
+        Some(&self.selection)
     }
 
     fn reset(&mut self) {

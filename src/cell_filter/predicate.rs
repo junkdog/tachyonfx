@@ -14,7 +14,7 @@ use crate::CellFilter;
 /// should be included in operations.
 ///
 /// See also [crate::Shader::cell_iter].
-pub struct CellPredicate {
+pub struct CellPredicate<'a> {
     /// The effective area for cell evaluation after applying any area-modifying filters.
     /// This may be different from the original area if the filter modifies spatial bounds
     /// (e.g., margins or layout sections).
@@ -23,10 +23,10 @@ pub struct CellPredicate {
     /// The filter strategy that defines the criteria cells must meet to be considered
     /// valid. This strategy can combine multiple filters using logical operations
     /// (AND, OR, NOT) and can include both position-based and content-based criteria.
-    strategy: CellFilter,
+    strategy: &'a CellFilter,
 }
 
-impl CellPredicate {
+impl<'a> CellPredicate<'a> {
     /// Creates a new `CellPredicate` with the specified area and filter strategy.
     ///
     /// The provided area may be modified based on the filter strategy (e.g., for
@@ -35,8 +35,8 @@ impl CellPredicate {
     /// # Arguments
     /// * `area` - The initial rectangular area for cell evaluation
     /// * `strategy` - The filter strategy to apply
-    pub(super) fn new(area: Rect, strategy: CellFilter) -> Self {
-        let filter_area = Self::resolve_area(area, &strategy);
+    pub(crate) fn new(area: Rect, strategy: &'a CellFilter) -> Self {
+        let filter_area = Self::resolve_area(area, strategy);
 
         Self { filter_area, strategy }
     }

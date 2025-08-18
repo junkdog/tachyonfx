@@ -91,7 +91,7 @@ impl Shader for ParallelEffect {
             .map(|d| EffectTimer::new(d, Linear))
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         None
     }
 
@@ -189,7 +189,7 @@ impl Shader for SequentialEffect {
         }
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         None
     }
 
@@ -264,12 +264,12 @@ mod tests {
         // same effect as calling Effect::filter
         effect.propagate_filter(CellFilter::Text);
 
-        assert_eq!(effect.effects[0].cell_filter().unwrap(), CellFilter::All);
+        assert_eq!(*effect.effects[0].cell_filter().unwrap(), CellFilter::All);
         assert_eq!(
-            effect.effects[1].cell_filter().unwrap(),
+            *effect.effects[1].cell_filter().unwrap(),
             CellFilter::Inner(Margin::new(1, 1))
         );
-        assert_eq!(effect.effects[2].cell_filter().unwrap(), CellFilter::Text);
+        assert_eq!(*effect.effects[2].cell_filter().unwrap(), CellFilter::Text);
         assert!(!effect.done());
     }
 }

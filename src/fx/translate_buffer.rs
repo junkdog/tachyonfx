@@ -75,7 +75,7 @@ impl Shader for TranslateBuffer {
         Some(self.timer)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         None
     }
 

@@ -33,7 +33,7 @@ impl Shader for Sleep {
         EffectSpan::new(self, offset, Vec::default())
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         None
     }
 

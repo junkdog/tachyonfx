@@ -30,20 +30,23 @@ impl Shader for FadeColors {
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
         let alpha = self.timer.alpha();
+        let fg = self.fg;
+        let bg = self.bg;
+        let color_space = self.color_space;
 
         let cell_iter = self.cell_iter(buf, area);
         let mut color_cache: ColorCache<Color, 8> = ColorCache::new();
 
         cell_iter.for_each_cell(|_, cell| {
-            if let Some(fg) = self.fg.as_ref() {
-                let color = color_cache
-                    .memoize_fg(cell.fg, *fg, |_| self.color_space.lerp(&cell.fg, fg, alpha));
+            if let Some(fg) = fg.as_ref() {
+                let color =
+                    color_cache.memoize_fg(cell.fg, *fg, |_| color_space.lerp(&cell.fg, fg, alpha));
                 cell.set_fg(color);
             }
 
-            if let Some(bg) = self.bg.as_ref() {
-                let color = color_cache
-                    .memoize_bg(cell.bg, *bg, |_| self.color_space.lerp(&cell.bg, bg, alpha));
+            if let Some(bg) = bg.as_ref() {
+                let color =
+                    color_cache.memoize_bg(cell.bg, *bg, |_| color_space.lerp(&cell.bg, bg, alpha));
                 cell.set_bg(color);
             }
         });
