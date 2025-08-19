@@ -158,11 +158,11 @@ impl<'a> CellIterator<'a> {
             for x in area.x..area.right() {
                 let pos = Position::new(x, y);
                 if let Some(cell) = self.buf.cell_mut(pos) {
-                    if let Some(predicate) = &self.predicate {
-                        if predicate.is_valid(pos, cell) {
-                            f(pos, cell);
-                        }
-                    } else {
+                    if self
+                        .predicate
+                        .as_ref()
+                        .is_none_or(|p| p.is_valid(pos, cell))
+                    {
                         f(pos, cell);
                     }
                 }

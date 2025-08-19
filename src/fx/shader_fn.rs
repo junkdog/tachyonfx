@@ -5,8 +5,8 @@ use compact_str::ToCompactString;
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
-    fx::invoke_fn, ref_count, CellFilter, CellIterator, Duration, EffectTimer, RefCount, Shader,
-    ThreadSafetyMarker,
+    cell_filter::FilterProcessor, fx::invoke_fn, ref_count, CellFilter, CellIterator, Duration,
+    EffectTimer, RefCount, Shader, ThreadSafetyMarker,
 };
 
 #[derive(Builder, Clone)]

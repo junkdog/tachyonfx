@@ -2,8 +2,8 @@ use bon::{builder, Builder};
 use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 
 use crate::{
-    color_space::color_from_hsl, color_to_hsl, default_shader_impl, effect_timer::EffectTimer,
-    shader::Shader, CellFilter, ColorCache, Duration, Interpolatable,
+    cell_filter::FilterProcessor, color_space::color_from_hsl, color_to_hsl, default_shader_impl,
+    effect_timer::EffectTimer, shader::Shader, CellFilter, ColorCache, Duration, Interpolatable,
 };
 
 #[derive(Builder, Clone, Default, Debug)]
@@ -13,7 +13,7 @@ pub struct HslShift {
     hsl_mod_fg: Option<[f32; 3]>,
     hsl_mod_bg: Option<[f32; 3]>,
     area: Option<Rect>,
-    cell_filter: Option<CellFilter>,
+    cell_filter: Option<FilterProcessor>,
 }
 
 impl Shader for HslShift {

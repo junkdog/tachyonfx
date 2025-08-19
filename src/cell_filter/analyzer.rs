@@ -5,7 +5,6 @@ pub(super) enum FilterType {
     #[default]
     Static,
     Dynamic,
-    Hybrid,
 }
 
 pub(crate) trait FilterAnalyzer {

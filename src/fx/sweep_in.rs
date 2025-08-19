@@ -6,9 +6,9 @@ use ratatui::{
 use Interpolation::CircOut;
 
 use crate::{
-    default_shader_impl, effect_timer::EffectTimer, fx::sliding_window_alpha::SlidingWindowAlpha,
-    interpolation::Interpolation, shader::Shader, CellFilter, ColorCache, ColorSpace,
-    DirectionalVariance, Duration, Motion,
+    cell_filter::FilterProcessor, default_shader_impl, effect_timer::EffectTimer,
+    fx::sliding_window_alpha::SlidingWindowAlpha, interpolation::Interpolation, shader::Shader,
+    CellFilter, ColorCache, ColorSpace, DirectionalVariance, Duration, Motion,
 };
 
 #[derive(Clone, Debug)]
@@ -19,7 +19,7 @@ pub struct SweepIn {
     timer: EffectTimer,
     direction: Motion,
     area: Option<Rect>,
-    cell_filter: Option<CellFilter>,
+    cell_filter: Option<FilterProcessor>,
     color_space: ColorSpace,
 }
 
@@ -106,8 +106,8 @@ impl Shader for SweepIn {
         let cell_filter = self
             .cell_filter
             .as_ref()
-            .unwrap_or(&CellFilter::All)
-            .selector(area);
+            .map(|f| f.selector(area))
+            .unwrap_or(CellFilter::All.selector(area));
 
         if self.randomness_extent == 0
             || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction)

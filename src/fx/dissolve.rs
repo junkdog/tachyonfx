@@ -1,8 +1,8 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
-    default_shader_impl, effect_timer::EffectTimer, shader::Shader, simple_rng::SimpleRng,
-    CellFilter, Duration,
+    cell_filter::FilterProcessor, default_shader_impl, effect_timer::EffectTimer, shader::Shader,
+    simple_rng::SimpleRng, CellFilter, Duration,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -10,7 +10,7 @@ pub struct Dissolve {
     timer: EffectTimer,
     dissolved_style: Option<Style>,
     area: Option<Rect>,
-    cell_filter: Option<CellFilter>,
+    cell_filter: Option<FilterProcessor>,
     lcg: SimpleRng,
 }
 

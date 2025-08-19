@@ -304,11 +304,11 @@ macro_rules! default_shader_impl {
     // Filter implementation
     (@filter) => {
         fn filter(&mut self, strategy: CellFilter) {
-            self.cell_filter = Some(strategy);
+            self.cell_filter = Some(FilterProcessor::from(strategy));
         }
 
         fn cell_filter(&self) -> Option<&CellFilter> {
-            self.cell_filter.as_ref()
+            self.cell_filter.as_ref().map(|f| f.filter_ref())
         }
     };
 

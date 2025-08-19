@@ -6,3 +6,4 @@ mod processor;
 pub(crate) use analyzer::*;
 pub use filter::*;
 pub use predicate::CellPredicate;
+pub(crate) use processor::*;

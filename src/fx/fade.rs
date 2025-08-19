@@ -2,8 +2,8 @@ use bon::{builder, Builder};
 use ratatui::{buffer::Buffer, layout::Rect, prelude::Color};
 
 use crate::{
-    default_shader_impl, effect_timer::EffectTimer, shader::Shader, CellFilter, ColorCache,
-    ColorSpace, Duration,
+    cell_filter::FilterProcessor, default_shader_impl, effect_timer::EffectTimer, shader::Shader,
+    CellFilter, ColorCache, ColorSpace, Duration,
 };
 
 #[derive(Builder, Clone, Debug)]
@@ -13,7 +13,7 @@ pub struct FadeColors {
     #[builder(into)]
     timer: EffectTimer,
     area: Option<Rect>,
-    cell_filter: Option<CellFilter>,
+    cell_filter: Option<FilterProcessor>,
     color_space: ColorSpace,
 }
 
