@@ -103,7 +103,8 @@ impl Shader for Explode {
             .cell_filter
             .as_ref()
             .map(|f| f.predicate(area))
-            .unwrap_or(CellFilter::All.predicate(area));
+            .map(|f| f.predicate(safe_area))
+            .unwrap_or(CellFilter::All.predicate(safe_area));
 
         for (pos, (dx, dy)) in cells.iter() {
             let pos = *pos;
