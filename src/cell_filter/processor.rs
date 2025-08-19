@@ -73,13 +73,9 @@ impl FilterProcessor {
     }
 }
 
-#[derive(Default)]
 pub(crate) enum CellValidator<'a> {
     Static(&'a StaticFilterProcessor),
     Dynamic(CellPredicate<'a>),
-
-    #[default]
-    AlwaysValid,
 }
 
 impl CellValidator<'_> {
@@ -87,7 +83,6 @@ impl CellValidator<'_> {
         match self {
             CellValidator::Static(processor) => processor.is_valid(pos),
             CellValidator::Dynamic(predicate) => predicate.is_valid(pos, cell),
-            CellValidator::AlwaysValid => true,
         }
     }
 }

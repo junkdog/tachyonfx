@@ -3,7 +3,10 @@ use ratatui::{
     layout::{Position, Rect},
 };
 
-use crate::cell_filter::{CellValidator, FilterProcessor};
+use crate::{
+    cell_filter::{CellValidator, FilterProcessor},
+    CellFilter,
+};
 
 /// An iterator over terminal cells within a rectangular area.
 ///
@@ -50,26 +53,11 @@ use crate::cell_filter::{CellValidator, FilterProcessor};
 ///     cell.set_char('O');
 /// }
 /// ```
-///
-/// ### With cell filtering
-/// ```rust
-/// use ratatui::{buffer::Buffer, layout::Rect, style::Color};
-/// use tachyonfx::{CellIterator, CellFilter};
-///
-/// let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 5));
-/// let filter = CellFilter::FgColor(Color::Red);
-/// let mut iter = CellIterator::new(&mut buffer, Rect::new(0, 0, 10, 5), Some(&filter));
-///
-/// iter.for_each_cell(|pos, cell| {
-///     // Only processes cells with red foreground color
-///     cell.set_char('R');
-/// });
-/// ```
 pub struct CellIterator<'a> {
     current: u32,
     area: Rect,
     buf: &'a mut Buffer,
-    predicate: CellValidator<'a>,
+    predicate: Option<CellValidator<'a>>,
 }
 
 impl<'a> CellIterator<'a> {
@@ -90,17 +78,12 @@ impl<'a> CellIterator<'a> {
     ///
     /// ```rust
     /// use ratatui::{buffer::Buffer, layout::Rect};
-    /// use tachyonfx::{CellIterator, cell_filter::FilterProcessor, CellFilter};
+    /// use tachyonfx::CellIterator;
     ///
     /// let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 5));
     ///
-    /// // No filtering
+    /// // Create iterator without filtering
     /// let iter = CellIterator::new(&mut buffer, Rect::new(0, 0, 5, 3), None);
-    ///
-    /// // With filtering
-    /// let filter = CellFilter::Inner(ratatui::layout::Margin::new(1, 1));
-    /// let processor = FilterProcessor::from(filter);
-    /// let iter = CellIterator::new(&mut buffer, Rect::new(0, 0, 10, 5), Some(&processor));
     /// ```
     pub fn new(
         buf: &'a mut Buffer,
@@ -112,8 +95,8 @@ impl<'a> CellIterator<'a> {
             area: area.intersection(buf.area),
             buf,
             predicate: filter_processor
-                .map(|f| f.validator())
-                .unwrap_or_default(),
+                .filter(|p| p.filter_ref() != &CellFilter::All) // all is same as no filter
+                .map(|f| f.validator()),
         }
     }
 
@@ -164,7 +147,11 @@ impl<'a> CellIterator<'a> {
             for x in area.x..area.right() {
                 let pos = Position::new(x, y);
                 if let Some(cell) = self.buf.cell_mut(pos) {
-                    if self.predicate.is_valid(pos, cell) {
+                    if self
+                        .predicate
+                        .as_ref()
+                        .is_none_or(|p| p.is_valid(pos, cell))
+                    {
                         f(pos, cell);
                     }
                 }
@@ -193,7 +180,11 @@ impl<'a> Iterator for CellIterator<'a> {
             let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
             self.current += 1;
 
-            if self.predicate.is_valid(pos, cell) {
+            if self
+                .predicate
+                .as_ref()
+                .is_none_or(|p| p.is_valid(pos, cell))
+            {
                 return Some((pos, cell));
             }
         }

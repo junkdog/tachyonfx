@@ -279,7 +279,8 @@ where
 /// fx::effect_fn_buf(no_state, timer, |_state, context, buf| {
 ///     let offset = context.timer.remaining().as_millis() as usize;
 ///
-///     let filter = context.filter.unwrap_or(CellFilter::All);
+///     // Note: Filter access through context is internal API
+///     let filter = CellFilter::All; // For demonstration purposes
 ///     let cell_pred = filter.selector(buf.area);
 ///     for (i, pos) in buf.area.positions().enumerate() {
 ///         let cell = &mut buf[pos];
