@@ -418,6 +418,22 @@ impl CellFilter {
     pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
         CellPredicate::new(area, self)
     }
+
+    /// Creates a [`CellPredicate`] for efficiently evaluating cells against this filter.
+    ///
+    /// **Deprecated:** Use [`predicate()`](#method.predicate) instead.
+    ///
+    /// # Arguments
+    ///
+    /// * `area` - The rectangular area within which to apply the filter
+    ///
+    /// # Returns
+    ///
+    /// A [`CellPredicate`] that can evaluate individual cells against this filter
+    #[deprecated(since = "0.17.0", note = "Use `predicate()` instead")]
+    pub fn selector(&self, area: Rect) -> CellPredicate<'_> {
+        self.predicate(area)
+    }
 }
 
 impl fmt::Debug for CellFilter {
