@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 
+#[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
 use ratatui::{buffer::Buffer, prelude::Rect};
 

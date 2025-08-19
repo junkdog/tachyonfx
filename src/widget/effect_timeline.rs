@@ -552,8 +552,10 @@ mod tests {
     use ratatui::{prelude::Margin, style::Color::Black};
 
     use super::*;
+    #[cfg(feature = "std")]
+    use crate::buffer_to_ansi_string;
     use crate::{
-        buffer_to_ansi_string, fx,
+        fx,
         fx::{never_complete, parallel, repeating, sequence, with_duration},
         CellFilter,
         CellFilter::{AllOf, Inner, Not, Outer, Text},

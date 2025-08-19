@@ -159,13 +159,12 @@ impl RangeSampler<i32> for SimpleRng {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(not(feature = "std"))]
-    use core::panic;
     #[cfg(feature = "std")]
     use std::panic;
 
     use super::*;
 
+    #[cfg(feature = "std")]
     const RETRY_COUNT: usize = 5;
 
     #[cfg(feature = "std")]

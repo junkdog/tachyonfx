@@ -19,6 +19,7 @@ bon = { version = "3.7.0", default-features = false }
 bitvec = { version = "1.0.1", default-features = false, features = ["alloc"] }
 colorsys = "0.7.0"
 compact_str = "0.9.0"
+# ratatui = { version = "0.29.0", default-features = false }
 ratatui = { version = "0.30.0-alpha.5", default-features = false }
 simple-easing = "1.0.1"
 thiserror = { version = "2.0.15", default-features = false, features = [] }
@@ -33,6 +34,7 @@ criterion = "0.7.0"
 
 [features]
 default = ["std", "crossterm", "dsl"]
+# std = ["thiserror/std", "bon/std"]
 std = ["thiserror/std", "ratatui/std", "bon/std"]
 crossterm = ["std", "ratatui/crossterm"]
 dsl = ["dep:anpa"]
@@ -43,22 +45,32 @@ web-time = ["dep:web-time"]
 
 [[example]]
 name = "minimal"
+required-features = ["std", "crossterm"]
 
 [[example]]
 # for fx module docs
 name = "effect-showcase"
+required-features = ["std", "crossterm"]
 
 [[example]]
 name = "open-window"
+required-features = ["std", "crossterm"]
 
 [[example]]
 name = "basic-effects"
+required-features = ["std", "crossterm"]
 
 [[example]]
 name = "tweens"
+required-features = ["std", "crossterm"]
 
 [[example]]
 name = "fx-chart"
+required-features = ["std", "crossterm"]
+
+[[example]]
+name = "effect-registry"
+required-features = ["std", "crossterm"]
 
 [[bench]]
 name = "color_interpolation"

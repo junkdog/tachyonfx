@@ -2,6 +2,7 @@ use alloc::{boxed::Box, vec::Vec};
 use core::{fmt::Debug, ops::Range};
 
 use bon::{builder, Builder};
+#[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
 use ratatui::{
     buffer::Buffer,

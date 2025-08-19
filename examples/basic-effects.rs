@@ -85,7 +85,7 @@ fn run_app(terminal: &mut Terminal, mut app: App, effects: EffectsRepository) ->
         last_frame_instant = Instant::now();
         terminal.draw(|f| ui(f, &mut app))?;
 
-        if event::poll(StdDuration::from_millis(32))? {
+        if event::poll(StdDuration::from_millis(16))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
