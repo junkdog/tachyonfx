@@ -199,7 +199,7 @@ mod examples {
                 let cell = &mut buf[pos];
                 if cell_pred
                     .as_ref()
-                    .map_or(true, |p| p.is_valid(pos, cell))
+                    .is_some_and(|p| p.is_valid(pos, cell))
                 {
                     cell.set_fg(Color::Indexed(((offset + i) % 256) as u8));
                 }
