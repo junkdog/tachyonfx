@@ -128,7 +128,7 @@ impl Shader for ResizeArea {
         }
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.fx.as_ref().and_then(Effect::cell_filter)
     }
 

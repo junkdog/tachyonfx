@@ -6,8 +6,8 @@ use compact_str::ToCompactString;
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
-    fx::invoke_fn, ref_count, CellFilter, CellIterator, Duration, EffectTimer, RefCount, Shader,
-    ThreadSafetyMarker,
+    cell_filter::FilterProcessor, default_shader_impl, fx::invoke_fn, ref_count, CellFilter,
+    CellIterator, Duration, EffectTimer, RefCount, Shader, ThreadSafetyMarker,
 };
 
 #[derive(Builder, Clone)]
@@ -20,7 +20,7 @@ pub struct ShaderFn<S: Clone> {
     #[builder(into)]
     timer: EffectTimer,
 
-    cell_filter: Option<CellFilter>,
+    cell_filter: Option<FilterProcessor>,
     area: Option<Rect>,
 }
 
@@ -62,13 +62,13 @@ pub struct ShaderFnContext<'a> {
     pub last_tick: Duration,
     pub timer: &'a EffectTimer,
     pub area: Rect,
-    pub filter: Option<CellFilter>,
+    filter: Option<FilterProcessor>,
 }
 
 impl<'a> ShaderFnContext<'a> {
     fn new(
         area: Rect,
-        filter: Option<CellFilter>,
+        filter: Option<FilterProcessor>,
         last_tick: Duration,
         timer: &'a EffectTimer,
     ) -> Self {
@@ -77,6 +77,10 @@ impl<'a> ShaderFnContext<'a> {
 
     pub fn alpha(&self) -> f32 {
         self.timer.alpha()
+    }
+
+    pub fn filter(&self) -> Option<&FilterProcessor> {
+        self.filter.as_ref()
     }
 }
 
@@ -101,7 +105,7 @@ impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
             state,
             code: ShaderFnSignature::new_iter(code),
             timer: timer.into(),
-            cell_filter,
+            cell_filter: cell_filter.map(FilterProcessor::from),
             area,
         }
     }
@@ -125,13 +129,15 @@ impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
             state,
             code: ShaderFnSignature::new_buffer(code),
             timer: timer.into(),
-            cell_filter,
+            cell_filter: cell_filter.map(FilterProcessor::from),
             area,
         }
     }
 }
 
 impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
+    default_shader_impl!(area, timer, filter, clone);
+
     fn name(&self) -> &'static str {
         self.name
     }
@@ -139,45 +145,22 @@ impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let overflow = self.timer.process(duration);
 
+        let cell_filter = self.cell_filter.as_ref().cloned();
+
         match self.code.clone() {
             ShaderFnSignature::Iter(f) => {
-                let cells = self.cell_iter(buf, area);
-                let ctx =
-                    ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
+                let processor = self.cell_filter.as_ref();
+                let cells = CellIterator::new(buf, area, processor);
+                let ctx = ShaderFnContext::new(area, cell_filter, duration, &self.timer);
                 invoke_fn!(f, &mut self.state, ctx, cells)
             },
             ShaderFnSignature::Buffer(f) => {
-                let ctx =
-                    ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
+                let ctx = ShaderFnContext::new(area, cell_filter, duration, &self.timer);
                 invoke_fn!(f, &mut self.state, ctx, buf)
             },
         }
 
         overflow
-    }
-
-    fn done(&self) -> bool {
-        self.timer.done()
-    }
-
-    fn clone_box(&self) -> Box<dyn Shader> {
-        Box::new(self.clone())
-    }
-
-    fn area(&self) -> Option<Rect> {
-        self.area
-    }
-
-    fn set_area(&mut self, area: Rect) {
-        self.area = Some(area);
-    }
-
-    fn filter(&mut self, filter: CellFilter) {
-        self.cell_filter = Some(filter);
-    }
-
-    fn cell_filter(&self) -> Option<CellFilter> {
-        self.cell_filter.clone()
     }
 
     fn reset(&mut self) {

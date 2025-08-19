@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::{
     default_shader_impl, effect_timer::EffectTimer, shader::Shader, simple_rng::SimpleRng,
-    CellFilter, Duration, LruCache,
+    CellFilter, Duration, FilterProcessor, LruCache,
 };
 
 #[derive(Clone, Debug)]
@@ -17,7 +17,7 @@ pub struct Explode {
     force: f32,
     force_rng_factor: f32,
     area: Option<Rect>,
-    cell_filter: Option<CellFilter>,
+    cell_filter: Option<FilterProcessor>,
     #[allow(clippy::type_complexity)]
     sorted_cells: LruCache<Rect, Vec<(Position, (f32, f32))>, 1>,
     replacement_cell: Cell,
@@ -105,8 +105,9 @@ impl Shader for Explode {
         let cell_filter = self
             .cell_filter
             .as_ref()
-            .unwrap_or(&CellFilter::All)
-            .selector(safe_area);
+            .map(|f| f.predicate(safe_area))
+            .unwrap_or(CellFilter::All.predicate(safe_area));
+
         for (pos, (dx, dy)) in cells.iter() {
             let pos = *pos;
             let (dx, dy) = (*dx, *dy);

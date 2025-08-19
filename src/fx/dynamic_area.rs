@@ -101,7 +101,7 @@ impl Shader for DynamicArea {
         self.fx.timer()
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.fx.cell_filter()
     }
 

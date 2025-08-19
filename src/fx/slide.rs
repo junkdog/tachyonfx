@@ -8,8 +8,9 @@ use ratatui::{
 };
 
 use crate::{
-    default_shader_impl, fx::sliding_window_alpha::SlidingWindowAlpha, CellFilter,
-    DirectionalVariance, Duration, EffectTimer, Motion, Shader,
+    cell_filter::FilterProcessor, default_shader_impl,
+    fx::sliding_window_alpha::SlidingWindowAlpha, CellFilter, DirectionalVariance, Duration,
+    EffectTimer, Motion, Shader,
 };
 
 /// A shader that applies a directional sliding effect to terminal cells.
@@ -30,7 +31,7 @@ pub struct SlideCell {
     /// The area within which the effect is applied.
     area: Option<Rect>,
     /// The cell selection strategy used to filter cells.
-    cell_filter: Option<CellFilter>,
+    cell_filter: Option<FilterProcessor>,
 }
 
 impl SlideCell {
@@ -87,8 +88,8 @@ impl Shader for SlideCell {
         let cell_filter = self
             .cell_filter
             .as_ref()
-            .unwrap_or(&CellFilter::All)
-            .selector(area);
+            .map(|f| f.predicate(area))
+            .unwrap_or(CellFilter::All.predicate(area));
 
         if self.randomness_extent == 0
             || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction)

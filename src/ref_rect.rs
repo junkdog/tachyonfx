@@ -97,6 +97,74 @@ impl RefRect {
             self.rect.borrow().contains(position)
         }
     }
+
+    /// Returns the top y-coordinate of the rectangle.
+    ///
+    /// # Returns
+    ///
+    /// The y-coordinate of the top edge
+    pub fn top(&self) -> u16 {
+        #[cfg(feature = "sendable")]
+        {
+            self.rect.lock().unwrap().top()
+        }
+        #[cfg(not(feature = "sendable"))]
+        {
+            self.rect.borrow().top()
+        }
+    }
+
+    /// Returns the bottom y-coordinate of the rectangle (outside the rect).
+    ///
+    /// This is equivalent to `y + height`.
+    ///
+    /// # Returns
+    ///
+    /// The y-coordinate of the bottom edge (exclusive)
+    pub fn bottom(&self) -> u16 {
+        #[cfg(feature = "sendable")]
+        {
+            self.rect.lock().unwrap().bottom()
+        }
+        #[cfg(not(feature = "sendable"))]
+        {
+            self.rect.borrow().bottom()
+        }
+    }
+
+    /// Returns the left x-coordinate of the rectangle.
+    ///
+    /// # Returns
+    ///
+    /// The x-coordinate of the left edge
+    pub fn left(&self) -> u16 {
+        #[cfg(feature = "sendable")]
+        {
+            self.rect.lock().unwrap().left()
+        }
+        #[cfg(not(feature = "sendable"))]
+        {
+            self.rect.borrow().left()
+        }
+    }
+
+    /// Returns the right x-coordinate of the rectangle (outside the rect).
+    ///
+    /// This is equivalent to `x + width`.
+    ///
+    /// # Returns
+    ///
+    /// The x-coordinate of the right edge (exclusive)
+    pub fn right(&self) -> u16 {
+        #[cfg(feature = "sendable")]
+        {
+            self.rect.lock().unwrap().right()
+        }
+        #[cfg(not(feature = "sendable"))]
+        {
+            self.rect.borrow().right()
+        }
+    }
 }
 
 impl Default for RefRect {
@@ -174,5 +242,16 @@ mod tests {
     fn test_ref_rect_default() {
         let ref_rect = RefRect::default();
         assert_eq!(ref_rect.get(), Rect::default());
+    }
+
+    #[test]
+    fn test_ref_rect_edge_methods() {
+        let rect = Rect::new(10, 20, 30, 40);
+        let ref_rect = RefRect::new(rect);
+
+        assert_eq!(ref_rect.top(), 20);
+        assert_eq!(ref_rect.bottom(), 60); // 20 + 40
+        assert_eq!(ref_rect.left(), 10);
+        assert_eq!(ref_rect.right(), 40); // 10 + 30
     }
 }

@@ -10,6 +10,12 @@
     - Old: `memoize_fg(from: Color, to: Color, alpha: f32, f: F) -> Color`
     - New: `memoize_fg(from: Color, context: Context, f: F) -> Color`
     - Removed `to: Color` and `alpha: f32` parameters, replaced with generic `context: Context` parameter
+- **CellFilter API optimization and restructuring**: Significant performance improvements through static filter analysis
+  and bitmask caching, with breaking API changes:
+  - **Method rename**: `CellFilter::selector()` → `CellFilter::predicate()` 
+  - **Lifetime parameter added**: `CellPredicate` now requires lifetime parameter `CellPredicate<'_>`
+  - **Ownership model change**: `CellPredicate` now borrows `CellFilter` instead of owning it
+  - **Performance improvement**: Static filters (Area, Position, etc.) are pre-computed as bitmasks for O(1) lookups
 
 ### Added
 - `CellIterator::for_each_cell()`: Performance-optimized method for iterating over cells without division and

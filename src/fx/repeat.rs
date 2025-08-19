@@ -128,7 +128,7 @@ impl Shader for Repeat {
         EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.fx.cell_filter()
     }
 

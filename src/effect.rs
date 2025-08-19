@@ -118,10 +118,19 @@ impl Shader for Effect {
 
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let area = self.shader.area().unwrap_or(area);
+        if let Some(processor) = self.shader.filter_processor_mut() {
+            processor.update(area);
+        }
+
         self.shader.process(duration, buf, area)
     }
 
     fn execute(&mut self, duration: Duration, area: Rect, buf: &mut Buffer) {
+        let area = self.shader.area().unwrap_or(area);
+        if let Some(processor) = self.shader.filter_processor_mut() {
+            processor.update(area);
+        }
+
         self.shader.execute(duration, area, buf);
     }
 
@@ -157,7 +166,7 @@ impl Shader for Effect {
         self.shader.timer_mut()
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.shader.cell_filter()
     }
 

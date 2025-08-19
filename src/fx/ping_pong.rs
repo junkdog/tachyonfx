@@ -75,8 +75,8 @@ impl Shader for PingPong {
         EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        Some(self.strategy.clone())
+    fn cell_filter(&self) -> Option<&CellFilter> {
+        Some(&self.strategy)
     }
 
     fn set_color_space(&mut self, color_space: ColorSpace) {

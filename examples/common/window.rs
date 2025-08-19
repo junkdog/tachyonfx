@@ -120,7 +120,7 @@ impl Shader for OpenWindow {
             .and_then(Effect::timer)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.pre_render_fx
             .as_ref()
             .and_then(Effect::cell_filter)
