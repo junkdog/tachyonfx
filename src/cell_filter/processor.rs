@@ -354,9 +354,9 @@ fn find_ref_rects(filter: &CellFilter) -> Vec<(Rect, RefRect)> {
 
 /// Computes a bitmask indicating which cells match the given static filter.
 fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
-    let size = area.width * area.height;
+    let size = area.width as usize * area.height as usize;
     let mut cell_indices = BitVec::new();
-    cell_indices.resize(size as _, false);
+    cell_indices.resize(size, false);
 
     let mut activate_area = |r: Rect, v: bool| {
         for y in r.top()..r.bottom() {
