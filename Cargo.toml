@@ -1,3 +1,16 @@
+[workspace]
+members = [
+    ".",
+    "examples/common",
+    "examples/minimal",
+    "examples/basic-effects",
+    "examples/effect-showcase",
+    "examples/open-window",
+    "examples/tweens",
+    "examples/fx-chart",
+    "examples/effect-registry",
+]
+
 [package]
 name = "tachyonfx"
 version = "0.16.0"
@@ -43,34 +56,6 @@ std-duration = ["std"]
 web-time = ["dep:web-time"]
 
 
-[[example]]
-name = "minimal"
-required-features = ["std", "crossterm"]
-
-[[example]]
-# for fx module docs
-name = "effect-showcase"
-required-features = ["std", "crossterm"]
-
-[[example]]
-name = "open-window"
-required-features = ["std", "crossterm"]
-
-[[example]]
-name = "basic-effects"
-required-features = ["std", "crossterm"]
-
-[[example]]
-name = "tweens"
-required-features = ["std", "crossterm"]
-
-[[example]]
-name = "fx-chart"
-required-features = ["std", "crossterm"]
-
-[[example]]
-name = "effect-registry"
-required-features = ["std", "crossterm"]
 
 [[bench]]
 name = "color_interpolation"

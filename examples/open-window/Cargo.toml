@@ -1,0 +1,10 @@
+[package]
+name = "open-window"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tachyonfx = { path = "../.." }
+ratatui = { version = "0.30.0-alpha.5", default-features = false, features = ["std", "crossterm"] }
+crossterm = "0.29.0"
+common = { path = "../common" }

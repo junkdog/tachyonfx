@@ -42,6 +42,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
+name = "basic-effects"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crossterm",
+ "ratatui",
+ "tachyonfx",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -168,6 +178,16 @@ name = "colorsys"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aee37dd2dc25d67ce9bca2709c384843c46d1582158ed5e2483d52b6da30e7d8"
+
+[[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "bon",
+ "crossterm",
+ "ratatui",
+ "tachyonfx",
+]
 
 [[package]]
 name = "compact_str"
@@ -358,6 +378,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "effect-registry"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crossterm",
+ "ratatui",
+ "tachyonfx",
+]
+
+[[package]]
+name = "effect-showcase"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crossterm",
+ "ratatui",
+ "tachyonfx",
+]
+
+[[package]]
 name = "either"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -396,6 +436,15 @@ name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
+
+[[package]]
+name = "fx-chart"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "ratatui",
+ "tachyonfx",
+]
 
 [[package]]
 name = "half"
@@ -555,6 +604,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
+name = "minimal"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "ratatui",
+ "tachyonfx",
+]
+
+[[package]]
 name = "mio"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -602,6 +660,16 @@ name = "oorandom"
 version = "11.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
+
+[[package]]
+name = "open-window"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crossterm",
+ "ratatui",
+ "tachyonfx",
+]
 
 [[package]]
 name = "parking_lot"
@@ -1047,6 +1115,16 @@ checksum = "be4d6b5f19ff7664e8c98d03e2139cb510db9b0a60b55f8e8709b689d939b6bc"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "tweens"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crossterm",
+ "ratatui",
+ "tachyonfx",
 ]
 
 [[package]]
