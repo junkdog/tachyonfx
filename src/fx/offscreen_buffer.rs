@@ -68,7 +68,7 @@ impl Shader for OffscreenBuffer {
         self.fx.filter(filter);
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.fx.cell_filter()
     }
 

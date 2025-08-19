@@ -112,7 +112,7 @@ impl Shader for Glitch {
         self.glitch_cells
             .retain(|cell| cell.cell_idx < buf.content.len());
 
-        let selector = self.selection.selector(area);
+        let predicate = self.selection.predicate(area);
 
         // apply glitches to buffer
         self.glitch_cells
@@ -126,7 +126,7 @@ impl Shader for Glitch {
                     .cell_mut(Position::new(area.x + x as u16, area.y + y as u16))
                     .unwrap();
 
-                if !selector.is_valid(pos, c) {
+                if !predicate.is_valid(pos, c) {
                     return;
                 }
 
@@ -192,8 +192,8 @@ impl Shader for Glitch {
         None
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
-        Some(self.selection.clone())
+    fn cell_filter(&self) -> Option<&CellFilter> {
+        Some(&self.selection)
     }
 
     fn reset(&mut self) {

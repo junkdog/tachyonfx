@@ -97,7 +97,7 @@ impl Shader for Translate {
         Some(self.timer)
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         if let Some(fx) = self.fx.as_ref() {
             return fx.cell_filter();
         }

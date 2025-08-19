@@ -65,7 +65,7 @@ impl Shader for TemporaryEffect {
         EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)])
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.effect.cell_filter()
     }
 

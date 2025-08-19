@@ -34,7 +34,7 @@ pub mod widget;
 pub mod dsl;
 
 pub use buffer_renderer::*;
-pub use cell_filter::{CellFilter, CellPredicate};
+pub use cell_filter::*;
 /// `CellIterator` provides an iterator over terminal cells.
 pub use cell_iter::CellIterator;
 pub use color_cache::ColorCache;

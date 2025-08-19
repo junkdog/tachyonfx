@@ -68,7 +68,7 @@ impl Shader for RunOnce {
         None
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.effect.cell_filter()
     }
 

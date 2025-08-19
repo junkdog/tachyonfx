@@ -7,7 +7,9 @@ use ratatui::{
     prelude::Color,
 };
 
-use crate::{color_ext::ToRgbComponents, ref_count, RefCount, RefRect, ThreadSafetyMarker};
+use crate::{
+    color_ext::ToRgbComponents, ref_count, CellPredicate, RefCount, RefRect, ThreadSafetyMarker,
+};
 
 #[cfg(not(feature = "sendable"))]
 type CellPredFn = RefCount<dyn Fn(&Cell) -> bool>;
@@ -25,38 +27,301 @@ type PositionFnType = RefCount<dyn Fn(Position) -> bool + Send>;
 /// `CellFilter` provides a flexible way to select cells for applying effects based on
 /// their properties such as colors, position, content, or custom predicates. Filters can
 /// be combined using logical operations to create complex selection patterns.
+///
+/// ## Performance Characteristics
+///
+/// Filters are analyzed and categorized as either **static** (cacheable) or **dynamic**
+/// (evaluated per-frame) for performance optimization:
+///
+/// - **Static filters**: Depend only on area geometry and can be pre-computed as
+///   bitmasks. Examples: [`All`](Self::All), [`Area`](Self::Area),
+///   [`Inner`](Self::Inner), [`Layout`](Self::Layout)
+/// - **Dynamic filters**: Depend on cell content and must be evaluated each frame.
+///   Examples: [`FgColor`](Self::FgColor), [`Text`](Self::Text),
+///   [`EvalCell`](Self::EvalCell)
+///
+/// ## Usage in Effects
+///
+/// Cell filters are typically applied to effects using the
+/// [`Effect::with_filter`](crate::Effect::with_filter) method, allowing effects to target
+/// specific subsets of cells:
+///
+/// ```rust
+/// use tachyonfx::{fx, CellFilter};
+/// use ratatui::style::Color;
+/// use ratatui::layout::Margin;
+///
+/// // Apply fade effect only to red text
+/// let effect = fx::fade_to_fg(Color::Blue, (1000, tachyonfx::Interpolation::Linear))
+///     .with_filter(CellFilter::FgColor(Color::Red));
+///
+/// // Apply effect to border area (outer margin)
+/// let border_effect = fx::dissolve(320)
+///     .with_filter(CellFilter::Outer(Margin::new(1, 1)));
+///
+/// // Combine filters with logical operations
+/// let complex_filter = CellFilter::AllOf(vec![
+///     CellFilter::Text,
+///     CellFilter::Inner(Margin::new(2, 1))
+/// ]);
+/// ```
+///
+/// ## Filter Composition
+///
+/// Filters support logical composition for complex selection patterns:
+/// - [`AllOf`](Self::AllOf): All filters must match (AND operation)
+/// - [`AnyOf`](Self::AnyOf): Any filter must match (OR operation)
+/// - [`NoneOf`](Self::NoneOf): No filters must match (NOR operation)
+/// - [`Not`](Self::Not): Inverts the filter result (NOT operation)
 #[derive(Clone, Default)]
 pub enum CellFilter {
-    /// Selects every cell
+    /// Selects every cell in the area (no filtering).
+    ///
+    /// This is the default filter that allows all effects to apply to every cell
+    /// within the specified area. It's the most permissive filter and has optimal
+    /// performance as it requires no evaluation.
     #[default]
     All,
-    /// Selects cells within the specified area
+
+    /// Selects cells within the specified rectangular area.
+    ///
+    /// Only cells whose positions fall within the provided [`Rect`] bounds will be
+    /// selected. This filter is **static** and can be pre-computed as a bitmask
+    /// for optimal performance.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::layout::Rect;
+    ///
+    /// let filter = CellFilter::Area(Rect::new(5, 10, 20, 15));
+    /// // Selects cells in a 20x15 rectangle starting at position (5, 10)
+    /// ```
     Area(Rect),
-    /// Selects cells within the area defined by a RefRect
+
+    /// Selects cells within the area defined by a [`RefRect`](crate::RefRect).
+    ///
+    /// Similar to [`Area`](Self::Area) but uses a reference-counted rectangle that
+    /// can be dynamically updated. This filter is **static** with respect to the
+    /// current rectangle value, but can change when the RefRect is modified.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::{CellFilter, RefRect};
+    /// use ratatui::layout::Rect;
+    ///
+    /// let ref_rect = RefRect::new(Rect::new(0, 0, 10, 10));
+    /// let filter = CellFilter::RefArea(ref_rect.clone());
+    /// // The filter area can be updated by modifying ref_rect
+    /// ref_rect.set(Rect::new(5, 5, 15, 15));
+    /// ```
     RefArea(RefRect),
-    /// Selects cells with matching foreground color
+
+    /// Selects cells with a matching foreground color.
+    ///
+    /// This filter is **dynamic** and must be evaluated each frame as it depends
+    /// on the current cell content. Only cells whose foreground color exactly
+    /// matches the specified color will be selected.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::style::Color;
+    ///
+    /// let filter = CellFilter::FgColor(Color::Red);
+    /// // Selects only cells with red foreground color
+    /// ```
     FgColor(Color),
-    /// Selects cells with matching background color
+
+    /// Selects cells with a matching background color.
+    ///
+    /// This filter is **dynamic** and must be evaluated each frame as it depends
+    /// on the current cell content. Only cells whose background color exactly
+    /// matches the specified color will be selected.
+    ///
+    /// # Example  
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::style::Color;
+    ///
+    /// let filter = CellFilter::BgColor(Color::Blue);
+    /// // Selects only cells with blue background color
+    /// ```
     BgColor(Color),
-    /// Selects cells within the inner margin of the area
+
+    /// Selects cells within the inner margin of the area.
+    ///
+    /// Creates an inner rectangle by applying the specified margin inward from
+    /// the area boundaries. This filter is **static** and can be pre-computed.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::layout::Margin;
+    ///
+    /// let filter = CellFilter::Inner(Margin::new(2, 1));
+    /// // Selects cells 2 columns and 1 row inward from the edges
+    /// ```
     Inner(Margin),
-    /// Selects cells outside the inner margin of the area
+
+    /// Selects cells outside the inner margin of the area (border region).
+    ///
+    /// Selects all cells except those within the inner margin, effectively
+    /// creating a border or frame effect. This filter is **static** and can be
+    /// pre-computed.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::layout::Margin;
+    ///
+    /// let filter = CellFilter::Outer(Margin::new(1, 1));
+    /// // Selects cells in the outer 1-cell border around the area
+    /// ```
     Outer(Margin),
-    /// Selects cells with text
+
+    /// Selects cells containing textual content.
+    ///
+    /// This filter is **dynamic** and identifies cells that contain characters
+    /// typically considered text: alphabetic characters, numeric characters,
+    /// spaces, and common punctuation (`?!.,:;()`). Empty cells and cells with
+    /// purely graphical characters are excluded.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    ///
+    /// let filter = CellFilter::Text;
+    /// // Selects cells containing letters, numbers, or common punctuation
+    /// ```
     Text,
-    /// Selects cells that match all the given filters
+
+    /// Selects cells that match ALL of the given filters (logical AND).
+    ///
+    /// A cell must satisfy every filter in the collection to be selected. The
+    /// performance characteristics depend on the constituent filters - if all
+    /// filters are **static**, the result can be pre-computed.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::style::Color;
+    /// use ratatui::layout::Margin;
+    ///
+    /// let filter = CellFilter::AllOf(vec![
+    ///     CellFilter::Text,
+    ///     CellFilter::FgColor(Color::Red),
+    ///     CellFilter::Inner(Margin::new(1, 1))
+    /// ]);
+    /// // Selects red text within the inner margin
+    /// ```
     AllOf(Vec<CellFilter>),
-    /// Selects cells that match any of the given filters
+
+    /// Selects cells that match ANY of the given filters (logical OR).
+    ///
+    /// A cell needs to satisfy only one filter in the collection to be selected.
+    /// The performance characteristics depend on the constituent filters.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::style::Color;
+    ///
+    /// let filter = CellFilter::AnyOf(vec![
+    ///     CellFilter::FgColor(Color::Red),
+    ///     CellFilter::BgColor(Color::Blue)
+    /// ]);
+    /// // Selects cells that are either red text or have blue background
+    /// ```
     AnyOf(Vec<CellFilter>),
-    /// Selects cells that do not match any of the given filters
+
+    /// Selects cells that match NONE of the given filters (logical NOR).
+    ///
+    /// A cell must fail to satisfy every filter in the collection to be selected.
+    /// This is equivalent to NOT(AnyOf(filters)).
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::style::Color;
+    ///
+    /// let filter = CellFilter::NoneOf(vec![
+    ///     CellFilter::FgColor(Color::Red),
+    ///     CellFilter::Text
+    /// ]);
+    /// // Selects cells that are neither red nor contain text
+    /// ```
     NoneOf(Vec<CellFilter>),
-    /// Negates the given filter
+
+    /// Inverts the result of the given filter (logical NOT).
+    ///
+    /// Selects cells that do NOT match the inner filter. The performance
+    /// characteristics match those of the inner filter.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::layout::Margin;
+    ///
+    /// let filter = CellFilter::Not(Box::new(
+    ///     CellFilter::Inner(Margin::new(2, 2))
+    /// ));
+    /// // Selects all cells except those in the inner area
+    /// ```
     Not(Box<CellFilter>),
-    /// Selects cells within the specified layout, denoted by the index
+
+    /// Selects cells within a specific section of a layout.
+    ///
+    /// Uses ratatui's [`Layout`](ratatui::layout::Layout) system to split the area
+    /// and selects cells within the section specified by the index. This filter
+    /// is **static** and can be pre-computed.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::layout::{Layout, Constraint, Direction};
+    ///
+    /// let layout = Layout::default()
+    ///     .direction(Direction::Horizontal)
+    ///     .constraints([Constraint::Percentage(50), Constraint::Percentage(50)]);
+    ///
+    /// let filter = CellFilter::Layout(layout, 0);
+    /// // Selects cells in the left half of the area
+    /// ```
     Layout(layout::Layout, u16),
-    /// Selects cells by predicate function
+
+    /// Selects cells using a custom position-based predicate function.
+    ///
+    /// Provides maximum flexibility by allowing custom logic based on cell
+    /// position. The function receives a [`Position`] and returns `true` for
+    /// cells that should be selected. This filter is **dynamic**.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::{CellFilter, ref_count};
+    /// use ratatui::layout::Position;
+    ///
+    /// let filter = CellFilter::PositionFn(ref_count(|pos: Position| {
+    ///     (pos.x + pos.y) % 2 == 0  // Checkerboard pattern
+    /// }));
+    /// ```
     PositionFn(PositionFnType),
-    /// Selects cells by predicate function
+
+    /// Selects cells using a custom cell-content-based predicate function.
+    ///
+    /// Provides maximum flexibility by allowing custom logic based on the
+    /// entire cell content. The function receives a [`Cell`] and returns `true`
+    /// for cells that should be selected. This filter is **dynamic**.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::{CellFilter, ref_count};
+    /// use ratatui::buffer::Cell;
+    ///
+    /// let filter = CellFilter::eval_cell(|cell: &Cell| {
+    ///     cell.symbol().len() > 1  // Multi-character symbols
+    /// });
+    /// ```
     EvalCell(CellPredFn),
 }
 
@@ -122,123 +387,52 @@ impl CellFilter {
             CellFilter::EvalCell(_) => "eval_cell".to_string(),
         }
     }
-}
 
-/// A predicate that evaluates cells based on their position and properties using a
-/// specified filter strategy.
-///
-/// `CellPredicate` is created internally by `CellFilter`'s `selector` method and serves
-/// as the evaluation engine for cell filtering operations. It combines spatial awareness
-/// (via a rectangular area) with content-based filtering rules to determine which cells
-/// should be included in operations.
-///
-/// See also [crate::Shader::cell_iter].
-pub struct CellPredicate {
-    /// The effective area for cell evaluation after applying any area-modifying filters.
-    /// This may be different from the original area if the filter modifies spatial bounds
-    /// (e.g., margins or layout sections).
-    filter_area: Rect,
-
-    /// The filter strategy that defines the criteria cells must meet to be considered
-    /// valid. This strategy can combine multiple filters using logical operations
-    /// (AND, OR, NOT) and can include both position-based and content-based criteria.
-    strategy: CellFilter,
-}
-
-impl CellPredicate {
-    /// Creates a new `CellPredicate` with the specified area and filter strategy.
+    /// Creates a [`CellPredicate`] for efficiently evaluating cells against this filter.
     ///
-    /// The provided area may be modified based on the filter strategy (e.g., for
-    /// margin-based filters).
+    /// The predicate combines the filter strategy with a specific area to create
+    /// an evaluation engine that can determine which cells match the filter criteria.
+    /// This method is primarily used internally by the effect system.
     ///
     /// # Arguments
-    /// * `area` - The initial rectangular area for cell evaluation
-    /// * `strategy` - The filter strategy to apply
-    fn new(area: Rect, strategy: CellFilter) -> Self {
-        let filter_area = Self::resolve_area(area, &strategy);
-
-        Self { filter_area, strategy }
-    }
-
-    fn resolve_area(area: Rect, mode: &CellFilter) -> Rect {
-        match mode {
-            CellFilter::All => area,
-            CellFilter::Area(r) => area.intersection(*r),
-            CellFilter::RefArea(ref_rect) => area.intersection(ref_rect.get()),
-            CellFilter::Inner(margin) => area.inner(*margin),
-            CellFilter::Outer(margin) => area.inner(*margin),
-            CellFilter::Text => area,
-            CellFilter::AllOf(_) => area,
-            CellFilter::AnyOf(_) => area,
-            CellFilter::NoneOf(_) => area,
-            CellFilter::Not(m) => Self::resolve_area(area, m.as_ref()),
-            CellFilter::FgColor(_) => area,
-            CellFilter::BgColor(_) => area,
-            CellFilter::Layout(layout, idx) => layout.split(area)[*idx as usize],
-            CellFilter::PositionFn(_) => area,
-            CellFilter::EvalCell(_) => area,
-        }
-    }
-
-    /// Determines if a cell at the given position meets the filter criteria.
-    ///
-    /// This method combines position-based and cell-content-based filtering to make
-    /// the final determination.
-    ///
-    /// # Arguments
-    /// * `pos` - The position to evaluate
-    /// * `cell` - The cell at the given position
+    /// * `area` - The rectangular area within which cells will be evaluated
     ///
     /// # Returns
-    /// `true` if the cell meets all filter criteria, `false` otherwise
-    pub fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
-        match &self.strategy {
-            CellFilter::All => true,
-            CellFilter::Area(_) => self.filter_area.contains(pos),
-            CellFilter::RefArea(_) => self.filter_area.contains(pos),
-            CellFilter::Layout(_, _) => self.filter_area.contains(pos),
-            CellFilter::Inner(_) => self.filter_area.contains(pos),
-            CellFilter::Outer(_) => !self.filter_area.contains(pos),
-            CellFilter::Text => {
-                let ch = cell.symbol().chars().next().unwrap();
-                ch.is_alphabetic() || ch.is_numeric() || " ?!.,:;()".contains(ch)
-            },
-            CellFilter::AllOf(s) => s.iter().all(|mode| {
-                mode.selector(self.filter_area)
-                    .is_valid(pos, cell)
-            }),
-            CellFilter::AnyOf(s) => s.iter().any(|mode| {
-                mode.selector(self.filter_area)
-                    .is_valid(pos, cell)
-            }),
-            CellFilter::NoneOf(s) => s.iter().all(|mode| {
-                !mode
-                    .selector(self.filter_area)
-                    .is_valid(pos, cell)
-            }),
-            CellFilter::Not(m) => !m.selector(self.filter_area).is_valid(pos, cell),
-            // CellFilter::Not(m)        => !self.valid_position(pos, m.as_ref()),
-            CellFilter::FgColor(c) => cell.fg == *c,
-            CellFilter::BgColor(c) => cell.bg == *c,
-            CellFilter::PositionFn(f) => {
-                #[cfg(not(feature = "sendable"))]
-                return f.borrow()(pos);
-                #[cfg(feature = "sendable")]
-                return f.lock().unwrap()(pos);
-            },
-            CellFilter::EvalCell(f) => {
-                #[cfg(not(feature = "sendable"))]
-                return f.borrow()(cell);
-                #[cfg(feature = "sendable")]
-                return f.lock().unwrap()(cell);
-            },
-        }
+    /// A [`CellPredicate`] that can evaluate individual cells against this filter
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    /// use ratatui::layout::{Rect, Position};
+    /// use ratatui::buffer::Cell;
+    ///
+    /// let filter = CellFilter::Text;
+    /// let area = Rect::new(0, 0, 10, 10);
+    /// let predicate = filter.predicate(area);
+    ///
+    /// // Check if a specific cell matches the filter
+    /// let cell = Cell::new("A");
+    /// let pos = Position::new(5, 5);
+    /// let matches = predicate.is_valid(pos, &cell);
+    /// ```
+    pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
+        CellPredicate::new(area, self)
     }
-}
 
-impl CellFilter {
-    pub fn selector(&self, area: Rect) -> CellPredicate {
-        CellPredicate::new(area, self.clone())
+    /// Creates a [`CellPredicate`] for efficiently evaluating cells against this filter.
+    ///
+    /// **Deprecated:** Use [`predicate()`](#method.predicate) instead.
+    ///
+    /// # Arguments
+    ///
+    /// * `area` - The rectangular area within which to apply the filter
+    ///
+    /// # Returns
+    ///
+    /// A [`CellPredicate`] that can evaluate individual cells against this filter
+    #[deprecated(since = "0.17.0", note = "Use `predicate()` instead")]
+    pub fn selector(&self, area: Rect) -> CellPredicate<'_> {
+        self.predicate(area)
     }
 }
 

@@ -75,7 +75,7 @@ impl Shader for Unique {
         self.fx.timer()
     }
 
-    fn cell_filter(&self) -> Option<CellFilter> {
+    fn cell_filter(&self) -> Option<&CellFilter> {
         self.fx.cell_filter()
     }
 
