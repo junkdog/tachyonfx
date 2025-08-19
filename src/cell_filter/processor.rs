@@ -25,22 +25,6 @@ use crate::{
 ///
 /// This optimization can provide significant performance improvements, especially for
 /// complex static filters that would otherwise require expensive per-cell evaluation.
-///
-/// ## Usage
-///
-/// `FilterProcessor` is typically created automatically when a [`CellFilter`] is applied
-/// to an effect. The processor handles the complexity of choosing the optimal evaluation
-/// strategy transparently.
-///
-/// ```rust
-/// # use tachyonfx::CellFilter;
-/// # use ratatui::layout::{Rect, Margin};
-/// # use tachyonfx::cell_filter::FilterProcessor;  // Note: this is internal
-/// # let filter = CellFilter::Inner(Margin::new(1, 1));
-/// # let processor = FilterProcessor::new(filter);
-/// // FilterProcessor automatically chooses static optimization for geometric filters
-/// // and dynamic evaluation for content-dependent filters
-/// ```
 #[derive(Debug, Clone)]
 pub enum FilterProcessor {
     /// Optimized processor for static filters using pre-computed bitmasks.
