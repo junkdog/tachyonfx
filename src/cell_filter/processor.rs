@@ -302,19 +302,16 @@ impl StaticFilterProcessor {
     ///
     /// # Returns
     /// `true` if recomputation is needed, `false` if the current bitmask is valid
-    fn requires_resize(&mut self, area: Rect) -> bool {
+    fn requires_resize(&self, area: Rect) -> bool {
+        let area_changed = area != self.last_active_area;
+
         for (rect, ref_rect) in &self.ref_rects {
             if rect != &ref_rect.get() {
                 return true; // Area has changed, need to recalculate
             }
         }
 
-        if self.last_active_area != area {
-            self.last_active_area = area;
-            return true; // Area has changed, need to recalculate
-        }
-
-        false
+        area_changed
     }
 }
 
