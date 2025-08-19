@@ -10,30 +10,64 @@ use crate::{
     cell_filter::{analyzer::FilterType, FilterAnalyzer},
     CellFilter, CellPredicate, RefRect,
 };
-// struct FilterProcessor {
-//     area: Option<Rect>,
-// }
-//
-// enum Op {
-//     AllOf,
-//     NoneOf,
-//     AnyOf,
-//     Not,
-// }
-//
-// enum FilterAction {
-//     Dynamic(CellFilter),
-//     Hybrid(Op, Vec<CellFilter>),
-//     Static(StaticFilterProcessor),
-// }
 
+/// High-level processor that optimizes filter evaluation based on filter characteristics.
+///
+/// The `FilterProcessor` serves as the main entry point for filter processing,
+/// automatically choosing between static (pre-computed bitmask) and dynamic (per-cell
+/// evaluation) strategies based on the filter's analysis result.
+///
+/// ## Performance Optimization Strategy
+///
+/// - **Static filters**: Pre-computed as bit vectors for O(1) lookup per cell
+/// - **Dynamic filters**: Evaluated per-cell using [`CellPredicate`] for maximum
+///   flexibility
+///
+/// This optimization can provide significant performance improvements, especially for
+/// complex static filters that would otherwise require expensive per-cell evaluation.
+///
+/// ## Usage
+///
+/// `FilterProcessor` is typically created automatically when a [`CellFilter`] is applied
+/// to an effect. The processor handles the complexity of choosing the optimal evaluation
+/// strategy transparently.
+///
+/// ```rust
+/// # use tachyonfx::CellFilter;
+/// # use ratatui::layout::{Rect, Margin};
+/// # use tachyonfx::cell_filter::FilterProcessor;  // Note: this is internal
+/// # let filter = CellFilter::Inner(Margin::new(1, 1));
+/// # let processor = FilterProcessor::new(filter);
+/// // FilterProcessor automatically chooses static optimization for geometric filters
+/// // and dynamic evaluation for content-dependent filters
+/// ```
 #[derive(Debug, Clone)]
 pub enum FilterProcessor {
+    /// Optimized processor for static filters using pre-computed bitmasks.
+    ///
+    /// Contains a [`StaticFilterProcessor`] that has pre-computed which cells
+    /// match the filter criteria, allowing for O(1) validation per cell.
     Static(StaticFilterProcessor),
+
+    /// Direct evaluation processor for dynamic filters.
+    ///
+    /// Stores the original [`CellFilter`] and area for per-cell evaluation
+    /// using [`CellPredicate`]. Required for filters that depend on cell content.
     Dynamic(CellFilter, Rect),
 }
 
 impl FilterProcessor {
+    /// Creates a [`CellPredicate`] for evaluating cells against the processed filter.
+    ///
+    /// This method provides a unified interface regardless of whether the filter
+    /// is processed statically or dynamically. The returned predicate can be used
+    /// to test individual cells against the filter criteria.
+    ///
+    /// # Arguments
+    /// * `area` - The rectangular area for cell evaluation
+    ///
+    /// # Returns
+    /// A [`CellPredicate`] configured for the specified area
     pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
         match self {
             FilterProcessor::Static(processor) => processor.filter.predicate(area),
@@ -41,6 +75,17 @@ impl FilterProcessor {
         }
     }
 
+    /// Creates a new `FilterProcessor` for the given filter, automatically choosing
+    /// the optimal processing strategy.
+    ///
+    /// The processor analyzes the filter to determine if it can be statically
+    /// optimized (pre-computed as a bitmask) or requires dynamic evaluation.
+    ///
+    /// # Arguments
+    /// * `filter` - The [`CellFilter`] to process
+    ///
+    /// # Returns
+    /// A `FilterProcessor` configured with the optimal strategy
     pub(crate) fn new(filter: CellFilter) -> Self {
         let area = Rect::default();
         match filter.analyze() {
@@ -49,6 +94,15 @@ impl FilterProcessor {
         }
     }
 
+    /// Updates the processor with a new area, potentially triggering recomputation
+    /// of static filter bitmasks.
+    ///
+    /// For static processors, this may cause expensive recomputation if the area
+    /// has changed significantly. For dynamic processors, this simply updates the
+    /// stored area for future predicate creation.
+    ///
+    /// # Arguments
+    /// * `area` - The new rectangular area for filter evaluation
     pub(crate) fn update(&mut self, area: Rect) {
         match self {
             FilterProcessor::Static(processor) => processor.update(area),
@@ -56,6 +110,14 @@ impl FilterProcessor {
         }
     }
 
+    /// Creates a [`CellValidator`] for efficient cell-by-cell validation.
+    ///
+    /// The validator provides an optimized interface for checking if individual
+    /// cells match the filter criteria, automatically using the most efficient
+    /// validation strategy based on the filter type.
+    ///
+    /// # Returns
+    /// A [`CellValidator`] configured for optimal performance
     pub(crate) fn validator(&self) -> CellValidator<'_> {
         match self {
             FilterProcessor::Static(processor) => CellValidator::Static(processor),
@@ -65,6 +127,13 @@ impl FilterProcessor {
         }
     }
 
+    /// Returns a reference to the underlying [`CellFilter`].
+    ///
+    /// This method provides access to the original filter regardless of how
+    /// it's being processed internally.
+    ///
+    /// # Returns
+    /// A reference to the underlying [`CellFilter`]
     pub(crate) fn filter_ref(&self) -> &CellFilter {
         match self {
             FilterProcessor::Static(processor) => &processor.filter,
@@ -73,12 +142,22 @@ impl FilterProcessor {
     }
 }
 
+/// Optimized validator for efficiently checking individual cells against filter criteria.
+///
+/// `CellValidator` provides a unified interface for cell validation while automatically
+/// using the most efficient validation strategy based on the filter type. It abstracts
+/// over the difference between static (bitmask-based) and dynamic (predicate-based)
+/// validation methods.
 pub(crate) enum CellValidator<'a> {
+    /// Validator using pre-computed static filter bitmask for O(1) validation.
     Static(&'a StaticFilterProcessor),
+
+    /// Validator using dynamic predicate evaluation for content-dependent filters.
     Dynamic(CellPredicate<'a>),
 }
 
 impl CellValidator<'_> {
+    /// Determines if a cell at the given position meets the filter criteria.
     pub(crate) fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
         match self {
             CellValidator::Static(processor) => processor.is_valid(pos),
@@ -87,11 +166,54 @@ impl CellValidator<'_> {
     }
 }
 
+/// Optimized processor for static filters using pre-computed bitmasks.
+///
+/// `StaticFilterProcessor` provides significant performance improvements for filters
+/// that depend only on cell positions and area geometry. It pre-computes which cells
+/// match the filter criteria and stores the results as a bit vector, enabling O(1)
+/// cell validation.
+///
+/// ## Supported Filter Types
+///
+/// Static processing works for filters that depend only on geometry:
+/// - [`CellFilter::All`], [`CellFilter::Area`], [`CellFilter::Inner`],
+///   [`CellFilter::Outer`]
+/// - [`CellFilter::Layout`] (layout-based selections)
+/// - [`CellFilter::RefArea`] (with dynamic area tracking)
+/// - Logical combinations of static filters ([`CellFilter::AllOf`],
+///   [`CellFilter::AnyOf`], etc.)
+///
+/// ## Memory Usage
+///
+/// The bitmask requires 1 bit per cell in the area, so memory usage is:
+/// `area.width * area.height` bits, or roughly `area.width * area.height / 8` bytes.
+/// For a typical 80x24 terminal area, this uses about 240 bytes.
 #[derive(Debug, Clone)]
 pub struct StaticFilterProcessor {
+    /// The original filter being processed.
+    ///
+    /// Stored for predicate creation and debugging purposes. The actual filtering
+    /// logic is pre-computed and stored in the bitmask.
     filter: CellFilter,
+
+    /// Pre-computed bitmask indicating which cells match the filter.
+    ///
+    /// Each bit corresponds to a cell position in row-major order:
+    /// `index = y * area_width + x`. A `true` bit indicates the cell at that
+    /// position matches the filter criteria.
     cell_indices: BitVec,
+
+    /// The area for which the current bitmask was computed.
+    ///
+    /// Used to determine when recomputation is necessary due to area changes.
+    /// When the area changes, the entire bitmask must be recalculated.
     last_active_area: Rect,
+
+    /// Cached RefRect values for change detection.
+    ///
+    /// Stores the `(area, RefRect)` pairs that were used during the last bitmask
+    /// computation. When any RefRect value changes, the bitmask must be recomputed
+    /// to reflect the new geometry.
     ref_rects: Vec<(Rect, RefRect)>,
 }
 
@@ -102,6 +224,17 @@ impl From<CellFilter> for FilterProcessor {
 }
 
 impl StaticFilterProcessor {
+    /// Creates a new static filter processor for the given filter.
+    ///
+    /// The processor initializes with an empty bitmask that will be computed
+    /// on the first call to [`update`](Self::update). RefRect dependencies
+    /// are analyzed and cached for change detection.
+    ///
+    /// # Arguments
+    /// * `filter` - The static filter to be processed
+    ///
+    /// # Returns
+    /// A new `StaticFilterProcessor` ready for area updates
     fn new(filter: CellFilter) -> Self {
         let ref_rects = find_ref_rects(&filter);
 
@@ -113,11 +246,40 @@ impl StaticFilterProcessor {
         }
     }
 
+    /// Validates if a cell at the given position matches the filter criteria.
+    ///
+    /// Performs O(1) validation by looking up the position in the pre-computed
+    /// bitmask. The position is converted to a bit index using row-major ordering.
+    ///
+    /// # Arguments
+    /// * `pos` - The position to validate
+    ///
+    /// # Returns
+    /// `true` if the cell at the position matches the filter, `false` otherwise
+    ///
+    /// # Panics
+    /// This method assumes the bitmask has been computed via [`update`](Self::update).
+    /// Using it before calling `update` may result in incorrect behavior.
     fn is_valid(&self, pos: Position) -> bool {
         let row_offset = pos.y as usize * self.last_active_area.width as usize;
         self.is_valid_index(row_offset + pos.x as usize)
     }
 
+    /// Updates the processor for a new area, recomputing the bitmask if necessary.
+    ///
+    /// The bitmask is only recomputed if:
+    /// - The area dimensions or position have changed
+    /// - Any RefRect dependencies have been modified
+    ///
+    /// This method can be expensive for large areas with complex filters, as it
+    /// must evaluate the filter for every cell position.
+    ///
+    /// # Arguments
+    /// * `area` - The new area for filter processing
+    ///
+    /// # Performance
+    /// - Best case (no changes): O(1)
+    /// - Worst case (recomputation): O(area.width * area.height * filter_complexity)
     fn update(&mut self, area: Rect) {
         if self.requires_resize(area) {
             self.cell_indices = calculate_cell_indices(area, &self.filter);
@@ -126,6 +288,16 @@ impl StaticFilterProcessor {
         }
     }
 
+    /// Validates if a bit index in the bitmask indicates a matching cell.
+    ///
+    /// Internal method that performs bounds checking and bitmask lookup.
+    /// The index should be computed as `y * area_width + x`.
+    ///
+    /// # Arguments
+    /// * `index` - The bit index to check
+    ///
+    /// # Returns
+    /// `true` if the index is valid and the bit is set, `false` otherwise
     fn is_valid_index(&self, index: usize) -> bool {
         if index >= self.cell_indices.len() {
             return false; // Out of bounds
@@ -134,6 +306,17 @@ impl StaticFilterProcessor {
         self.cell_indices[index]
     }
 
+    /// Determines if the bitmask needs to be recomputed for the given area.
+    ///
+    /// Checks for area changes and RefRect modifications that would invalidate
+    /// the current bitmask. This method also updates the cached area to detect
+    /// future changes.
+    ///
+    /// # Arguments
+    /// * `area` - The area to check against cached state
+    ///
+    /// # Returns
+    /// `true` if recomputation is needed, `false` if the current bitmask is valid
     fn requires_resize(&mut self, area: Rect) -> bool {
         for (rect, ref_rect) in &self.ref_rects {
             if rect != &area || ref_rect.get() != area {
@@ -150,6 +333,7 @@ impl StaticFilterProcessor {
     }
 }
 
+/// Recursively finds all RefRect dependencies within a filter tree.
 fn find_ref_rects(filter: &CellFilter) -> Vec<(Rect, RefRect)> {
     let mut ref_rects = Vec::new();
 
@@ -168,6 +352,7 @@ fn find_ref_rects(filter: &CellFilter) -> Vec<(Rect, RefRect)> {
     ref_rects
 }
 
+/// Computes a bitmask indicating which cells match the given static filter.
 fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
     let size = area.width * area.height;
     let mut cell_indices = BitVec::new();
