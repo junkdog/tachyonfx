@@ -34,10 +34,10 @@ pub enum FilterProcessor {
 }
 
 impl FilterProcessor {
-    pub fn selector(&self, area: Rect) -> CellPredicate<'_> {
+    pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
         match self {
-            FilterProcessor::Static(processor) => processor.filter.selector(area),
-            FilterProcessor::Dynamic(filter, _) => filter.selector(area),
+            FilterProcessor::Static(processor) => processor.filter.predicate(area),
+            FilterProcessor::Dynamic(filter, _) => filter.predicate(area),
         }
     }
 
@@ -60,7 +60,7 @@ impl FilterProcessor {
         match self {
             FilterProcessor::Static(processor) => CellValidator::Static(processor),
             FilterProcessor::Dynamic(filter, area) => {
-                CellValidator::Dynamic(filter.selector(*area))
+                CellValidator::Dynamic(filter.predicate(*area))
             },
         }
     }

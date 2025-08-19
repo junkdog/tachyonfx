@@ -8,7 +8,7 @@ use crate::CellFilter;
 /// A predicate that evaluates cells based on their position and properties using a
 /// specified filter strategy.
 ///
-/// `CellPredicate` is created internally by `CellFilter`'s `selector` method and serves
+/// `CellPredicate` is created internally by `CellFilter`'s `predicate` method and serves
 /// as the evaluation engine for cell filtering operations. It combines spatial awareness
 /// (via a rectangular area) with content-based filtering rules to determine which cells
 /// should be included in operations.
@@ -85,19 +85,19 @@ impl<'a> CellPredicate<'a> {
                 ch.is_alphabetic() || ch.is_numeric() || " ?!.,:;()".contains(ch)
             },
             CellFilter::AllOf(s) => s.iter().all(|mode| {
-                mode.selector(self.filter_area)
+                mode.predicate(self.filter_area)
                     .is_valid(pos, cell)
             }),
             CellFilter::AnyOf(s) => s.iter().any(|mode| {
-                mode.selector(self.filter_area)
+                mode.predicate(self.filter_area)
                     .is_valid(pos, cell)
             }),
             CellFilter::NoneOf(s) => s.iter().all(|mode| {
                 !mode
-                    .selector(self.filter_area)
+                    .predicate(self.filter_area)
                     .is_valid(pos, cell)
             }),
-            CellFilter::Not(m) => !m.selector(self.filter_area).is_valid(pos, cell),
+            CellFilter::Not(m) => !m.predicate(self.filter_area).is_valid(pos, cell),
             CellFilter::FgColor(c) => cell.fg == *c,
             CellFilter::BgColor(c) => cell.bg == *c,
             CellFilter::PositionFn(f) => {

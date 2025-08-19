@@ -281,7 +281,7 @@ where
 ///
 ///     // Note: Filter access through context is internal API
 ///     let filter = CellFilter::All; // For demonstration purposes
-///     let cell_pred = filter.selector(buf.area);
+///     let cell_pred = filter.predicate(buf.area);
 ///     for (i, pos) in buf.area.positions().enumerate() {
 ///         let cell = &mut buf[pos];
 ///         if !cell_pred.is_valid(pos, &cell) {

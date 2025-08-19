@@ -106,8 +106,8 @@ impl Shader for SweepIn {
         let cell_filter = self
             .cell_filter
             .as_ref()
-            .map(|f| f.selector(area))
-            .unwrap_or(CellFilter::All.selector(area));
+            .map(|f| f.predicate(area))
+            .unwrap_or(CellFilter::All.predicate(area));
 
         if self.randomness_extent == 0
             || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction)
