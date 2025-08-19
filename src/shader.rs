@@ -3,8 +3,8 @@ use std::fmt::Debug;
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
-    cell_iter::CellIterator, widget::EffectSpan, CellFilter, ColorSpace, Duration, EffectTimer,
-    ThreadSafetyMarker,
+    cell_filter::FilterProcessor, cell_iter::CellIterator, widget::EffectSpan, CellFilter,
+    ColorSpace, Duration, EffectTimer, ThreadSafetyMarker,
 };
 
 /// A trait representing a shader-like object that can be processed for a duration.
@@ -82,7 +82,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// # Returns
     /// * A [CellIterator] over the cells in the specified area.
     fn cell_iter<'a>(&'a mut self, buf: &'a mut Buffer, area: Rect) -> CellIterator<'a> {
-        CellIterator::new(buf, area, self.cell_filter())
+        CellIterator::new(buf, area, self.filter_processor())
     }
 
     /// Returns true if the shader effect is done.
@@ -190,6 +190,19 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// # Returns
     /// * An `Option` containing the shader's `CellFilter`, or `None` if not applicable.
     fn cell_filter(&self) -> Option<&CellFilter> {
+        None
+    }
+
+    /// Returns the shader's filter processor for selective cell processing.
+    ///
+    /// # Returns
+    /// * An `Option` containing the shader's `FilterProcessor`, or `None` if not
+    ///   applicable.
+    fn filter_processor(&self) -> Option<&FilterProcessor> {
+        None
+    }
+
+    fn filter_processor_mut(&mut self) -> Option<&mut FilterProcessor> {
         None
     }
 
@@ -309,6 +322,15 @@ macro_rules! default_shader_impl {
 
         fn cell_filter(&self) -> Option<&CellFilter> {
             self.cell_filter.as_ref().map(|f| f.filter_ref())
+        }
+
+        fn filter_processor(&self) -> Option<&FilterProcessor> {
+            self.cell_filter.as_ref()
+        }
+
+
+        fn filter_processor_mut(&mut self) -> Option<&mut FilterProcessor> {
+            self.cell_filter.as_mut()
         }
     };
 

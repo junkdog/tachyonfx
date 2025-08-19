@@ -1,7 +1,7 @@
 use crate::CellFilter;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) enum FilterType {
+pub(crate) enum FilterType {
     #[default]
     Static,
     Dynamic,

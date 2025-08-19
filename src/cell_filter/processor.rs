@@ -1,6 +1,6 @@
 use std::ops::{BitAnd, BitOr, Not};
 
-use bitvec::{bits, bitvec, vec::BitVec};
+use bitvec::vec::BitVec;
 use ratatui::{
     buffer::Cell,
     layout::{Position, Rect},
@@ -28,7 +28,7 @@ use crate::{
 // }
 
 #[derive(Debug, Clone)]
-pub(crate) enum FilterProcessor {
+pub enum FilterProcessor {
     Static(StaticFilterProcessor),
     Dynamic(CellFilter, Rect),
 }
@@ -44,21 +44,24 @@ impl FilterProcessor {
     pub(crate) fn new(filter: CellFilter) -> Self {
         let area = Rect::default();
         match filter.analyze() {
-            FilterType::Static => FilterProcessor::Static(StaticFilterProcessor::new(filter, area)),
+            FilterType::Static => FilterProcessor::Static(StaticFilterProcessor::new(filter)),
             FilterType::Dynamic => FilterProcessor::Dynamic(filter, area),
         }
     }
 
     pub(crate) fn update(&mut self, area: Rect) {
-        if let FilterProcessor::Static(processor) = self {
-            processor.update(area);
+        match self {
+            FilterProcessor::Static(processor) => processor.update(area),
+            FilterProcessor::Dynamic(_, a) => *a = area,
         }
     }
 
-    pub(crate) fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
+    pub(crate) fn validator(&self) -> CellValidator<'_> {
         match self {
-            FilterProcessor::Static(processor) => processor.is_valid(pos),
-            FilterProcessor::Dynamic(filter, area) => filter.selector(*area).is_valid(pos, cell),
+            FilterProcessor::Static(processor) => CellValidator::Static(processor),
+            FilterProcessor::Dynamic(filter, area) => {
+                CellValidator::Dynamic(filter.selector(*area))
+            },
         }
     }
 
@@ -70,8 +73,27 @@ impl FilterProcessor {
     }
 }
 
+#[derive(Default)]
+pub(crate) enum CellValidator<'a> {
+    Static(&'a StaticFilterProcessor),
+    Dynamic(CellPredicate<'a>),
+
+    #[default]
+    AlwaysValid,
+}
+
+impl CellValidator<'_> {
+    pub(crate) fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
+        match self {
+            CellValidator::Static(processor) => processor.is_valid(pos),
+            CellValidator::Dynamic(predicate) => predicate.is_valid(pos, cell),
+            CellValidator::AlwaysValid => true,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
-struct StaticFilterProcessor {
+pub struct StaticFilterProcessor {
     filter: CellFilter,
     cell_indices: BitVec,
     last_active_area: Rect,
@@ -85,19 +107,24 @@ impl From<CellFilter> for FilterProcessor {
 }
 
 impl StaticFilterProcessor {
-    fn new(filter: CellFilter, area: Rect) -> Self {
-        let cell_indices = calculate_cell_indices(area, &filter);
+    fn new(filter: CellFilter) -> Self {
         let ref_rects = find_ref_rects(&filter);
+
         Self {
             filter,
-            cell_indices,
-            last_active_area: area,
+            cell_indices: BitVec::new(),
+            last_active_area: Rect::default(),
             ref_rects,
         }
     }
 
+    fn is_valid(&self, pos: Position) -> bool {
+        let row_offset = pos.y as usize * self.last_active_area.width as usize;
+        self.is_valid_index(row_offset + pos.x as usize)
+    }
+
     fn update(&mut self, area: Rect) {
-        if !self.check_resize(area) {
+        if self.requires_resize(area) {
             self.cell_indices = calculate_cell_indices(area, &self.filter);
             self.ref_rects = find_ref_rects(&self.filter);
             self.last_active_area = area;
@@ -112,23 +139,19 @@ impl StaticFilterProcessor {
         self.cell_indices[index]
     }
 
-    pub(crate) fn is_valid(&self, pos: Position) -> bool {
-        self.is_valid_index((pos.y * self.last_active_area.width + pos.x) as usize)
-    }
-
-    fn check_resize(&mut self, area: Rect) -> bool {
+    fn requires_resize(&mut self, area: Rect) -> bool {
         for (rect, ref_rect) in &self.ref_rects {
             if rect != &area || ref_rect.get() != area {
-                return false; // Area has changed, need to recalculate
+                return true; // Area has changed, need to recalculate
             }
         }
 
         if self.last_active_area != area {
             self.last_active_area = area;
-            return false; // Area has changed, need to recalculate
+            return true; // Area has changed, need to recalculate
         }
 
-        true
+        false
     }
 }
 
@@ -167,7 +190,7 @@ fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
     match &filter {
         CellFilter::All => activate_area(area, true),
         CellFilter::Area(r) => activate_area(*r, true),
-        CellFilter::RefArea(r) => activate_area(r.get(), true), // todo: handle dynamic udpates
+        CellFilter::RefArea(r) => activate_area(r.get(), true),
         CellFilter::Inner(m) => activate_area(area.inner(*m), true),
         CellFilter::Outer(m) => {
             activate_area(area, true);
@@ -214,8 +237,7 @@ fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
             cell_indices = indices.not();
         },
 
-        // _ => BitVec::from_elem(area.width * area.height, false),
-        _ => todo!("tbd: {:?}", filter),
+        _ => unimplemented!("only static filters (hybrid not yet impl): {:?}", filter),
     };
 
     cell_indices
