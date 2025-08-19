@@ -2,7 +2,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use ratatui::{
     buffer::Buffer,
-    layout::{Margin, Rect},
+    layout,
+    layout::{Constraint, Direction, Margin, Rect},
     prelude::Color,
 };
 use tachyonfx::{fx, CellFilter, Duration, Effect, Shader};
@@ -69,14 +70,48 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
     });
 
     // Benchmark different filter configurations
+    use CellFilter::*;
     let test_cases = [
         ("filter_plain", None),
-        ("filter_all", Some(CellFilter::All)),
+        ("filter_all", Some(All)),
         (
             "filter_all_of_inner_color",
-            Some(CellFilter::AllOf(vec![
-                CellFilter::FgColor(Color::Red),
-                CellFilter::Inner(Margin::new(1, 1)),
+            Some(AllOf(vec![FgColor(Color::Red), Inner(Margin::new(1, 1))])),
+        ),
+        (
+            "filter_allof_with_not",
+            Some(AllOf(vec![
+                Inner(Margin::new(2, 2)),
+                Not(Box::new(Area(Rect::new(20, 20, 60, 60)))),
+                AnyOf(vec![Outer(Margin::new(5, 5)), Inner(Margin::new(10, 10))]),
+            ])),
+        ),
+        (
+            "filter_complex_position",
+            Some(NoneOf(vec![
+                AllOf(vec![
+                    Layout(
+                        layout::Layout::default()
+                            .direction(Direction::Horizontal)
+                            .constraints([Constraint::Percentage(25), Constraint::Percentage(75)]),
+                        0,
+                    ),
+                    Inner(Margin::new(3, 3)),
+                ]),
+                AnyOf(vec![
+                    Area(Rect::new(0, 0, 30, 30)),
+                    Area(Rect::new(70, 70, 30, 30)),
+                    Not(Box::new(Outer(Margin::new(8, 8)))),
+                ]),
+                AllOf(vec![
+                    Layout(
+                        layout::Layout::default()
+                            .direction(Direction::Vertical)
+                            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)]),
+                        1,
+                    ),
+                    Not(Box::new(Inner(Margin::new(15, 15)))),
+                ]),
             ])),
         ),
     ];
