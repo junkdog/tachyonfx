@@ -1,5 +1,9 @@
 use std::{error::Error, io, io::Stdout, time::Instant};
 
+use common::gruvbox::{
+    Gruvbox,
+    Gruvbox::{Dark0Hard, Dark0Soft, Light4},
+};
 use crossterm::{
     event,
     event::{Event, KeyCode, KeyEventKind},
@@ -20,14 +24,6 @@ use tachyonfx::{
 };
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
-
-use crate::gruvbox::{
-    Gruvbox,
-    Gruvbox::{Dark0Hard, Dark0Soft, Light4},
-};
-
-#[path = "common/gruvbox.rs"]
-mod gruvbox;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;

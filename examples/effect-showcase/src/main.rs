@@ -3,9 +3,7 @@ use std::{
     time::{Duration as StdDuration, Instant},
 };
 
-#[path = "common/gruvbox.rs"]
-mod gruvbox;
-
+use common::gruvbox::Gruvbox;
 use ratatui::{
     crossterm::event::{self, Event},
     prelude::*,
@@ -17,8 +15,6 @@ use tachyonfx::{
     fx::{consume_tick, never_complete, timed_never_complete, with_duration},
     CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, Shader,
 };
-
-use crate::gruvbox::Gruvbox;
 
 // these example effects are used for the tachyonfx::fx module documentation
 mod examples {

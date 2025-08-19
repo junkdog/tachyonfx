@@ -1,5 +1,9 @@
 use std::{error::Error, io, io::Stdout, vec};
 
+use common::{
+    gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Light2, YellowBright},
+    window::OpenWindow,
+};
 use crossterm::{
     event,
     event::{Event, KeyCode, KeyEventKind},
@@ -25,17 +29,6 @@ use tachyonfx::{
 };
 use CellFilter::Text;
 use Interpolation::*;
-
-use crate::{
-    gruvbox::Gruvbox::{BlueBright, Dark0, Dark0Hard, Light2, YellowBright},
-    window::OpenWindow,
-};
-
-#[path = "common/gruvbox.rs"]
-mod gruvbox;
-
-#[path = "common/window.rs"]
-mod window;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;

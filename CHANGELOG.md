@@ -23,6 +23,10 @@
 
 ### Changed
 - Updated ratatui dependency to `>=0.29.0` for compatibility with both 0.29.x stable and 0.30-alpha releases.
+- **Example restructuring**: Migrated all examples to independent Cargo workspace members:
+  - `examples/common` crate with shared utilities (`gruvbox` color theme, `window` helper)
+  - Examples now standalone crates with their own `Cargo.toml`
+  - Run with `cargo run -p {example-name}` instead of `cargo run --example {name}`
 
 ### Removed
 - Removed `dsl-playground` as it was a poor example of the DSL and of little value.
