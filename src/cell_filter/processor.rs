@@ -293,9 +293,8 @@ impl StaticFilterProcessor {
 
     /// Determines if the bitmask needs to be recomputed for the given area.
     ///
-    /// Checks for area changes and RefRect modifications that would invalidate
-    /// the current bitmask. This method also updates the cached area to detect
-    /// future changes.
+    /// Checks for area changes and [`RefRect`] modifications that would invalidate
+    /// the current bitmask.
     ///
     /// # Arguments
     /// * `area` - The area to check against cached state
