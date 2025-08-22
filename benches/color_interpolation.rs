@@ -1,71 +1,63 @@
-// benches/color_interpolation.rs
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use ratatui::style::Color;
-use tachyonfx::{ColorCache, ColorSpace, LruCache, ToRgbComponents};
+use tachyonfx::{ColorCache, ColorSpace};
 
 // Constants for benchmark parameters
-const ANIMATION_FRAMES: usize = 100;
 const INTERPOLATION_ALPHA: f32 = 0.5;
-const COLOR_OFFSET: u8 = 10;
 
-/// A composite key for caching complete lerp operations (legacy benchmark format)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-struct LegacyLerpKey {
-    from: Color,
-    to: Color,
-    // We'll use a u8 to represent alpha with 0-255 precision
-    // This avoids floating point equality issues in cache lookups
-    alpha_byte: u8,
-}
-
-impl LegacyLerpKey {
-    fn new(from: Color, to: Color, alpha: f32) -> Self {
-        Self {
-            from,
-            to,
-            // Convert 0.0-1.0 to 0-255
-            alpha_byte: (alpha * 255.0).round() as u8,
-        }
-    }
-}
-
-/// Calculate target color by adding offset to RGB components
-fn calculate_target_color(theme_color: Color) -> Color {
-    let (r, g, b) = theme_color.to_rgb();
-    Color::Rgb(
-        r.saturating_add(COLOR_OFFSET),
-        g.saturating_add(COLOR_OFFSET),
-        b.saturating_add(COLOR_OFFSET),
-    )
-}
+const SCREEN_BUFFER: &str = r#"
+[0m[38;2;102;92;84m[48;2;29;32;33m┌[0m[38;2;102;92;84m[48;2;29;32;33m[1m gitlab pipelines [0m[38;2;102;92;84m[48;2;29;32;33m──────────────────────────────────────────────────────────────────────────────────────┐[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Thu, 21 Aug      [0m[38;2;102;92;84m[48;2;29;32;33m[1mimpedimenta                             [0m[38;2;102;92;84m[48;2;29;32;33m Thu, 21 Aug 23:25:47 🟢 main                 │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 23:18:34         magnetar/vitalstatistix/                 Thu, 21 Aug 23:22:46 🟢 renovate/all-minor-d │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│                                                                                                        │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ [0m[38;2;102;92;84m[48;2;29;32;33m[1mThu, 21 Aug      goose                                    Thu, 21 Aug 23:33:39 🟢 main                [0m[38;2;102;92;84m[48;2;29;32;33m │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ [0m[38;2;102;92;84m[48;2;29;32;33m[1m23:1[0m[38;2;254;128;25m[48;2;40;40;40m╭┫[0m[38;2;40;40;40m[48;2;214;93;14m[1m Project Details [0m[38;2;254;128;25m[48;2;40;40;40m┣─────────────────────────────────────────────────────────────────────────╮[0m[38;2;102;92;84m[48;2;29;32;33m[1mor-d[0m[38;2;102;92;84m[48;2;29;32;33m │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ [0m[38;2;102;92;84m[48;2;29;32;33m[1m    [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m[1mgoose                                                               [0m[38;2;131;165;152m[48;2;40;40;40m[1m461[0m[38;2;69;133;136m[48;2;40;40;40m commits[0m[48;2;40;40;40m            [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m[1mll-m[0m[38;2;102;92;84m[48;2;29;32;33m │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Thu,[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;214;93;14m[48;2;40;40;40mmagnetar/idefix/                                                    [0m[38;2;131;165;152m[48;2;40;40;40m[1m16.52mb in repository [0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 23:1[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m                                                                     [0m[38;2;131;165;152m[48;2;40;40;40m[1m5.86gb in artifacts   [0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│     [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m                                                                                            [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Thu,[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;146;131;116m[48;2;60;56;54m[1mThu, 21 Aug [0m[48;2;60;56;54m[1m [0m[38;2;213;196;161m[48;2;60;56;54m[1mmain                           [0m[48;2;60;56;54m[1m 🟢🟢🟢🟢🟢🟢 [0m[38;2;213;196;161m[48;2;60;56;54m[1m20:23[0m[48;2;60;56;54m[1m [0m[38;2;168;153;132m[48;2;60;56;54m[1m[3mMerge branch 'renovate/all[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 15:3[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;60;56;54m[1m23:13:16    [0m[48;2;60;56;54m[1m [0m[38;2;131;165;152m[48;2;60;56;54m[1mpush                           [0m[48;2;60;56;54m[1m                                              [0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│     [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;146;131;116m[48;2;40;40;40mThu, 21 Aug [0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;40;40;40mrenovate/all-minor-dependencies[0m[48;2;40;40;40m 🟢           [0m[38;2;213;196;161m[48;2;40;40;40m 5:33[0m[48;2;40;40;40m [0m[38;2;168;153;132m[48;2;40;40;40m[3mUpdate all minor dependenc[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Wed,[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;40;40;40m23:12:09    [0m[48;2;40;40;40m [0m[38;2;131;165;152m[48;2;40;40;40mpush                           [0m[48;2;40;40;40m                                               [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33mor-d │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 23:1[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;146;131;116m[48;2;29;32;33mThu, 21 Aug [0m[48;2;29;32;33m [0m[38;2;213;196;161m[48;2;29;32;33mmain                           [0m[48;2;29;32;33m 🟢🟢🟢🟢🟢🟢 [0m[38;2;213;196;161m[48;2;29;32;33m23:20[0m[48;2;29;32;33m [0m[38;2;168;153;132m[48;2;29;32;33m[3madd monitor stack to pipel[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│     [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;29;32;33m16:46:28    [0m[48;2;29;32;33m [0m[38;2;131;165;152m[48;2;29;32;33mpush                           [0m[48;2;29;32;33m                                              [0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Tue,[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;146;131;116m[48;2;40;40;40mThu, 21 Aug [0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;40;40;40mmain                           [0m[48;2;40;40;40m 🟢🟢🟢🟢🟢🟢 [0m[38;2;213;196;161m[48;2;40;40;40m23:03[0m[48;2;40;40;40m [0m[38;2;168;153;132m[48;2;40;40;40m[3mmissed adding file on prev[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 16:0[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;40;40;40m13:37:29    [0m[48;2;40;40;40m [0m[38;2;131;165;152m[48;2;40;40;40mpush                           [0m[48;2;40;40;40m                                               [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│     [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;146;131;116m[48;2;29;32;33mThu, 21 Aug [0m[48;2;29;32;33m [0m[38;2;213;196;161m[48;2;29;32;33mmain                           [0m[48;2;29;32;33m 🟢🟢🟢🔴⚫⚫ [0m[38;2;213;196;161m[48;2;29;32;33m 9:31[0m[48;2;29;32;33m [0m[38;2;168;153;132m[48;2;29;32;33m[3morganize cdk code. separat[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Thu,[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;29;32;33m09:49:28    [0m[48;2;29;32;33m [0m[38;2;131;165;152m[48;2;29;32;33mpush                           [0m[48;2;29;32;33m [0m[38;2;251;73;52m[48;2;29;32;33mdeploy-test [0m[48;2;29;32;33m                                 [0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 10:5[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;146;131;116m[48;2;40;40;40mWed, 20 Aug [0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;40;40;40mmain                           [0m[48;2;40;40;40m 🟢🟢🟢🟢🟢🟢 [0m[38;2;213;196;161m[48;2;40;40;40m16:22[0m[48;2;40;40;40m [0m[38;2;168;153;132m[48;2;40;40;40m[3mMerge branch 'renovate/all[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│     [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;40;40;40m23:13:31    [0m[48;2;40;40;40m [0m[38;2;131;165;152m[48;2;40;40;40mpush                           [0m[48;2;40;40;40m                                               [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Wed,[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;146;131;116m[48;2;29;32;33mWed, 20 Aug [0m[48;2;29;32;33m [0m[38;2;213;196;161m[48;2;29;32;33mrenovate/all-minor-dependencies[0m[48;2;29;32;33m 🟢           [0m[38;2;213;196;161m[48;2;29;32;33m 4:07[0m[48;2;29;32;33m [0m[38;2;168;153;132m[48;2;29;32;33m[3mUpdate all minor dependenc[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 10:0[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;29;32;33m23:11:48    [0m[48;2;29;32;33m [0m[38;2;131;165;152m[48;2;29;32;33mpush                           [0m[48;2;29;32;33m                                              [0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│     [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;146;131;116m[48;2;40;40;40mTue, 19 Aug [0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;40;40;40mmain                           [0m[48;2;40;40;40m 🟢🟢🟢🟢🟢🟢 [0m[38;2;213;196;161m[48;2;40;40;40m16:49[0m[48;2;40;40;40m [0m[38;2;168;153;132m[48;2;40;40;40m[3mMerge branch 'renovate/all[0m[48;2;40;40;40m [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Wed,[0m[38;2;254;128;25m[48;2;40;40;40m│[0m[48;2;40;40;40m [0m[38;2;213;196;161m[48;2;40;40;40m23:12:07    [0m[48;2;40;40;40m [0m[38;2;131;165;152m[48;2;40;40;40mpush                           [0m[48;2;40;40;40m                                               [0m[38;2;254;128;25m[48;2;40;40;40m│[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 12:3[0m[38;2;254;128;25m[48;2;40;40;40m╰──────────────────────────────────────────────────── [0m[38;2;214;93;14m[48;2;40;40;40m[1mESC[0m[38;2;254;128;25m[48;2;40;40;40m [0m[38;2;175;58;3m[48;2;40;40;40m[1mclose[0m[38;2;254;128;25m[48;2;40;40;40m  [0m[38;2;214;93;14m[48;2;40;40;40m[1m↑ ↓[0m[38;2;254;128;25m[48;2;40;40;40m [0m[38;2;175;58;3m[48;2;40;40;40m[1mselection[0m[38;2;254;128;25m[48;2;40;40;40m  [0m[38;2;214;93;14m[48;2;40;40;40m[1m↵[0m[38;2;254;128;25m[48;2;40;40;40m [0m[38;2;175;58;3m[48;2;40;40;40m[1mactions...[0m[38;2;254;128;25m[48;2;40;40;40m ╯[0m[38;2;102;92;84m[48;2;29;32;33m     │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│                                                                                                        │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ Thu, 24 Jul      [0m[38;2;102;92;84m[48;2;29;32;33m[1mmagnetar-owasp                          [0m[38;2;102;92;84m[48;2;29;32;33m                                              │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│ 09:55:30         magnetar-public/                                                                      │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m│                                                                                                        │[0m
+[0m[38;2;102;92;84m[48;2;29;32;33m└[0m[38;2;102;92;84m[48;2;29;32;33m[1muit  open web  config  last notification  f/ filter  refresh  pipeline refresh  ↑↓ selection  ↵ details [0m[38;2;102;92;84m[48;2;29;32;33m┘[0m
+"#;
 
 /// Run animation loop with the provided interpolation function
 fn run_animation_loop<F>(theme_colors: &[Color], mut interpolate_fn: F)
 where
     F: FnMut(Color, Color),
 {
-    for _ in 0..ANIMATION_FRAMES {
-        for &theme_color in theme_colors {
-            let target = calculate_target_color(theme_color);
-            interpolate_fn(theme_color, target);
-        }
+    const TARGET_COLOR: Color = Color::Rgb(40, 61, 80);
+    for &c in theme_colors {
+        interpolate_fn(c, TARGET_COLOR);
     }
 }
 
 pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("ui_pattern");
+    let mut group = c.benchmark_group("color-lerp");
 
-    // Create a set of theme colors and highlight colors
-    let theme_colors = [
-        Color::Rgb(30, 30, 30),
-        Color::Rgb(220, 220, 220),
-        Color::Rgb(40, 40, 40),
-        Color::Rgb(180, 180, 180),
-    ];
+    let theme_colors = fg_colors_from_ansi(SCREEN_BUFFER);
 
-    // group.bench_with_input(BenchmarkId::new("raw_hsl_lerp", "ui-pattern"), &(), |b, _| {
     // Direct interpolation benchmark
-    group.bench_with_input(BenchmarkId::new("direct", "ui-pattern"), &(), |b, _| {
+    group.bench_with_input(BenchmarkId::new("direct", "all"), &(), |b, _| {
         b.iter(|| {
             run_animation_loop(&theme_colors, |theme_color, target| {
                 std::hint::black_box(ColorSpace::Hsl.lerp(
@@ -77,71 +69,50 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
         });
     });
 
-    // Benchmark with cache size 16 for HSL conversion
-    group.bench_with_input(
-        BenchmarkId::new("cache_rev2_hsl_size_16", "ui-pattern"),
-        &(),
-        |b, _| {
-            b.iter_with_setup(ColorCache::<Color, 16>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
-                        ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
-                    }));
-                });
-            })
-        },
-    );
+    group.bench_with_input(BenchmarkId::new("color-cache", "hsl/4"), &(), |b, _| {
+        b.iter_with_setup(ColorCache::<Color, 4>::new, |mut cache| {
+            run_animation_loop(&theme_colors, |theme_color, target| {
+                std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
+                    ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
+                }));
+            });
+        })
+    });
 
-    // Benchmark with cache size 8 for HSL conversion
-    group.bench_with_input(
-        BenchmarkId::new("cache_rev2_hsl_size_8", "ui-pattern"),
-        &(),
-        |b, _| {
-            b.iter_with_setup(ColorCache::<Color, 8>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
-                        ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
-                    }));
-                });
-            })
-        },
-    );
+    group.bench_with_input(BenchmarkId::new("color-cache", "hsl/8"), &(), |b, _| {
+        b.iter_with_setup(ColorCache::<Color, 8>::new, |mut cache| {
+            run_animation_loop(&theme_colors, |theme_color, target| {
+                std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
+                    ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
+                }));
+            });
+        })
+    });
 
-    // Cache the entire lerp operation result
-    group.bench_with_input(
-        BenchmarkId::new("cached_full_lerp_size_8", "ui-pattern"),
-        &(),
-        |b, _| {
-            b.iter_with_setup(LruCache::<LegacyLerpKey, Color, 8>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    let key = LegacyLerpKey::new(theme_color, target, INTERPOLATION_ALPHA);
-                    let result = cache.memoize(&key, |_| {
-                        ColorSpace::Hsl.lerp(&theme_color, &target, INTERPOLATION_ALPHA)
-                    });
-                    std::hint::black_box(result);
-                });
-            })
-        },
-    );
-
-    // Cache the entire lerp operation result with a larger cache
-    group.bench_with_input(
-        BenchmarkId::new("cached_full_lerp_size_16", "ui-pattern"),
-        &(),
-        |b, _| {
-            b.iter_with_setup(LruCache::<LegacyLerpKey, Color, 16>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    let key = LegacyLerpKey::new(theme_color, target, INTERPOLATION_ALPHA);
-                    let result = cache.memoize(&key, |_| {
-                        ColorSpace::Hsl.lerp(&theme_color, &target, INTERPOLATION_ALPHA)
-                    });
-                    std::hint::black_box(result);
-                });
-            })
-        },
-    );
+    group.bench_with_input(BenchmarkId::new("color-cache", "hsl/16"), &(), |b, _| {
+        b.iter_with_setup(ColorCache::<Color, 16>::new, |mut cache| {
+            run_animation_loop(&theme_colors, |theme_color, target| {
+                std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
+                    ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
+                }));
+            });
+        })
+    });
 
     group.finish();
+}
+
+fn fg_colors_from_ansi(ansi: &'static str) -> Vec<Color> {
+    use ansi_to_tui::IntoText as _;
+    let buffer_text = ansi
+        .to_text()
+        .expect("buffer should convert to text");
+
+    buffer_text
+        .iter()
+        .flat_map(|line| &line.spans)
+        .flat_map(|span| span.style.fg)
+        .collect()
 }
 
 // Register both benchmarks with Criterion
