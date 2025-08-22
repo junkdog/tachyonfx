@@ -16,6 +16,7 @@
   - **Lifetime parameter added**: `CellPredicate` now requires lifetime parameter `CellPredicate<'_>`
   - **Ownership model change**: `CellPredicate` now borrows `CellFilter` instead of owning it
   - **Performance improvement**: Static filters (Area, Position, etc.) are pre-computed as bitmasks for O(1) lookups
+- **LruCache**: The key type `K` now requires `Copy` in addition to existing bounds for performance optimizations.
 
 ### Added
 - `CellIterator::for_each_cell()`: Performance-optimized method for iterating over cells without division and
