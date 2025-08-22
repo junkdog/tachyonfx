@@ -20,7 +20,7 @@ use tachyonfx::{
     color_from_hsl,
     fx::{self, never_complete, parallel, sequence, Glitch},
     CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect,
-    Motion, Shader, SimpleRng,
+    Motion, SimpleRng,
 };
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;

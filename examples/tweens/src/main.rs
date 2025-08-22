@@ -24,7 +24,7 @@ use tachyonfx::{
     fx,
     fx::{parallel, repeating, sequence},
     CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation,
-    Motion, Shader,
+    Motion,
 };
 use Gruvbox::OrangeBright;
 use Interpolation::*;

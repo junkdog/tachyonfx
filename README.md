@@ -94,9 +94,6 @@ cargo run -p effect-registry
 # Complete effect showcase
 cargo run -p effect-showcase
 
-# Window opening animation
-cargo run -p open-window
-
 # Tweening examples
 cargo run -p tweens
 ```

@@ -5,7 +5,6 @@ members = [
     "examples/minimal",
     "examples/basic-effects",
     "examples/effect-showcase",
-    "examples/open-window",
     "examples/tweens",
     "examples/fx-chart",
     "examples/effect-registry",

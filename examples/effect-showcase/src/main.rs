@@ -13,7 +13,7 @@ use ratatui::{
 use tachyonfx::{
     fx,
     fx::{consume_tick, never_complete, timed_never_complete, with_duration},
-    CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, Shader,
+    CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation,
 };
 
 // these example effects are used for the tachyonfx::fx module documentation

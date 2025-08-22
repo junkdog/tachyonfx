@@ -11,7 +11,7 @@ use ratatui::{
 use tachyonfx::{
     fx::{self, Glitch},
     CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation, IntoEffect,
-    Motion, Shader, SimpleRng,
+    Motion, SimpleRng,
 };
 
 fn main() -> io::Result<()> {

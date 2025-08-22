@@ -31,7 +31,8 @@
   - Run with `cargo run -p {example-name}` instead of `cargo run --example {name}`
 
 ### Removed
-- Removed `dsl-playground` as it was a poor example of the DSL and of little value.
+- Example: `dsl-playground`: as it was a poor example of the DSL and of little value.
+- Example: `open-window`: removed due to its poor design and ergonomics.
 - Removed `colorsys` dependency, only used for indexed color conversion.
 
 

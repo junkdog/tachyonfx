@@ -15,7 +15,7 @@ use ratatui::{
 };
 use tachyonfx::{
     widget::{EffectTimeline, EffectTimelineRects},
-    BufferRenderer, Duration, Effect, Shader,
+    BufferRenderer, Duration, Effect,
 };
 
 use crate::effects::{effect_in, transition_fx};
