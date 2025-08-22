@@ -30,6 +30,7 @@
 
 ### Removed
 - Removed `dsl-playground` as it was a poor example of the DSL and of little value.
+- Removed `colorsys` dependency, only used for indexed color conversion.
 
 
 ## tachyonfx 0.16.0 - 2025-07-16
