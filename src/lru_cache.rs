@@ -1,6 +1,4 @@
-use std::array;
-
-const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
+const MAX_CACHE_SIZE: usize = 255; // Limited by u8 index space
 
 /// A fixed-size LRU (Least Recently Used) cache with const generic capacity.
 /// This cache is designed for high-performance scenarios with small cache sizes.
@@ -15,8 +13,8 @@ const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
 ///
 /// # Type Parameters
 ///
-/// * `K` - The key type, must implement `PartialEq + Copy + Default`
-/// * `V` - The value type, must implement `Default`
+/// * `K` - The key type, must implement `PartialEq + Copy`
+/// * `V` - The value type
 /// * `N` - The fixed capacity of the cache (must be between 1 and 255)
 ///
 /// # Examples
@@ -44,7 +42,7 @@ const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
 #[derive(Debug)]
 pub struct LruCache<K, V, const N: usize>
 where
-    K: PartialEq + Copy + Default,
+    K: PartialEq + Copy,
 {
     index: [(K, u8); N],
     entries: [V; N],
@@ -54,7 +52,7 @@ where
 
 impl<K, V, const N: usize> LruCache<K, V, N>
 where
-    K: PartialEq + Copy + Default,
+    K: PartialEq + Copy,
 {
     const _VALIDATE_SIZE: () = assert!(
         N > 0 && N <= MAX_CACHE_SIZE,
@@ -76,8 +74,8 @@ where
         let _ = Self::_VALIDATE_SIZE;
 
         Self {
-            index: array::from_fn(|i| (K::default(), i as u8)),
-            entries: array::from_fn(|_| Default::default()),
+            index: core::array::from_fn(|i| (K::default(), i as u8)),
+            entries: core::array::from_fn(|_| V::default()),
             cache_misses: 0,
             cache_hits: 0,
         }
@@ -144,7 +142,6 @@ where
         self.cache_misses
     }
 
-    #[inline(always)]
     fn refresh_key(&mut self, key: &K) -> RefreshResult {
         if let Some((idx, entry_idx)) = self
             .index
@@ -165,7 +162,7 @@ where
         } else {
             self.cache_misses += 1;
 
-            let entry_idx = self.index[N - 1].1; // Get entry_idx BEFORE copy_within
+            let entry_idx = self.index[N - 1].1;
             self.index.copy_within(0..N - 1, 1);
             self.index[0] = (*key, entry_idx);
 
@@ -191,7 +188,7 @@ where
 
 impl<K, V, const N: usize> Clone for LruCache<K, V, N>
 where
-    K: Default + Copy + PartialEq,
+    K: Copy + PartialEq,
     V: Clone,
 {
     fn clone(&self) -> Self {

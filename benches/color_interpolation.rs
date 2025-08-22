@@ -57,7 +57,7 @@ pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
     let theme_colors = fg_colors_from_ansi(SCREEN_BUFFER);
 
     // Direct interpolation benchmark
-    group.bench_with_input(BenchmarkId::new("direct", "all"), &(), |b, _| {
+    group.bench_with_input(BenchmarkId::new("direct", "hsl"), &(), |b, _| {
         b.iter(|| {
             run_animation_loop(&theme_colors, |theme_color, target| {
                 std::hint::black_box(ColorSpace::Hsl.lerp(
