@@ -245,7 +245,7 @@ impl StaticFilterProcessor {
     /// This method assumes the bitmask has been computed via [`update`](Self::update).
     /// Using it before calling `update` may result in incorrect behavior.
     fn is_valid(&self, pos: Position) -> bool {
-        let row_offset = pos.y as usize * self.last_active_area.width as usize;
+        let row_offset = pos.y as usize * self.last_active_area.right() as usize;
         self.is_valid_index(row_offset + pos.x as usize)
     }
 
@@ -292,28 +292,24 @@ impl StaticFilterProcessor {
 
     /// Determines if the bitmask needs to be recomputed for the given area.
     ///
-    /// Checks for area changes and RefRect modifications that would invalidate
-    /// the current bitmask. This method also updates the cached area to detect
-    /// future changes.
+    /// Checks for area changes and [`RefRect`] modifications that would invalidate
+    /// the current bitmask.
     ///
     /// # Arguments
     /// * `area` - The area to check against cached state
     ///
     /// # Returns
     /// `true` if recomputation is needed, `false` if the current bitmask is valid
-    fn requires_resize(&mut self, area: Rect) -> bool {
+    fn requires_resize(&self, area: Rect) -> bool {
+        let area_changed = area != self.last_active_area;
+
         for (rect, ref_rect) in &self.ref_rects {
-            if rect != &area || ref_rect.get() != area {
+            if rect != &ref_rect.get() {
                 return true; // Area has changed, need to recalculate
             }
         }
 
-        if self.last_active_area != area {
-            self.last_active_area = area;
-            return true; // Area has changed, need to recalculate
-        }
-
-        false
+        area_changed
     }
 }
 
@@ -338,15 +334,17 @@ fn find_ref_rects(filter: &CellFilter) -> Vec<(Rect, RefRect)> {
 
 /// Computes a bitmask indicating which cells match the given static filter.
 fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
-    let size = area.width as usize * area.height as usize;
+    let size = area.right() as usize * area.bottom() as usize;
     let mut cell_indices = BitVec::new();
     cell_indices.resize(size, false);
 
     let mut activate_area = |r: Rect, v: bool| {
-        for y in r.top()..r.bottom() {
-            for x in r.left()..r.right() {
-                let index = (y * area.width) + x;
-                cell_indices.set(index as usize, v);
+        for y in r.y..r.bottom() {
+            let row_offset = y as usize * area.right() as usize;
+            for x in r.x..r.right() {
+                let x = x as usize;
+                let index = row_offset + x;
+                cell_indices.set(index, v);
             }
         }
     };
@@ -354,7 +352,7 @@ fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
     match &filter {
         CellFilter::All => activate_area(area, true),
         CellFilter::Area(r) => activate_area(*r, true),
-        CellFilter::RefArea(r) => activate_area(r.get(), true),
+        CellFilter::RefArea(r) => activate_area(r.get().intersection(area), true),
         CellFilter::Inner(m) => activate_area(area.inner(*m), true),
         CellFilter::Outer(m) => {
             activate_area(area, true);
