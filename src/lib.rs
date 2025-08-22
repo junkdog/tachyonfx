@@ -58,5 +58,7 @@ pub use render_effect::EffectRenderer;
 pub use shader::Shader;
 pub use simple_rng::*;
 
+extern crate alloc;
+
 #[cfg(all(feature = "std-duration", feature = "web-time"))]
 compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");
