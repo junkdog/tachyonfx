@@ -557,7 +557,7 @@ mod tests {
         fx::RepeatMode,
         CellFilter, Duration, Effect, EffectTimer, Interpolation,
         Interpolation::{CircOut, QuadOut},
-        Motion, Shader,
+        Motion,
     };
 
     fn assert_effect_roundtrip_eq(effect: Effect) {

@@ -1503,7 +1503,6 @@ mod tests {
     use ratatui::prelude::Color;
 
     use super::*;
-    use crate::Shader;
 
     const DIRECTIONS: [Motion; 4] =
         [Motion::DownToUp, Motion::UpToDown, Motion::LeftToRight, Motion::RightToLeft];

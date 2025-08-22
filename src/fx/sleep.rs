@@ -53,7 +53,7 @@ impl Shader for Sleep {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use crate::{fx, Shader};
+    use crate::fx;
 
     #[test]
     fn to_dsl() {

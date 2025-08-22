@@ -279,7 +279,7 @@ mod tests {
 mod dsl_tests {
     use indoc::indoc;
 
-    use crate::{fx, Shader};
+    use crate::fx;
 
     #[test]
     fn parallel() {

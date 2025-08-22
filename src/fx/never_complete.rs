@@ -82,10 +82,7 @@ impl Shader for NeverComplete {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use crate::{
-        fx::{consume_tick, never_complete},
-        Shader,
-    };
+    use crate::fx::{consume_tick, never_complete};
 
     #[test]
     fn to_dsl() {

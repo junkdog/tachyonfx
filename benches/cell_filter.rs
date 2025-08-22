@@ -6,7 +6,7 @@ use ratatui::{
     layout::{Constraint, Direction, Margin, Rect},
     prelude::Color,
 };
-use tachyonfx::{fx, CellFilter, Duration, Effect, Shader};
+use tachyonfx::{fx, CellFilter, Duration, Effect};
 
 // Constants for consistent measurements
 const BENCH_WIDTH: u16 = 100;

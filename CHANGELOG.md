@@ -3,6 +3,7 @@
 ## unreleased
 
 ### Breaking Changes
+- **Effect API refactoring**: `Effect` no longer implements `Shader` trait; methods are now direct on `Effect`. 
 - **Major ColorCache API overhaul**: The `ColorCache` API has been completely redesigned for improved flexibility and
   performance:
   - **Generic signature change**: `ColorCache<Context, const N: usize>` from `ColorCache<const N: usize>`

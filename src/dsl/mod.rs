@@ -217,7 +217,7 @@ impl fmt::Display for EffectExpression {
 mod tests {
     use indoc::indoc;
 
-    use crate::{fx, fx::RepeatMode, Shader};
+    use crate::{fx, fx::RepeatMode};
 
     #[test]
     fn to_dsl_format_complex_tree() {

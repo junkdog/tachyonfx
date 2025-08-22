@@ -161,7 +161,7 @@ mod tests {
 
     use crate::{
         fx::{consume_tick, repeat, RepeatMode},
-        Duration, Shader,
+        Duration,
     };
 
     #[test]

@@ -16,7 +16,7 @@ use crate::{
         area_registry::AreaRegistry, color_resolver::color_registry, effect_span::effect_span_tree,
         CellFilterRegistry, ColorResolver, EffectSpan,
     },
-    CellFilter, Duration, Effect, Shader,
+    CellFilter, Duration, Effect,
 };
 
 /// A widget that visualizes the timeline of effects in a `tachyonfx` Effect.

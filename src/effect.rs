@@ -109,12 +109,17 @@ impl Clone for Effect {
     }
 }
 
-impl Shader for Effect {
-    fn name(&self) -> &'static str {
+impl Effect {
+    pub fn name(&self) -> &'static str {
         self.shader.name()
     }
 
-    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
+    pub fn process(
+        &mut self,
+        duration: Duration,
+        buf: &mut Buffer,
+        area: Rect,
+    ) -> Option<Duration> {
         let area = self.shader.area().unwrap_or(area);
         if let Some(processor) = self.shader.filter_processor_mut() {
             processor.update(area);
@@ -123,56 +128,47 @@ impl Shader for Effect {
         self.shader.process(duration, buf, area)
     }
 
-    fn execute(&mut self, duration: Duration, area: Rect, buf: &mut Buffer) {
-        let area = self.shader.area().unwrap_or(area);
-        if let Some(processor) = self.shader.filter_processor_mut() {
-            processor.update(area);
-        }
-
-        self.shader.execute(duration, area, buf);
-    }
-
-    fn done(&self) -> bool {
+    pub fn done(&self) -> bool {
         self.shader.done()
     }
 
-    fn clone_box(&self) -> Box<dyn Shader> {
-        self.shader.clone_box()
+    pub fn running(&self) -> bool {
+        self.shader.running()
     }
 
-    fn area(&self) -> Option<Rect> {
+    pub fn area(&self) -> Option<Rect> {
         self.shader.area()
     }
 
-    fn set_area(&mut self, area: Rect) {
+    pub fn set_area(&mut self, area: Rect) {
         self.shader.set_area(area)
     }
 
-    fn filter(&mut self, strategy: CellFilter) {
+    pub fn filter(&mut self, strategy: CellFilter) {
         self.shader.propagate_filter(strategy)
     }
 
-    fn reverse(&mut self) {
+    pub fn reverse(&mut self) {
         self.shader.reverse()
     }
 
-    fn timer(&self) -> Option<EffectTimer> {
+    pub fn timer(&self) -> Option<EffectTimer> {
         self.shader.timer()
     }
 
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+    pub fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
         self.shader.timer_mut()
     }
 
-    fn cell_filter(&self) -> Option<&CellFilter> {
+    pub fn cell_filter(&self) -> Option<&CellFilter> {
         self.shader.cell_filter()
     }
 
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.shader.reset()
     }
 
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan
+    pub fn as_effect_span(&self, offset: Duration) -> EffectSpan
     where
         Self: Sized + Clone,
     {
@@ -180,7 +176,7 @@ impl Shader for Effect {
     }
 
     #[cfg(feature = "dsl")]
-    fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
+    pub fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         self.shader.to_dsl()
     }
 }

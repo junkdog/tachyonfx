@@ -99,7 +99,7 @@ impl Shader for RunOnce {
 
 #[cfg(test)]
 mod tests {
-    use crate::{fx, Shader};
+    use crate::fx;
 
     #[test]
     fn test_run_once_execution() {

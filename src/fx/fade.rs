@@ -82,7 +82,7 @@ mod tests {
     use indoc::indoc;
     use ratatui::style::Color;
 
-    use crate::{effect_timer::EffectTimer, fx, shader::Shader, Interpolation::QuadOut};
+    use crate::{effect_timer::EffectTimer, fx, Interpolation::QuadOut};
 
     #[test]
     fn to_dsl_fade_to_fg() {

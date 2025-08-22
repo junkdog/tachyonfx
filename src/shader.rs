@@ -202,6 +202,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
         None
     }
 
+    /// Returns a mutable reference to the shader's filter processor for selective cell
     fn filter_processor_mut(&mut self) -> Option<&mut FilterProcessor> {
         None
     }

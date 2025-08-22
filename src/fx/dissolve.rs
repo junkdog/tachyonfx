@@ -88,7 +88,7 @@ mod tests {
     use indoc::indoc;
     use ratatui::style::Style;
 
-    use crate::{fx, EffectTimer, Interpolation::SineOut, Shader};
+    use crate::{fx, EffectTimer, Interpolation::SineOut};
 
     #[test]
     fn dsl_format_dissolve() {

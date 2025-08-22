@@ -5,7 +5,7 @@ use ratatui::{buffer::Buffer, layout::Rect};
 use crate::{
     features::acquire_mut,
     fx::unique::{Unique, UniqueContext},
-    ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng, ThreadSafetyMarker,
+    ref_count, Duration, Effect, IntoEffect, RefCount, SimpleRng, ThreadSafetyMarker,
 };
 
 /// Manages a collection of terminal UI effects, including uniquely identified
