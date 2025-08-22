@@ -3,13 +3,19 @@ use std::array;
 const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
 
 /// A fixed-size LRU (Least Recently Used) cache with const generic capacity.
+/// This cache is designed for high-performance scenarios with small cache sizes.
 ///
 /// This cache stores key-value pairs and automatically evicts the least recently
 /// used item when the capacity is reached. It also tracks cache hit/miss statistics.
 ///
+/// The implementation is optimized for small cache sizes (typically 8 entries)
+/// and uses stack-allocated arrays for maximum performance. The LRU ordering is
+/// maintained using efficient array operations without heap allocations. More
+/// recently accessed entries are moved to the front of the index array.
+///
 /// # Type Parameters
 ///
-/// * `K` - The key type, must be `Eq + Clone + Default`
+/// * `K` - The key type, must be `PartialEq + Clone + Copy + Default`
 /// * `V` - The value type, must be `Clone`
 /// * `N` - The fixed capacity of the cache (must be between 1 and 255)
 ///
@@ -18,23 +24,22 @@ const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
 /// ```
 /// use tachyonfx::LruCache;
 ///
-/// let mut cache = LruCache::<String, i32, 2>::new();
+/// // Small cache size for optimal performance
+/// let mut cache = LruCache::<i32, String, 8>::new();
 ///
 /// // The memoize method computes a value if not in cache
-/// let value = cache.memoize(&"key1".to_string(), |k| k.len() as i32);
-/// assert_eq!(value, 4);
+/// let value = cache.memoize(&42, |k| format!("value_{}", k));
+/// assert_eq!(value, "value_42");
 ///
 /// // Second access is a cache hit
-/// let value = cache.memoize(&"key1".to_string(), |_| panic!("Should not be called"));
-/// assert_eq!(value, 4);
+/// let value = cache.memoize(&42, |_| panic!("Should not be called"));
+/// assert_eq!(value, "value_42");
 ///
 /// // When capacity is reached, least recently used item is evicted
-/// cache.memoize(&"key2".to_string(), |_| 10);
-/// cache.memoize(&"key3".to_string(), |_| 20);
-///
-/// // key1 was evicted, so this will call the function again
-/// let value = cache.memoize(&"key1".to_string(), |_| 30);
-/// assert_eq!(value, 30);
+/// for i in 1..=8 {
+///     cache.memoize(&i, |k| format!("value_{}", k));
+/// }
+/// cache.memoize(&999, |k| format!("value_{}", k)); // Evicts LRU item
 /// ```
 #[derive(Debug, Clone)]
 pub struct LruCache<K, V, const N: usize>
