@@ -15,8 +15,8 @@ const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
 ///
 /// # Type Parameters
 ///
-/// * `K` - The key type, must be `PartialEq + Clone + Copy + Default`
-/// * `V` - The value type, must be `Clone`
+/// * `K` - The key type, must implement `PartialEq + Copy + Default`
+/// * `V` - The value type, must implement `Default`
 /// * `N` - The fixed capacity of the cache (must be between 1 and 255)
 ///
 /// # Examples
@@ -41,10 +41,10 @@ const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
 /// }
 /// cache.memoize(&999, |k| format!("value_{}", k)); // Evicts LRU item
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct LruCache<K, V, const N: usize>
 where
-    K: PartialEq + Clone + Copy + Default,
+    K: PartialEq + Copy + Default,
 {
     index: [(K, u8); N],
     entries: [V; N],
@@ -54,7 +54,7 @@ where
 
 impl<K, V, const N: usize> LruCache<K, V, N>
 where
-    K: PartialEq + Clone + Copy + Default,
+    K: PartialEq + Copy + Default,
 {
     const _VALIDATE_SIZE: () = assert!(
         N > 0 && N <= MAX_CACHE_SIZE,
@@ -182,10 +182,25 @@ enum RefreshResult {
 impl<K, V, const N: usize> Default for LruCache<K, V, N>
 where
     K: PartialEq + Copy + Default,
-    V: Copy + Default,
+    V: Default,
 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<K, V, const N: usize> Clone for LruCache<K, V, N>
+where
+    K: Default + Copy + PartialEq,
+    V: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            index: self.index,
+            entries: self.entries.clone(),
+            cache_misses: 0,
+            cache_hits: 0,
+        }
     }
 }
 

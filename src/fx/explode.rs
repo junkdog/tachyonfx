@@ -8,7 +8,7 @@ use crate::{
     CellFilter, Duration, FilterProcessor, LruCache,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Explode {
     timer: EffectTimer,
     force: f32,
@@ -159,5 +159,20 @@ fn into_pos(x: f32, y: f32) -> Option<Position> {
         let x = x.round() as u16;
         let y = y.round() as u16;
         Some(Position::new(x, y))
+    }
+}
+
+impl Clone for Explode {
+    fn clone(&self) -> Self {
+        Self {
+            timer: self.timer,
+            force: self.force,
+            force_rng_factor: self.force_rng_factor,
+            area: self.area,
+            cell_filter: self.cell_filter.clone(),
+            sorted_cells: LruCache::new(),
+            replacement_cell: self.replacement_cell.clone(),
+            lcg: self.lcg,
+        }
     }
 }

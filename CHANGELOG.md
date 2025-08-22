@@ -24,6 +24,7 @@
   modulo operations. Recommended for all cell processing unless iterator combinators are needed.
 
 ### Changed
+- `LruCache`: `V` is no longer required to implement `Clone`.
 - Updated ratatui dependency to `>=0.29.0` for compatibility with both 0.29.x stable and 0.30-alpha releases.
 - **Example restructuring**: Migrated all examples to independent Cargo workspace members:
   - `examples/common` crate with shared utilities (`gruvbox` color theme, `window` helper)
