@@ -3,6 +3,7 @@
 ## unreleased
 
 ### Breaking Changes
+- `Interpolatable` trait has been simplified from `Interpolatable<T>` to `Interpolatable`.
 - **Effect API refactoring**: `Effect` no longer implements `Shader` trait; methods are now direct on `Effect`. 
 - **Major ColorCache API overhaul**: The `ColorCache` API has been completely redesigned for improved flexibility and
   performance:
