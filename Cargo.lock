@@ -59,8 +59,8 @@ name = "basic-effects"
 version = "0.1.0"
 dependencies = [
  "common",
- "crossterm 0.29.0",
- "ratatui 0.29.0",
+ "crossterm",
+ "ratatui 0.30.0-alpha.5",
  "tachyonfx",
 ]
 
@@ -203,8 +203,8 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "bon",
- "crossterm 0.29.0",
- "ratatui 0.29.0",
+ "crossterm",
+ "ratatui 0.30.0-alpha.5",
  "tachyonfx",
 ]
 
@@ -305,22 +305,6 @@ checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
 name = "crossterm"
-version = "0.28.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "829d955a0bb380ef178a640b91779e3987da38c9aea133b20614cfed8cdea9c6"
-dependencies = [
- "bitflags",
- "crossterm_winapi",
- "mio",
- "parking_lot",
- "rustix 0.38.44",
- "signal-hook",
- "signal-hook-mio",
- "winapi",
-]
-
-[[package]]
-name = "crossterm"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8b9f2e4c67f833b660cdb0a3523065869fb35570177239812ed4c905aeff87b"
@@ -331,7 +315,7 @@ dependencies = [
  "document-features",
  "mio",
  "parking_lot",
- "rustix 1.0.8",
+ "rustix",
  "signal-hook",
  "signal-hook-mio",
  "winapi",
@@ -431,8 +415,8 @@ name = "effect-registry"
 version = "0.1.0"
 dependencies = [
  "common",
- "crossterm 0.29.0",
- "ratatui 0.29.0",
+ "crossterm",
+ "ratatui 0.30.0-alpha.5",
  "tachyonfx",
 ]
 
@@ -441,8 +425,8 @@ name = "effect-showcase"
 version = "0.1.0"
 dependencies = [
  "common",
- "crossterm 0.29.0",
- "ratatui 0.29.0",
+ "crossterm",
+ "ratatui 0.30.0-alpha.5",
  "tachyonfx",
 ]
 
@@ -490,8 +474,8 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 name = "fx-chart"
 version = "0.1.0"
 dependencies = [
- "crossterm 0.29.0",
- "ratatui 0.29.0",
+ "crossterm",
+ "ratatui 0.30.0-alpha.5",
  "tachyonfx",
 ]
 
@@ -611,12 +595,6 @@ dependencies = [
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.4.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab"
-
-[[package]]
-name = "linux-raw-sys"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd945864f07fe9f5371a27ad7b52a172b4b499999f1d97574c9fa68373937e12"
@@ -671,8 +649,8 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 name = "minimal"
 version = "0.1.0"
 dependencies = [
- "crossterm 0.29.0",
- "ratatui 0.29.0",
+ "crossterm",
+ "ratatui 0.30.0-alpha.5",
  "tachyonfx",
 ]
 
@@ -847,7 +825,6 @@ dependencies = [
  "bitflags",
  "cassowary",
  "compact_str 0.8.1",
- "crossterm 0.28.1",
  "indoc",
  "instability",
  "itertools 0.13.0",
@@ -897,7 +874,7 @@ version = "0.1.0-alpha.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22f4a90548bf8ed759d226d621d73561110db23aee7b7dc4e12c39ac7132062f"
 dependencies = [
- "crossterm 0.29.0",
+ "crossterm",
  "instability",
  "ratatui-core",
 ]
@@ -981,19 +958,6 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "rustix"
-version = "0.38.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdb5bc1ae2baa591800df16c9ca78619bf65c0488b41b96ccec5d11220d8c154"
-dependencies = [
- "bitflags",
- "errno",
- "libc",
- "linux-raw-sys 0.4.15",
- "windows-sys",
-]
-
-[[package]]
-name = "rustix"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11181fbabf243db407ef8df94a6ce0b2f9a733bd8be4ad02b4eda9602296cac8"
@@ -1001,7 +965,7 @@ dependencies = [
  "bitflags",
  "errno",
  "libc",
- "linux-raw-sys 0.9.4",
+ "linux-raw-sys",
  "windows-sys",
 ]
 
@@ -1189,7 +1153,7 @@ dependencies = [
  "colorsys",
  "compact_str 0.9.0",
  "criterion",
- "crossterm 0.29.0",
+ "crossterm",
  "indoc",
  "ratatui 0.30.0-alpha.5",
  "regex",
@@ -1281,8 +1245,8 @@ name = "tweens"
 version = "0.1.0"
 dependencies = [
  "common",
- "crossterm 0.29.0",
- "ratatui 0.29.0",
+ "crossterm",
+ "ratatui 0.30.0-alpha.5",
  "tachyonfx",
 ]
 

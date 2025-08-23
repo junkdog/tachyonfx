@@ -552,8 +552,6 @@ mod tests {
     use ratatui::style::Color::Black;
 
     use super::*;
-    #[cfg(feature = "std")]
-    use crate::buffer_to_ansi_string;
     use crate::{
         fx,
         fx::{parallel, sequence},
@@ -731,7 +729,7 @@ mod tests {
         let mut buf = Buffer::empty(area);
         timeline.render(area, &mut buf);
 
-        let ansi_escaped_string = buffer_to_ansi_string(&buf, false);
+        let ansi_escaped_string = crate::buffer_to_ansi_string(&buf, false);
         println!("{ansi_escaped_string}");
     }
 }
