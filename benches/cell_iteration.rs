@@ -36,7 +36,7 @@ fn manual_iteration(buffer: &mut Buffer, rect: Rect) {
         for x in rect.x..rect.right() {
             let pos = Position::new(x, y);
             if let Some(cell) = buffer.cell_mut(pos) {
-                std::hint::black_box((pos, cell));
+                core::hint::black_box((pos, cell));
             }
         }
     }
@@ -45,14 +45,14 @@ fn manual_iteration(buffer: &mut Buffer, rect: Rect) {
 fn iterator_iteration(buffer: &mut Buffer, rect: Rect) {
     let mut iter = CellIterator::new(buffer, rect, None);
     for (pos, cell) in &mut iter {
-        std::hint::black_box((pos, cell));
+        core::hint::black_box((pos, cell));
     }
 }
 
 fn for_each_cell_iteration(buffer: &mut Buffer, rect: Rect) {
     let iter = CellIterator::new(buffer, rect, None);
     iter.for_each_cell(|pos, cell| {
-        std::hint::black_box((pos, cell));
+        core::hint::black_box((pos, cell));
     });
 }
 
