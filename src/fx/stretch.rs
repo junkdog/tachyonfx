@@ -2,8 +2,8 @@ use bon::{builder, Builder};
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
-    cell_filter::FilterProcessor, default_shader_impl, CellFilter, Duration, EffectTimer,
-    Interpolatable, Motion, Shader,
+    cell_filter::FilterProcessor, default_shader_impl, CellFilter, CellIterator, Duration,
+    EffectTimer, Interpolatable, Motion, Shader,
 };
 
 /// A shader that applies a stretching effect to terminal cells, expanding or shrinking
@@ -24,13 +24,89 @@ pub(super) struct Stretch {
 }
 
 impl Stretch {
-    fn fill_area(&mut self, area: Rect, buf: &mut Buffer) {
-        let style = self.style;
+    fn fill_area(&mut self, style: Style, area: Rect, buf: &mut Buffer) {
         self.cell_iter(buf, area)
             .for_each_cell(|_pos, cell| {
                 cell.set_symbol(" ");
                 cell.set_style(style);
             });
+    }
+
+    fn regions(&mut self, progress: f32, area: Rect) -> Regions {
+        match self.direction {
+            Motion::LeftToRight => {
+                let len = area.width as f32 * progress;
+                Regions {
+                    filled: Rect::new(area.x, area.y, len.floor() as u16, area.height),
+                    stretching: Rect::new(area.x + len.floor() as u16, area.y, 1, area.height),
+                    empty: Rect::new(
+                        area.x + len.ceil() as u16,
+                        area.y,
+                        area.width - len.ceil() as u16,
+                        area.height,
+                    ),
+                }
+            },
+            Motion::RightToLeft => {
+                let len = area.width as f32 * progress;
+                Regions {
+                    filled: Rect::new(
+                        area.x + area.width - len.ceil() as u16,
+                        area.y,
+                        len.ceil() as u16,
+                        area.height,
+                    ),
+                    stretching: Rect::new(
+                        area.x + area.width - len.floor() as u16 - 1,
+                        area.y,
+                        1,
+                        area.height,
+                    ),
+                    empty: Rect::new(
+                        area.x,
+                        area.y,
+                        area.width - len.floor() as u16 - 1,
+                        area.height,
+                    ),
+                }
+            },
+            Motion::UpToDown => {
+                let len = area.height as f32 * progress;
+                Regions {
+                    filled: Rect::new(area.x, area.y, area.width, len.floor() as u16),
+                    stretching: Rect::new(area.x, area.y + len.floor() as u16, area.width, 1),
+                    empty: Rect::new(
+                        area.x,
+                        area.y + len.ceil() as u16,
+                        area.width,
+                        area.height - len.ceil() as u16,
+                    ),
+                }
+            },
+            Motion::DownToUp => {
+                let len = area.height as f32 * progress;
+                Regions {
+                    filled: Rect::new(
+                        area.x,
+                        area.y + area.height - len.ceil() as u16,
+                        area.width,
+                        len.ceil() as u16,
+                    ),
+                    stretching: Rect::new(
+                        area.x,
+                        area.y + area.height - len.floor() as u16 - 1,
+                        area.width,
+                        1,
+                    ),
+                    empty: Rect::new(
+                        area.x,
+                        area.y,
+                        area.width,
+                        area.height - len.floor() as u16 - 1,
+                    ),
+                }
+            },
+        }
     }
 }
 
@@ -46,49 +122,32 @@ impl Shader for Stretch {
 
         // determine the effective + safe area to apply the effect
         let area = self.area.unwrap_or(area).intersection(buf.area);
-        self.fill_area(area, buf);
 
         if alpha == 1.0 {
+            self.fill_area(self.style, area, buf);
+            return;
+        } else if alpha == 0.0 {
+            self.fill_area(inverse_style(self.style), area, buf);
             return;
         }
 
         let bounds = StretchBounds::new(area, self.direction, alpha);
         let fractional = bounds.end % 1.0;
-        // For reverse directions, invert the fractional part since stretch characters
-        // show progress from left-to-right, but we're stretching in the opposite direction
-        let adjusted_fractional = match self.direction {
+        let fractional = match self.direction {
             Motion::RightToLeft | Motion::DownToUp => 1.0 - fractional,
             _ => fractional,
         };
-        let (symbol, style) = stretch_symbol(adjusted_fractional, self.direction, self.style);
+        let (symbol, style) = stretch_char(fractional, self.direction, self.style);
+        let regions = self.regions(alpha, area);
+        self.fill_area(inverse_style(self.style), regions.filled, buf);
+        self.fill_area(self.style, regions.empty, buf);
 
-        use Motion::*;
-        match self.direction {
-            LeftToRight => {
-                let x = bounds.end as u16;
-                for y in area.top()..area.bottom() {
-                    buf[(x, y)].set_char(symbol).set_style(style);
-                }
+        CellIterator::new(buf, regions.stretching, self.cell_filter.as_ref()).for_each_cell(
+            |_pos, cell| {
+                cell.set_char(symbol);
+                cell.set_style(style);
             },
-            RightToLeft => {
-                let x = bounds.end as u16;
-                for y in area.top()..area.bottom() {
-                    buf[(x, y)].set_char(symbol).set_style(style);
-                }
-            },
-            UpToDown => {
-                let y = bounds.end as u16;
-                for x in area.left()..area.right() {
-                    buf[(x, y)].set_char(symbol).set_style(style);
-                }
-            },
-            DownToUp => {
-                let y = bounds.end as u16;
-                for x in area.left()..area.right() {
-                    buf[(x, y)].set_char(symbol).set_style(style);
-                }
-            },
-        }
+        );
     }
 
     #[cfg(feature = "dsl")]
@@ -99,8 +158,21 @@ impl Shader for Stretch {
             "fx::stretch({}, {}, {})",
             self.direction.dsl_format(),
             self.style.dsl_format(),
-            self.timer.dsl_format()
+            self.timer.dsl_format(),
         ))
+    }
+}
+
+fn inverse_style(style: Style) -> Style {
+    let s = Style::default()
+        .add_modifier(style.add_modifier)
+        .remove_modifier(style.sub_modifier);
+
+    match (style.fg, style.bg) {
+        (Some(fg), Some(bg)) => s.fg(bg).bg(fg),
+        (Some(fg), None) => s.bg(fg),
+        (None, Some(bg)) => s.fg(bg),
+        (None, None) => s,
     }
 }
 
@@ -109,33 +181,20 @@ fn stretch_symbol_idx(alpha: f32) -> usize {
     (LAST_IDX as f32 * alpha).round() as usize
 }
 
-fn stretch_symbol(inside_cell_alpha: f32, motion: Motion, style: Style) -> (char, Style) {
+fn stretch_char(inside_cell_alpha: f32, motion: Motion, style: Style) -> (char, Style) {
     let char_idx = stretch_symbol_idx(inside_cell_alpha);
 
     use Motion::*;
     let symbol = match motion {
         LeftToRight => STRETCH_H[char_idx],
         RightToLeft => STRETCH_H[LAST_IDX - char_idx],
-        UpToDown => STRETCH_V[char_idx],
-        DownToUp => STRETCH_V[LAST_IDX - char_idx],
+        UpToDown => STRETCH_V[LAST_IDX - char_idx],
+        DownToUp => STRETCH_V[char_idx],
     };
 
-    let is_reverse = matches!(motion, RightToLeft | DownToUp);
+    let is_reverse = matches!(motion, RightToLeft | UpToDown);
 
-    let style = if is_reverse || char_idx == 0 {
-        style
-    } else {
-        let s = Style::default()
-            .add_modifier(style.add_modifier)
-            .remove_modifier(style.sub_modifier);
-
-        match (style.fg, style.bg) {
-            (Some(fg), Some(bg)) => s.fg(bg).bg(fg),
-            (Some(fg), None) => s.bg(fg),
-            (None, Some(bg)) => s.fg(bg),
-            (None, None) => s,
-        }
-    };
+    let style = if is_reverse { inverse_style(style) } else { style };
 
     (symbol, style)
 }
@@ -157,15 +216,9 @@ impl StretchBounds {
 
         match motion {
             Motion::LeftToRight => StretchBounds { start: x, end: x + w * alpha },
-            Motion::RightToLeft => StretchBounds {
-                start: x + w - 1.0,
-                end: x + (w - 1.0) * (1.0 - alpha),
-            },
+            Motion::RightToLeft => StretchBounds { start: x + w - 1.0, end: x + w * (1.0 - alpha) },
             Motion::UpToDown => StretchBounds { start: y, end: y + h * alpha },
-            Motion::DownToUp => StretchBounds {
-                start: y + h - 1.0,
-                end: y + (h - 1.0) * (1.0 - alpha),
-            },
+            Motion::DownToUp => StretchBounds { start: y + h - 1.0, end: y + h * (1.0 - alpha) },
         }
     }
 }
@@ -179,6 +232,12 @@ impl Interpolatable for StretchBounds {
     }
 }
 
+struct Regions {
+    filled: Rect,
+    stretching: Rect,
+    empty: Rect,
+}
+
 #[cfg(test)]
 mod tests {
     use ratatui::{
@@ -190,14 +249,17 @@ mod tests {
     use crate::{fx::stretch::Stretch, Duration, Effect, IntoEffect, Motion};
 
     fn assert_buf(buf: &Buffer, x: u16, y: u16, symbol: char, reverse: bool) {
-        let style = if reverse || symbol == ' ' {
+        let style = if reverse {
             Style::default().fg(Color::White).bg(Color::Black)
         } else {
             Style::default().fg(Color::Black).bg(Color::White)
         };
 
         let cell = &buf[(x, y)];
-        assert_eq!(cell.symbol(), symbol.to_string());
+        assert_eq!(
+            (cell.symbol(), cell.style()),
+            (symbol.to_string().as_str(), style)
+        );
         assert_eq!(cell.style(), style);
     }
 
@@ -224,7 +286,7 @@ mod tests {
 
         assert_buf(&buf, 0, 0, ' ', false);
         assert_buf(&buf, 1, 0, ' ', false);
-        assert_buf(&buf, 2, 0, '▊', false);
+        assert_buf(&buf, 2, 0, '▊', true);
     }
 
     #[test]
@@ -239,11 +301,9 @@ mod tests {
             area,
         );
 
-        // For RightToLeft, the stretch should start from the right edge
-        // and move leftward, with the partial character having reversed colors
-        assert_buf(&buf, 2, 0, ' ', true);
-        assert_buf(&buf, 1, 0, ' ', true);
-        assert_buf(&buf, 0, 0, '▎', true);
+        assert_buf(&buf, 2, 0, ' ', false);
+        assert_buf(&buf, 1, 0, ' ', false);
+        assert_buf(&buf, 0, 0, '▍', false);
     }
 
     #[test]
@@ -261,10 +321,9 @@ mod tests {
             area,
         );
 
-        // For UpToDown, the stretch should fill from top and have partial character at y=2
         assert_buf(&buf, 0, 0, ' ', false);
         assert_buf(&buf, 0, 1, ' ', false);
-        assert_buf(&buf, 0, 2, '▆', false);
+        assert_buf(&buf, 0, 2, '▃', false);
     }
 
     #[test]
@@ -282,9 +341,8 @@ mod tests {
             area,
         );
 
-        // For DownToUp, the stretch should start from bottom and move upward
-        assert_buf(&buf, 0, 0, '▂', true);
-        assert_buf(&buf, 0, 1, ' ', true);
-        assert_buf(&buf, 0, 2, ' ', true);
+        assert_buf(&buf, 0, 0, '▆', true);
+        assert_buf(&buf, 0, 1, ' ', false);
+        assert_buf(&buf, 0, 2, ' ', false);
     }
 }

@@ -62,8 +62,8 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
 
     /// Creates and adds a unique effect to the manager in a single operation.
     ///
-    /// This is a convenience method that combines [`Self::unique`] and [`Self::add_effect`].
-    /// Any existing effect with the same key will be cancelled.
+    /// This is a convenience method that combines [`Self::unique`] and
+    /// [`Self::add_effect`]. Any existing effect with the same key will be cancelled.
     ///
     /// # Arguments
     /// * `key` - A unique identifier for the effect. If an effect with this key already
