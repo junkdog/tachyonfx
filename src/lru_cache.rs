@@ -203,6 +203,13 @@ where
 
 #[cfg(test)]
 mod tests {
+    use alloc::{
+        format,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+
     use super::*;
 
     #[test]

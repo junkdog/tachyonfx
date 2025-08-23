@@ -549,21 +549,27 @@ fn span_as_bar_line(span: &EffectSpan, scale_time_to_cell: f32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use ratatui::{prelude::Margin, style::Color::Black};
+    use ratatui::style::Color::Black;
 
     use super::*;
     #[cfg(feature = "std")]
     use crate::buffer_to_ansi_string;
     use crate::{
         fx,
-        fx::{never_complete, parallel, repeating, sequence, with_duration},
+        fx::{parallel, sequence},
         CellFilter,
-        CellFilter::{AllOf, Inner, Not, Outer, Text},
-        Interpolation::{BounceIn, BounceOut, CircInOut, ElasticOut, QuadOut},
+        Interpolation::{CircInOut, QuadOut},
         Motion,
     };
 
+    #[cfg(feature = "std")]
     fn example_complex_fx() -> Effect {
+        use fx::*;
+        use ratatui::layout::Margin;
+        use CellFilter::*;
+
+        use crate::Interpolation::*;
+
         let margin = Margin::new(1, 1);
         let border_text = AllOf(vec![Outer(margin), Text]);
         let border_decorations = AllOf(vec![Outer(margin), Not(Text.into())]);
@@ -604,13 +610,13 @@ mod tests {
                     ]),
                 ),
                 parallel(&[
-                    fx::coalesce(Duration::from_millis(220) * time_scale),
-                    fx::fade_from(bg, bg, (250 * time_scale, QuadOut)),
+                    coalesce(Duration::from_millis(220) * time_scale),
+                    fade_from(bg, bg, (250 * time_scale, QuadOut)),
                 ]),
-                fx::sleep(3000),
+                sleep(3000),
                 parallel(&[
-                    fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
-                    fx::dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
+                    fade_to(bg, bg, (250 * time_scale, BounceIn)),
+                    dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
                 ]),
             ])
             .with_filter(Inner(margin)),

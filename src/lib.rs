@@ -49,8 +49,8 @@ mod simple_rng;
 pub mod fx;
 pub mod widget;
 
-#[cfg(feature = "dsl")]
 #[doc = include_str!("../docs/dsl.md")]
+#[cfg(feature = "dsl")]
 pub mod dsl;
 
 pub use buffer_renderer::*;
