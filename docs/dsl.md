@@ -133,6 +133,44 @@ let effect = dsl.compiler().compile(r#"
 "#).expect("Valid effect");
 ```
 
+### Stretch Effects
+
+The `stretch` effect creates expanding or contracting animations using block characters, perfect for progress bars and layout transitions:
+
+```rust
+use tachyonfx::{dsl::EffectDsl, Motion};
+use ratatui::style::{Color, Style};
+
+let dsl = EffectDsl::new();
+
+// Basic stretch from left to right
+let stretch_effect = dsl.compiler().compile(r#"
+    fx::stretch(
+        Motion::LeftToRight, 
+        Style::default().fg(Color::White).bg(Color::Blue), 
+        (1000, Linear)
+    )
+"#).expect("Valid effect");
+
+// Stretch upward with custom styling
+let upward_stretch = dsl.compiler().compile(r#"
+    fx::stretch(
+        Motion::DownToUp,
+        Style::default().bg(Color::Green),
+        (2000, QuadOut)
+    )
+"#).expect("Valid effect");
+
+// Using variables for reusable stretch configurations
+let stretch_with_vars = dsl.compiler()
+    .bind("direction", Motion::RightToLeft)
+    .bind("style", Style::default().fg(Color::Yellow).bg(Color::DarkGray))
+    .compile(r#"
+        fx::stretch(direction, style, (1500, CubicOut))
+    "#)
+    .expect("Valid effect");
+```
+
 ## Supported Types and Methods
 
 The Effect DSL supports all the types and methods needed to create tachyonfx effects:
@@ -390,7 +428,7 @@ let animation_dsl = r#"
     let color = Color::from_u32(0x3366ff);
     let color_space = ColorSpace::Rgb;  
 
-    // Create a parallel sequenece of effects
+    // Create a parallel sequence of effects
     fx::parallel(&[
         // Fade in text
         fx::fade_from_fg(Color::Black, timer)
@@ -400,6 +438,9 @@ let animation_dsl = r#"
         // Add some color shifting 
         fx::hsl_shift_fg([30.0, 0.0, 0.0], (500, SineInOut))
             .with_color_space(color_space),
+
+        // Create a stretch effect from left to right
+        fx::stretch(Motion::LeftToRight, Style::default().bg(color), timer),
 
         // After 1s, fade everything out
         fx::prolong_start(1000, fx::fade_to(Color::Black, Color::Black, timer))

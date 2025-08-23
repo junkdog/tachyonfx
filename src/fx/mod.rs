@@ -798,7 +798,7 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
 /// - Creating expansion/contraction animations
 /// - Building custom layout transitions
 pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) -> Effect {
-    self::stretch::Stretch::builder()
+    stretch::Stretch::builder()
         .direction(direction)
         .style(style)
         .timer(timer)

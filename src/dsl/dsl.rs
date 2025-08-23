@@ -347,6 +347,7 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("repeating", |args| repeating(args.effect()?).into())
         .register("slide_in", compilers::slide_in)
         .register("slide_out", compilers::slide_out)
+        .register("stretch", compilers::stretch)
         .register("sweep_in", compilers::sweep_in)
         .register("sweep_out", compilers::sweep_out)
         .register("with_duration", compilers::with_duration)
@@ -520,6 +521,10 @@ mod compilers {
         fx::with_duration(args.duration()?, args.effect()?).into()
     }
 
+    pub(super) fn stretch(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::stretch(args.motion()?, args.style()?, args.effect_timer()?).into()
+    }
+
     pub(super) fn timed_never_complete(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::timed_never_complete(args.duration()?, args.effect()?).into()
     }
@@ -617,6 +622,11 @@ mod tests {
             fx::sleep((1000, Linear)),
             fx::slide_in(Motion::LeftToRight, 10, 5, color, (1000, Linear)),
             fx::slide_out(Motion::UpToDown, 10, 5, color, (1000, Linear)),
+            fx::stretch(
+                Motion::LeftToRight,
+                Style::new().bg(Color::Cyan).bg(Color::Black),
+                (1000, Linear),
+            ),
             fx::sweep_in(Motion::LeftToRight, 10, 5, color, (1000, Linear)),
             fx::sweep_out(Motion::UpToDown, 10, 5, color, (1000, Linear)),
             fx::term256_colors(),
