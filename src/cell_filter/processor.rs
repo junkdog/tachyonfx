@@ -1,13 +1,13 @@
 use alloc::vec::Vec;
 use core::ops::{BitAnd, BitOr, Not};
 
-use bitvec::vec::BitVec;
 use ratatui::{
     buffer::Cell,
     layout::{Position, Rect},
 };
 
 use crate::{
+    bitvec::BitVec,
     cell_filter::{analyzer::FilterType, FilterAnalyzer},
     CellFilter, CellPredicate, RefRect,
 };

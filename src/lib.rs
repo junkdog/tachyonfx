@@ -24,6 +24,7 @@ compile_error!("DSL feature is not supported in no-std environments. Use either 
 #[cfg(all(feature = "std-duration", feature = "web-time"))]
 compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");
 
+mod bitvec;
 mod bounding_box;
 mod buffer_renderer;
 mod cell_filter;
