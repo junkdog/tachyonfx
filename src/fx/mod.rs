@@ -791,12 +791,6 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
 ///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
 /// );
 /// ```
-///
-/// The stretch effect is particularly effective for:
-/// - Progress bars and loading indicators
-/// - Revealing content with smooth transitions
-/// - Creating expansion/contraction animations
-/// - Building custom layout transitions
 pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) -> Effect {
     stretch::Stretch::builder()
         .direction(direction)

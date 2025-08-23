@@ -24,7 +24,7 @@ pub struct EffectManager<K: Clone + Ord + ThreadSafetyMarker + 'static> {
 #[allow(dead_code)]
 impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// Creates a unique effect that will cancel any existing effect with the same key.
-    /// The effect must be added to the manager using [`add_effect`] in order to be
+    /// The effect must be added to the manager using [`Self::add_effect`] in order to be
     /// processed.
     ///
     /// When a new unique effect is created with a key that matches an existing effect,
@@ -62,7 +62,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
 
     /// Creates and adds a unique effect to the manager in a single operation.
     ///
-    /// This is a convenience method that combines [`unique`] and [`add_effect`].
+    /// This is a convenience method that combines [`Self::unique`] and [`Self::add_effect`].
     /// Any existing effect with the same key will be cancelled.
     ///
     /// # Arguments
