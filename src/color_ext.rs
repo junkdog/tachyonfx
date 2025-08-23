@@ -26,7 +26,10 @@ impl ToRgbComponents for Color {
             Color::LightCyan => (0, 255, 255),
             Color::White => (192, 192, 192),
             Color::Indexed(code) => {
-                let [_, r, g, b] = indexed_color_to_rgb(*code).to_le_bytes();
+                let rgb = indexed_color_to_rgb(*code);
+                let r = ((rgb >> 16) & 0xFF) as u8;
+                let g = ((rgb >> 8) & 0xFF) as u8;
+                let b = (rgb & 0xFF) as u8;
                 (r, g, b)
             },
         }
@@ -43,10 +46,41 @@ impl AsIndexedColor for Color {
     fn as_indexed_color(&self) -> Color {
         let (r, g, b) = self.to_rgb();
 
-        let c = colorsys::Rgb::from([r as f64, g as f64, b as f64]);
-        let ansi256 = colorsys::Ansi256::from(c);
-        Color::Indexed(ansi256.code())
+        // let c = colorsys::Rgb::from([r as f64, g as f64, b as f64]);
+        // let ansi256 = colorsys::Ansi256::from(c);
+        Color::Indexed(rgb_to_indexed_color(r, g, b))
     }
+}
+
+fn rgb_to_indexed_color(r: u8, g: u8, b: u8) -> u8 {
+    // grayscale colors (232-255)
+    if r == g && g == b && (8..=238).contains(&r) {
+        return 232 + (r - 8) / 10;
+    }
+
+    let quantize = |val: u8| -> u8 {
+        if val < 155 {
+            if val < 48 {
+                0
+            } else if val < 115 {
+                1
+            } else {
+                2
+            }
+        } else if val < 195 {
+            3
+        } else if val < 235 {
+            4
+        } else {
+            5
+        }
+    };
+
+    let r_idx = quantize(r);
+    let g_idx = quantize(g);
+    let b_idx = quantize(b);
+
+    16 + r_idx * 36 + g_idx * 6 + b_idx
 }
 
 /// Converts an indexed color (0-255) to an RGB value.
@@ -92,7 +126,7 @@ fn indexed_color_to_rgb(index: u8) -> u32 {
                 }
             };
 
-            to_rgb(r) << 16 | to_rgb(g) << 8 | to_rgb(b)
+            (to_rgb(r) << 16) | (to_rgb(g) << 8) | to_rgb(b)
         },
 
         // 24 grayscale colors (232-255)
@@ -102,5 +136,53 @@ fn indexed_color_to_rgb(index: u8) -> u32 {
             let gray = (8 + gray_index * 10) as u32;
             (gray << 16) | (gray << 8) | gray
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_indexed_color_roundtrip() {
+        // skip basic colors (0-15) since they are not quantized
+        for index in 16..=255u8 {
+            let rgb_value = indexed_color_to_rgb(index);
+            let r = ((rgb_value >> 16) & 0xFF) as u8;
+            let g = ((rgb_value >> 8) & 0xFF) as u8;
+            let b = (rgb_value & 0xFF) as u8;
+            let back_to_index = rgb_to_indexed_color(r, g, b);
+
+            // For the 216-color cube (16-231) and grayscale (232-255),
+            // we should get exact roundtrip, except when cube colors are grayscale
+            // and get remapped to the dedicated grayscale ramp
+            match index {
+                16..=231 => {
+                    // Cube colors should roundtrip unless they're grayscale
+                    if r == g && g == b && (8..=238).contains(&r) {
+                        // Grayscale cube colors should map to grayscale ramp
+                        assert!((232..=255).contains(&back_to_index),
+                            "Grayscale cube color {} -> ({}, {}, {}) should map to grayscale ramp, got {}", 
+                            index, r, g, b, back_to_index);
+                    } else {
+                        // Non-grayscale cube colors should roundtrip exactly
+                        assert_eq!(
+                            index, back_to_index,
+                            "Roundtrip failed for index {}: {} -> ({}, {}, {}) -> {}",
+                            index, index, r, g, b, back_to_index
+                        );
+                    }
+                },
+                232..=255 => {
+                    // Grayscale ramp should always roundtrip exactly
+                    assert_eq!(
+                        index, back_to_index,
+                        "Roundtrip failed for index {}: {} -> ({}, {}, {}) -> {}",
+                        index, index, r, g, b, back_to_index
+                    );
+                },
+                _ => continue,
+            }
+        }
     }
 }

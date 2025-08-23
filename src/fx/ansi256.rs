@@ -65,8 +65,6 @@ mod tests {
     #[test]
     #[allow(deprecated)]
     fn to_dsl() {
-        use crate::shader::Shader;
-
         let dsl = fx::term256_colors().to_dsl().unwrap().to_string();
         assert_eq!(dsl, "fx::term256_colors()");
     }

@@ -134,7 +134,7 @@ impl Shader for Prolong {
 mod tests {
     use indoc::indoc;
 
-    use crate::{fx, fx::consume_tick, shader::Shader};
+    use crate::{fx, fx::consume_tick};
 
     #[test]
     fn to_dsl_prolong_start() {

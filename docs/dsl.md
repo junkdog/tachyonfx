@@ -133,6 +133,327 @@ let effect = dsl.compiler().compile(r#"
 "#).expect("Valid effect");
 ```
 
+### Text and Character Effects
+
+#### Dissolve and Coalesce Effects
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Basic dissolve effect - makes text disappear gradually
+let dissolve_effect = dsl.compiler().compile(r#"
+    fx::dissolve((1000, Linear))
+"#).expect("Valid effect");
+
+// Dissolve to specific style - transitions both text and background
+let dissolve_to_effect = dsl.compiler().compile(r#"
+    fx::dissolve_to(
+        Style::default().fg(Color::Red).bg(Color::Black), 
+        (1500, QuadOut)
+    )
+"#).expect("Valid effect");
+
+// Coalesce - reverse of dissolve (text appears gradually)
+let coalesce_effect = dsl.compiler().compile(r#"
+    fx::coalesce((1000, BounceOut))
+"#).expect("Valid effect");
+
+// Coalesce from specific style - reforms text from given appearance
+let coalesce_from_effect = dsl.compiler().compile(r#"
+    fx::coalesce_from(
+        Style::default().fg(Color::DarkGray).bg(Color::Black),
+        (1000, ExpoInOut)
+    )
+"#).expect("Valid effect");
+```
+
+#### Explosion Effects
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Basic explosion - content disperses outward from center
+let explode_effect = dsl.compiler().compile(r#"
+    fx::explode(15.0, 2.0, (1000, Linear))
+"#).expect("Valid effect");
+
+// Combined with fade for dramatic effect
+let dramatic_explosion = dsl.compiler().compile(r#"
+    fx::parallel(&[
+        fx::fade_to_fg(Color::from_u32(0x404040), (1000, Linear)),
+        fx::explode(20.0, 3.0, (1000, Linear))
+    ])
+"#).expect("Valid effect");
+```
+
+#### Slide and Sweep Effects  
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Slide in from specified direction with gradient
+let slide_in_effect = dsl.compiler().compile(r#"
+    fx::slide_in(
+        Motion::LeftToRight,
+        10,  // gradient length
+        5,   // randomness
+        Color::from_u32(0x1d2021),  // color behind cells
+        (1000, Linear)
+    )
+"#).expect("Valid effect");
+
+// Slide out in specified direction
+let slide_out_effect = dsl.compiler().compile(r#"
+    fx::slide_out(
+        Motion::UpToDown,
+        15,  // gradient length  
+        0,   // no randomness for uniform effect
+        Color::Black,
+        (1500, QuadOut)
+    )
+"#).expect("Valid effect");
+
+// Sweep in - transitions from specified color to original content
+let sweep_in_effect = dsl.compiler().compile(r#"
+    fx::sweep_in(
+        Motion::RightToLeft,
+        8,   // gradient length
+        3,   // randomness for organic feel
+        Color::Blue,  // faded color
+        (1200, CubicInOut)
+    )
+"#).expect("Valid effect");
+
+// Sweep out - transitions from original content to specified color
+let sweep_out_effect = dsl.compiler().compile(r#"
+    fx::sweep_out(
+        Motion::DownToUp,
+        12,  // gradient length
+        2,   // slight randomness
+        Color::from_u32(0x504945),
+        (800, BounceOut)
+    )
+"#).expect("Valid effect");
+```
+
+### Stretch Effects
+
+The `stretch` effect creates expanding or contracting animations using block characters, perfect for progress bars and layout transitions:
+
+```rust
+use tachyonfx::{dsl::EffectDsl, Motion};
+use ratatui::style::{Color, Style};
+
+let dsl = EffectDsl::new();
+
+// Basic stretch from left to right
+let stretch_effect = dsl.compiler().compile(r#"
+    fx::stretch(
+        Motion::LeftToRight, 
+        Style::default().fg(Color::White).bg(Color::Blue), 
+        (1000, Linear)
+    )
+"#).expect("Valid effect");
+
+// Stretch upward with custom styling
+let upward_stretch = dsl.compiler().compile(r#"
+    fx::stretch(
+        Motion::DownToUp,
+        Style::default().bg(Color::Green),
+        (2000, QuadOut)
+    )
+"#).expect("Valid effect");
+
+// Using variables for reusable stretch configurations
+let stretch_with_vars = dsl.compiler()
+    .bind("direction", Motion::RightToLeft)
+    .bind("style", Style::default().fg(Color::Yellow).bg(Color::DarkGray))
+    .compile(r#"
+        fx::stretch(direction, style, (1500, CubicOut))
+    "#)
+    .expect("Valid effect");
+```
+
+### Color Effects
+
+#### HSL Color Manipulation
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Shift both foreground and background colors in HSL space
+let hsl_shift_effect = dsl.compiler().compile(r#"
+    fx::hsl_shift(
+        Some([120.0, 25.0, 25.0]),  // foreground HSL shifts: [hue, saturation, lightness]
+        Some([-40.0, -50.0, -50.0]), // background HSL shifts
+        (1000, Linear)
+    )
+"#).expect("Valid effect");
+
+// Shift only foreground color
+let fg_hsl_shift = dsl.compiler().compile(r#"
+    fx::hsl_shift_fg(
+        [180.0, 0.0, -20.0],  // shift hue by 180°, reduce lightness by 20%
+        (1500, SineInOut)
+    )
+"#).expect("Valid effect");
+
+// Using variables for reusable color shifts
+let color_shift_with_vars = dsl.compiler()
+    .bind("hue_shift", 90.0f32)
+    .bind("saturation_boost", 30.0f32)
+    .compile(r#"
+        let fg_shift = [hue_shift, saturation_boost, 0.0];
+        fx::hsl_shift_fg(fg_shift, (2000, QuadInOut))
+    "#)
+    .expect("Valid effect");
+```
+
+#### Basic Color Fading
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Fade foreground to specific color
+let fade_fg_effect = dsl.compiler().compile(r#"
+    fx::fade_to_fg(Color::Red, (1000, Linear))
+"#).expect("Valid effect");
+
+// Fade from specific foreground color to original
+let fade_from_fg_effect = dsl.compiler().compile(r#"
+    fx::fade_from_fg(Color::from_u32(0x504945), (1000, QuadInOut))
+"#).expect("Valid effect");
+
+// Fade both foreground and background colors
+let fade_both_effect = dsl.compiler().compile(r#"
+    fx::fade_to(Color::White, Color::Black, (1500, CircOut))
+"#).expect("Valid effect");
+
+// Fade from both colors to original
+let fade_from_both_effect = dsl.compiler().compile(r#"
+    fx::fade_from(Color::Blue, Color::from_u32(0x000080), (1200, BounceOut))
+"#).expect("Valid effect");
+```
+
+### Timing and Control Effects
+
+#### Effect Repetition and Loops
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Repeat effect specific number of times
+let repeated_fade = dsl.compiler().compile(r#"
+    fx::repeat(
+        fx::fade_to_fg(Color::Red, (500, Linear)),
+        RepeatMode::Times(3)
+    )
+"#).expect("Valid effect");
+
+// Repeat effect for specific duration (using milliseconds)
+let duration_repeat = dsl.compiler().compile(r#"
+    fx::repeat(
+        fx::fade_to_fg(Color::Blue, (200, Linear)), 
+        RepeatMode::Duration(5000)
+    )
+"#).expect("Valid effect");
+
+// Repeat indefinitely (shorthand for RepeatMode::Forever)
+let endless_pulse = dsl.compiler().compile(r#"
+    fx::repeating(fx::fade_to_fg(Color::Green, (300, SineInOut)))
+"#).expect("Valid effect");
+
+// Ping-pong effect - plays forward then backward
+let ping_pong_fade = dsl.compiler().compile(r#"
+    fx::ping_pong(fx::fade_to_fg(Color::Yellow, (500, CircOut)))
+"#).expect("Valid effect");
+```
+
+#### Effect Duration Control
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Never complete - effect runs indefinitely once finished
+let permanent_effect = dsl.compiler().compile(r#"
+    fx::never_complete(fx::fade_to_fg(Color::Red, (1000, Linear)))
+"#).expect("Valid effect");
+
+// Timed never complete - runs indefinitely but with duration limit (using milliseconds)
+let timed_permanent = dsl.compiler().compile(r#"
+    fx::timed_never_complete(
+        10000,
+        fx::fade_to_fg(Color::from_u32(0x800080), (1000, Linear))
+    )
+"#).expect("Valid effect");
+
+// Apply duration limit to any effect (using milliseconds)
+let duration_limited = dsl.compiler().compile(r#"
+    fx::with_duration(2000, fx::repeating(fx::dissolve(500)))
+"#).expect("Valid effect");
+
+// Prolong effect duration at start or end
+let prolonged_start = dsl.compiler().compile(r#"
+    fx::prolong_start((500, Linear), fx::fade_to_fg(Color::Cyan, (1000, Linear)))
+"#).expect("Valid effect");
+
+let prolonged_end = dsl.compiler().compile(r#"
+    fx::prolong_end((800, Linear), fx::coalesce((600, BounceOut)))
+"#).expect("Valid effect");
+```
+
+#### Advanced Effect Control
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Freeze effect at specific alpha (transition point)
+let frozen_effect = dsl.compiler().compile(r#"
+    fx::freeze_at(0.75, true, fx::fade_to_fg(Color::from_u32(0xFFA500), (1000, Linear)))
+"#).expect("Valid effect");
+
+// Remap alpha progression to smaller range
+let remapped_effect = dsl.compiler().compile(r#"
+    fx::remap_alpha(0.2, 0.8, fx::dissolve((1000, QuadInOut)))
+"#).expect("Valid effect");
+
+// Run effect exactly once (useful for zero-duration effects in sequences)
+let run_once_effect = dsl.compiler().compile(r#"
+    fx::run_once(fx::consume_tick())
+"#).expect("Valid effect");
+
+// Consume single tick (minimal delay)
+let tick_delay = dsl.compiler().compile(r#"
+    fx::consume_tick()
+"#).expect("Valid effect");
+
+// Add delay before effect starts
+let delayed_effect = dsl.compiler().compile(r#"
+    fx::delay((800, Linear), fx::explode(10.0, 1.5, (1200, QuadOut)))
+"#).expect("Valid effect");
+
+// Simple sleep/pause effect
+let pause_effect = dsl.compiler().compile(r#"
+    fx::sleep((1000, Linear))
+"#).expect("Valid effect");
+```
+
 ## Supported Types and Methods
 
 The Effect DSL supports all the types and methods needed to create tachyonfx effects:
@@ -390,7 +711,7 @@ let animation_dsl = r#"
     let color = Color::from_u32(0x3366ff);
     let color_space = ColorSpace::Rgb;  
 
-    // Create a parallel sequenece of effects
+    // Create a parallel sequence of effects
     fx::parallel(&[
         // Fade in text
         fx::fade_from_fg(Color::Black, timer)
@@ -400,6 +721,9 @@ let animation_dsl = r#"
         // Add some color shifting 
         fx::hsl_shift_fg([30.0, 0.0, 0.0], (500, SineInOut))
             .with_color_space(color_space),
+
+        // Create a stretch effect from left to right
+        fx::stretch(Motion::LeftToRight, Style::default().bg(color), timer),
 
         // After 1s, fade everything out
         fx::prolong_start(1000, fx::fade_to(Color::Black, Color::Black, timer))
@@ -411,6 +735,52 @@ let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(animation_dsl).expect("Valid effect");
 ```
 
+## Effects Not Available in DSL
+
+Some tachyonfx effects are intentionally not available in the DSL due to their complexity or requirements for runtime-specific data:
+
+### Custom Function Effects
+- `fx::effect_fn` - Requires Rust closures which cannot be represented in string-based DSL
+- `fx::effect_fn_buf` - Same limitation as above
+
+### Geometry and Buffer Effects  
+- `fx::translate` - Requires complex offset calculations
+- `fx::translate_buf` - Works with `RefCount<Buffer>` which cannot be constructed from DSL
+- `fx::resize_area` - Works with `Size` parameters that need runtime calculation
+- `fx::offscreen_buffer` - Requires `RefCount<Buffer>` parameter
+
+### Advanced Layout Effects
+- `fx::dynamic_area` - Requires `RefRect` shared references
+- `fx::dispatch_event` - Requires `mpsc::Sender<T>` channels and generic event types
+
+### Special Composition Effects
+Note that `fx::sequence` and `fx::parallel` are available in DSL but use special syntax rather than function calls:
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Use this syntax in DSL for composition:
+let sequence_effect = dsl.compiler().compile(r#"
+    fx::sequence(&[
+        fx::fade_to_fg(Color::Red, 500),
+        fx::dissolve(300)
+    ])
+"#).expect("Valid effect");
+
+let parallel_effect = dsl.compiler().compile(r#"
+    fx::parallel(&[
+        fx::fade_to_fg(Color::Blue, 1000),
+        fx::coalesce(800)
+    ])
+"#).expect("Valid effect");
+
+// These are not regular function registrations like other effects
+```
+
+These limitations ensure the DSL remains simple and focused on effects that can be fully described with basic data types.
+
 ## Limitations and Considerations
 
 When working with the Effect DSL, be aware of the following limitations:
@@ -421,4 +791,5 @@ When working with the Effect DSL, be aware of the following limitations:
 - **No Control Flow:** The Effect DSL does not support if/else, match, or loop constructs.
 - **Comments:** Both line comments `//` and block comments `/* */` are supported in the Effect DSL but are not preserved
   when serializing back to DSL.
+- **Runtime Dependencies:** Effects requiring runtime-specific data (channels, buffers, closures) are not available.
 

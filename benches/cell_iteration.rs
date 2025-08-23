@@ -1,9 +1,3 @@
-#![allow(
-    clippy::std_instead_of_core,
-    clippy::std_instead_of_alloc,
-    clippy::alloc_instead_of_core
-)]
-
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use ratatui::{
     buffer::Buffer,

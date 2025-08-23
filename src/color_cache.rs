@@ -71,7 +71,7 @@ use crate::lru_cache::LruCache;
 /// ```
 pub struct ColorCache<Context, const N: usize>
 where
-    Context: Debug + Clone + Copy + PartialEq + Eq + Default,
+    Context: Debug + PartialEq + Copy + Eq + Default,
 {
     fg_cache: LruCache<CacheKey<Context>, Color, N>,
     bg_cache: LruCache<CacheKey<Context>, Color, N>,
@@ -79,7 +79,7 @@ where
 
 impl<Context, const N: usize> ColorCache<Context, N>
 where
-    Context: Debug + Clone + Copy + PartialEq + Eq + Default,
+    Context: Debug + PartialEq + Copy + Eq + Default,
 {
     /// Creates a new `ColorCache` with empty foreground and background caches.
     pub fn new() -> Self {
@@ -160,7 +160,7 @@ where
 
 impl<Context, const N: usize> Default for ColorCache<Context, N>
 where
-    Context: Debug + Clone + Copy + PartialEq + Eq + Default,
+    Context: Debug + Copy + PartialEq + Eq + Default,
 {
     fn default() -> Self {
         Self::new()

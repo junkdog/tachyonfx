@@ -1,9 +1,3 @@
-#![allow(
-    clippy::std_instead_of_core,
-    clippy::std_instead_of_alloc,
-    clippy::alloc_instead_of_core
-)]
-
 use std::{error::Error, io, io::Stdout, panic, time::Instant, vec};
 
 use common::gruvbox::{
@@ -30,7 +24,7 @@ use tachyonfx::{
     fx,
     fx::{parallel, repeating, sequence},
     CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation,
-    Motion, Shader,
+    Motion,
 };
 use Gruvbox::OrangeBright;
 use Interpolation::*;

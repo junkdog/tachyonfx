@@ -148,6 +148,7 @@ mod shader_fn;
 mod sleep;
 mod slide;
 mod sliding_window_alpha;
+mod stretch;
 mod sweep_in;
 mod temporary;
 mod translate;
@@ -742,6 +743,59 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
         .gradient_length(gradient_length)
         .randomness_extent(randomness)
         .direction(direction)
+        .build()
+        .into_effect()
+}
+
+/// Creates a stretch effect that expands or shrinks rectangular areas using block
+/// characters.
+///
+/// This effect creates a stretching animation that uses block characters (like ▏▎▍▌▋▊▉█)
+/// to simulate smooth expansion or contraction in terminal interfaces. The effect fills
+/// the area with the specified style and places partial block characters at the leading
+/// edge.
+///
+/// # Arguments
+///
+/// * `direction` - The direction of the stretch effect:
+///   - `Motion::LeftToRight` - Stretches from left edge rightward
+///   - `Motion::RightToLeft` - Stretches from right edge leftward
+///   - `Motion::UpToDown` - Stretches from top edge downward
+///   - `Motion::DownToUp` - Stretches from bottom edge upward
+///
+/// * `style` - The visual style applied to the stretched area (colors, modifiers)
+///
+/// * `timer` - Controls the duration and timing of the stretch effect
+///
+/// # Returns
+///
+/// An `Effect` that creates a stretching animation when processed.
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::{fx, EffectTimer, Interpolation, Motion};
+/// use ratatui::style::{Color, Style};
+///
+/// // Stretch from left to right with white foreground on black background
+/// let stretch_effect = fx::stretch(
+///     Motion::LeftToRight,
+///     Style::default().fg(Color::White).bg(Color::Black),
+///     EffectTimer::from_ms(1000, Interpolation::Linear)
+/// );
+///
+/// // Stretch upward with colored background
+/// let upward_stretch = fx::stretch(
+///     Motion::DownToUp,
+///     Style::default().bg(Color::Blue),
+///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
+/// );
+/// ```
+pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) -> Effect {
+    stretch::Stretch::builder()
+        .direction(direction)
+        .style(style)
+        .timer(timer)
         .build()
         .into_effect()
 }
@@ -1504,7 +1558,6 @@ mod tests {
     use ratatui::prelude::Color;
 
     use super::*;
-    use crate::Shader;
 
     const DIRECTIONS: [Motion; 4] =
         [Motion::DownToUp, Motion::UpToDown, Motion::LeftToRight, Motion::RightToLeft];

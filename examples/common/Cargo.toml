@@ -5,6 +5,6 @@ edition = "2021"
 
 [dependencies]
 tachyonfx = { path = "../.." }
-ratatui = { version = "0.30.0-alpha.5", default-features = false, features = ["std", "crossterm"] }
+ratatui = { version = "0.29.0", default-features = false, features = ["crossterm"] }
 crossterm = "0.29.0"
 bon = { version = "3.7.0", default-features = false }

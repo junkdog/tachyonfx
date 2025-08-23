@@ -3,6 +3,8 @@
 ## unreleased
 
 ### Breaking Changes
+- `Interpolatable` trait has been simplified from `Interpolatable<T>` to `Interpolatable`.
+- **Effect API refactoring**: `Effect` no longer implements `Shader` trait; methods are now direct on `Effect`. 
 - **Major ColorCache API overhaul**: The `ColorCache` API has been completely redesigned for improved flexibility and
   performance:
   - **Generic signature change**: `ColorCache<Context, const N: usize>` from `ColorCache<const N: usize>`
@@ -16,16 +18,25 @@
   - **Lifetime parameter added**: `CellPredicate` now requires lifetime parameter `CellPredicate<'_>`
   - **Ownership model change**: `CellPredicate` now borrows `CellFilter` instead of owning it
   - **Performance improvement**: Static filters (Area, Position, etc.) are pre-computed as bitmasks for O(1) lookups
+- **LruCache**: The key type `K` now requires `Copy` in addition to existing bounds for performance optimizations.
 
 ### Added
 - `CellIterator::for_each_cell()`: Performance-optimized method for iterating over cells without division and
   modulo operations. Recommended for all cell processing unless iterator combinators are needed.
+- `fx::stretch()`: Creates a stretching effect that expands or shrinks rectangular areas using block characters (▏▎▍▌▋▊▉█). Supports all four directions with smooth partial character rendering at the leading edge.
 
 ### Changed
+- `LruCache`: `V` is no longer required to implement `Clone`.
 - Updated ratatui dependency to `>=0.29.0` for compatibility with both 0.29.x stable and 0.30-alpha releases.
+- **Example restructuring**: Migrated all examples to independent Cargo workspace members:
+  - `examples/common` crate with shared utilities (`gruvbox` color theme, `window` helper)
+  - Examples now standalone crates with their own `Cargo.toml`
+  - Run with `cargo run -p {example-name}` instead of `cargo run --example {name}`
 
 ### Removed
-- Removed `dsl-playground` as it was a poor example of the DSL and of little value.
+- Example: `dsl-playground`: as it was a poor example of the DSL and of little value.
+- Example: `open-window`: removed due to its poor design and ergonomics.
+- Removed `colorsys` dependency, only used for indexed color conversion.
 
 
 ## tachyonfx 0.16.0 - 2025-07-16

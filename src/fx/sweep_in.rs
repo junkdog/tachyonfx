@@ -179,7 +179,7 @@ mod tests {
     use indoc::indoc;
     use ratatui::prelude::Color;
 
-    use crate::{fx, Motion, Shader};
+    use crate::{fx, Motion};
 
     #[test]
     fn to_dsl_slide_in() {

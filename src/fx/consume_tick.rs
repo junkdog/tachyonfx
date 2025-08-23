@@ -47,7 +47,7 @@ impl Shader for ConsumeTick {
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
-    use crate::{fx, Shader};
+    use crate::fx;
 
     #[test]
     fn consume_tick() {

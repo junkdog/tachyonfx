@@ -1,9 +1,3 @@
-#![allow(
-    clippy::std_instead_of_core,
-    clippy::std_instead_of_alloc,
-    clippy::alloc_instead_of_core
-)]
-
 use std::{cell::RefCell, error::Error, io, io::Stdout, rc::Rc, sync::mpsc, thread};
 
 use crossterm::{
@@ -21,7 +15,7 @@ use ratatui::{
 };
 use tachyonfx::{
     widget::{EffectTimeline, EffectTimelineRects},
-    BufferRenderer, Duration, Effect, Shader,
+    BufferRenderer, Duration, Effect,
 };
 
 use crate::effects::{effect_in, transition_fx};

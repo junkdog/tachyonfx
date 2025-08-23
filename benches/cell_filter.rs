@@ -1,9 +1,3 @@
-#![allow(
-    clippy::std_instead_of_core,
-    clippy::std_instead_of_alloc,
-    clippy::alloc_instead_of_core
-)]
-
 // benches/cell_filter.rs
 use criterion::{criterion_group, criterion_main, Criterion};
 use ratatui::{
@@ -12,7 +6,7 @@ use ratatui::{
     layout::{Constraint, Direction, Margin, Rect},
     prelude::Color,
 };
-use tachyonfx::{fx, CellFilter, Duration, Effect, Shader};
+use tachyonfx::{fx, CellFilter, Duration, Effect};
 
 // Constants for consistent measurements
 const BENCH_WIDTH: u16 = 100;

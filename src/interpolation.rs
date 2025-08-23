@@ -110,21 +110,24 @@ impl Interpolation {
 }
 
 /// A trait for interpolating between two values.
-pub trait Interpolatable<T> {
-    fn lerp(&self, target: &T, alpha: f32) -> T;
+pub trait Interpolatable {
+    fn lerp(&self, target: &Self, alpha: f32) -> Self;
 
-    fn tween(&self, target: &T, alpha: f32, interpolation: Interpolation) -> T {
+    fn tween(&self, target: &Self, alpha: f32, interpolation: Interpolation) -> Self
+    where
+        Self: Sized,
+    {
         self.lerp(target, interpolation.alpha(alpha))
     }
 }
 
-impl<T: Interpolatable<T>> Interpolatable<(T, T)> for (T, T) {
+impl<T: Interpolatable> Interpolatable for (T, T) {
     fn lerp(&self, target: &(T, T), alpha: f32) -> (T, T) {
         (self.0.lerp(&target.0, alpha), self.1.lerp(&target.1, alpha))
     }
 }
 
-impl Interpolatable<u16> for u16 {
+impl Interpolatable for u16 {
     fn lerp(&self, target: &u16, alpha: f32) -> u16 {
         (*self as f32)
             .lerp(&(*target as f32), alpha)
@@ -132,7 +135,7 @@ impl Interpolatable<u16> for u16 {
     }
 }
 
-impl Interpolatable<i16> for i16 {
+impl Interpolatable for i16 {
     fn lerp(&self, target: &i16, alpha: f32) -> i16 {
         (*self as f32)
             .lerp(&(*target as f32), alpha)
@@ -140,19 +143,19 @@ impl Interpolatable<i16> for i16 {
     }
 }
 
-impl Interpolatable<f32> for f32 {
+impl Interpolatable for f32 {
     fn lerp(&self, target: &f32, alpha: f32) -> f32 {
         self + (target - self) * alpha
     }
 }
 
-impl Interpolatable<i32> for i32 {
+impl Interpolatable for i32 {
     fn lerp(&self, target: &i32, alpha: f32) -> i32 {
         self + ((target - self) as f64 * alpha as f64).round() as i32
     }
 }
 
-impl Interpolatable<Style> for Style {
+impl Interpolatable for Style {
     fn lerp(&self, target: &Style, alpha: f32) -> Style {
         let fg = self.fg.lerp(&target.fg, alpha);
         let bg = self.bg.lerp(&target.bg, alpha);
@@ -169,7 +172,7 @@ impl Interpolatable<Style> for Style {
     }
 }
 
-impl Interpolatable<Color> for Color {
+impl Interpolatable for Color {
     fn lerp(&self, target: &Color, alpha: f32) -> Color {
         if alpha == 0.0 {
             return *self;
@@ -181,7 +184,7 @@ impl Interpolatable<Color> for Color {
     }
 }
 
-impl Interpolatable<Option<Color>> for Option<Color> {
+impl Interpolatable for Option<Color> {
     fn lerp(&self, target: &Option<Color>, alpha: f32) -> Option<Color> {
         match (self, target) {
             (Some(c1), Some(c2)) => Some(c1.lerp(c2, alpha)),
@@ -192,7 +195,7 @@ impl Interpolatable<Option<Color>> for Option<Color> {
     }
 }
 
-impl Interpolatable<Offset> for Offset {
+impl Interpolatable for Offset {
     fn lerp(&self, target: &Offset, alpha: f32) -> Offset {
         Offset {
             x: self.x.lerp(&target.x, alpha),

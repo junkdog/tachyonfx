@@ -80,13 +80,22 @@ Explore the examples to see effects in action:
 
 ```bash
 # Basic effects showcase
-cargo run --example basic-effects
+cargo run -p basic-effects
 
 # Effect timeline visualization
-cargo run --example fx-chart
+cargo run -p fx-chart
 
 # Minimal setup example
-cargo run --example minimal
+cargo run -p minimal
+
+# Interactive effect registry demo
+cargo run -p effect-registry
+
+# Complete effect showcase
+cargo run -p effect-showcase
+
+# Tweening examples
+cargo run -p tweens
 ```
 
 ## 🎯 Getting Started

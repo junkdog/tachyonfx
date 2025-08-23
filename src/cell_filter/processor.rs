@@ -261,10 +261,6 @@ impl StaticFilterProcessor {
     ///
     /// # Arguments
     /// * `area` - The new area for filter processing
-    ///
-    /// # Performance
-    /// - Best case (no changes): O(1)
-    /// - Worst case (recomputation): O(area.width * area.height * filter_complexity)
     fn update(&mut self, area: Rect) {
         if self.requires_resize(area) {
             self.cell_indices = calculate_cell_indices(area, &self.filter);

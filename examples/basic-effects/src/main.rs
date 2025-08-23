@@ -1,9 +1,3 @@
-#![allow(
-    clippy::std_instead_of_core,
-    clippy::std_instead_of_alloc,
-    clippy::alloc_instead_of_core
-)]
-
 use std::{error::Error, io, io::Stdout, time::Instant};
 
 use common::gruvbox::{
@@ -26,7 +20,7 @@ use tachyonfx::{
     color_from_hsl,
     fx::{self, never_complete, parallel, sequence, Glitch},
     CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect,
-    Motion, Shader, SimpleRng,
+    Motion, SimpleRng,
 };
 use Gruvbox::{Light3, Orange, OrangeBright};
 use Interpolation::*;
@@ -81,7 +75,7 @@ fn run_app(terminal: &mut Terminal, mut app: App, effects: EffectsRepository) ->
         last_frame_instant = Instant::now();
         terminal.draw(|f| ui(f, &mut app))?;
 
-        if event::poll(StdDuration::from_millis(16))? {
+        if event::poll(StdDuration::from_millis(32))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {

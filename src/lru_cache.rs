@@ -1,18 +1,20 @@
-use core::array;
-
-const MAX_CACHE_SIZE: usize = 255; // Limited by u16 counter space
-const UNINITIALIZED_TIMESTAMP: u16 = 0;
-const INITIAL_TIMESTAMP: u16 = 1;
+const MAX_CACHE_SIZE: usize = 255; // Limited by u8 index space
 
 /// A fixed-size LRU (Least Recently Used) cache with const generic capacity.
+/// This cache is designed for high-performance scenarios with small cache sizes.
 ///
 /// This cache stores key-value pairs and automatically evicts the least recently
 /// used item when the capacity is reached. It also tracks cache hit/miss statistics.
 ///
+/// The implementation is optimized for small cache sizes (typically 8 entries)
+/// and uses stack-allocated arrays for maximum performance. The LRU ordering is
+/// maintained using efficient array operations without heap allocations. More
+/// recently accessed entries are moved to the front of the index array.
+///
 /// # Type Parameters
 ///
-/// * `K` - The key type, must be `Eq + Clone + Default`
-/// * `V` - The value type, must be `Clone`
+/// * `K` - The key type, must implement `PartialEq + Copy`
+/// * `V` - The value type
 /// * `N` - The fixed capacity of the cache (must be between 1 and 255)
 ///
 /// # Examples
@@ -20,39 +22,37 @@ const INITIAL_TIMESTAMP: u16 = 1;
 /// ```
 /// use tachyonfx::LruCache;
 ///
-/// let mut cache = LruCache::<String, i32, 2>::new();
+/// // Small cache size for optimal performance
+/// let mut cache = LruCache::<i32, String, 8>::new();
 ///
 /// // The memoize method computes a value if not in cache
-/// let value = cache.memoize(&"key1".to_string(), |k| k.len() as i32);
-/// assert_eq!(value, 4);
+/// let value = cache.memoize(&42, |k| format!("value_{}", k));
+/// assert_eq!(value, "value_42");
 ///
 /// // Second access is a cache hit
-/// let value = cache.memoize(&"key1".to_string(), |_| panic!("Should not be called"));
-/// assert_eq!(value, 4);
+/// let value = cache.memoize(&42, |_| panic!("Should not be called"));
+/// assert_eq!(value, "value_42");
 ///
 /// // When capacity is reached, least recently used item is evicted
-/// cache.memoize(&"key2".to_string(), |_| 10);
-/// cache.memoize(&"key3".to_string(), |_| 20);
-///
-/// // key1 was evicted, so this will call the function again
-/// let value = cache.memoize(&"key1".to_string(), |_| 30);
-/// assert_eq!(value, 30);
+/// for i in 1..=8 {
+///     cache.memoize(&i, |k| format!("value_{}", k));
+/// }
+/// cache.memoize(&999, |k| format!("value_{}", k)); // Evicts LRU item
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct LruCache<K, V, const N: usize>
 where
-    K: PartialEq + Clone + Default,
+    K: PartialEq + Copy,
 {
-    index: [K; N],
-    entries: [(V, u16); N],
-    counter: u16,
+    index: [(K, u8); N],
+    entries: [V; N],
     cache_misses: u32,
     cache_hits: u32,
 }
 
 impl<K, V, const N: usize> LruCache<K, V, N>
 where
-    K: PartialEq + Clone + Default,
+    K: PartialEq + Copy,
 {
     const _VALIDATE_SIZE: () = assert!(
         N > 0 && N <= MAX_CACHE_SIZE,
@@ -74,9 +74,8 @@ where
         let _ = Self::_VALIDATE_SIZE;
 
         Self {
-            index: array::from_fn(|_| Default::default()),
-            entries: array::from_fn(|_| Default::default()),
-            counter: INITIAL_TIMESTAMP,
+            index: core::array::from_fn(|i| (K::default(), i as u8)),
+            entries: core::array::from_fn(|_| V::default()),
             cache_misses: 0,
             cache_hits: 0,
         }
@@ -124,31 +123,11 @@ where
     ///
     /// The value associated with the key, either from the cache or newly computed
     pub fn memoize_ref(&mut self, key: &K, f: impl FnOnce(&K) -> V) -> &V {
-        self.counter += 1;
-        if self.counter == 0xffff {
-            self.normalize();
-            self.counter = self
-                .entries
-                .iter()
-                .map(|(_, counter)| *counter)
-                .max()
-                .unwrap_or(1) // 1 == valid entry
-        }
-
-        match self.find_key_index(key) {
-            Some(idx) => {
-                self.cache_hits += 1;
-
-                self.entries[idx].1 = self.counter;
-                &self.entries[idx].0
-            },
-            None => {
-                self.cache_misses += 1;
-
-                let idx = self.find_lru_index();
-                self.index[idx] = key.clone();
-                self.entries[idx] = (f(key), self.counter);
-                &self.entries[idx].0
+        match self.refresh_key(key) {
+            RefreshResult::Hit(value_idx) => &self.entries[value_idx],
+            RefreshResult::Miss(value_idx) => {
+                self.entries[value_idx] = f(key);
+                &self.entries[value_idx]
             },
         }
     }
@@ -163,69 +142,74 @@ where
         self.cache_misses
     }
 
-    fn normalize(&mut self) {
-        let min_offset = self
-            .entries
+    fn refresh_key(&mut self, key: &K) -> RefreshResult {
+        if let Some((idx, entry_idx)) = self
+            .index
             .iter()
-            .map(|(_, counter)| *counter)
-            .filter(|&c| c != UNINITIALIZED_TIMESTAMP) // Only consider used entries
-            .min()
-            .unwrap_or(1);
+            .enumerate()
+            .find(|&(_, v)| v.0 == *key)
+            .map(|(idx, (_key, entry_idx))| (idx, *entry_idx))
+        {
+            self.cache_hits += 1;
 
-        self.entries.iter_mut().for_each(|(_, counter)| {
-            if *counter != UNINITIALIZED_TIMESTAMP {
-                *counter -= min_offset - 1; // Subtract min_offset but keep it >= 1
+            if idx > 0 {
+                let index_record = self.index[idx];
+                self.index.copy_within(0..idx, 1);
+                self.index[0] = index_record;
             }
-        });
-    }
 
-    #[inline(always)]
-    fn find_key_index(&self, key: &K) -> Option<usize> {
-        self.index
-            .iter()
-            .enumerate()
-            .find(|(i, k)| *k == key && self.entries[*i].1 > 0)
-            .map(|(i, _)| i)
-    }
+            RefreshResult::Hit(entry_idx as usize)
+        } else {
+            self.cache_misses += 1;
 
-    // Helper method to find the index of the least recently used entry
-    #[inline(always)]
-    fn find_lru_index(&self) -> usize {
-        self.entries
-            .iter()
-            .enumerate()
-            .min_by_key(|(_, (_, timestamp))| *timestamp)
-            .map(|(i, _)| i)
-            .unwrap_or(0)
+            let entry_idx = self.index[N - 1].1;
+            self.index.copy_within(0..N - 1, 1);
+            self.index[0] = (*key, entry_idx);
+
+            RefreshResult::Miss(entry_idx as usize)
+        }
     }
+}
+
+enum RefreshResult {
+    Hit(usize),
+    Miss(usize),
 }
 
 impl<K, V, const N: usize> Default for LruCache<K, V, N>
 where
     K: PartialEq + Copy + Default,
-    V: Copy + Default,
+    V: Default,
 {
     fn default() -> Self {
         Self::new()
     }
 }
 
+impl<K, V, const N: usize> Clone for LruCache<K, V, N>
+where
+    K: Copy + PartialEq,
+    V: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            index: self.index,
+            entries: self.entries.clone(),
+            cache_misses: 0,
+            cache_hits: 0,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use alloc::{
-        string::{String, ToString},
-        vec,
-        vec::Vec,
-    };
-    use core::cell::Cell;
-
     use super::*;
 
     #[test]
     fn test_memoize_adds_entry() {
         let mut cache: LruCache<&str, i32, 5> = LruCache::new();
 
-        let compute_called = Cell::new(0);
+        let compute_called = std::cell::Cell::new(0);
         let result = cache.memoize(&"key1", |_| {
             compute_called.set(compute_called.get() + 1);
             42
@@ -238,7 +222,7 @@ mod tests {
     #[test]
     fn test_cache_hit_reuses_value() {
         let mut cache: LruCache<&str, i32, 5> = LruCache::new();
-        let compute_count = Cell::new(0);
+        let compute_count = std::cell::Cell::new(0);
 
         // First call computes the value
         let val1 = cache.memoize(&"key1", |_| {
@@ -270,7 +254,7 @@ mod tests {
         cache.memoize(&4, |k| k * 10);
 
         // Checking if key 1 is recomputed to verify it was evicted
-        let computation_occurred = Cell::new(false);
+        let computation_occurred = std::cell::Cell::new(false);
         cache.memoize(&1, |k| {
             computation_occurred.set(true);
             k * 10
@@ -325,44 +309,17 @@ mod tests {
     }
 
     #[test]
-    fn test_counter_overflow_handling() {
-        let mut cache: LruCache<char, i32, 2> = LruCache::new();
-
-        // Simulate a counter approaching overflow
-        cache.counter = 0xffff - 2;
-
-        // Add a few items
-        cache.memoize(&'b', |_| 2);
-        cache.memoize(&'a', |_| 1);
-
-        // This should trigger counter overflow and normalize the counters
-        cache.memoize(&'c', |_| 3);
-
-        // Verify 'a' and 'b' were evicted by checking if they're recomputed
-        let mut compute_count = 0;
-        cache.memoize(&'a', |_| {
-            compute_count += 1;
-            1
-        });
-
-        assert_eq!(
-            compute_count, 0,
-            "Key 'a' should have been retained during normalization"
-        );
-    }
-
-    #[test]
     fn test_complex_key_types() {
-        #[derive(Debug, Clone, Default, PartialEq, Eq)]
+        #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
         struct ComplexKey {
-            id: String,
+            id: &'static str,
             section: u32,
         }
 
         let mut cache: LruCache<ComplexKey, Vec<i32>, 3> = LruCache::new();
 
-        let key1 = ComplexKey { id: "test".to_string(), section: 1 };
-        let key2 = ComplexKey { id: "test".to_string(), section: 2 };
+        let key1 = ComplexKey { id: "test", section: 1 };
+        let key2 = ComplexKey { id: "test", section: 2 };
 
         cache.memoize(&key1, |_| vec![1, 2, 3]);
         cache.memoize(&key2, |_| vec![4, 5, 6]);
@@ -404,5 +361,28 @@ mod tests {
         let (hits, misses) = (cache.cache_hits(), cache.cache_misses());
         assert_eq!(hits, 3);
         assert_eq!(misses, 2);
+    }
+
+    #[test]
+    fn test_entry_index_correctness() {
+        // This test ensures that cache misses get the correct entry index
+        // and don't cause misidentifications
+        let mut cache: LruCache<i32, String, 3> = LruCache::new();
+
+        // Fill cache completely
+        cache.memoize(&1, |k| format!("value{}", k));
+        cache.memoize(&2, |k| format!("value{}", k));
+        cache.memoize(&3, |k| format!("value{}", k));
+
+        // All should be hits and return correct values
+        assert_eq!(cache.memoize(&1, |_| "wrong".to_string()), "value1");
+        assert_eq!(cache.memoize(&2, |_| "wrong".to_string()), "value2");
+        assert_eq!(cache.memoize(&3, |_| "wrong".to_string()), "value3");
+
+        // Add new item, should evict one
+        cache.memoize(&4, |k| format!("value{}", k));
+
+        // New item should be cached correctly
+        assert_eq!(cache.memoize(&4, |_| "wrong".to_string()), "value4");
     }
 }
