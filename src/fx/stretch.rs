@@ -126,10 +126,10 @@ impl Shader for Stretch {
         let area = self.area.unwrap_or(area).intersection(buf.area);
 
         if alpha == 1.0 {
-            self.fill_area(self.style, area, buf);
+            self.fill_area(inverse_style(self.style), area, buf);
             return;
         } else if alpha == 0.0 {
-            self.fill_area(inverse_style(self.style), area, buf);
+            self.fill_area(self.style, area, buf);
             return;
         }
 

@@ -15,7 +15,7 @@ use crate::{
 /// The `EffectManager` provides lifecycle management for both regular effects and unique
 /// effects. Regular effects run until completion, while unique effects can be cancelled
 /// when a new effect with the same identifier is added.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EffectManager<K: Clone + Ord + ThreadSafetyMarker + 'static> {
     effects: Vec<Effect>,
     uniques: BTreeMap<K, RefCount<UniqueContext>>,
