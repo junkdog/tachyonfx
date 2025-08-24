@@ -12,6 +12,7 @@ use crate::{
 /// Supported types for promotion:
 /// - Motion enum variants
 /// - Direction enum variants
+/// - ExpandDirection enum variants
 /// - ColorSpace enum variants
 /// - CellFilter enum variants
 /// - Modifier enum variants
@@ -39,6 +40,7 @@ pub(super) fn maybe_promote(expr: Expr) -> Expr {
 fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
     motion(text)
         .or_else(|| direction(text))
+        .or_else(|| expand_direction(text))
         .or_else(|| cell_filter(text))
         .or_else(|| modifier(text))
         .or_else(|| color_space(text))
@@ -85,6 +87,16 @@ fn direction(text: &str) -> Option<Value> {
         match text.trim_start_matches("Direction::") {
             "Horizontal" => Direction::Horizontal,
             "Vertical" => Direction::Vertical,
+            _ => None?,
+        },
+    ))
+}
+
+fn expand_direction(text: &str) -> Option<Value> {
+    Some(Value::ExpandDirection(
+        match text.trim_start_matches("ExpandDirection::") {
+            "Horizontal" => crate::fx::ExpandDirection::Horizontal,
+            "Vertical" => crate::fx::ExpandDirection::Vertical,
             _ => None?,
         },
     ))

@@ -13,12 +13,12 @@ use crate::{
 #[derive(Builder, Clone, Debug)]
 pub(super) struct Stretch {
     /// The style applied to the stretched area.
-    style: Style,
+    pub(super) style: Style,
     /// The direction of the stretching effect.
     direction: Motion,
     /// The timer controlling the duration and progress of the effect.
     #[builder(into)]
-    timer: EffectTimer,
+    pub(super) timer: EffectTimer,
     /// The area within which the effect is applied.
     area: Option<Rect>,
     /// The cell selection strategy used to filter cells.

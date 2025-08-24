@@ -103,6 +103,16 @@ impl DslFormat for Motion {
     }
 }
 
+impl DslFormat for crate::fx::ExpandDirection {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            crate::fx::ExpandDirection::Horizontal => "ExpandDirection::Horizontal",
+            crate::fx::ExpandDirection::Vertical => "ExpandDirection::Vertical",
+        }
+        .to_compact_string()
+    }
+}
+
 impl DslFormat for Style {
     fn dsl_format(&self) -> CompactString {
         let mut methods = CompactString::new("");

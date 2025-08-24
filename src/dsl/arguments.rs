@@ -467,6 +467,15 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns an [`ExpandDirection`].
+    pub fn expand_direction(&mut self) -> Result<crate::fx::ExpandDirection, DslError> {
+        match self.next("expand_direction")? {
+            Expr::Literal(Value::ExpandDirection(d), _) => Ok(d),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("expand_direction", e),
+        }
+    }
+
     /// Consumes the next argument and returns a [`RepeatMode`].
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
@@ -981,6 +990,7 @@ impl_from_args!(Duration, duration);
 impl_from_args!(EffectTimer, effect_timer);
 impl_from_args!(Interpolation, interpolation);
 impl_from_args!(Motion, motion);
+impl_from_args!(crate::fx::ExpandDirection, expand_direction);
 impl_from_args!(RepeatMode, repeat_mode);
 impl_from_args!(CellFilter, cell_filter);
 impl_from_args!(ColorSpace, color_space);

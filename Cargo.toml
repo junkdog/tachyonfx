@@ -87,7 +87,6 @@ alloc_instead_of_core = "warn"
 lto = true
 codegen-units = 1
 debug = false
-panic = "abort"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(not_disabled_due_to_version_conflict)'] }

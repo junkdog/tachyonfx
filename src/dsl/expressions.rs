@@ -83,6 +83,7 @@ pub(super) enum Value {
     Motion(Motion),
     RepeatMode(RepeatMode),
     Interpolation(Interpolation),
+    ExpandDirection(crate::fx::ExpandDirection),
 }
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -189,6 +190,7 @@ impl Value {
             Value::Direction(dir) => dir.dsl_format(),
             Value::ColorSpace(c) => c.dsl_format(),
             Value::Bool(b) => b.dsl_format(),
+            Value::ExpandDirection(d) => d.dsl_format(),
         }
     }
 
@@ -208,6 +210,7 @@ impl Value {
             Value::Modifier(_) => "modifier",
             Value::Direction(_) => "direction",
             Value::ColorSpace(_) => "color_space",
+            Value::ExpandDirection(_) => "expand_direction",
         }
     }
 }

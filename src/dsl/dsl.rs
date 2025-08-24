@@ -326,6 +326,7 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("delay", compilers::delay)
         .register("dissolve", |args| dissolve(args.effect_timer()?).into())
         .register("dissolve_to", compilers::dissolve_to)
+        .register("expand", compilers::expand)
         .register("explode", compilers::explode)
         .register("fade_from", compilers::fade_from)
         .register("fade_from_fg", compilers::fade_from_fg)
@@ -381,6 +382,15 @@ mod compilers {
 
     pub(super) fn coalesce_from(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::coalesce_from(args.style()?, args.effect_timer()?).into()
+    }
+
+    pub(super) fn expand(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::expand(
+            args.expand_direction()?,
+            args.style()?,
+            args.effect_timer()?,
+        )
+        .into()
     }
 
     pub(super) fn explode(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -604,6 +614,11 @@ mod tests {
             fx::delay((1000, Linear), fx::dissolve((1000, Linear))),
             fx::dissolve((1000, Linear)),
             fx::dissolve_to(Style::default(), (1000, Linear)),
+            fx::expand(
+                fx::ExpandDirection::Horizontal,
+                Style::new().bg(Color::Cyan),
+                (1000, Linear),
+            ),
             fx::fade_from(color, color, (1000, Linear)),
             fx::fade_from_fg(color, (1000, Linear)),
             fx::fade_to(color, color, (1000, Linear)),

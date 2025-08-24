@@ -830,7 +830,7 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 ///
 /// ```no_run
 /// use tachyonfx::{fx, EffectTimer, Interpolation};
-/// use tachyonfx::fx::expand::ExpandDirection;
+/// use tachyonfx::fx::ExpandDirection;
 /// use ratatui::style::{Color, Style};
 ///
 /// // Expand horizontally from center with colored background
