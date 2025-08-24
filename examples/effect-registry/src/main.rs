@@ -12,16 +12,16 @@ use crossterm::{
     event::{Event, KeyCode, KeyEventKind, MouseButton, MouseEventKind},
 };
 use ratatui::{
+    Frame,
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Widget},
-    Frame,
 };
 use tachyonfx::{
-    fx::{self, dynamic_area, parallel, sequence},
     Duration, EffectManager, Motion, RefRect,
+    fx::{self, dynamic_area, parallel, sequence},
 };
 
 /// Effect identifiers for different UI components

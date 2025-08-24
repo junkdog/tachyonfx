@@ -5,17 +5,17 @@ use crossterm::{
     event::{Event, KeyCode, KeyEventKind},
 };
 use ratatui::{
+    Frame,
     backend::CrosstermBackend,
     buffer::Buffer,
     layout::{Offset, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Clear, Widget},
-    Frame,
 };
 use tachyonfx::{
-    widget::{EffectTimeline, EffectTimelineRects},
     BufferRenderer, Duration, Effect,
+    widget::{EffectTimeline, EffectTimelineRects},
 };
 
 use crate::effects::{effect_in, transition_fx};
@@ -130,11 +130,11 @@ mod effects {
 
     use ratatui::{layout::Rect, style::Color};
     use tachyonfx::{
-        fx::*,
-        widget::EffectTimelineRects,
         CellFilter, Duration, Effect,
         Interpolation::{BounceOut, CircIn, ExpoInOut, ExpoOut, QuadOut},
         Motion,
+        fx::*,
+        widget::EffectTimelineRects,
     };
 
     use crate::AppEvent;

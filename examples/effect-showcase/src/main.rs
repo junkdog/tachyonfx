@@ -5,21 +5,20 @@ use std::{
 
 use common::gruvbox::Gruvbox;
 use ratatui::{
+    DefaultTerminal,
     crossterm::event::{self, Event},
     prelude::*,
     widgets::{Block, Borders},
-    DefaultTerminal,
 };
 use tachyonfx::{
-    fx,
+    CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, fx,
     fx::{consume_tick, never_complete, timed_never_complete, with_duration},
-    CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation,
 };
 
 // these example effects are used for the tachyonfx::fx module documentation
 mod examples {
     use ratatui::layout::Offset;
-    use tachyonfx::{color_from_hsl, Motion};
+    use tachyonfx::{Motion, color_from_hsl};
 
     use super::*;
 

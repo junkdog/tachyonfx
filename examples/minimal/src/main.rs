@@ -9,9 +9,9 @@ use ratatui::{
     widgets::{Block, Clear},
 };
 use tachyonfx::{
-    fx::{self, Glitch},
     CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation, IntoEffect,
     Motion, SimpleRng,
+    fx::{self, Glitch},
 };
 
 fn main() -> io::Result<()> {

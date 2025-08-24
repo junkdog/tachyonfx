@@ -1,5 +1,7 @@
 use std::{error::Error, io, io::Stdout, time::Instant};
 
+use Gruvbox::{Light3, Orange, OrangeBright};
+use Interpolation::*;
 use common::gruvbox::{
     Gruvbox,
     Gruvbox::{Dark0Hard, Dark0Soft, Light4},
@@ -9,21 +11,18 @@ use crossterm::{
     event::{Event, KeyCode, KeyEventKind},
 };
 use ratatui::{
+    Frame,
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Margin},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{Block, Clear, Widget},
-    Frame,
 };
 use tachyonfx::{
-    color_from_hsl,
-    fx::{self, never_complete, parallel, sequence, sleep, ExpandDirection, Glitch},
     CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect,
-    Motion, SimpleRng,
+    Motion, SimpleRng, color_from_hsl,
+    fx::{self, ExpandDirection, Glitch, never_complete, parallel, sequence, sleep},
 };
-use Gruvbox::{Light3, Orange, OrangeBright};
-use Interpolation::*;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
@@ -81,7 +80,7 @@ fn run_app(terminal: &mut Terminal, mut app: App, effects: EffectsRepository) ->
                     match key.code {
                         KeyCode::Esc => return Ok(()),
                         KeyCode::Char('r') => {
-                            let fx_idx = (rng.gen() % effects.len() as u32) as usize;
+                            let fx_idx = (rng.r#gen() % effects.len() as u32) as usize;
                             app.active_effect = effects.get_effect(fx_idx);
                             app.active_effect_idx = fx_idx;
                         },
