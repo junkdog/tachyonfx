@@ -37,7 +37,6 @@ This release introduces several breaking changes, but shouldn't impact most exis
 ### Changed
 - `LruCache`: `V` is no longer required to implement `Clone`.
 - `EffectManger` implements `Debug` trait.
-- Updated ratatui dependency to `>=0.29.0` for compatibility with both 0.29.x stable and 0.30-alpha releases.
 - **Example restructuring**: Migrated all examples to independent Cargo workspace members:
   - `examples/common` crate with shared utilities (`gruvbox` color theme, `window` helper)
   - Examples now standalone crates with their own `Cargo.toml`
