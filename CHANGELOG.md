@@ -27,6 +27,8 @@
   modulo operations. Recommended for all cell processing unless iterator combinators are needed.
 - `fx::stretch()`: Creates a stretching effect that expands or shrinks rectangular areas using block characters (▏▎▍▌▋▊▉█).
 - `fx::expand()`: Creates a bidirectional expansion effect that stretches outward from the center in both directions simultaneously.
+- `FilterProcessor`: Automatically optimizes `CellFilter` evaluation by choosing between static 
+  (pre-computed bitmask) and dynamic (per-cell evaluation) strategies. Implements `From<CellFilter>`.
 
 ### Changed
 - `LruCache`: `V` is no longer required to implement `Clone`.
