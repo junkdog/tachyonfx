@@ -1,3 +1,9 @@
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
+
 use ratatui::layout::Rect;
 
 use crate::widget::EffectSpan;

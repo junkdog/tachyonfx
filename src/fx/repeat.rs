@@ -1,3 +1,5 @@
+use alloc::{boxed::Box, vec};
+
 use ratatui::{buffer::Buffer, prelude::Rect};
 
 use crate::{

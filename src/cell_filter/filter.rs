@@ -1,4 +1,10 @@
-use std::fmt;
+use alloc::{
+    boxed::Box,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
+use core::fmt;
 
 use ratatui::{
     buffer::Cell,
@@ -485,6 +491,9 @@ impl PartialEq for CellFilter {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(feature = "std"))]
+    use alloc::vec;
+
     use layout::Layout;
     use ratatui::{buffer::Buffer, style::Style, text::Span};
 

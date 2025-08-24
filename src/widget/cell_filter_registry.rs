@@ -1,3 +1,10 @@
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
+
 use crate::{widget::EffectSpan, CellFilter};
 
 #[derive(Clone)]

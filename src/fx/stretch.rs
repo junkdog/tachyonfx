@@ -1,3 +1,5 @@
+use alloc::boxed::Box;
+
 use bon::{builder, Builder};
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 
@@ -124,10 +126,10 @@ impl Shader for Stretch {
         let area = self.area.unwrap_or(area).intersection(buf.area);
 
         if alpha == 1.0 {
-            self.fill_area(self.style, area, buf);
+            self.fill_area(inverse_style(self.style), area, buf);
             return;
         } else if alpha == 0.0 {
-            self.fill_area(inverse_style(self.style), area, buf);
+            self.fill_area(self.style, area, buf);
             return;
         }
 
@@ -154,7 +156,7 @@ impl Shader for Stretch {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
 
-        EffectExpression::parse(&format!(
+        EffectExpression::parse(&compact_str::format_compact!(
             "fx::stretch({}, {}, {})",
             self.direction.dsl_format(),
             self.style.dsl_format(),
@@ -246,7 +248,9 @@ mod tests {
         style::{Color, Style},
     };
 
-    use crate::{fx::stretch::Stretch, Duration, Effect, IntoEffect, Motion};
+    use crate::{
+        alloc::string::ToString, fx::stretch::Stretch, Duration, Effect, IntoEffect, Motion,
+    };
 
     fn assert_buf(buf: &Buffer, x: u16, y: u16, symbol: char, reverse: bool) {
         let style = if reverse {
@@ -256,11 +260,14 @@ mod tests {
         };
 
         let cell = &buf[(x, y)];
+        // 0.29.0 vs 0.30.0 compatibility hack
+        let cell_style = Style::default()
+            .fg(cell.style().fg.unwrap_or(Color::Reset))
+            .bg(cell.style().bg.unwrap_or(Color::Reset));
         assert_eq!(
-            (cell.symbol(), cell.style()),
+            (cell.symbol(), cell_style),
             (symbol.to_string().as_str(), style)
         );
-        assert_eq!(cell.style(), style);
     }
 
     fn stretch_fx(motion: Motion) -> Effect {

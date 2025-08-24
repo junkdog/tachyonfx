@@ -1,3 +1,5 @@
+use alloc::boxed::Box;
+
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{shader::Shader, CellFilter, Duration};

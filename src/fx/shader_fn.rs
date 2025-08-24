@@ -1,6 +1,8 @@
-use std::{fmt, fmt::Debug};
+use alloc::boxed::Box;
+use core::{fmt, fmt::Debug};
 
 use bon::{bon, builder, Builder};
+#[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
 use ratatui::{buffer::Buffer, layout::Rect};
 

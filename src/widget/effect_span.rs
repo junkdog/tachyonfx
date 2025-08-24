@@ -1,4 +1,9 @@
-use std::fmt;
+use alloc::{
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
+use core::fmt;
 
 use ratatui::{layout::Rect, prelude::Line, style::Style, text::Span};
 

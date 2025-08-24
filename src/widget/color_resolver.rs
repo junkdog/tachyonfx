@@ -1,4 +1,9 @@
-use std::{collections::BTreeSet, ops::Range};
+use alloc::{
+    collections::BTreeSet,
+    string::{String, ToString},
+    vec::Vec,
+};
+use core::ops::Range;
 
 use bon::builder;
 use ratatui::prelude::Color;
@@ -92,6 +97,8 @@ fn shuffle<T>(vec: &mut [T], rng: &mut SimpleRng) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use super::*;
 
     #[test]

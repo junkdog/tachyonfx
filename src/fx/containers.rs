@@ -1,3 +1,5 @@
+use alloc::{boxed::Box, vec::Vec};
+
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
@@ -245,6 +247,8 @@ fn to_dsl(
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use ratatui::{layout::Margin, style::Color};
 
     use super::*;

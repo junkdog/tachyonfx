@@ -1,3 +1,5 @@
+use alloc::{boxed::Box, vec::Vec};
+
 use ratatui::layout::Rect;
 
 use crate::{

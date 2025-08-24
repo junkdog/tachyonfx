@@ -1,4 +1,5 @@
-use std::{collections::BTreeMap, fmt::Debug};
+use alloc::{collections::BTreeMap, vec::Vec};
+use core::fmt::Debug;
 
 use ratatui::{buffer::Buffer, layout::Rect};
 
@@ -14,7 +15,7 @@ use crate::{
 /// The `EffectManager` provides lifecycle management for both regular effects and unique
 /// effects. Regular effects run until completion, while unique effects can be cancelled
 /// when a new effect with the same identifier is added.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EffectManager<K: Clone + Ord + ThreadSafetyMarker + 'static> {
     effects: Vec<Effect>,
     uniques: BTreeMap<K, RefCount<UniqueContext>>,
@@ -100,7 +101,11 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
+    use alloc::{
+        boxed::Box,
+        string::{String, ToString},
+    };
+    use core::fmt::Debug;
 
     use ratatui::{buffer::Buffer, layout::Rect};
 
@@ -304,7 +309,8 @@ mod tests {
     #[test]
     #[cfg(not(feature = "sendable"))]
     fn test_effect_manager_with_zero_duration_shader_fn() {
-        use std::{cell::RefCell, rc::Rc};
+        use alloc::rc::Rc;
+        use core::cell::RefCell;
 
         use crate::fx;
 
@@ -341,7 +347,8 @@ mod tests {
     #[test]
     #[cfg(not(feature = "sendable"))]
     fn test_effect_manager_with_normal_duration_shader_fn() {
-        use std::{cell::RefCell, rc::Rc};
+        use alloc::rc::Rc;
+        use core::cell::RefCell;
 
         use crate::fx;
 
@@ -382,7 +389,8 @@ mod tests {
     #[test]
     #[cfg(not(feature = "sendable"))]
     fn test_multiple_zero_duration_shader_fn_effects() {
-        use std::{cell::RefCell, rc::Rc};
+        use alloc::rc::Rc;
+        use core::cell::RefCell;
 
         use crate::fx;
 

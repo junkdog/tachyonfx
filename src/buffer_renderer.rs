@@ -1,4 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
+use alloc::{
+    format,
+    rc::Rc,
+    string::{String, ToString},
+};
+use core::cell::RefCell;
 
 use ratatui::{
     buffer::Buffer,

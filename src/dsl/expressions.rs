@@ -1,3 +1,5 @@
+use core::fmt;
+
 use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::{
     layout::Direction,
@@ -164,8 +166,8 @@ impl Expr {
     }
 }
 
-impl std::fmt::Display for ExprSpan {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ExprSpan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}..{})", self.start, self.end)
     }
 }

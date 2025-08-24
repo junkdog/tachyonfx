@@ -21,8 +21,8 @@ fn create_noop_effect(filter: Option<CellFilter>) -> Effect {
     let mut effect = fx::effect_fn((), 1, |_, _, cells| {
         // Just iterate over the cells with black_box to prevent optimizations
         for (pos, cell) in cells {
-            std::hint::black_box(pos);
-            std::hint::black_box(cell);
+            core::hint::black_box(pos);
+            core::hint::black_box(cell);
         }
     });
 
@@ -44,7 +44,7 @@ fn bench_effect_with_filter(
         b.iter_with_setup(
             || (Buffer::empty(area), create_noop_effect(filter.clone())),
             |(mut buffer, mut effect)| {
-                effect.process(std::hint::black_box(BENCH_DURATION), &mut buffer, area);
+                effect.process(core::hint::black_box(BENCH_DURATION), &mut buffer, area);
             },
         );
     });
@@ -62,7 +62,7 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
                 // This is the absolute baseline - just iterating through the buffer
                 for y in 0..BENCH_HEIGHT {
                     for x in 0..BENCH_WIDTH {
-                        std::hint::black_box(&buffer[(x, y)]);
+                        core::hint::black_box(&buffer[(x, y)]);
                     }
                 }
             },

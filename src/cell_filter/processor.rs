@@ -1,12 +1,13 @@
-use std::ops::{BitAnd, BitOr, Not};
+use alloc::vec::Vec;
+use core::ops::{BitAnd, BitOr, Not};
 
-use bitvec::vec::BitVec;
 use ratatui::{
     buffer::Cell,
     layout::{Position, Rect},
 };
 
 use crate::{
+    bitvec::BitVec,
     cell_filter::{analyzer::FilterType, FilterAnalyzer},
     CellFilter, CellPredicate, RefRect,
 };
@@ -283,7 +284,7 @@ impl StaticFilterProcessor {
             return false; // Out of bounds
         }
 
-        self.cell_indices[index]
+        self.cell_indices.get(index)
     }
 
     /// Determines if the bitmask needs to be recomputed for the given area.

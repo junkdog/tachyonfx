@@ -21,12 +21,15 @@
 - **LruCache**: The key type `K` now requires `Copy` in addition to existing bounds for performance optimizations.
 
 ### Added
+- `std` feature flag: controls standard library usage. Disabling enables no-std compatibility for
+  embedded environments and projects like [mousefood](https://github.com/j-g00da/mousefood).
 - `CellIterator::for_each_cell()`: Performance-optimized method for iterating over cells without division and
   modulo operations. Recommended for all cell processing unless iterator combinators are needed.
-- `fx::stretch()`: Creates a stretching effect that expands or shrinks rectangular areas using block characters (▏▎▍▌▋▊▉█). Supports all four directions with smooth partial character rendering at the leading edge.
+- `fx::stretch()`: Creates a stretching effect that expands or shrinks rectangular areas using block characters (▏▎▍▌▋▊▉█).
 
 ### Changed
 - `LruCache`: `V` is no longer required to implement `Clone`.
+- `EffectManger` implements `Debug` trait.
 - Updated ratatui dependency to `>=0.29.0` for compatibility with both 0.29.x stable and 0.30-alpha releases.
 - **Example restructuring**: Migrated all examples to independent Cargo workspace members:
   - `examples/common` crate with shared utilities (`gruvbox` color theme, `window` helper)

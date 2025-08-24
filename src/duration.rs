@@ -1,3 +1,7 @@
+//! Duration abstraction for tachyonfx
+//! Uses std::time::Duration when std-duration feature is enabled,
+//! otherwise uses custom implementation
+
 #[cfg(feature = "std-duration")]
 pub type Duration = std::time::Duration;
 
@@ -9,7 +13,7 @@ pub type Duration = duration::Duration;
 pub mod duration {
     // Your custom Duration implementation goes here
 
-    use std::{
+    use core::{
         iter::Sum,
         ops::{Add, AddAssign, Mul, Sub, SubAssign},
     };
@@ -141,7 +145,8 @@ pub mod duration {
         }
     }
 
-    #[cfg(not(feature = "web-time"))]
+    #[cfg(all(feature = "std", not(feature = "web-time")))]
+    #[allow(clippy::std_instead_of_core)]
     impl From<std::time::Duration> for Duration {
         fn from(d: std::time::Duration) -> Self {
             Self { milliseconds: d.as_millis() as u32 }
@@ -155,7 +160,8 @@ pub mod duration {
         }
     }
 
-    #[cfg(not(feature = "web-time"))]
+    #[cfg(all(feature = "std", not(feature = "web-time")))]
+    #[allow(clippy::std_instead_of_core)]
     impl From<Duration> for std::time::Duration {
         fn from(d: Duration) -> Self {
             std::time::Duration::from_millis(d.milliseconds as u64)

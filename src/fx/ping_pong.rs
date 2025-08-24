@@ -1,3 +1,5 @@
+use alloc::{boxed::Box, vec};
+
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, EffectTimer, Shader};

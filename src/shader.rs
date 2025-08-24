@@ -1,4 +1,5 @@
-use std::fmt::Debug;
+use alloc::{boxed::Box, vec::Vec};
+use core::fmt::Debug;
 
 use ratatui::{buffer::Buffer, layout::Rect};
 

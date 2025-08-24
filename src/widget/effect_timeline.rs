@@ -1,4 +1,12 @@
-use std::{fs::File, io::Write, ops::Range};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
+use core::ops::Range;
+#[cfg(feature = "std")]
+use std::{fs::File, io::Write};
 
 use bon::bon;
 use ratatui::{
@@ -145,6 +153,7 @@ impl EffectTimeline {
     /// let timeline = EffectTimeline::builder().effect(&effect).build();
     /// timeline.save_to_file("effect_timeline.txt", 100)?;
     /// ```
+    #[cfg(feature = "std")]
     pub fn save_to_file(self, path: &str, width: u16) -> std::io::Result<()> {
         let layout = self.layout(Rect::new(0, 0, width, 200));
         let height = layout.areas_legend.y + layout.areas_legend.height;
@@ -540,19 +549,25 @@ fn span_as_bar_line(span: &EffectSpan, scale_time_to_cell: f32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use ratatui::{prelude::Margin, style::Color::Black};
+    use ratatui::style::Color::Black;
 
     use super::*;
     use crate::{
-        buffer_to_ansi_string, fx,
-        fx::{never_complete, parallel, repeating, sequence, with_duration},
+        fx,
+        fx::{parallel, sequence},
         CellFilter,
-        CellFilter::{AllOf, Inner, Not, Outer, Text},
-        Interpolation::{BounceIn, BounceOut, CircInOut, ElasticOut, QuadOut},
+        Interpolation::{CircInOut, QuadOut},
         Motion,
     };
 
+    #[cfg(feature = "std")]
     fn example_complex_fx() -> Effect {
+        use fx::*;
+        use ratatui::layout::Margin;
+        use CellFilter::*;
+
+        use crate::Interpolation::*;
+
         let margin = Margin::new(1, 1);
         let border_text = AllOf(vec![Outer(margin), Text]);
         let border_decorations = AllOf(vec![Outer(margin), Not(Text.into())]);
@@ -593,13 +608,13 @@ mod tests {
                     ]),
                 ),
                 parallel(&[
-                    fx::coalesce(Duration::from_millis(220) * time_scale),
-                    fx::fade_from(bg, bg, (250 * time_scale, QuadOut)),
+                    coalesce(Duration::from_millis(220) * time_scale),
+                    fade_from(bg, bg, (250 * time_scale, QuadOut)),
                 ]),
-                fx::sleep(3000),
+                sleep(3000),
                 parallel(&[
-                    fx::fade_to(bg, bg, (250 * time_scale, BounceIn)),
-                    fx::dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
+                    fade_to(bg, bg, (250 * time_scale, BounceIn)),
+                    dissolve((Duration::from_millis(220) * time_scale, ElasticOut)),
                 ]),
             ])
             .with_filter(Inner(margin)),
@@ -700,6 +715,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")] // println! is only available with std
     fn print_widget_to_stdout() {
         let fx = example_complex_fx();
         let timeline = EffectTimeline::builder().effect(&fx).build();
@@ -713,7 +729,7 @@ mod tests {
         let mut buf = Buffer::empty(area);
         timeline.render(area, &mut buf);
 
-        let ansi_escaped_string = buffer_to_ansi_string(&buf, false);
+        let ansi_escaped_string = crate::buffer_to_ansi_string(&buf, false);
         println!("{ansi_escaped_string}");
     }
 }

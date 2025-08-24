@@ -1,4 +1,5 @@
-use std::ops::Range;
+use alloc::{boxed::Box, vec};
+use core::ops::Range;
 
 use ratatui::{buffer::Buffer, layout::Rect};
 use Interpolation::Linear;

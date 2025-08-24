@@ -1,3 +1,6 @@
+use alloc::{boxed::Box, vec};
+
+#[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
 use ratatui::{buffer::Buffer, layout::Rect};
 

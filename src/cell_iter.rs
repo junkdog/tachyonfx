@@ -1,3 +1,5 @@
+use core::mem;
+
 use ratatui::{
     buffer::{Buffer, Cell},
     layout::{Position, Rect},
@@ -177,7 +179,7 @@ impl<'a> Iterator for CellIterator<'a> {
         while self.current < area {
             let (pos, cell) = self.cell_mut()?;
             // enforce cell's lifetime. this is safe because `buf` is guaranteed to outlive `'a`
-            let cell: &'a mut Cell = unsafe { std::mem::transmute(cell) };
+            let cell: &'a mut Cell = unsafe { mem::transmute(cell) };
             self.current += 1;
 
             if self
@@ -195,6 +197,9 @@ impl<'a> Iterator for CellIterator<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(feature = "std"))]
+    use alloc::{vec, vec::Vec};
+
     use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 
     use super::*;
