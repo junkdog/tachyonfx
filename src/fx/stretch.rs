@@ -34,8 +34,8 @@ impl Stretch {
             });
     }
 
-    fn regions(&mut self, progress: f32, area: Rect) -> Regions {
-        match self.direction {
+    fn regions(direction: Motion, progress: f32, area: Rect) -> Regions {
+        match direction {
             Motion::LeftToRight => {
                 let len = area.width as f32 * progress;
                 Regions {
@@ -140,7 +140,7 @@ impl Shader for Stretch {
             _ => fractional,
         };
         let (symbol, style) = stretch_char(fractional, self.direction, self.style);
-        let regions = self.regions(alpha, area);
+        let regions = Self::regions(self.direction, alpha, area);
         self.fill_area(inverse_style(self.style), regions.filled, buf);
         self.fill_area(self.style, regions.empty, buf);
 

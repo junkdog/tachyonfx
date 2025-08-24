@@ -18,7 +18,7 @@ use ratatui::{
 };
 use tachyonfx::{
     color_from_hsl,
-    fx::{self, never_complete, parallel, sequence, Glitch},
+    fx::{self, never_complete, parallel, sequence, sleep, ExpandDirection, Glitch},
     CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect,
     Motion, SimpleRng,
 };
@@ -200,8 +200,8 @@ struct EffectsRepository {
 
 impl EffectsRepository {
     fn new() -> Self {
-        let screen_bg = Dark0Hard;
-        let bg = Dark0Soft;
+        let screen_bg = Dark0Hard.into();
+        let bg = Dark0Soft.into();
 
         let slow = Duration::from_millis(1250);
         let medium = Duration::from_millis(750);
@@ -235,6 +235,23 @@ impl EffectsRepository {
                 fx::sweep_in(Motion::LeftToRight, 30, 0, screen_bg, (slow, QuadOut)),
             ),
             (
+                "smooth expand and reversed",
+                sequence(&[
+                    fx::expand(
+                        ExpandDirection::Vertical,
+                        Style::new().fg(bg).bg(screen_bg),
+                        1200,
+                    ),
+                    fx::sleep(slow),
+                    fx::expand(
+                        ExpandDirection::Horizontal,
+                        Style::new().fg(bg).bg(screen_bg),
+                        1200,
+                    )
+                    .reversed(),
+                ]),
+            ),
+            (
                 "irregular sweep out/sweep in",
                 sequence(&[
                     fx::sweep_out(Motion::DownToUp, 5, 20, bg, (2000, QuadOut)),
@@ -250,7 +267,7 @@ impl EffectsRepository {
                     fx::sleep(medium),
                     fx::prolong_end(
                         medium,
-                        fx::dissolve_to(Style::default().bg(screen_bg.color()), medium),
+                        fx::dissolve_to(Style::default().bg(screen_bg), medium),
                     ),
                 ]),
             ),

@@ -122,10 +122,9 @@ impl Effect {
     ///
     /// # Returns
     /// * A new `Effect` instance with the shader's reverse flag toggled.
-    pub fn reversed(&self) -> Self {
-        let mut cloned = self.clone();
-        cloned.reverse();
-        cloned
+    pub fn reversed(mut self) -> Self {
+        self.reverse();
+        self
     }
 }
 

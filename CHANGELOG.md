@@ -26,6 +26,7 @@
 - `CellIterator::for_each_cell()`: Performance-optimized method for iterating over cells without division and
   modulo operations. Recommended for all cell processing unless iterator combinators are needed.
 - `fx::stretch()`: Creates a stretching effect that expands or shrinks rectangular areas using block characters (▏▎▍▌▋▊▉█).
+- `fx::expand()`: Creates a bidirectional expansion effect that stretches outward from the center in both directions simultaneously.
 
 ### Changed
 - `LruCache`: `V` is no longer required to implement `Clone`.

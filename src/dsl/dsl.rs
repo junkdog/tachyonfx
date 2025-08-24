@@ -856,8 +856,9 @@ mod tests {
             let base_effect = fx::fade_to_fg(Color::Red, 500);
             fx::sequence(&[
                 base_effect.clone(),
-                base_effect.reversed(),
+                base_effect.clone().reversed(),
                 base_effect
+                    .clone()
                     .reversed()
                     .with_filter(CellFilter::Not(Box::new(CellFilter::Text))),
             ])

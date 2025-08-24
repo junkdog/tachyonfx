@@ -54,6 +54,7 @@
 //! | [`repeating()`] 🔁 | Repeats an effect indefinitely       | N/A |
 //! | [`run_once()`] 🔂 | Ensures wrapped effect runs exactly once | N/A |
 //! | [`sleep()`] 💤 | Pauses for specified duration            | N/A |
+//! | [`timed_never_complete()`] ⏰ | Makes effect run indefinitely with time limit | N/A |
 //! | [`with_duration()`] ⏱️ | Applies duration limit to effect | N/A |
 //!
 //!
@@ -63,9 +64,11 @@
 //!
 //! | Effect                 | Description | Example  |
 //! |------------------------|-------------|----------|
+//! | [`expand()`] ⬌         | Expands bidirectionally from center | N/A |
+//! | [`resize_area()`] ⬌   | Resizes effect area   | N/A |
+//! | [`stretch()`] ⬌        | Stretches unidirectionally using block chars | N/A |
 //! | [`translate()`] ➡️     | Moves effect area     | N/A |
 //! | [`translate_buf()`] ➡️ | Moves buffer contents | N/A |
-//! | [`resize_area()`] ⬌   | Resizes effect area   | N/A |
 //!
 //! ## Combination Effects 🔗
 //! Combination effects allow multiple effects to be composed together. These are crucial
@@ -91,6 +94,7 @@
 
 pub use direction::*;
 pub use dynamic_area::DynamicArea;
+pub use expand::ExpandDirection;
 pub use glitch::Glitch;
 use ping_pong::PingPong;
 use prolong::{Prolong, ProlongPosition};
@@ -133,6 +137,7 @@ pub(crate) mod containers;
 mod direction;
 mod dissolve;
 mod dynamic_area;
+mod expand;
 mod explode;
 mod fade;
 mod glitch;
@@ -798,6 +803,52 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
         .timer(timer)
         .build()
         .into_effect()
+}
+
+/// Creates an expand effect that stretches/expands bidirectionally using block
+/// characters.
+///
+/// This effect creates an expansion animation that grows outward from the center in both
+/// directions (horizontal or vertical) simultaneously. It uses two opposing stretch
+/// effects internally to create the bidirectional expansion.
+///
+/// # Arguments
+///
+/// * `direction` - The expand direction:
+///   - `ExpandDirection::Horizontal` - Expands left and right from the center
+///   - `ExpandDirection::Vertical` - Expands up and down from the center
+///
+/// * `style` - The visual style applied to the expanded area (colors, modifiers)
+///
+/// * `timer` - Controls the duration and timing of the expand effect
+///
+/// # Returns
+///
+/// An `Effect` that creates a bidirectional expansion animation when processed.
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::{fx, EffectTimer, Interpolation};
+/// use tachyonfx::fx::expand::ExpandDirection;
+/// use ratatui::style::{Color, Style};
+///
+/// // Expand horizontally from center with colored background
+/// let expand_effect = fx::expand(
+///     ExpandDirection::Horizontal,
+///     Style::default().bg(Color::Blue),
+///     EffectTimer::from_ms(1000, Interpolation::Linear)
+/// );
+///
+/// // Expand vertically from center
+/// let vertical_expand = fx::expand(
+///     ExpandDirection::Vertical,
+///     Style::default().fg(Color::White).bg(Color::Black),
+///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
+/// );
+/// ```
+pub fn expand<T: Into<EffectTimer>>(direction: ExpandDirection, style: Style, timer: T) -> Effect {
+    Expand::new(direction, style, timer.into()).into_effect()
 }
 
 /// Translates an effect by a specified amount over a specified duration.
@@ -1550,6 +1601,7 @@ pub(crate) use invoke_fn;
 
 use crate::fx::{
     alpha_xform::{FreezeAt, RemapAlpha},
+    expand::Expand,
     explode::Explode,
 };
 
