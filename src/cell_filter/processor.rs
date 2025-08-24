@@ -284,7 +284,7 @@ impl StaticFilterProcessor {
             return false; // Out of bounds
         }
 
-        self.cell_indices[index]
+        self.cell_indices.get(index)
     }
 
     /// Determines if the bitmask needs to be recomputed for the given area.
