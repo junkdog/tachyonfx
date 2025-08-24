@@ -2,6 +2,10 @@
 
 ## unreleased
 
+## tachyonfx 0.17.0 - 2025-08-24
+
+This release introduces several breaking changes, but shouldn't impact most existing codebases.
+
 ### Breaking Changes
 - `Interpolatable` trait has been simplified from `Interpolatable<T>` to `Interpolatable`.
 - **Effect API refactoring**: `Effect` no longer implements `Shader` trait; methods are now direct on `Effect`. 

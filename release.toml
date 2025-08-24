@@ -12,4 +12,4 @@ owners = ["junkdog"]
 
 # Safety: don't push/publish without explicit confirmation
 push = true
-publish = false
+publish = true
