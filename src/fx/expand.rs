@@ -84,6 +84,11 @@ impl Shader for Expand {
         self.stretch_b.filter(filter);
     }
 
+    fn reset(&mut self) {
+        self.stretch_a.reset();
+        self.stretch_b.reset();
+    }
+
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         // safe area
         let area = self.area.unwrap_or(area).intersection(buf.area);

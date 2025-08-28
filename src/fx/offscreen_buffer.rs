@@ -92,4 +92,8 @@ impl Shader for OffscreenBuffer {
     fn color_space(&self) -> ColorSpace {
         self.fx.color_space()
     }
+
+    fn reset(&mut self) {
+        self.fx.reset()
+    }
 }

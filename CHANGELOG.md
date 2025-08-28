@@ -2,6 +2,13 @@
 
 ## unreleased
 
+## tachyonfx 0.17.1 - 2025-08-24
+
+### Fixed
+- `fx::expand()`: Now properly resets both internal stretch effects.
+- `fx::offscreen_buffer()`: Now properly delegates reset to the wrapped effect.
+
+
 ## tachyonfx 0.17.0 - 2025-08-24
 
 This release introduces several breaking changes, but shouldn't impact most existing codebases.
