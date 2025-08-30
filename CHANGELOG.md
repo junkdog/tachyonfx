@@ -2,7 +2,7 @@
 
 ## unreleased
 
-## tachyonfx 0.17.1 - 2025-08-24
+## tachyonfx 0.17.1 - 2025-08-28
 
 ### Fixed
 - `fx::expand()`: Now properly resets both internal stretch effects.
