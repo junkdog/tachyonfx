@@ -166,7 +166,10 @@ impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
 
     fn reset(&mut self) {
         self.timer.reset();
-        self.state = self.original_state.as_ref().unwrap().clone();
+
+        if let Some(original_state) = self.original_state.as_ref() {
+            self.state = original_state.clone();
+        }
     }
 
     #[cfg(feature = "dsl")]
