@@ -154,6 +154,9 @@ impl<'dsl> Arguments<'dsl> {
                     "Not" => Ok(CellFilter::Not(
                         inner_args.boxed(Arguments::cell_filter, span)?,
                     )),
+                    "Static" => Ok(CellFilter::Static(
+                        inner_args.boxed(Arguments::cell_filter, span)?,
+                    )),
                     "Layout" => Ok(CellFilter::Layout(
                         inner_args.layout()?,
                         inner_args.read_u16()?,

@@ -59,6 +59,7 @@ impl FilterAnalyzer for CellFilter {
             | CellFilter::RefArea(_)
             | CellFilter::Inner(_)
             | CellFilter::Outer(_)
+            | CellFilter::Static(_)
             | CellFilter::Layout(_, _) => FilterType::Static,
 
             // dynamic filter are evaluated each frame

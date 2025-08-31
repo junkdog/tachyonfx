@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::ops::{BitAnd, BitOr, Not};
 
 use ratatui::{
-    buffer::Cell,
+    buffer::{Buffer, Cell},
     layout::{Position, Rect},
 };
 
@@ -88,9 +88,9 @@ impl FilterProcessor {
     ///
     /// # Arguments
     /// * `area` - The new rectangular area for filter evaluation
-    pub(crate) fn update(&mut self, area: Rect) {
+    pub(crate) fn update(&mut self, buf: &Buffer, area: Rect) {
         match self {
-            FilterProcessor::Static(processor) => processor.update(area),
+            FilterProcessor::Static(processor) => processor.update(buf, area),
             FilterProcessor::Dynamic(_, a) => *a = area,
         }
     }
@@ -261,9 +261,9 @@ impl StaticFilterProcessor {
     ///
     /// # Arguments
     /// * `area` - The new area for filter processing
-    fn update(&mut self, area: Rect) {
+    fn update(&mut self, buf: &Buffer, area: Rect) {
         if self.requires_resize(area) {
-            self.cell_indices = calculate_cell_indices(area, &self.filter);
+            self.cell_indices = calculate_cell_indices(buf, area, &self.filter);
             self.ref_rects = find_ref_rects(&self.filter);
             self.last_active_area = area;
         }
@@ -323,6 +323,12 @@ fn find_ref_rects(filter: &CellFilter) -> Vec<(Rect, RefRect)> {
                 ref_rects.extend(find_ref_rects(sub_filter));
             }
         },
+        CellFilter::Not(filter) => {
+            ref_rects.extend(find_ref_rects(filter.as_ref()));
+        },
+        CellFilter::Static(filter) => {
+            ref_rects.extend(find_ref_rects(filter.as_ref()));
+        },
         _ => {}, // Other filters do not have ref rects
     }
 
@@ -330,7 +336,7 @@ fn find_ref_rects(filter: &CellFilter) -> Vec<(Rect, RefRect)> {
 }
 
 /// Computes a bitmask indicating which cells match the given static filter.
-fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
+fn calculate_cell_indices(buf: &Buffer, area: Rect, filter: &CellFilter) -> BitVec {
     let size = area.right() as usize * area.bottom() as usize;
     let mut cell_indices = BitVec::new();
     cell_indices.resize(size, false);
@@ -363,7 +369,7 @@ fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
         CellFilter::AllOf(filters) => {
             let all_of = filters
                 .iter()
-                .map(|f| calculate_cell_indices(area, f))
+                .map(|f| calculate_cell_indices(buf, area, f))
                 .reduce(|acc, i| acc.bitand(i));
 
             if let Some(indices) = all_of {
@@ -373,7 +379,7 @@ fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
         CellFilter::AnyOf(filters) => {
             let any_of = filters
                 .iter()
-                .map(|f| calculate_cell_indices(area, f))
+                .map(|f| calculate_cell_indices(buf, area, f))
                 .reduce(|acc, i| acc.bitor(i));
 
             if let Some(indices) = any_of {
@@ -383,7 +389,7 @@ fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
         CellFilter::NoneOf(filters) => {
             let none_of = filters
                 .iter()
-                .map(|f| calculate_cell_indices(area, f))
+                .map(|f| calculate_cell_indices(buf, area, f))
                 .reduce(|acc, i| acc.bitor(i))
                 .map(|indices| indices.not());
 
@@ -391,12 +397,34 @@ fn calculate_cell_indices(area: Rect, filter: &CellFilter) -> BitVec {
                 cell_indices = indices;
             }
         },
-        CellFilter::Not(filter) => {
-            let indices = calculate_cell_indices(area, filter);
-            cell_indices = indices.not();
+        CellFilter::Not(f) => cell_indices = calculate_cell_indices(buf, area, f).not(),
+
+        CellFilter::Static(filter) => {
+            // Static variant wrapping another filter - delegate to the wrapped filter
+            // This should only be called for Static(static_filter) since
+            // Static(dynamic_filter) uses the dynamic processor
+            cell_indices = calculate_cell_indices(buf, area, filter.as_ref());
         },
 
-        _ => unimplemented!("only static filters (hybrid not yet impl): {:?}", filter),
+        // these are dynamic filters that can be precomputed when wrapped in Static
+        CellFilter::FgColor(_)
+        | CellFilter::BgColor(_)
+        | CellFilter::Text
+        | CellFilter::PositionFn(_)
+        | CellFilter::EvalCell(_) => {
+            let pred = CellPredicate::new(area, filter);
+            for y in area.y..area.bottom() {
+                let row_offset = y as usize * area.right() as usize;
+                for x in area.x..area.right() {
+                    let index = row_offset + x as usize;
+
+                    let position: Position = (x, y).into();
+                    if let Some(cell) = buf.cell(position) {
+                        cell_indices.set(index, pred.is_valid(position, cell));
+                    }
+                }
+            }
+        },
     };
 
     cell_indices

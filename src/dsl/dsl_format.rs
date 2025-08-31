@@ -268,6 +268,9 @@ impl DslFormat for CellFilter {
             CellFilter::Layout(l, idx) => format_compact!("CellFilter::Layout({l:#?}, {idx})"),
             CellFilter::PositionFn(_) => "CellFilter::PositionFn(fn)".to_compact_string(),
             CellFilter::EvalCell(_) => "CellFilter::EvalCell(fn)".to_compact_string(),
+            CellFilter::Static(filter) => {
+                format_compact!("CellFilter::Static(Box::new({}))", filter.dsl_format())
+            },
         }
     }
 }

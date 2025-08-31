@@ -329,6 +329,16 @@ pub enum CellFilter {
     /// });
     /// ```
     EvalCell(CellPredFn),
+
+    /// Treats a wrapped filter as static for optimization purposes, the filter is
+    /// re-evaluated whenever the effect area or any referenced `RefRect`s change.
+    ///
+    /// ## When to Use
+    ///
+    /// Use this variant when:
+    /// - The wrapped filter depends on cell content that won't change during the effect
+    /// - You have a complex dynamic filter that's expensive to evaluate per-frame
+    Static(Box<CellFilter>),
 }
 
 impl CellFilter {
@@ -391,6 +401,7 @@ impl CellFilter {
             CellFilter::Layout(_, idx) => format!("layout({idx})"),
             CellFilter::PositionFn(_) => "position_fn".to_string(),
             CellFilter::EvalCell(_) => "eval_cell".to_string(),
+            CellFilter::Static(filter) => format!("static({})", filter.to_string()),
         }
     }
 
@@ -462,6 +473,7 @@ impl fmt::Debug for CellFilter {
             },
             CellFilter::PositionFn(_) => write!(f, "PositionFn(<function>)"),
             CellFilter::EvalCell(_) => write!(f, "EvalCell(<function>)"),
+            CellFilter::Static(filter) => f.debug_tuple("Static").field(filter).finish(),
         }
     }
 }
@@ -484,6 +496,7 @@ impl PartialEq for CellFilter {
             (CellFilter::Layout(l1, i1), CellFilter::Layout(l2, i2)) => l1 == l2 && i1 == i2,
             (CellFilter::PositionFn(_), CellFilter::PositionFn(_)) => true,
             (CellFilter::EvalCell(_), CellFilter::EvalCell(_)) => true,
+            (CellFilter::Static(f1), CellFilter::Static(f2)) => f1 == f2,
             _ => false,
         }
     }
@@ -551,6 +564,15 @@ mod tests {
         let ref_rect = RefRect::new(Rect::new(5, 10, 20, 30));
         let filter = CellFilter::RefArea(ref_rect);
         assert_eq!(filter.to_string(), "ref_area(20x30+5+10)");
+
+        let filter = CellFilter::Static(Box::new(CellFilter::Text));
+        assert_eq!(filter.to_string(), "static(text)");
+
+        let filter = CellFilter::Static(Box::new(CellFilter::AllOf(vec![
+            CellFilter::Text,
+            CellFilter::FgColor(Color::Red),
+        ])));
+        assert_eq!(filter.to_string(), "static(all_of(text, fg(#800000)))");
     }
 
     #[test]
@@ -698,5 +720,121 @@ mod tests {
         ref_rect3.set(Rect::new(0, 0, 10, 10));
         let filter4 = CellFilter::RefArea(ref_rect3);
         assert_eq!(filter1, filter4);
+    }
+
+    #[test]
+    fn test_static_filter_analyzer() {
+        use crate::cell_filter::analyzer::{FilterAnalyzer, FilterType};
+
+        let static_text = CellFilter::Static(Box::new(CellFilter::Text));
+        let static_area = CellFilter::Static(Box::new(CellFilter::Area(Rect::new(0, 0, 10, 10))));
+
+        // Both should be analyzed as static regardless of wrapped filter type
+        assert_eq!(static_text.analyze(), FilterType::Static);
+        assert_eq!(static_area.analyze(), FilterType::Static);
+    }
+
+    #[test]
+    fn test_static_vs_dynamic_filters() {
+        use ratatui::style::{Color, Style};
+
+        let mut buf = Buffer::filled(Rect::new(0, 0, 6, 4), Cell::new("."));
+        buf.set_span(
+            0,
+            1,
+            &ratatui::text::Span::from("......").style(Style::default().fg(Color::Red)),
+            6,
+        );
+        buf.set_span(
+            0,
+            2,
+            &ratatui::text::Span::from("......").style(Style::default().bg(Color::Blue)),
+            6,
+        );
+
+        let fx = effect_fn((), 1, |_, _, cells| {
+            for (_, c) in cells {
+                c.set_symbol("X");
+                c.set_style(Style::reset());
+            }
+        });
+
+        let test_filter = |dynamic: CellFilter, static_wrapped: CellFilter| {
+            let mut buf1 = buf.clone();
+            let mut buf2 = buf.clone();
+            buf1.render_effect(
+                &mut fx.clone().with_filter(dynamic),
+                buf.area,
+                Duration::from_millis(16),
+            );
+            buf2.render_effect(
+                &mut fx.clone().with_filter(static_wrapped),
+                buf.area,
+                Duration::from_millis(16),
+            );
+            assert_eq!(buf1, buf2);
+            buf1
+        };
+
+        // Test color filters
+        let mut fg_result = test_filter(
+            CellFilter::FgColor(Color::Red),
+            CellFilter::Static(Box::new(CellFilter::FgColor(Color::Red))),
+        );
+        let mut bg_result = test_filter(
+            CellFilter::BgColor(Color::Blue),
+            CellFilter::Static(Box::new(CellFilter::BgColor(Color::Blue))),
+        );
+
+        // Clear remaining styles for clean comparison
+        let mut clear_styles = effect_fn((), 1, |_, _, cells| {
+            for (_, c) in cells {
+                c.set_style(Style::reset());
+            }
+        });
+        clear_styles.process(Duration::from_millis(16), &mut fg_result, buf.area);
+        clear_styles.process(Duration::from_millis(16), &mut bg_result, buf.area);
+
+        assert_eq!(
+            fg_result,
+            Buffer::with_lines(["......", "XXXXXX", "......", "......"])
+        );
+        assert_eq!(
+            bg_result,
+            Buffer::with_lines(["......", "......", "XXXXXX", "......"])
+        );
+
+        // Test text filter
+        let mut text_buf = Buffer::filled(Rect::new(0, 0, 8, 3), Cell::new(" "));
+        text_buf.set_span(0, 0, &ratatui::text::Span::from("Hello123"), 8);
+        text_buf.set_span(0, 1, &ratatui::text::Span::from("────────"), 8);
+        text_buf.set_span(0, 2, &ratatui::text::Span::from("Test!()"), 7);
+
+        let text_fx = effect_fn((), 1, |_, _, cells| {
+            for (_, c) in cells {
+                c.set_symbol("X");
+            }
+        });
+
+        let mut text1 = text_buf.clone();
+        let mut text2 = text_buf.clone();
+        text1.render_effect(
+            &mut text_fx.clone().with_filter(CellFilter::Text),
+            text_buf.area,
+            Duration::from_millis(16),
+        );
+        text2.render_effect(
+            &mut text_fx
+                .clone()
+                .with_filter(CellFilter::Static(Box::new(CellFilter::Text))),
+            text_buf.area,
+            Duration::from_millis(16),
+        );
+
+        assert_eq!(text1, text2);
+        assert_eq!(
+            text1,
+            Buffer::with_lines(["XXXXXXXX", "────────", "XXXXXXXX"])
+        );
     }
 }

@@ -2,6 +2,9 @@
 
 ## unreleased
 
+### Added
+- `CellFilter::Static`: optimization wrapper that treats wrapped filters as static for performance.
+
 ## tachyonfx 0.17.1 - 2025-08-28
 
 ### Fixed

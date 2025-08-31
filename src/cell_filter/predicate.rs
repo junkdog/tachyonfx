@@ -58,6 +58,7 @@ impl<'a> CellPredicate<'a> {
             CellFilter::Layout(layout, idx) => layout.split(area)[*idx as usize],
             CellFilter::PositionFn(_) => area,
             CellFilter::EvalCell(_) => area,
+            CellFilter::Static(filter) => Self::resolve_area(area, filter.as_ref()),
         }
     }
 
@@ -112,6 +113,7 @@ impl<'a> CellPredicate<'a> {
                 #[cfg(feature = "sendable")]
                 return f.lock().unwrap()(cell);
             },
+            CellFilter::Static(f) => f.predicate(self.filter_area).is_valid(pos, cell),
         }
     }
 }

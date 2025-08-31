@@ -178,7 +178,7 @@ impl Effect {
     ) -> Option<Duration> {
         let area = self.shader.area().unwrap_or(area);
         if let Some(processor) = self.shader.filter_processor_mut() {
-            processor.update(area);
+            processor.update(buf, area);
         }
 
         self.shader.process(duration, buf, area)
