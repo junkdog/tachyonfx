@@ -359,6 +359,33 @@ impl CellFilter {
         CellFilter::EvalCell(ref_count(f))
     }
 
+    /// Wraps this filter in a `Not` variant, effectively negating its selection criteria.
+    pub fn negated(self) -> Self {
+        CellFilter::Not(Box::new(self))
+    }
+
+    /// Wraps this filter in a [`CellFilter::Static`], treating it as static for
+    /// optimization.
+    ///
+    /// ## Safety and Correctness
+    ///
+    /// This optimization is only sound when the underlying cell contents will NOT change
+    /// during the lifetime of the effect that owns this filter. If cell content changes
+    /// (colors, characters, styles), the cached evaluation may become incorrect.
+    ///
+    /// Safe to use with filters that depend only on:
+    /// - Area geometry (Area, Inner, Outer, Layout)
+    /// - Position-based logic that doesn't change
+    /// - Cell content that remains constant during the effect
+    ///
+    /// Unsafe with filters on dynamic content:
+    /// - Color filters when colors change during the effect
+    /// - Text filters when characters change during the effect
+    /// - Custom predicates that depend on mutable cell properties
+    pub fn into_static(self) -> Self {
+        CellFilter::Static(Box::new(self))
+    }
+
     /// Converts the filter to a human-readable string representation.
     ///
     /// This method is useful for debugging and logging purposes, providing

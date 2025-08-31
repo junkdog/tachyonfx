@@ -4,6 +4,8 @@
 
 ### Added
 - `CellFilter::Static`: optimization wrapper that treats wrapped filters as static for performance.
+- `CellFilter::into_static()`: convenience method to wrap a filter in `CellFilter::Static`.
+- `CellFilter::negated()`: convenience method to wrap a filter in `CellFilter::Not`.
 
 ## tachyonfx 0.17.1 - 2025-08-28
 
