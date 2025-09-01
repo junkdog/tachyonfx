@@ -88,7 +88,7 @@ impl<'a> ShaderFnContext<'a> {
 #[bon]
 impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
     #[builder]
-    pub(self) fn with_iterator<F, T>(
+    pub(crate) fn with_iterator<F, T>(
         name: Option<&'static str>,
         state: S,
         code: F,
@@ -112,7 +112,7 @@ impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
     }
 
     #[builder]
-    pub(self) fn with_buffer<F, T>(
+    pub(crate) fn with_buffer<F, T>(
         name: Option<&'static str>,
         state: S,
         code: F,
@@ -166,10 +166,7 @@ impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
 
     fn reset(&mut self) {
         self.timer.reset();
-
-        if let Some(original_state) = self.original_state.as_ref() {
-            self.state = original_state.clone();
-        }
+        self.state = self.original_state.as_ref().unwrap().clone();
     }
 
     #[cfg(feature = "dsl")]
@@ -197,5 +194,77 @@ impl<S: Clone> Debug for ShaderFn<S> {
             .field("cell_filter", &self.cell_filter)
             .field("area", &self.area)
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ratatui::{buffer::Buffer, layout::Rect};
+
+    use super::*;
+    use crate::{EffectTimer, Interpolation::Linear};
+
+    #[test]
+    fn test_shader_fn_reset_preserves_original_state() {
+        #[derive(Debug, Clone, PartialEq)]
+        struct TestState {
+            counter: u32,
+            name: String,
+        }
+
+        let initial_state = TestState { counter: 0, name: "initial".to_string() };
+
+        let mut shader = ShaderFn::with_iterator()
+            .name("test_shader")
+            .state(initial_state.clone())
+            .code(|state: &mut TestState, _ctx, _cells| {
+                state.counter += 1;
+                state.name = format!("modified_{}", state.counter);
+            })
+            .timer(EffectTimer::from_ms(1000, Linear))
+            .call();
+
+        let mut buf = Buffer::empty(Rect::new(0, 0, 10, 10));
+        let area = Rect::new(0, 0, 10, 10);
+
+        // Process to modify state
+        shader.process(Duration::from_millis(100), &mut buf, area);
+        assert_ne!(shader.state, initial_state);
+
+        // Reset should restore original state
+        shader.reset();
+        assert_eq!(shader.state, initial_state);
+        assert!(!shader.done());
+    }
+
+    #[test]
+    fn test_effect_fn_preserves_original_state() {
+        use crate::fx;
+
+        #[derive(Debug, Clone, PartialEq)]
+        struct TestState {
+            counter: u32,
+        }
+
+        let initial_state = TestState { counter: 0 };
+
+        let mut effect = fx::effect_fn(
+            initial_state,
+            EffectTimer::from_ms(1000, Linear),
+            |state: &mut TestState, _ctx, _cells| {
+                state.counter += 1;
+            },
+        );
+
+        let mut buf = Buffer::empty(Rect::new(0, 0, 5, 5));
+        let area = Rect::new(0, 0, 5, 5);
+
+        // Process multiple times to modify internal state
+        effect.process(Duration::from_millis(100), &mut buf, area);
+        effect.process(Duration::from_millis(100), &mut buf, area);
+
+        // Reset should restore original state and timer
+        effect.reset();
+        assert!(!effect.done());
     }
 }

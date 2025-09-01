@@ -238,12 +238,12 @@ where
     T: Into<EffectTimer>,
     F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static,
 {
-    ShaderFn::builder()
+    ShaderFn::with_iterator()
         .name("shader_fn")
         .state(state)
-        .code(ShaderFnSignature::new_iter(f))
+        .code(f)
         .timer(timer)
-        .build()
+        .call()
         .into_effect()
 }
 
@@ -307,12 +307,12 @@ where
     T: Into<EffectTimer>,
     F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static,
 {
-    ShaderFn::builder()
+    ShaderFn::with_buffer()
         .name("shader_fn_buf")
         .state(state)
-        .code(ShaderFnSignature::new_buffer(f))
+        .code(f)
         .timer(timer)
-        .build()
+        .call()
         .into_effect()
 }
 

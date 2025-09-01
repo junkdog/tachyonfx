@@ -7,6 +7,9 @@
 - `CellFilter::into_static()`: convenience method to wrap a filter in `CellFilter::Static`.
 - `CellFilter::negated()`: convenience method to wrap a filter in `CellFilter::Not`.
 
+### Fixed
+- `fx::effect_fn()` and `fx::effect_fn_buf()`: Fixed panic when `reset()` is called. These functions now properly preserve and restore original state during reset operations.
+
 ## tachyonfx 0.17.1 - 2025-08-28
 
 ### Fixed
