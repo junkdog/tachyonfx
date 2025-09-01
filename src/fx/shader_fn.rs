@@ -199,6 +199,11 @@ impl<S: Clone> Debug for ShaderFn<S> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{
+        format,
+        string::{String, ToString},
+    };
+
     use ratatui::{buffer::Buffer, layout::Rect};
 
     use super::*;
