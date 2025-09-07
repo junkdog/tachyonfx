@@ -91,6 +91,35 @@ impl EffectTimer {
         self.reverse
     }
 
+    /// Returns a mirrored timer that runs in reverse direction with flipped
+    /// interpolation.
+    ///
+    /// This preserves the visual curve shape when used with effects that reverse at
+    /// construction time. Unlike `reversed()`, which flips both direction and
+    /// interpolation type (turning In curves into Out curves and vice versa),
+    /// `mirrored()` flips the interpolation to compensate for the reversed direction,
+    /// maintaining the intended visual effect.
+    ///
+    /// # Returns
+    /// A new timer with reversed direction and flipped interpolation.
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{EffectTimer, Interpolation};
+    /// use std::time::Duration;
+    ///
+    /// let timer = EffectTimer::from_ms(1000, Interpolation::QuadIn);
+    /// let mirrored = timer.mirrored(); // Direction reversed, interpolation becomes QuadOut
+    ///
+    /// assert!(mirrored.is_reversed());
+    /// assert_eq!(mirrored.interpolation(), Interpolation::QuadOut);
+    /// ```
+    pub fn mirrored(mut self) -> Self {
+        self.reverse = !self.reverse;
+        self.interpolation = self.interpolation.flipped();
+        self
+    }
+
     /// Checks if the timer has started.
     ///
     /// # Returns

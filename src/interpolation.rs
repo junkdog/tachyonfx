@@ -107,6 +107,55 @@ impl Interpolation {
             Interpolation::SineInOut => sine_in_out(a),
         }
     }
+
+    pub fn flipped(&self) -> Self {
+        use Interpolation::*;
+        match self {
+            BackIn => BackOut,
+            BackOut => BackIn,
+            BackInOut => BackInOut,
+
+            BounceIn => BounceOut,
+            BounceOut => BounceIn,
+            BounceInOut => BounceInOut,
+
+            CircIn => CircOut,
+            CircOut => CircIn,
+            CircInOut => CircInOut,
+
+            CubicIn => CubicOut,
+            CubicOut => CubicIn,
+            CubicInOut => CubicInOut,
+
+            ElasticIn => ElasticOut,
+            ElasticOut => ElasticIn,
+            ElasticInOut => ElasticInOut,
+
+            ExpoIn => ExpoOut,
+            ExpoOut => ExpoIn,
+            ExpoInOut => ExpoInOut,
+
+            Linear => Linear,
+
+            QuadIn => QuadOut,
+            QuadOut => QuadIn,
+            QuadInOut => QuadInOut,
+
+            QuartIn => QuartOut,
+            QuartOut => QuartIn,
+            QuartInOut => QuartInOut,
+
+            QuintIn => QuintOut,
+            QuintOut => QuintIn,
+            QuintInOut => QuintInOut,
+
+            Reverse => Reverse,
+
+            SineIn => SineOut,
+            SineOut => SineIn,
+            SineInOut => SineInOut,
+        }
+    }
 }
 
 /// A trait for interpolating between two values.

@@ -185,10 +185,20 @@ impl DslFormat for Interpolation {
 
 impl DslFormat for EffectTimer {
     fn dsl_format(&self) -> CompactString {
+        // If the timer is reversed, we need to flip the interpolation
+        // for correct DSL representation, as effects that are reversed
+        // at construction-time are "mirrored" effects; in order to get
+        // the same interpolation curve, we need to flip the interpolation.
+        let interpolation = if self.is_reversed() {
+            self.interpolation().flipped()
+        } else {
+            self.interpolation()
+        };
+
         format_compact!(
             "EffectTimer::from_ms({}, {})",
             self.duration().as_millis(),
-            self.interpolation().dsl_format(),
+            interpolation.dsl_format(),
         )
     }
 }

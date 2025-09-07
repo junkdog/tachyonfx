@@ -735,15 +735,8 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
     timer: T,
 ) -> Effect {
     let timer: EffectTimer = timer.into();
-    let timer = match direction {
-        Motion::LeftToRight => timer,
-        Motion::RightToLeft => timer.reversed(),
-        Motion::UpToDown => timer,
-        Motion::DownToUp => timer.reversed(),
-    };
-
     SlideCell::builder()
-        .timer(timer)
+        .timer(if direction.flips_timer() { timer.mirrored() } else { timer })
         .color_behind_cell(color_behind_cells.into())
         .gradient_length(gradient_length)
         .randomness_extent(randomness)
@@ -1107,7 +1100,7 @@ pub fn dissolve_to<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 /// fx::coalesce((1000, Interpolation::BounceOut));
 /// ```
 pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
-    Dissolve::new(timer.into().reversed()).into_effect()
+    Dissolve::new(timer.into().mirrored()).into_effect()
 }
 
 /// Reforms both the text and background to the specified style over the specified
@@ -1135,7 +1128,7 @@ pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
 /// fx::coalesce_from(style, (1000, Interpolation::ExpoInOut));
 /// ```
 pub fn coalesce_from<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
-    Dissolve::with_style(style, timer.into().reversed()).into_effect()
+    Dissolve::with_style(style, timer.into().mirrored()).into_effect()
 }
 
 /// Fades the foreground color to the specified color over the specified duration.
@@ -1217,6 +1210,7 @@ pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> 
 /// ```no_run
 /// use ratatui::prelude::Color;
 /// use tachyonfx::*;
+///
 /// let c = Color::from_u32(0x1d2021);
 /// fx::fade_from(c, c, (1000, Interpolation::CircOut));
 /// ```
@@ -1567,7 +1561,7 @@ where
     }))
 }
 
-fn fade<C: Into<Color>>(fg: Option<C>, bg: Option<C>, timer: EffectTimer, reverse: bool) -> Effect {
+fn fade<C: Into<Color>>(fg: Option<C>, bg: Option<C>, timer: EffectTimer, mirror: bool) -> Effect {
     if fg.is_none() && bg.is_none() {
         panic!("At least one of fg or bg must be provided");
     }
@@ -1575,7 +1569,7 @@ fn fade<C: Into<Color>>(fg: Option<C>, bg: Option<C>, timer: EffectTimer, revers
     FadeColors::builder()
         .maybe_fg(fg.map(Into::into))
         .maybe_bg(bg.map(Into::into))
-        .timer(if reverse { timer.reversed() } else { timer })
+        .timer(if mirror { timer.mirrored() } else { timer })
         .color_space(ColorSpace::default())
         .build()
         .into_effect()

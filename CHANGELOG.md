@@ -1,14 +1,25 @@
 # Changelog
 
-## unreleased
+## tachyonfx 0.18.0 - 2025-09-07
+
+### Breaking Changes
+- Timer interpolation behavior: Effects that implicitly reverse timers (like `slide_out`, `coalesce`, etc.) now use
+  `mirrored()` instead of `reversed()` to preserve interpolation curves. This affects the visual behavior of these
+  effects when using asymmetric interpolation curves.
 
 ### Added
 - `CellFilter::Static`: optimization wrapper that treats wrapped filters as static for performance.
 - `CellFilter::into_static()`: convenience method to wrap a filter in `CellFilter::Static`.
 - `CellFilter::negated()`: convenience method to wrap a filter in `CellFilter::Not`.
+- `EffectTimer::mirrored()`: returns a timer with reversed direction and flipped interpolation, preserving the visual
+  curve shape when used with effects that reverse at construction time.
+- `Interpolation::flipped()`: returns an interpolation with In/Out variants swapped (e.g., `QuadIn` becomes `QuadOut`).
 
 ### Fixed
-- `fx::effect_fn()` and `fx::effect_fn_buf()`: Fixed panic when `reset()` is called. These functions now properly preserve and restore original state during reset operations.
+- `fx::effect_fn()` and `fx::effect_fn_buf()`: Fixed panic when `reset()` is called. These functions now properly
+  preserve and restore original state during reset operations.
+- Fixed issue where effects that reverse timers at construction-time would incorrectly flip interpolation curves.
+
 
 ## tachyonfx 0.17.1 - 2025-08-28
 

@@ -38,7 +38,7 @@ impl SweepIn {
             gradient_length,
             randomness_extent: randomness,
             faded_color,
-            timer: if direction.flips_timer() { lifetime.reversed() } else { lifetime },
+            timer: if direction.flips_timer() { lifetime.mirrored() } else { lifetime },
             area: None,
             cell_filter: None,
             color_space: ColorSpace::default(),
