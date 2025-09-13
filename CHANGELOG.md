@@ -1,5 +1,13 @@
 # Changelog
 
+## tachyonfx 0.18.1 - TBD
+
+### Added
+- `fx::evolve`: Creates evolving text effects that transform characters through predefined symbol sets.
+- `Pattern` trait: New trait for transforming global alpha values to local alpha values for specific cell positions, enabling spatial effects.
+  - `SlidePattern`: Sliding gradient effects in four directions.
+  - `CoalescePattern`: Implements randomized coalescing effects.
+
 ## tachyonfx 0.18.0 - 2025-09-07
 
 ### Breaking Changes

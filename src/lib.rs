@@ -7,6 +7,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
+extern crate core;
 
 // Feature validation
 #[cfg(all(feature = "std-duration", feature = "web-time"))]
@@ -41,6 +42,7 @@ mod features;
 mod interpolation;
 mod lru_cache;
 mod motion;
+mod pattern;
 mod rect_ext;
 mod ref_rect;
 mod render_effect;
@@ -78,3 +80,5 @@ pub use ref_rect::RefRect;
 pub use render_effect::EffectRenderer;
 pub use shader::Shader;
 pub use simple_rng::*;
+
+pub use pattern::{SlidePattern, CoalescePattern};

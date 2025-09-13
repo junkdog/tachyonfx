@@ -94,6 +94,7 @@
 
 pub use direction::*;
 pub use dynamic_area::DynamicArea;
+pub use evolve::EvolveSymbolSet;
 pub use expand::ExpandDirection;
 pub use glitch::Glitch;
 use ping_pong::PingPong;
@@ -116,6 +117,7 @@ use crate::{
         consume_tick::ConsumeTick,
         containers::{ParallelEffect, SequentialEffect},
         dissolve::Dissolve,
+        evolve::Evolve,
         fade::FadeColors,
         hsl_shift::HslShift,
         never_complete::NeverComplete,
@@ -127,8 +129,11 @@ use crate::{
         temporary::TemporaryEffect,
         translate_buffer::TranslateBuffer,
     },
+    pattern::Pattern,
     CellIterator, ColorSpace, Duration, Motion, RefCount, RefRect, ThreadSafetyMarker,
 };
+
+use core::fmt::Debug;
 
 mod alpha_xform;
 mod ansi256;
@@ -159,6 +164,7 @@ mod temporary;
 mod translate;
 mod translate_buffer;
 pub(crate) mod unique;
+mod evolve;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -796,6 +802,51 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
         .timer(timer)
         .build()
         .into_effect()
+}
+
+/// Creates an evolve effect that progressively transforms characters through symbol sets.
+///
+/// This effect transforms text characters through a progression of symbols, with the progression
+/// controlled by configurable patterns. Different symbol sets provide various visual themes,
+/// from circles to blocks to shading patterns.
+///
+/// # Arguments
+///
+/// * `symbols` - The symbol set to use for the evolution progression
+/// * `pattern` - The pattern that controls how the evolution spreads across the area
+/// * `timer` - Controls the duration and timing of the evolution effect
+///
+/// # Returns
+///
+/// An `Effect` that creates a symbol evolution animation when processed.
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::{fx, EffectTimer, Interpolation};
+/// use tachyonfx::fx::EvolveSymbolSet;
+/// use tachyonfx::pattern::SlidePattern;
+///
+/// // Evolve through circle symbols sliding left to right
+/// let evolve_effect = fx::evolve(
+///     EvolveSymbolSet::Circles,
+///     SlidePattern::left_to_right(),
+///     EffectTimer::from_ms(1000, Interpolation::Linear)
+/// );
+///
+/// // Use block symbols with a different progression pattern
+/// let block_effect = fx::evolve(
+///     EvolveSymbolSet::BlocksVertical,
+///     SlidePattern::up_to_down(),
+///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
+/// );
+/// ```
+pub fn evolve<P, T>(symbols: EvolveSymbolSet, pattern: P, timer: T) -> Effect 
+where
+    P: Pattern + Debug + Copy + Send + 'static,
+    T: Into<EffectTimer>,
+{
+    Evolve::new(symbols, pattern, timer.into()).into_effect()
 }
 
 /// Creates an expand effect that stretches/expands bidirectionally using block
