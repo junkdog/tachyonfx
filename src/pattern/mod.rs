@@ -5,7 +5,6 @@ mod diagonal;
 mod instanced_pattern;
 mod radial;
 mod sweep;
-mod util;
 
 use ratatui::layout::Rect;
 

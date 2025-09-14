@@ -102,7 +102,7 @@ impl Shader for FadeColors {
 mod plain_test {
     use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 
-    use crate::{fx, pattern::SweepPattern, Duration, EffectTimer, Interpolation};
+    use crate::{fx, pattern::SweepPattern, Duration};
 
     #[test]
     fn test_fade_with_sweep_patterns() {
@@ -118,7 +118,7 @@ mod plain_test {
                     buf[(x, y)].fg = Color::White;
                 }
             }
-            fade.process(Duration::from_millis(progress_ms), &mut buf, area);
+            fade.process(Duration::from_millis(progress_ms.into()), &mut buf, area);
             buf
         };
 

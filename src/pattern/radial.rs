@@ -1,6 +1,6 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::pattern::{util::ProgressionMapper, InstancedPattern, Pattern, PatternForFrame};
+use crate::pattern::{InstancedPattern, Pattern, PatternForFrame};
 
 #[derive(Clone, Debug, Copy)]
 pub struct RadialPattern {

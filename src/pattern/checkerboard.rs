@@ -66,8 +66,8 @@ impl InstancedPattern for PatternForFrame<(f32, Rect), CheckerboardPattern> {
         let (global_alpha, area) = self.context;
 
         // Calculate relative position within the area
-        let rel_x = (pos.x - area.x) as u16;
-        let rel_y = (pos.y - area.y) as u16;
+        let rel_x = pos.x - area.x;
+        let rel_y = pos.y - area.y;
 
         // Determine if this is a "white" or "black" cell in the checkerboard
         let is_white = pattern.is_white_cell(rel_x, rel_y);

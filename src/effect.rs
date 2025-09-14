@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use core::{fmt::Debug, ops::Deref};
+use core::fmt::Debug;
 
 use ratatui::{buffer::Buffer, layout::Rect};
 

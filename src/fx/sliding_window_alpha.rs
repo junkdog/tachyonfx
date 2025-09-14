@@ -1,5 +1,3 @@
-use core::ops::Range;
-
 use ratatui::layout::{Position, Rect};
 
 use crate::Motion;

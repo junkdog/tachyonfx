@@ -92,8 +92,6 @@
 //!
 //! Additional effects can be created by implementing the [Shader](crate::Shader) trait.
 
-use core::fmt::Debug;
-
 pub use direction::*;
 pub use dynamic_area::DynamicArea;
 pub use evolve::EvolveSymbolSet;
@@ -131,7 +129,6 @@ use crate::{
         temporary::TemporaryEffect,
         translate_buffer::TranslateBuffer,
     },
-    pattern::Pattern,
     CellIterator, ColorSpace, Duration, Motion, RefCount, RefRect, ThreadSafetyMarker,
 };
 
@@ -1660,13 +1657,10 @@ macro_rules! invoke_fn {
 
 pub(crate) use invoke_fn;
 
-use crate::{
-    fx::{
-        alpha_xform::{FreezeAt, RemapAlpha},
-        expand::Expand,
-        explode::Explode,
-    },
-    pattern::{InstancedPattern, PatternForFrame},
+use crate::fx::{
+    alpha_xform::{FreezeAt, RemapAlpha},
+    expand::Expand,
+    explode::Explode,
 };
 
 #[cfg(test)]

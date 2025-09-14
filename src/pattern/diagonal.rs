@@ -1,10 +1,6 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::{
-    fx::sliding_window_alpha::SlidingWindowAlpha,
-    pattern::{InstancedPattern, Pattern, PatternForFrame},
-    Motion,
-};
+use crate::pattern::{InstancedPattern, Pattern, PatternForFrame};
 
 #[derive(Clone, Debug, Copy)]
 pub struct DiagonalPattern {

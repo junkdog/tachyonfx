@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use core::fmt::Debug;
 
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
@@ -68,21 +69,16 @@ impl Shader for Evolve {
     }
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum EvolveSymbolSet {
     BlocksHorizontal,
     BlocksVertical,
     CircleFill,
+    #[default]
     Circles,
     Quadrants,
     Shaded,
     Squares,
-}
-
-impl Default for EvolveSymbolSet {
-    fn default() -> Self {
-        EvolveSymbolSet::Circles
-    }
 }
 
 impl EvolveSymbolSet {
