@@ -1,7 +1,6 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::pattern::{InstancedPattern, Pattern, PatternForFrame};
-use crate::pattern::util::ProgressionMapper;
+use crate::pattern::{util::ProgressionMapper, InstancedPattern, Pattern, PatternForFrame};
 
 #[derive(Clone, Debug, Copy)]
 pub struct RadialPattern {
@@ -37,7 +36,8 @@ impl RadialPattern {
     /// * `center_x` - Center X position (0.0-1.0 normalized coordinates)
     /// * `center_y` - Center Y position (0.0-1.0 normalized coordinates)
     /// * `transition_width` - Width of the gradient transition zone (0.01-1.0)
-    pub fn with_transition(center_x: f32, center_y: f32, transition_width: f32) -> Self {
+    pub fn with_transition(center: (f32, f32), transition_width: f32) -> Self {
+        let (center_x, center_y) = center;
         Self {
             center_x: center_x.clamp(0.0, 1.0),
             center_y: center_y.clamp(0.0, 1.0),
@@ -56,7 +56,8 @@ impl RadialPattern {
     }
 
     /// Sets a custom center point for the radial pattern
-    pub fn with_center(mut self, center_x: f32, center_y: f32) -> Self {
+    pub fn with_center(mut self, center: (f32, f32)) -> Self {
+        let (center_x, center_y) = center;
         self.center_x = center_x.clamp(0.0, 1.0);
         self.center_y = center_y.clamp(0.0, 1.0);
         self
@@ -77,54 +78,53 @@ impl Pattern for RadialPattern {
 impl InstancedPattern for PatternForFrame<(f32, Rect), RadialPattern> {
     fn map_alpha(&mut self, pos: Position) -> f32 {
         let pattern = &self.pattern;
-
         let (global_alpha, area) = self.context;
 
-        let (x, y) = (pos.x, pos.y);
+        // Calculate center position in cell coordinates
+        let center_x = area.x as f32 + (pattern.center_x * area.width as f32);
+        let center_y = area.y as f32 + (pattern.center_y * area.height as f32);
 
-        // Convert position to normalized coordinates (0.0-1.0)
-        let norm_x = (x - area.x) as f32 / area.width as f32;
-        let norm_y = (y - area.y) as f32 / area.height as f32;
-
-        // Calculate distance from center
-        let dx = norm_x - pattern.center_x;
-        let dy = norm_y - pattern.center_y;
+        // Calculate distance from center in cell coordinates
+        let dx = pos.x as f32 - center_x;
+        let dy = pos.y as f32 - center_y;
         let distance = (dx * dx + dy * dy).sqrt();
 
-        // Maximum possible distance from center to any corner
-        let corners = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)];
-        let max_distance = corners
-            .iter()
-            .map(|(cx, cy)| {
-                let dx = cx - pattern.center_x;
-                let dy = cy - pattern.center_y;
-                (dx * dx + dy * dy).sqrt()
-            })
-            .fold(0.0f32, f32::max);
-
-        // Create radial effect: starts from center and expands outward
-        let normalized_distance = (distance / max_distance);
-
-        // Use ProgressionMapper to handle the expanded alpha range
-        // let expanded_alpha = global_alpha + self.transition_width;
-        let mapper =
-            ProgressionMapper::new(-pattern.transition_width, 1.0 + pattern.transition_width);
-        let local_alpha = mapper.map(global_alpha);
-
-        let result = if normalized_distance <= local_alpha {
-            // Inside the expanding circle - fully active
-            1.0
-        } else if normalized_distance <= local_alpha + pattern.transition_width {
-            // Gradient edge for smooth transition
-            let edge_progress = (local_alpha + pattern.transition_width - normalized_distance)
-                / pattern.transition_width;
-            edge_progress
-        } else {
-            // Outside the expanding circle
-            0.0
+        // Calculate maximum radius (distance to farthest corner)
+        let max_radius = {
+            let corners = [
+                (area.x as f32, area.y as f32),
+                (area.right() as f32, area.y as f32),
+                (area.x as f32, area.bottom() as f32),
+                (area.right() as f32, area.bottom() as f32),
+            ];
+            corners
+                .iter()
+                .map(|(x, y)| {
+                    let dx = x - center_x;
+                    let dy = y - center_y;
+                    (dx * dx + dy * dy).sqrt()
+                })
+                .fold(0.0f32, f32::max)
         };
 
-        // Clamp final result to 0.0-1.0 range
-        result.clamp(0.0, 1.0)
+        let transition_radius = pattern.transition_width * max_radius;
+
+        // Circle radius scales from -transition_radius to max_radius + transition_radius
+        // This ensures at alpha=0, even the transition zone is "before" position 0
+        let circle_radius =
+            (global_alpha * (max_radius + 2.0 * transition_radius)) - transition_radius;
+
+        if distance <= circle_radius {
+            // Inside the solid circle - fully active
+            1.0
+        } else if distance <= circle_radius + transition_radius {
+            // Inside the transition zone - gradient from 1.0 to 0.0
+            let distance_into_transition = distance - circle_radius;
+            let progress = 1.0 - (distance_into_transition / transition_radius);
+            progress.clamp(0.0, 1.0)
+        } else {
+            // Outside the circle + transition
+            0.0
+        }
     }
 }
