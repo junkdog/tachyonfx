@@ -1,9 +1,11 @@
 mod coalesce;
+mod diagonal;
 mod radial;
 mod sweep;
 mod util;
 
 pub use coalesce::CoalescePattern;
+pub use diagonal::{DiagonalDirection, DiagonalPattern};
 pub use radial::RadialPattern;
 use ratatui::layout::{Position, Rect};
 pub use sweep::SweepPattern;
@@ -25,5 +27,4 @@ pub(crate) struct PatternForFrame<S, P: Pattern> {
     context: S,
 }
 
-struct DiagonalPattern;
 struct CheckerboardPattern;
