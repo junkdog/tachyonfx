@@ -21,9 +21,10 @@
   - `RadialPattern`: Radial expansion effects from configurable center points with parameterized transition widths
   - `SweepPattern`: Linear sweep effects in four cardinal directions (left-to-right, right-to-left, up-to-down, down-to-up)
 - `Effect::with_pattern()`: Applies spatial patterns to pattern-compatible effects, supporting:
-  - `fx::dissolve`, `fx::dissolve_to`, 
+  - `fx::dissolve`, `fx::dissolve_to`,
   - `fx::coalesce`, `fx::coalesce_from`
   - `fx::evolve`
+  - `fx::explode`
   - `fx::fade_from`, `fx::fade_from_fg`,
   - `fx::fade_to`, `fx::fade_to_fg`
 

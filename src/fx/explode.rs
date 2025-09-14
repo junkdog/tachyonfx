@@ -7,7 +7,11 @@ use ratatui::{
 };
 
 use crate::{
-    default_shader_impl, effect_timer::EffectTimer, shader::Shader, simple_rng::SimpleRng,
+    default_shader_impl,
+    effect_timer::EffectTimer,
+    pattern::{AnyPattern, InstancedPattern, Pattern},
+    shader::Shader,
+    simple_rng::SimpleRng,
     CellFilter, Duration, FilterProcessor, LruCache,
 };
 
@@ -22,6 +26,7 @@ pub struct Explode {
     sorted_cells: LruCache<Rect, Vec<(Position, (f32, f32))>, 1>,
     replacement_cell: Cell,
     lcg: SimpleRng,
+    pattern: AnyPattern,
 }
 
 const EXPLODED: &str = "▉▉▓▙▜▛░▚▗▘▝▔⠢⠌⠐⠁  ";
@@ -42,6 +47,7 @@ impl Explode {
             sorted_cells: LruCache::new(),
             replacement_cell,
             lcg: SimpleRng::new(0x12345678),
+            pattern: AnyPattern::Identity,
         }
     }
 
@@ -64,11 +70,13 @@ impl Shader for Explode {
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
-        let alpha = self.timer.alpha();
+        let global_alpha = self.timer.alpha();
         let mut rng = self.lcg; // copy rng each frame for deterministic behavior
 
         let area = self.area().unwrap_or(area);
         let safe_area = area.intersection(buf.area);
+
+        let mut pattern_frame = self.pattern.for_frame(global_alpha, safe_area);
 
         let cells = self.sorted_cells.memoize_ref(&safe_area, |area| {
             let center_x = area.x as f32 + area.width as f32 / 2.0;
@@ -116,6 +124,14 @@ impl Shader for Explode {
                 continue;
             }
 
+            // Get pattern-modified alpha for this position
+            let cell_alpha = pattern_frame.map_alpha(pos);
+
+            // Only explode cells that have reached their pattern threshold
+            if cell_alpha <= 0.0 {
+                continue;
+            }
+
             // replace original cell with empty cell
             let orig_cell = buf[pos].clone();
             buf[pos] = self.replacement_cell.clone();
@@ -126,13 +142,13 @@ impl Shader for Explode {
 
             // force randomization; calculate displacement force
             let rand_factor = 1.0 + rng.gen_f32() * self.force_rng_factor;
-            let force = self.force * alpha * rand_factor;
+            let force = self.force * cell_alpha * rand_factor;
 
             let new_x = pos.x as f32 + dx * force;
             let new_y = pos.y as f32 + dy * force;
             if let Some(new_pos) = into_pos(new_x, new_y) {
                 let delta = rng.gen_f32() * 0.4 - 0.2; // randomize explosion character
-                let alpha = (alpha + delta).max(0.0);
+                let alpha = (cell_alpha + delta).max(0.0);
 
                 if alpha <= 1.0 && buf.area.contains(new_pos) {
                     buf[new_pos].fg = orig_cell.fg;
@@ -140,6 +156,10 @@ impl Shader for Explode {
                 }
             }
         }
+    }
+
+    fn set_pattern(&mut self, pattern: AnyPattern) {
+        self.pattern = pattern;
     }
 
     #[cfg(feature = "dsl")]
@@ -176,6 +196,7 @@ impl Clone for Explode {
             sorted_cells: LruCache::new(),
             replacement_cell: self.replacement_cell.clone(),
             lcg: self.lcg,
+            pattern: self.pattern,
         }
     }
 }
