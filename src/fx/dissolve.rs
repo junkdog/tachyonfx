@@ -3,8 +3,13 @@ use alloc::boxed::Box;
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
-    cell_filter::FilterProcessor, default_shader_impl, effect_timer::EffectTimer, shader::Shader,
-    simple_rng::SimpleRng, CellFilter, Duration,
+    cell_filter::FilterProcessor,
+    default_shader_impl,
+    effect_timer::EffectTimer,
+    pattern::{AnyPattern, InstancedPattern, Pattern},
+    shader::Shader,
+    simple_rng::SimpleRng,
+    CellFilter, Duration,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -14,6 +19,7 @@ pub struct Dissolve {
     area: Option<Rect>,
     cell_filter: Option<FilterProcessor>,
     lcg: SimpleRng,
+    pattern: AnyPattern,
 }
 
 impl Dissolve {
@@ -43,23 +49,32 @@ impl Shader for Dissolve {
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
-        let alpha = self.timer.alpha();
+        let global_alpha = self.timer.alpha();
         let mut lcg = self.lcg;
         let dissolved_style = self.dissolved_style;
 
-        let cell_iter = self.cell_iter(buf, area);
-        let dissolved_cells = cell_iter.filter(|_| alpha > lcg.gen_f32());
+        // Use pattern-based alpha mapping for all cases (Identity pattern = no change for
+        // original behavior)
+        let mut pattern_frame = self.pattern.for_frame(global_alpha, area);
 
-        if let Some(style) = dissolved_style {
-            dissolved_cells.for_each(|(_, c)| {
-                c.set_char(' ');
-                c.set_style(style);
+        self.cell_iter(buf, area)
+            .for_each_cell(|pos, cell| {
+                let cell_alpha = pattern_frame.map_alpha(pos);
+
+                // For dissolve effects, we use random thresholding
+                // Pattern controls the alpha, random determines which cells at that alpha level
+                // dissolve
+                if cell_alpha > lcg.gen_f32() {
+                    cell.set_char(' ');
+                    if let Some(style) = dissolved_style {
+                        cell.set_style(style);
+                    }
+                }
             });
-        } else {
-            dissolved_cells.for_each(|(_, c)| {
-                c.set_char(' ');
-            });
-        }
+    }
+
+    fn set_pattern(&mut self, pattern: AnyPattern) {
+        self.pattern = pattern;
     }
 
     #[cfg(feature = "dsl")]

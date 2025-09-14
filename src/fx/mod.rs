@@ -830,14 +830,14 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 /// // Evolve through circle symbols sliding left to right
 /// let evolve_effect = fx::evolve(
 ///     EvolveSymbolSet::Circles,
-///     SweepPattern::left_to_right(),
+///     SweepPattern::left_to_right(3),  // gradient_span of 3 cells
 ///     EffectTimer::from_ms(1000, Interpolation::Linear)
 /// );
 ///
 /// // Use block symbols with a different progression pattern
 /// let block_effect = fx::evolve(
 ///     EvolveSymbolSet::BlocksVertical,
-///     SweepPattern::up_to_down(),
+///     SweepPattern::up_to_down(5),     // gradient_span of 5 cells
 ///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
 /// );
 /// ```

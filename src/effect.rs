@@ -1,8 +1,12 @@
 use alloc::boxed::Box;
+use core::{fmt::Debug, ops::Deref};
 
 use ratatui::{buffer::Buffer, layout::Rect};
 
-use crate::{shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration, EffectTimer};
+use crate::{
+    pattern::AnyPattern, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
+    EffectTimer,
+};
 
 /// Represents an effect that can be applied to terminal cells.
 /// The `Effect` struct wraps a shader, allowing it to be configured
@@ -293,6 +297,40 @@ impl Effect {
         self.shader.reset()
     }
 
+    /// Sets a pattern for spatial alpha progression on pattern-compatible effects.
+    /// This is a no-op for effects that don't support patterns.
+    ///
+    /// # Arguments
+    /// * `pattern` - An AnyPattern enum containing the pattern to apply
+    pub(crate) fn set_pattern(&mut self, pattern: AnyPattern) {
+        self.shader.set_pattern(pattern);
+    }
+
+    /// Applies a pattern to this effect for spatial alpha progression.
+    /// This is a no-op for effects that don't support patterns.
+    ///
+    /// # Arguments
+    /// * `pattern` - A pattern that implements Into<AnyPattern>
+    ///
+    /// # Returns
+    /// * The same effect with the pattern applied (if supported)
+    ///
+    /// # Example
+    /// ```
+    /// use tachyonfx::{fx, pattern};
+    ///
+    /// let effect = fx::dissolve(1000)
+    ///     .with_pattern(pattern::RadialPattern::center());
+    /// ```
+    pub fn with_pattern<P>(mut self, pattern: P) -> Self
+    where
+        P: Into<AnyPattern>,
+    {
+        let any_pattern = pattern.into();
+        self.set_pattern(any_pattern);
+        self
+    }
+
     pub fn as_effect_span(&self, offset: Duration) -> EffectSpan
     where
         Self: Sized + Clone,
@@ -352,3 +390,5 @@ impl ShaderExt for dyn Shader {
         }
     }
 }
+
+// PatternedEffect is no longer needed since Effect now has .with_pattern() directly

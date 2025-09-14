@@ -4,8 +4,8 @@ use core::fmt::Debug;
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
-    cell_filter::FilterProcessor, cell_iter::CellIterator, widget::EffectSpan, CellFilter,
-    ColorSpace, Duration, EffectTimer, ThreadSafetyMarker,
+    cell_filter::FilterProcessor, cell_iter::CellIterator, pattern::AnyPattern, widget::EffectSpan,
+    CellFilter, ColorSpace, Duration, EffectTimer, ThreadSafetyMarker,
 };
 
 /// A trait representing a shader-like object that can be processed for a duration.
@@ -221,6 +221,17 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// supported.
     fn color_space(&self) -> ColorSpace {
         ColorSpace::default()
+    }
+
+    /// Sets a pattern for spatial alpha progression. This is a no-op for effects that
+    /// don't support patterns. Pattern-compatible effects should override this
+    /// method.
+    ///
+    /// # Arguments
+    /// * `pattern` - An AnyPattern enum containing the pattern to apply
+    #[allow(unused_variables)]
+    fn set_pattern(&mut self, pattern: AnyPattern) {
+        // Default no-op implementation for non-pattern-compatible shaders
     }
 
     /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and

@@ -54,6 +54,7 @@ impl FilterProcessor {
     /// # Returns
     /// A [`CellPredicate`] configured for the specified area
     pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
+        // todo: deprecate and replace with validator()
         match self {
             FilterProcessor::Static(processor) => processor.filter.predicate(area),
             FilterProcessor::Dynamic(filter, _) => filter.predicate(area),
