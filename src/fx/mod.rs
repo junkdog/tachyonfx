@@ -28,6 +28,7 @@
 //! |------------------------|-------------|----------|
 //! | [`coalesce()`] ⬆️      | Reforms dissolved foreground | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce.gif) |
 //! | [`coalesce_from()`] ⬆️ | Reforms dissolved foreground | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce_from.gif) |
+//! | [`evolve()`] 🔄        | Transforms characters through symbol sets | N/A |
 //! | [`explode()`] 💥       | Explodes content outward     | N/A |
 //! | [`dissolve()`] ⬇️      | Dissolves foreground content | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve.gif) |
 //! | [`dissolve_to()`] ⬇️   | Dissolves foreground content | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve_to.gif) |

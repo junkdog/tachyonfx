@@ -1,6 +1,6 @@
 # Changelog
 
-## tachyonfx 0.18.1 - TBD
+## tachyonfx 0.19.0 - TBD
 
 ### Added
 - `fx::evolve`: Creates evolving text effects that transform characters through predefined symbol sets.
@@ -23,6 +23,7 @@
 - `Effect::with_pattern()`: Applies spatial patterns to pattern-compatible effects, supporting:
   - `fx::dissolve`, `fx::dissolve_to`, 
   - `fx::coalesce`, `fx::coalesce_from`
+  - `fx::evolve`
   - `fx::fade_from`, `fx::fade_from_fg`,
   - `fx::fade_to`, `fx::fade_to_fg`
 
