@@ -808,58 +808,41 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 /// visual themes, from circles to blocks to shading patterns.
 ///
 /// # Arguments
-///
-/// * `symbols` - The symbol set to use for the evolution progression
-/// * `pattern` - The pattern that controls how the evolution spreads across the area
-/// * `timer` - Controls the duration and timing of the evolution effect
-///
-/// # Returns
-///
-/// An `Effect` that creates a symbol evolution animation when processed.
+/// * `symbols` - The symbol set configuration, either:
+///   - `EvolveSymbolSet` - Plain symbol set without styling
+///   - `(EvolveSymbolSet, Style)` - Symbol set with custom styling
+/// * `timer` - Controls the duration and interpolation of the effect
 ///
 /// # Examples
-///
 /// ```no_run
-/// use tachyonfx::{fx, EffectTimer, Interpolation};
-/// use tachyonfx::fx::EvolveSymbolSet;
-/// use tachyonfx::pattern::SweepPattern;
+/// use ratatui::style::{Color, Style};
+/// use tachyonfx::{fx, fx::EvolveSymbolSet, EffectTimer, Interpolation};
 ///
-/// // Evolve through circle symbols with uniform progression
+/// // Basic evolve effect with default styling
 /// let evolve_effect = fx::evolve(
 ///     EvolveSymbolSet::Circles,
-///     EffectTimer::from_ms(1000, Interpolation::Linear)
+///     EffectTimer::from_ms(2000, Interpolation::Linear)
 /// );
 ///
-/// // Use block symbols with custom pattern
-/// let block_effect = fx::evolve(
-///     EvolveSymbolSet::BlocksVertical,
-///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
-/// ).with_pattern(SweepPattern::up_to_down(5));
+/// // Evolve effect with custom styling
+/// let styled_effect = fx::evolve(
+///     (EvolveSymbolSet::BlocksHorizontal, Style::default().fg(Color::Red)),
+///     EffectTimer::from_ms(1500, Interpolation::QuadOut)
+/// );
 /// ```
-pub fn evolve<T>(symbols: EvolveSymbolSet, timer: T) -> Effect
+#[allow(private_bounds)]
+pub fn evolve<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
 where
     T: Into<EffectTimer>,
 {
-    Evolve::new(symbols, timer.into()).into_effect()
-}
+    let (symbols, style) = match symbols.into() {
+        EvolveSymbolConfig::Plain(symbols) => (symbols, None),
+        EvolveSymbolConfig::Styled(symbols, style) => (symbols, Some(style)),
+    };
 
-/// Creates an evolve effect with custom styling that transforms characters through
-/// predefined symbol sets based on pattern-driven alpha progression.
-///
-/// This version allows you to specify a custom style for the evolving symbols,
-/// overriding the underlying cell's style.
-///
-/// # Arguments
-/// * `symbols` - The symbol set to use for character transformation
-/// * `style` - The style to apply to the evolving symbols
-/// * `timer` - Controls the duration and interpolation of the effect
-pub fn evolve_with_style<T>(symbols: EvolveSymbolSet, style: Style, timer: T) -> Effect
-where
-    T: Into<EffectTimer>,
-{
-    Evolve::new(symbols, timer.into())
-        .with_style(style)
-        .into_effect()
+    let fx = Evolve::new(symbols, timer.into());
+
+    if let Some(style) = style { fx.with_style(style) } else { fx }.into_effect()
 }
 
 /// Creates an expand effect that stretches/expands bidirectionally using block
@@ -1659,6 +1642,7 @@ pub(crate) use invoke_fn;
 
 use crate::fx::{
     alpha_xform::{FreezeAt, RemapAlpha},
+    evolve::EvolveSymbolConfig,
     expand::Expand,
     explode::Explode,
 };

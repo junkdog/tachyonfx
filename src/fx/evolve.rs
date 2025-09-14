@@ -69,6 +69,23 @@ impl Shader for Evolve {
     }
 }
 
+pub(crate) enum EvolveSymbolConfig {
+    Plain(EvolveSymbolSet),
+    Styled(EvolveSymbolSet, Style),
+}
+
+impl From<EvolveSymbolSet> for EvolveSymbolConfig {
+    fn from(value: EvolveSymbolSet) -> Self {
+        EvolveSymbolConfig::Plain(value)
+    }
+}
+
+impl From<(EvolveSymbolSet, Style)> for EvolveSymbolConfig {
+    fn from(value: (EvolveSymbolSet, Style)) -> Self {
+        EvolveSymbolConfig::Styled(value.0, value.1)
+    }
+}
+
 #[derive(Clone, Debug, Copy, Default)]
 pub enum EvolveSymbolSet {
     BlocksHorizontal,
