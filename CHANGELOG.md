@@ -4,9 +4,28 @@
 
 ### Added
 - `fx::evolve`: Creates evolving text effects that transform characters through predefined symbol sets.
-- `Pattern` trait: New trait for transforming global alpha values to local alpha values for specific cell positions, enabling spatial effects.
-  - `SlidePattern`: Sliding gradient effects in four directions.
-  - `CoalescePattern`: Implements randomized coalescing effects.
+  Can accept either plain symbol sets or styled tuples `(EvolveSymbolSet, Style)` for custom styling.
+- `EvolveSymbolSet` enum: Defines symbol progressions for evolve effects with variants:
+  - `BlocksHorizontal`: Horizontal block progression (`▏▎▍▌▋▊▉█`)
+  - `BlocksVertical`: Vertical block progression (`▁▂▃▄▅▆▇█`)
+  - `CircleFill`: Circle fill progression (`◌◎◍●`)
+  - `Circles`: Circle progression (` ·•◉●`)
+  - `Quadrants`: Quadrant block progression (`▖▘▗▝▚▞▙▛▜▟█`)
+  - `Shaded`: Shading progression (` ░▒▓█`)
+  - `Squares`: Square progression (` ·▫▪◼█`)
+- **Pattern System**: New pattern-based spatial effects system for controlling how effects progress across screen areas:
+  - `CheckerboardPattern`: Creates alternating checkerboard reveal patterns with configurable cell size and transition width
+  - `CoalescePattern`: Randomized coalescing effects where cells activate at random thresholds for organic transitions
+  - `DiagonalPattern`: Diagonal sweep effects in four directions (top-left to bottom-right, etc.) with smooth gradients
+  - `DissolvePattern`: Randomized dissolve effects where cells deactivate at random thresholds - the reverse of `CoalescePattern`
+  - `RadialPattern`: Radial expansion effects from configurable center points with parameterized transition widths
+  - `SweepPattern`: Linear sweep effects in four cardinal directions (left-to-right, right-to-left, up-to-down, down-to-up)
+- `Effect::with_pattern()`: Applies spatial patterns to pattern-compatible effects, supporting:
+  - `fx::dissolve`, `fx::dissolve_to`, 
+  - `fx::coalesce`, `fx::coalesce_from`
+  - `fx::fade_from`, `fx::fade_from_fg`,
+  - `fx::fade_to`, `fx::fade_to_fg`
+
 
 ## tachyonfx 0.18.0 - 2025-09-07
 

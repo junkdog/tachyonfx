@@ -2,6 +2,7 @@ mod any_pattern;
 mod checkerboard;
 mod coalesce;
 mod diagonal;
+mod dissolve;
 mod instanced_pattern;
 mod radial;
 mod sweep;
@@ -14,6 +15,7 @@ pub use self::{
     checkerboard::CheckerboardPattern,
     coalesce::CoalescePattern,
     diagonal::{DiagonalDirection, DiagonalPattern},
+    dissolve::DissolvePattern,
     radial::RadialPattern,
     sweep::SweepPattern,
 };

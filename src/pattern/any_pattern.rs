@@ -3,8 +3,8 @@ use ratatui::layout::{Position, Rect};
 use crate::{
     fx::sliding_window_alpha::SlidingWindowAlpha,
     pattern::{
-        CheckerboardPattern, CoalescePattern, DiagonalPattern, InstancedPattern, Pattern,
-        PatternForFrame, RadialPattern, SweepPattern,
+        CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern, InstancedPattern,
+        Pattern, PatternForFrame, RadialPattern, SweepPattern,
     },
     simple_rng::SimpleRng,
 };
@@ -21,6 +21,7 @@ pub enum AnyPattern {
     Checkerboard(CheckerboardPattern),
     Sweep(SweepPattern),
     Coalesce(CoalescePattern),
+    Dissolve(DissolvePattern),
 }
 
 /// Context enum that holds the appropriate pattern frame state for each pattern type
@@ -31,6 +32,7 @@ pub enum AnyPatternContext {
     Checkerboard(PatternForFrame<(f32, Rect), CheckerboardPattern>),
     Sweep(PatternForFrame<SlidingWindowAlpha, SweepPattern>),
     Coalesce(PatternForFrame<(f32, SimpleRng), CoalescePattern>),
+    Dissolve(PatternForFrame<(f32, SimpleRng), DissolvePattern>),
 }
 
 impl Pattern for AnyPattern {
@@ -55,6 +57,9 @@ impl Pattern for AnyPattern {
             AnyPattern::Coalesce(pattern) => {
                 AnyPatternContext::Coalesce(pattern.for_frame(alpha, area))
             },
+            AnyPattern::Dissolve(pattern) => {
+                AnyPatternContext::Dissolve(pattern.for_frame(alpha, area))
+            },
         };
 
         PatternForFrame { pattern: self, context }
@@ -70,6 +75,7 @@ impl InstancedPattern for PatternForFrame<AnyPatternContext, AnyPattern> {
             AnyPatternContext::Checkerboard(frame) => frame.map_alpha(pos),
             AnyPatternContext::Sweep(frame) => frame.map_alpha(pos),
             AnyPatternContext::Coalesce(frame) => frame.map_alpha(pos),
+            AnyPatternContext::Dissolve(frame) => frame.map_alpha(pos),
         }
     }
 }
@@ -102,5 +108,11 @@ impl From<SweepPattern> for AnyPattern {
 impl From<CoalescePattern> for AnyPattern {
     fn from(pattern: CoalescePattern) -> Self {
         AnyPattern::Coalesce(pattern)
+    }
+}
+
+impl From<DissolvePattern> for AnyPattern {
+    fn from(pattern: DissolvePattern) -> Self {
+        AnyPattern::Dissolve(pattern)
     }
 }
