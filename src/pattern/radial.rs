@@ -87,6 +87,7 @@ impl InstancedPattern for PatternForFrame<(f32, Rect), RadialPattern> {
         // Calculate distance from center in cell coordinates
         let dx = pos.x as f32 - center_x;
         let dy = pos.y as f32 - center_y;
+        // Compensate for terminal cell aspect ratio (typically 2:1 height to width)
         let distance = (dx * dx + 2.0 * dy * 2.0 * dy).sqrt();
 
         // Calculate maximum radius (distance to farthest corner)

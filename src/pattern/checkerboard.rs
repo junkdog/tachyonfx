@@ -9,17 +9,28 @@ pub struct CheckerboardPattern {
 }
 
 impl CheckerboardPattern {
-    /// Creates a checkerboard pattern with default cell size of 2x2
+    /// Creates a checkerboard pattern with specified cell size and transition width.
+    ///
+    /// # Arguments
+    /// * `cell_size` - Size of each checkerboard cell in terminal cells (minimum 1)
+    /// * `transition_width` - Width of gradient transition between cells (0.01-1.0)
     pub fn new(cell_size: u16, transition_width: f32) -> Self {
         Self { cell_size, transition_width }
     }
 
-    /// Creates a checkerboard pattern with custom cell size
+    /// Creates a checkerboard pattern with custom cell size and default transition width.
+    ///
+    /// # Arguments
+    /// * `cell_size` - Size of each checkerboard cell in terminal cells (automatically
+    ///   clamped to minimum 1)
     pub fn with_cell_size(cell_size: u16) -> Self {
         Self { cell_size: cell_size.max(1), transition_width: 0.1 }
     }
 
-    /// Sets the transition width for gradient smoothing
+    /// Sets the transition width for gradient smoothing between cells.
+    ///
+    /// # Arguments
+    /// * `width` - Width of gradient transition zone (0.01-1.0, automatically clamped)
     pub fn with_transition_width(mut self, width: f32) -> Self {
         self.transition_width = width.clamp(0.01, 1.0);
         self

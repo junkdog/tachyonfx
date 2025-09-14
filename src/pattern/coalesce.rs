@@ -5,12 +5,25 @@ use crate::{
     SimpleRng,
 };
 
+/// A pattern that creates organic, randomized reveal effects.
+///
+/// The coalesce pattern assigns each cell a random threshold value, causing cells to
+/// activate at different points during the animation. This creates a scattered,
+/// organic-looking transition that resembles particles or pixels coalescing together.
+///
+/// Unlike structured patterns (checkerboard, radial), coalesce creates truly random
+/// distributions that feel natural and unpredictable.
 #[derive(Clone, Debug, Copy, Default)]
 pub struct CoalescePattern {
     rng: SimpleRng,
 }
 
 impl CoalescePattern {
+    /// Creates a new coalesce pattern with a default random number generator.
+    ///
+    /// The coalesce pattern creates a randomized reveal effect where each cell
+    /// becomes active at a random threshold, creating a scattered, organic-looking
+    /// transition as the global alpha increases.
     pub fn new() -> Self {
         Self::default()
     }

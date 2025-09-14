@@ -18,7 +18,7 @@ impl ProgressionMapper {
     /// Remaps an effects global `alpha` to a new range and then clamps it to `0.0..=1.0`.
     ///
     /// # Arguments
-    /// * `global_alpha` -
+    /// * `global_alpha` - The input alpha value (typically 0.0..=1.0) to be remapped
     ///
     /// # Returns
     /// Mapped value in range 0.0..=1.0

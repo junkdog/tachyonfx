@@ -12,11 +12,16 @@ pub struct DiagonalPattern {
     transition_width: f32,
 }
 
+/// Direction variants for diagonal sweep patterns.
 #[derive(Clone, Debug, Copy)]
 pub enum DiagonalDirection {
+    /// Sweeps diagonally from top-left corner to bottom-right corner
     TopLeftToBottomRight,
+    /// Sweeps diagonally from top-right corner to bottom-left corner
     TopRightToBottomLeft,
+    /// Sweeps diagonally from bottom-left corner to top-right corner
     BottomLeftToTopRight,
+    /// Sweeps diagonally from bottom-right corner to top-left corner
     BottomRightToTopLeft,
 }
 
@@ -49,6 +54,12 @@ impl DiagonalPattern {
         }
     }
 
+    /// Creates a diagonal pattern with specified direction and transition width.
+    ///
+    /// # Arguments
+    /// * `direction` - Direction of the diagonal sweep
+    /// * `transition_width` - Width of gradient transition zone (0.01-1.0, automatically
+    ///   clamped)
     pub fn new(direction: DiagonalDirection, transition_width: f32) -> Self {
         Self {
             direction,
@@ -56,6 +67,10 @@ impl DiagonalPattern {
         }
     }
 
+    /// Sets the transition width for gradient smoothing along the diagonal edge.
+    ///
+    /// # Arguments
+    /// * `width` - Width of gradient transition zone (0.01-1.0, automatically clamped)
     pub fn with_transition_width(mut self, width: f32) -> Self {
         self.transition_width = width.clamp(0.01, 1.0);
         self

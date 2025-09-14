@@ -56,12 +56,12 @@ impl Effect {
     /// Creates a new `Effect` with the specified cell filter.
     ///
     /// # Arguments
-    /// * `mode` - The terminal cell filter to be used for the effect.
+    /// * `mode` - The cell filter to be used for the effect.
     ///
     /// # Returns
     /// * A new `Effect` instance with the specified filter.
     ///
-    /// /// # Notes
+    /// # Notes
     /// This method only applies the filter if the effect doesn't already have a filter
     /// set, preserving any existing filters during effect composition.
     ///
@@ -111,7 +111,8 @@ impl Effect {
     /// * A new `Effect` instance with the specified color space.
     ///
     /// # Example
-    /// ```no_compile
+    /// ```no_run
+    /// use ratatui::style::Color;
     /// use tachyonfx::{ColorSpace, fx, Interpolation};
     ///
     /// let effect = fx::fade_to_fg(Color::Red, (300, Interpolation::SineIn))
@@ -163,11 +164,10 @@ impl Effect {
     ///   it is still running.
     ///
     /// # Example
-    /// ```no_compile
-    /// use std::time::Duration;
+    /// ```no_run
     /// use ratatui::buffer::Buffer;
     /// use ratatui::layout::Rect;
-    /// use tachyonfx::{Effect, fx, Interpolation};
+    /// use tachyonfx::{Effect, fx, Interpolation, Duration};
     ///
     /// let mut effect = fx::dissolve((100, Interpolation::Linear));
     /// let area = Rect::new(0, 0, 10, 10);
@@ -224,21 +224,23 @@ impl Effect {
     /// if the effect doesn't already have one set.
     ///
     /// # Arguments
-    /// * `strategy` - The cell selection strategy to set.
+    /// * `strategy` - The cell filter strategy to set.
     ///
     /// # Example
-    /// ```no_compile
-    /// use ratatui::style::Color;
+    /// ```no_run
     /// use tachyonfx::{CellFilter, fx, Interpolation};
     ///
     /// let mut effect = fx::dissolve((100, Interpolation::Linear));
-    /// effect.filter(CellFilter::Not(CellFilter::Text));
+    /// effect.filter(CellFilter::Not(CellFilter::Text.into()));
     /// ```
     pub fn filter(&mut self, strategy: CellFilter) {
         self.shader.propagate_filter(strategy)
     }
 
-    /// Reverses the effect.
+    /// Reverses the effect's playback direction.
+    ///
+    /// This toggles the effect to play in the opposite direction from its
+    /// current state. Can be used to create back-and-forth animations.
     pub fn reverse(&mut self) {
         self.shader.reverse()
     }
@@ -273,7 +275,9 @@ impl Effect {
     ///   `None` if not applicable.
     ///
     /// # Example
-    /// ```no_compile
+    /// ```no_run
+    /// use tachyonfx::{fx, Interpolation};
+    ///
     /// let mut effect = fx::dissolve((100, Interpolation::Linear));
     /// if let Some(timer) = effect.timer_mut() {
     ///     timer.reset();
@@ -331,6 +335,13 @@ impl Effect {
         self
     }
 
+    /// Creates an `EffectSpan` representation of this effect for timeline visualization.
+    ///
+    /// # Arguments
+    /// * `offset` - The time offset when this effect should start in the timeline
+    ///
+    /// # Returns
+    /// * An `EffectSpan` that can be used in timeline widgets
     pub fn as_effect_span(&self, offset: Duration) -> EffectSpan
     where
         Self: Sized + Clone,
@@ -357,7 +368,9 @@ impl Effect {
     }
 }
 
+/// Trait for converting shader types into Effect instances.
 pub trait IntoEffect {
+    /// Converts this shader into an Effect.
     fn into_effect(self) -> Effect;
 }
 
@@ -370,8 +383,12 @@ where
     }
 }
 
+/// Extension trait for shader filter propagation logic.
 pub(crate) trait ShaderExt {
     /// Propagates the cell filter to the shader if it is not already set.
+    ///
+    /// This method only applies the filter if the shader doesn't already have one,
+    /// preserving existing filters during effect composition.
     fn propagate_filter(&mut self, cell_filter: CellFilter);
 }
 
