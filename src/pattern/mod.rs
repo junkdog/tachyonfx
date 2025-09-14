@@ -1,14 +1,19 @@
+mod checkerboard;
 mod coalesce;
 mod diagonal;
 mod radial;
 mod sweep;
 mod util;
 
-pub use coalesce::CoalescePattern;
-pub use diagonal::{DiagonalDirection, DiagonalPattern};
-pub use radial::RadialPattern;
 use ratatui::layout::{Position, Rect};
-pub use sweep::SweepPattern;
+
+pub use self::{
+    checkerboard::CheckerboardPattern,
+    coalesce::CoalescePattern,
+    diagonal::{DiagonalDirection, DiagonalPattern},
+    radial::RadialPattern,
+    sweep::SweepPattern,
+};
 
 pub(crate) trait Pattern {
     type Context;
@@ -26,5 +31,3 @@ pub(crate) struct PatternForFrame<S, P: Pattern> {
     pattern: P,
     context: S,
 }
-
-struct CheckerboardPattern;
