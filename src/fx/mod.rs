@@ -92,6 +92,8 @@
 //!
 //! Additional effects can be created by implementing the [Shader](crate::Shader) trait.
 
+use core::fmt::Debug;
+
 pub use direction::*;
 pub use dynamic_area::DynamicArea;
 pub use evolve::EvolveSymbolSet;
@@ -133,8 +135,6 @@ use crate::{
     CellIterator, ColorSpace, Duration, Motion, RefCount, RefRect, ThreadSafetyMarker,
 };
 
-use core::fmt::Debug;
-
 mod alpha_xform;
 mod ansi256;
 mod consume_tick;
@@ -142,6 +142,7 @@ pub(crate) mod containers;
 mod direction;
 mod dissolve;
 mod dynamic_area;
+mod evolve;
 mod expand;
 mod explode;
 mod fade;
@@ -157,14 +158,13 @@ mod run_once;
 mod shader_fn;
 mod sleep;
 mod slide;
-mod sliding_window_alpha;
+pub(crate) mod sliding_window_alpha;
 mod stretch;
 mod sweep_in;
 mod temporary;
 mod translate;
 mod translate_buffer;
 pub(crate) mod unique;
-mod evolve;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -806,9 +806,9 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 
 /// Creates an evolve effect that progressively transforms characters through symbol sets.
 ///
-/// This effect transforms text characters through a progression of symbols, with the progression
-/// controlled by configurable patterns. Different symbol sets provide various visual themes,
-/// from circles to blocks to shading patterns.
+/// This effect transforms text characters through a progression of symbols, with the
+/// progression controlled by configurable patterns. Different symbol sets provide various
+/// visual themes, from circles to blocks to shading patterns.
 ///
 /// # Arguments
 ///
@@ -825,28 +825,56 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 /// ```no_run
 /// use tachyonfx::{fx, EffectTimer, Interpolation};
 /// use tachyonfx::fx::EvolveSymbolSet;
-/// use tachyonfx::pattern::SlidePattern;
+/// use tachyonfx::pattern::SweepPattern;
 ///
 /// // Evolve through circle symbols sliding left to right
 /// let evolve_effect = fx::evolve(
 ///     EvolveSymbolSet::Circles,
-///     SlidePattern::left_to_right(),
+///     SweepPattern::left_to_right(),
 ///     EffectTimer::from_ms(1000, Interpolation::Linear)
 /// );
 ///
 /// // Use block symbols with a different progression pattern
 /// let block_effect = fx::evolve(
 ///     EvolveSymbolSet::BlocksVertical,
-///     SlidePattern::up_to_down(),
+///     SweepPattern::up_to_down(),
 ///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
 /// );
 /// ```
-pub fn evolve<P, T>(symbols: EvolveSymbolSet, pattern: P, timer: T) -> Effect 
+pub fn evolve<P, T>(symbols: EvolveSymbolSet, pattern: P, timer: T) -> Effect
 where
     P: Pattern + Debug + Copy + Send + 'static,
     T: Into<EffectTimer>,
+    PatternForFrame<P::Context, P>: InstancedPattern,
 {
     Evolve::new(symbols, pattern, timer.into()).into_effect()
+}
+
+/// Creates an evolve effect with custom styling that transforms characters through
+/// predefined symbol sets based on pattern-driven alpha progression.
+///
+/// This version allows you to specify a custom style for the evolving symbols,
+/// overriding the underlying cell's style.
+///
+/// # Arguments
+/// * `symbols` - The symbol set to use for character transformation
+/// * `pattern` - The pattern controlling spatial alpha progression
+/// * `style` - The style to apply to the evolving symbols
+/// * `timer` - Controls the duration and interpolation of the effect
+pub fn evolve_with_style<P, T>(
+    symbols: EvolveSymbolSet,
+    pattern: P,
+    style: Style,
+    timer: T,
+) -> Effect
+where
+    P: Pattern + Debug + Copy + Send + 'static,
+    T: Into<EffectTimer>,
+    PatternForFrame<P::Context, P>: InstancedPattern,
+{
+    Evolve::new(symbols, pattern, timer.into())
+        .with_style(style)
+        .into_effect()
 }
 
 /// Creates an expand effect that stretches/expands bidirectionally using block
@@ -1644,10 +1672,13 @@ macro_rules! invoke_fn {
 
 pub(crate) use invoke_fn;
 
-use crate::fx::{
-    alpha_xform::{FreezeAt, RemapAlpha},
-    expand::Expand,
-    explode::Explode,
+use crate::{
+    fx::{
+        alpha_xform::{FreezeAt, RemapAlpha},
+        expand::Expand,
+        explode::Explode,
+    },
+    pattern::{InstancedPattern, PatternForFrame},
 };
 
 #[cfg(test)]

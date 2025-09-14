@@ -4,10 +4,17 @@ use ratatui::layout::{Position, Rect};
 
 use crate::Motion;
 
+#[derive(Clone, Copy, Debug)]
 pub struct SlidingWindowAlpha {
-    alpha_fn: fn(Position, Range<f32>, f32) -> f32,
-    gradient: Range<f32>,
+    alpha_fn: fn(Position, Gradient, f32) -> f32,
+    gradient: Gradient,
     alpha_per_cell: f32,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Gradient {
+    start: f32,
+    end: f32,
 }
 
 #[bon::bon]
@@ -35,19 +42,19 @@ impl SlidingWindowAlpha {
     }
 
     pub fn alpha(&self, position: Position) -> f32 {
-        (self.alpha_fn)(position, self.gradient.clone(), self.alpha_per_cell)
+        (self.alpha_fn)(position, self.gradient, self.alpha_per_cell)
     }
 }
 
-fn gradient(progress: f32, coordinate: u16, area_len: u16, gradient_len: u16) -> Range<f32> {
+fn gradient(progress: f32, coordinate: u16, area_len: u16, gradient_len: u16) -> Gradient {
     let gradient_len = gradient_len as f32;
     let start = (coordinate as f32 - gradient_len) + ((area_len as f32 + gradient_len) * progress);
     let end = start + gradient_len;
 
-    start..end
+    Gradient { start, end }
 }
 
-fn slide_down(position: Position, gradient: Range<f32>, alpha_per_cell: f32) -> f32 {
+fn slide_down(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
     match position.y as f32 {
         y if y < gradient.start => 0.0,
         y if y > gradient.end => 1.0,
@@ -55,11 +62,11 @@ fn slide_down(position: Position, gradient: Range<f32>, alpha_per_cell: f32) -> 
     }
 }
 
-fn slide_up(position: Position, gradient: Range<f32>, alpha_per_cell: f32) -> f32 {
+fn slide_up(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
     1.0 - slide_down(position, gradient, alpha_per_cell)
 }
 
-fn slide_right(position: Position, gradient: Range<f32>, alpha_per_cell: f32) -> f32 {
+fn slide_right(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
     match position.x as f32 {
         x if x < gradient.start => 0.0,
         x if x > gradient.end => 1.0,
@@ -67,6 +74,6 @@ fn slide_right(position: Position, gradient: Range<f32>, alpha_per_cell: f32) ->
     }
 }
 
-fn slide_left(position: Position, gradient: Range<f32>, alpha_per_cell: f32) -> f32 {
+fn slide_left(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
     1.0 - slide_right(position, gradient, alpha_per_cell)
 }
