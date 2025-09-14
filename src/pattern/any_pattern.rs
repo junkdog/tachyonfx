@@ -1,15 +1,20 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::pattern::{
-    CheckerboardPattern, CoalescePattern, DiagonalPattern, InstancedPattern, Pattern,
-    PatternForFrame, RadialPattern, SweepPattern,
+use crate::{
+    fx::sliding_window_alpha::SlidingWindowAlpha,
+    pattern::{
+        CheckerboardPattern, CoalescePattern, DiagonalPattern, InstancedPattern, Pattern,
+        PatternForFrame, RadialPattern, SweepPattern,
+    },
+    simple_rng::SimpleRng,
 };
 
 /// An enum that can hold any concrete pattern type.
 /// This allows shaders to store patterns without knowing their concrete types at compile
 /// time.
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum AnyPattern {
+    #[default]
     Identity, // Returns global alpha unchanged - allows single code path for all effects
     Radial(RadialPattern),
     Diagonal(DiagonalPattern),
@@ -18,48 +23,53 @@ pub enum AnyPattern {
     Coalesce(CoalescePattern),
 }
 
-impl Default for AnyPattern {
-    fn default() -> Self {
-        AnyPattern::Identity
-    }
+/// Context enum that holds the appropriate pattern frame state for each pattern type
+pub enum AnyPatternContext {
+    Identity(f32), // Just stores the global alpha
+    Radial(PatternForFrame<(f32, Rect), RadialPattern>),
+    Diagonal(PatternForFrame<(f32, Rect), DiagonalPattern>),
+    Checkerboard(PatternForFrame<(f32, Rect), CheckerboardPattern>),
+    Sweep(PatternForFrame<SlidingWindowAlpha, SweepPattern>),
+    Coalesce(PatternForFrame<(f32, SimpleRng), CoalescePattern>),
 }
 
 impl Pattern for AnyPattern {
-    type Context = (f32, Rect);
+    type Context = AnyPatternContext;
 
     fn for_frame(self, alpha: f32, area: Rect) -> PatternForFrame<Self::Context, Self>
     where
         Self: Sized,
     {
-        PatternForFrame { pattern: self, context: (alpha, area) }
+        let context = match self {
+            AnyPattern::Identity => AnyPatternContext::Identity(alpha),
+            AnyPattern::Radial(pattern) => {
+                AnyPatternContext::Radial(pattern.for_frame(alpha, area))
+            },
+            AnyPattern::Diagonal(pattern) => {
+                AnyPatternContext::Diagonal(pattern.for_frame(alpha, area))
+            },
+            AnyPattern::Checkerboard(pattern) => {
+                AnyPatternContext::Checkerboard(pattern.for_frame(alpha, area))
+            },
+            AnyPattern::Sweep(pattern) => AnyPatternContext::Sweep(pattern.for_frame(alpha, area)),
+            AnyPattern::Coalesce(pattern) => {
+                AnyPatternContext::Coalesce(pattern.for_frame(alpha, area))
+            },
+        };
+
+        PatternForFrame { pattern: self, context }
     }
 }
 
-impl InstancedPattern for PatternForFrame<(f32, Rect), AnyPattern> {
+impl InstancedPattern for PatternForFrame<AnyPatternContext, AnyPattern> {
     fn map_alpha(&mut self, pos: Position) -> f32 {
-        let (alpha, area) = self.context;
-        match &mut self.pattern {
-            AnyPattern::Identity => alpha, // Just return the global alpha unchanged
-            AnyPattern::Radial(pattern) => {
-                let mut radial_frame = pattern.for_frame(alpha, area);
-                radial_frame.map_alpha(pos)
-            },
-            AnyPattern::Diagonal(pattern) => {
-                let mut diagonal_frame = pattern.for_frame(alpha, area);
-                diagonal_frame.map_alpha(pos)
-            },
-            AnyPattern::Checkerboard(pattern) => {
-                let mut checkerboard_frame = pattern.for_frame(alpha, area);
-                checkerboard_frame.map_alpha(pos)
-            },
-            AnyPattern::Sweep(pattern) => {
-                let mut sweep_frame = pattern.for_frame(alpha, area);
-                sweep_frame.map_alpha(pos)
-            },
-            AnyPattern::Coalesce(pattern) => {
-                let mut coalesce_frame = pattern.for_frame(alpha, area);
-                coalesce_frame.map_alpha(pos)
-            },
+        match &mut self.context {
+            AnyPatternContext::Identity(alpha) => *alpha, // Just return the global alpha unchanged
+            AnyPatternContext::Radial(frame) => frame.map_alpha(pos),
+            AnyPatternContext::Diagonal(frame) => frame.map_alpha(pos),
+            AnyPatternContext::Checkerboard(frame) => frame.map_alpha(pos),
+            AnyPatternContext::Sweep(frame) => frame.map_alpha(pos),
+            AnyPatternContext::Coalesce(frame) => frame.map_alpha(pos),
         }
     }
 }

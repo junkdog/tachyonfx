@@ -4,33 +4,26 @@ use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
     default_shader_impl,
-    pattern::{InstancedPattern, Pattern, PatternForFrame},
+    pattern::{AnyPattern, InstancedPattern, Pattern},
     CellFilter, Duration, EffectTimer, FilterProcessor, Shader,
 };
 
-#[derive(Clone, Debug)]
-pub(crate) struct Evolve<P>
-where
-    P: Pattern + Copy + Send + 'static,
-    PatternForFrame<P::Context, P>: InstancedPattern,
-{
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Evolve {
     symbol_set: EvolveSymbolSet,
-    pattern: P,
+    pattern: AnyPattern,
     timer: EffectTimer,
     area: Option<Rect>,
     cell_filter: Option<FilterProcessor>,
     style: Option<Style>,
 }
 
-impl<P: Pattern + Copy + Send + 'static> Evolve<P>
-where
-    PatternForFrame<P::Context, P>: InstancedPattern,
-{
-    pub(crate) fn new(symbols: EvolveSymbolSet, pattern: P, lifetime: EffectTimer) -> Self {
+impl Evolve {
+    pub(crate) fn new(symbols: EvolveSymbolSet, lifetime: EffectTimer) -> Self {
         Self {
             symbol_set: symbols,
             timer: lifetime,
-            pattern,
+            pattern: AnyPattern::Identity,
             area: None,
             cell_filter: None,
             style: None,
@@ -44,10 +37,7 @@ where
     }
 }
 
-impl<P: Pattern + Debug + Copy + Send + 'static> Shader for Evolve<P>
-where
-    PatternForFrame<P::Context, P>: InstancedPattern,
-{
+impl Shader for Evolve {
     default_shader_impl!(area, timer, filter, clone);
 
     fn name(&self) -> &'static str {
@@ -72,6 +62,10 @@ where
                 }
             });
     }
+
+    fn set_pattern(&mut self, pattern: AnyPattern) {
+        self.pattern = pattern;
+    }
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -85,13 +79,19 @@ pub enum EvolveSymbolSet {
     Squares,
 }
 
+impl Default for EvolveSymbolSet {
+    fn default() -> Self {
+        EvolveSymbolSet::Circles
+    }
+}
+
 impl EvolveSymbolSet {
     const fn symbols(&self) -> &[char] {
         match self {
             EvolveSymbolSet::Circles => &[' ', '·', '•', '◉', '●'],
             EvolveSymbolSet::BlocksHorizontal => &[' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'],
             EvolveSymbolSet::BlocksVertical => &[' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'],
-            EvolveSymbolSet::CircleFill => &[' ', '◌', '◍', '◎', '●'],
+            EvolveSymbolSet::CircleFill => &[' ', '◌', '◎', '◍', '●'],
             EvolveSymbolSet::Quadrants => {
                 &[' ', '▖', '▘', '▗', '▝', '▚', '▞', '▙', '▛', '▜', '▟', '█']
             },

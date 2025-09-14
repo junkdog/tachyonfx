@@ -22,10 +22,10 @@ impl SlidingWindowAlpha {
     #[builder(finish_fn = build)]
     pub fn builder(direction: Motion, area: Rect, progress: f32, gradient_len: u16) -> Self {
         let alpha_fn = match direction {
-            Motion::UpToDown => slide_up,
-            Motion::DownToUp => slide_down,
-            Motion::LeftToRight => slide_left,
-            Motion::RightToLeft => slide_right,
+            Motion::UpToDown => move_up_to_down,
+            Motion::DownToUp => move_down_to_up,
+            Motion::LeftToRight => move_left_to_right,
+            Motion::RightToLeft => move_right_to_left,
         };
 
         let gradient = match direction {
@@ -54,7 +54,7 @@ fn gradient(progress: f32, coordinate: u16, area_len: u16, gradient_len: u16) ->
     Gradient { start, end }
 }
 
-fn slide_down(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
+fn move_down_to_up(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
     match position.y as f32 {
         y if y < gradient.start => 0.0,
         y if y > gradient.end => 1.0,
@@ -62,11 +62,11 @@ fn slide_down(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f3
     }
 }
 
-fn slide_up(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
-    1.0 - slide_down(position, gradient, alpha_per_cell)
+fn move_up_to_down(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
+    1.0 - move_down_to_up(position, gradient, alpha_per_cell)
 }
 
-fn slide_right(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
+fn move_right_to_left(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
     match position.x as f32 {
         x if x < gradient.start => 0.0,
         x if x > gradient.end => 1.0,
@@ -74,6 +74,6 @@ fn slide_right(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f
     }
 }
 
-fn slide_left(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
-    1.0 - slide_right(position, gradient, alpha_per_cell)
+fn move_left_to_right(position: Position, gradient: Gradient, alpha_per_cell: f32) -> f32 {
+    1.0 - move_right_to_left(position, gradient, alpha_per_cell)
 }

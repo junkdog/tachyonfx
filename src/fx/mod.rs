@@ -827,27 +827,23 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 /// use tachyonfx::fx::EvolveSymbolSet;
 /// use tachyonfx::pattern::SweepPattern;
 ///
-/// // Evolve through circle symbols sliding left to right
+/// // Evolve through circle symbols with uniform progression
 /// let evolve_effect = fx::evolve(
 ///     EvolveSymbolSet::Circles,
-///     SweepPattern::left_to_right(3),  // gradient_span of 3 cells
 ///     EffectTimer::from_ms(1000, Interpolation::Linear)
 /// );
 ///
-/// // Use block symbols with a different progression pattern
+/// // Use block symbols with custom pattern
 /// let block_effect = fx::evolve(
 ///     EvolveSymbolSet::BlocksVertical,
-///     SweepPattern::up_to_down(5),     // gradient_span of 5 cells
 ///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
-/// );
+/// ).with_pattern(SweepPattern::up_to_down(5));
 /// ```
-pub fn evolve<P, T>(symbols: EvolveSymbolSet, pattern: P, timer: T) -> Effect
+pub fn evolve<T>(symbols: EvolveSymbolSet, timer: T) -> Effect
 where
-    P: Pattern + Debug + Copy + Send + 'static,
     T: Into<EffectTimer>,
-    PatternForFrame<P::Context, P>: InstancedPattern,
 {
-    Evolve::new(symbols, pattern, timer.into()).into_effect()
+    Evolve::new(symbols, timer.into()).into_effect()
 }
 
 /// Creates an evolve effect with custom styling that transforms characters through
@@ -858,21 +854,13 @@ where
 ///
 /// # Arguments
 /// * `symbols` - The symbol set to use for character transformation
-/// * `pattern` - The pattern controlling spatial alpha progression
 /// * `style` - The style to apply to the evolving symbols
 /// * `timer` - Controls the duration and interpolation of the effect
-pub fn evolve_with_style<P, T>(
-    symbols: EvolveSymbolSet,
-    pattern: P,
-    style: Style,
-    timer: T,
-) -> Effect
+pub fn evolve_with_style<T>(symbols: EvolveSymbolSet, style: Style, timer: T) -> Effect
 where
-    P: Pattern + Debug + Copy + Send + 'static,
     T: Into<EffectTimer>,
-    PatternForFrame<P::Context, P>: InstancedPattern,
 {
-    Evolve::new(symbols, pattern, timer.into())
+    Evolve::new(symbols, timer.into())
         .with_style(style)
         .into_effect()
 }

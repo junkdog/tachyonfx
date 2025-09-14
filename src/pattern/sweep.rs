@@ -46,11 +46,16 @@ impl Pattern for SweepPattern {
     where
         Self: Sized,
     {
+        // Apply the same timer flipping logic used by slide effects
+        // to compensate for the semantic mismatch in SlidingWindowAlpha
+        let adjusted_progress =
+            if self.direction.flips_timer() { 1.0 - global_alpha } else { global_alpha };
+
         PatternForFrame {
             pattern: self,
             context: SlidingWindowAlpha::builder()
                 .direction(self.direction)
-                .progress(global_alpha)
+                .progress(adjusted_progress)
                 .area(area)
                 .gradient_len(self.gradient_span)
                 .build(),
