@@ -1,6 +1,6 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::pattern::{InstancedPattern, Pattern, PatternForFrame};
+use crate::pattern::{InstancedPattern, Pattern, PreparedPattern};
 
 #[derive(Clone, Debug, Copy)]
 pub struct CheckerboardPattern {
@@ -52,15 +52,15 @@ impl Default for CheckerboardPattern {
 impl Pattern for CheckerboardPattern {
     type Context = (f32, Rect);
 
-    fn for_frame(self, alpha: f32, area: Rect) -> PatternForFrame<Self::Context, Self>
+    fn for_frame(self, alpha: f32, area: Rect) -> PreparedPattern<Self::Context, Self>
     where
         Self: Sized,
     {
-        PatternForFrame { pattern: self, context: (alpha, area) }
+        PreparedPattern { pattern: self, context: (alpha, area) }
     }
 }
 
-impl InstancedPattern for PatternForFrame<(f32, Rect), CheckerboardPattern> {
+impl InstancedPattern for PreparedPattern<(f32, Rect), CheckerboardPattern> {
     fn map_alpha(&mut self, pos: Position) -> f32 {
         let pattern = &self.pattern;
         let (global_alpha, area) = self.context;

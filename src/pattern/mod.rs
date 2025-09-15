@@ -26,7 +26,7 @@ pub use self::{
 /// values into position-specific alpha values. This trait handles the initialization
 /// phase where patterns prepare their per-frame context based on the current
 /// animation progress and render area.
-pub(crate) trait Pattern {
+pub trait Pattern {
     /// The context type that holds per-frame state for this pattern
     type Context;
 
@@ -37,13 +37,22 @@ pub(crate) trait Pattern {
     /// * `area` - The rectangular area where the pattern will be applied
     ///
     /// # Returns
-    /// A `PatternForFrame` instance ready for per-cell alpha computation
-    fn for_frame(self, alpha: f32, area: Rect) -> PatternForFrame<Self::Context, Self>
+    /// A `PreparedPattern` instance ready for per-cell alpha computation
+    fn for_frame(self, alpha: f32, area: Rect) -> PreparedPattern<Self::Context, Self>
     where
         Self: Sized;
 }
 
-pub(crate) struct PatternForFrame<S, P: Pattern> {
+/// A pattern that has been prepared for rendering a specific frame.
+///
+/// This struct wraps a pattern along with its frame-specific context, created by
+/// calling [`Pattern::for_frame`]. It contains all the necessary state to compute
+/// per-cell alpha values for the current animation frame.
+///
+/// # Type Parameters
+/// * `S` - The context type that holds per-frame state for the pattern
+/// * `P` - The pattern type that implements [`Pattern`]
+pub struct PreparedPattern<S, P: Pattern> {
     pattern: P,
     context: S,
 }

@@ -13,7 +13,7 @@
   - `Quadrants`: Quadrant block progression (`▖▘▗▝▚▞▙▛▜▟█`)
   - `Shaded`: Shading progression (` ░▒▓█`)
   - `Squares`: Square progression (` ·▫▪◼█`)
-- **Pattern System**: New pattern-based spatial effects system for controlling how effects progress across screen areas:
+- **`Pattern` trait**: New pattern-based spatial effects system for controlling how effects progress across screen areas:
   - `CheckerboardPattern`: Creates alternating checkerboard reveal patterns with configurable cell size and transition width
   - `CoalescePattern`: Randomized coalescing effects where cells activate at random thresholds for organic transitions
   - `DiagonalPattern`: Diagonal sweep effects in four directions (top-left to bottom-right, etc.) with smooth gradients

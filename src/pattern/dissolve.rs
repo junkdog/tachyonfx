@@ -1,7 +1,7 @@
 use ratatui::layout::{Position, Rect};
 
 use crate::{
-    pattern::{InstancedPattern, Pattern, PatternForFrame},
+    pattern::{InstancedPattern, Pattern, PreparedPattern},
     SimpleRng,
 };
 
@@ -33,15 +33,15 @@ impl DissolvePattern {
 impl Pattern for DissolvePattern {
     type Context = (f32, SimpleRng);
 
-    fn for_frame(self, alpha: f32, _area: Rect) -> PatternForFrame<Self::Context, Self>
+    fn for_frame(self, alpha: f32, _area: Rect) -> PreparedPattern<Self::Context, Self>
     where
         Self: Sized,
     {
-        PatternForFrame { pattern: self, context: (alpha, self.rng) }
+        PreparedPattern { pattern: self, context: (alpha, self.rng) }
     }
 }
 
-impl InstancedPattern for PatternForFrame<(f32, SimpleRng), DissolvePattern> {
+impl InstancedPattern for PreparedPattern<(f32, SimpleRng), DissolvePattern> {
     fn map_alpha(&mut self, _pos: Position) -> f32 {
         // initial RNG is reset each frame to ensure consistent randomness
         let threshold = self.context.1.gen_f32();

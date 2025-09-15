@@ -4,7 +4,7 @@ use crate::{
     fx::sliding_window_alpha::SlidingWindowAlpha,
     pattern::{
         CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern, InstancedPattern,
-        Pattern, PatternForFrame, RadialPattern, SweepPattern,
+        Pattern, PreparedPattern, RadialPattern, SweepPattern,
     },
     simple_rng::SimpleRng,
 };
@@ -27,18 +27,18 @@ pub enum AnyPattern {
 /// Context enum that holds the appropriate pattern frame state for each pattern type
 pub enum AnyPatternContext {
     Identity(f32), // Just stores the global alpha
-    Radial(PatternForFrame<(f32, Rect), RadialPattern>),
-    Diagonal(PatternForFrame<(f32, Rect), DiagonalPattern>),
-    Checkerboard(PatternForFrame<(f32, Rect), CheckerboardPattern>),
-    Sweep(PatternForFrame<SlidingWindowAlpha, SweepPattern>),
-    Coalesce(PatternForFrame<(f32, SimpleRng), CoalescePattern>),
-    Dissolve(PatternForFrame<(f32, SimpleRng), DissolvePattern>),
+    Radial(PreparedPattern<(f32, Rect), RadialPattern>),
+    Diagonal(PreparedPattern<(f32, Rect), DiagonalPattern>),
+    Checkerboard(PreparedPattern<(f32, Rect), CheckerboardPattern>),
+    Sweep(PreparedPattern<SlidingWindowAlpha, SweepPattern>),
+    Coalesce(PreparedPattern<(f32, SimpleRng), CoalescePattern>),
+    Dissolve(PreparedPattern<(f32, SimpleRng), DissolvePattern>),
 }
 
 impl Pattern for AnyPattern {
     type Context = AnyPatternContext;
 
-    fn for_frame(self, alpha: f32, area: Rect) -> PatternForFrame<Self::Context, Self>
+    fn for_frame(self, alpha: f32, area: Rect) -> PreparedPattern<Self::Context, Self>
     where
         Self: Sized,
     {
@@ -62,11 +62,11 @@ impl Pattern for AnyPattern {
             },
         };
 
-        PatternForFrame { pattern: self, context }
+        PreparedPattern { pattern: self, context }
     }
 }
 
-impl InstancedPattern for PatternForFrame<AnyPatternContext, AnyPattern> {
+impl InstancedPattern for PreparedPattern<AnyPatternContext, AnyPattern> {
     fn map_alpha(&mut self, pos: Position) -> f32 {
         match &mut self.context {
             AnyPatternContext::Identity(alpha) => *alpha, // Just return the global alpha unchanged

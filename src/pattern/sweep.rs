@@ -2,7 +2,7 @@ use ratatui::layout::{Position, Rect};
 
 use crate::{
     fx::sliding_window_alpha::SlidingWindowAlpha,
-    pattern::{InstancedPattern, Pattern, PatternForFrame},
+    pattern::{InstancedPattern, Pattern, PreparedPattern},
     Motion,
 };
 
@@ -42,7 +42,7 @@ impl SweepPattern {
 impl Pattern for SweepPattern {
     type Context = SlidingWindowAlpha;
 
-    fn for_frame(self, global_alpha: f32, area: Rect) -> PatternForFrame<SlidingWindowAlpha, Self>
+    fn for_frame(self, global_alpha: f32, area: Rect) -> PreparedPattern<SlidingWindowAlpha, Self>
     where
         Self: Sized,
     {
@@ -51,7 +51,7 @@ impl Pattern for SweepPattern {
         let adjusted_progress =
             if self.direction.flips_timer() { 1.0 - global_alpha } else { global_alpha };
 
-        PatternForFrame {
+        PreparedPattern {
             pattern: self,
             context: SlidingWindowAlpha::builder()
                 .direction(self.direction)
@@ -63,7 +63,7 @@ impl Pattern for SweepPattern {
     }
 }
 
-impl InstancedPattern for PatternForFrame<SlidingWindowAlpha, SweepPattern> {
+impl InstancedPattern for PreparedPattern<SlidingWindowAlpha, SweepPattern> {
     fn map_alpha(&mut self, pos: Position) -> f32 {
         self.context.alpha(pos)
     }
