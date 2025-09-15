@@ -42,6 +42,7 @@ impl Pattern for CoalescePattern {
 
 impl InstancedPattern for PatternForFrame<(f32, SimpleRng), CoalescePattern> {
     fn map_alpha(&mut self, _pos: Position) -> f32 {
+        // initial RNG is reset each frame to ensure consistent randomness
         let threshold = self.context.1.gen_f32();
         let global_alpha = self.context.0;
 
@@ -54,5 +55,11 @@ impl InstancedPattern for PatternForFrame<(f32, SimpleRng), CoalescePattern> {
             let progress = (global_alpha - threshold) / (1.0 - threshold);
             progress.clamp(0.0, 1.0)
         }
+    }
+}
+
+impl From<SimpleRng> for CoalescePattern {
+    fn from(rng: SimpleRng) -> Self {
+        Self { rng }
     }
 }

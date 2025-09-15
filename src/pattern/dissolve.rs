@@ -43,6 +43,7 @@ impl Pattern for DissolvePattern {
 
 impl InstancedPattern for PatternForFrame<(f32, SimpleRng), DissolvePattern> {
     fn map_alpha(&mut self, _pos: Position) -> f32 {
+        // initial RNG is reset each frame to ensure consistent randomness
         let threshold = self.context.1.gen_f32();
         let global_alpha = self.context.0;
 
@@ -56,5 +57,11 @@ impl InstancedPattern for PatternForFrame<(f32, SimpleRng), DissolvePattern> {
             let progress = (threshold - global_alpha) / threshold;
             progress.clamp(0.0, 1.0)
         }
+    }
+}
+
+impl From<SimpleRng> for DissolvePattern {
+    fn from(rng: SimpleRng) -> Self {
+        Self { rng }
     }
 }
