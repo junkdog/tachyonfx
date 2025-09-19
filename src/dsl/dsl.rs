@@ -1,4 +1,4 @@
-use alloc::{fmt, fmt::Formatter};
+use core::{fmt, fmt::Formatter};
 
 use compact_str::CompactString;
 

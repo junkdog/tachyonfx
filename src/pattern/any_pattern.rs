@@ -42,24 +42,15 @@ impl Pattern for AnyPattern {
     where
         Self: Sized,
     {
+        use AnyPatternContext as APC;
         let context = match self {
-            AnyPattern::Identity => AnyPatternContext::Identity(alpha),
-            AnyPattern::Radial(pattern) => {
-                AnyPatternContext::Radial(pattern.for_frame(alpha, area))
-            },
-            AnyPattern::Diagonal(pattern) => {
-                AnyPatternContext::Diagonal(pattern.for_frame(alpha, area))
-            },
-            AnyPattern::Checkerboard(pattern) => {
-                AnyPatternContext::Checkerboard(pattern.for_frame(alpha, area))
-            },
-            AnyPattern::Sweep(pattern) => AnyPatternContext::Sweep(pattern.for_frame(alpha, area)),
-            AnyPattern::Coalesce(pattern) => {
-                AnyPatternContext::Coalesce(pattern.for_frame(alpha, area))
-            },
-            AnyPattern::Dissolve(pattern) => {
-                AnyPatternContext::Dissolve(pattern.for_frame(alpha, area))
-            },
+            AnyPattern::Identity => APC::Identity(alpha),
+            AnyPattern::Radial(pattern) => APC::Radial(pattern.for_frame(alpha, area)),
+            AnyPattern::Diagonal(pattern) => APC::Diagonal(pattern.for_frame(alpha, area)),
+            AnyPattern::Checkerboard(pattern) => APC::Checkerboard(pattern.for_frame(alpha, area)),
+            AnyPattern::Sweep(pattern) => APC::Sweep(pattern.for_frame(alpha, area)),
+            AnyPattern::Coalesce(pattern) => APC::Coalesce(pattern.for_frame(alpha, area)),
+            AnyPattern::Dissolve(pattern) => APC::Dissolve(pattern.for_frame(alpha, area)),
         };
 
         PreparedPattern { pattern: self, context }

@@ -29,6 +29,8 @@
 //! | [`coalesce()`] ⬆️      | Reforms dissolved foreground | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce.gif) |
 //! | [`coalesce_from()`] ⬆️ | Reforms dissolved foreground | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce_from.gif) |
 //! | [`evolve()`] 🔄        | Transforms characters through symbol sets | N/A |
+//! | [`evolve_into()`] 🔄   | Evolves into underlying content | N/A |
+//! | [`evolve_from()`] 🔄   | Evolves from underlying content | N/A |
 //! | [`explode()`] 💥       | Explodes content outward     | N/A |
 //! | [`dissolve()`] ⬇️      | Dissolves foreground content | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve.gif) |
 //! | [`dissolve_to()`] ⬇️   | Dissolves foreground content | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve_to.gif) |
@@ -804,9 +806,10 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 
 /// Creates an evolve effect that progressively transforms characters through symbol sets.
 ///
-/// This effect transforms text characters through a progression of symbols, with the
-/// progression controlled by configurable patterns. Different symbol sets provide various
-/// visual themes, from circles to blocks to shading patterns.
+/// This effect transforms text characters through a progression of symbols. Without a
+/// pattern, all cells transform synchronously. For more interesting effects, combine with
+/// spatial patterns using `.with_pattern()` to control the progression across the screen
+/// area.
 ///
 /// # Arguments
 /// * `symbols` - The symbol set configuration, either:
@@ -818,32 +821,91 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 /// ```no_run
 /// use ratatui::style::{Color, Style};
 /// use tachyonfx::{fx, fx::EvolveSymbolSet, EffectTimer, Interpolation};
+/// use tachyonfx::pattern::{DiagonalPattern, DiagonalDirection};
 ///
-/// // Basic evolve effect with default styling
+/// // Basic evolve effect (all cells transform simultaneously)
 /// let evolve_effect = fx::evolve(
 ///     EvolveSymbolSet::Circles,
 ///     EffectTimer::from_ms(2000, Interpolation::Linear)
 /// );
 ///
-/// // Evolve effect with custom styling
-/// let styled_effect = fx::evolve(
+/// // Evolve effect with spatial pattern for progressive transformation
+/// let patterned_effect = fx::evolve(
 ///     (EvolveSymbolSet::BlocksHorizontal, Style::default().fg(Color::Red)),
 ///     EffectTimer::from_ms(1500, Interpolation::QuadOut)
-/// );
+/// ).with_pattern(DiagonalPattern::new(DiagonalDirection::TopLeftToBottomRight, 2.0));
 /// ```
 #[allow(private_bounds)]
 pub fn evolve<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
 where
     T: Into<EffectTimer>,
 {
-    let (symbols, style) = match symbols.into() {
-        EvolveSymbolConfig::Plain(symbols) => (symbols, None),
-        EvolveSymbolConfig::Styled(symbols, style) => (symbols, Some(style)),
-    };
+    Evolve::new(symbols, timer.into()).into_effect()
+}
 
-    let fx = Evolve::new(symbols, timer.into());
+/// Creates an evolve effect that reveals underlying content at completion.
+///
+/// This variant of [`evolve`] transforms characters through a symbol progression, but
+/// stops updating the buffer when alpha reaches 1.0, allowing the underlying content to
+/// show through. This creates a smooth transition into existing text or graphics. Use
+/// with spatial patterns for progressive revelation across the screen area.
+///
+/// # Arguments
+/// * `symbols` - The symbol set configuration (same as [`evolve`])
+/// * `timer` - Controls the duration and interpolation of the effect
+///
+/// # Examples
+/// ```no_run
+/// use tachyonfx::{fx, fx::EvolveSymbolSet, EffectTimer, Interpolation};
+/// use tachyonfx::pattern::RadialPattern;
+///
+/// // Evolve characters with radial pattern, then reveal underlying text
+/// let effect = fx::evolve_into(
+///     EvolveSymbolSet::Circles,
+///     EffectTimer::from_ms(2000, Interpolation::Linear)
+/// ).with_pattern(RadialPattern::center());
+/// ```
+#[allow(private_bounds)]
+pub fn evolve_into<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
+where
+    T: Into<EffectTimer>,
+{
+    Evolve::new(symbols, timer.into())
+        .with_mode(EvolveMode::Into)
+        .into_effect()
+}
 
-    if let Some(style) = style { fx.with_style(style) } else { fx }.into_effect()
+/// Creates an evolve effect that reveals underlying content at the start.
+///
+/// This variant of [`evolve`] begins by showing the underlying buffer content when alpha
+/// is 0.0, then progressively evolves through the symbol set. This creates a smooth
+/// transition from existing text or graphics into the evolved symbols. Use with spatial
+/// patterns for progressive transformation across the screen area.
+///
+/// # Arguments
+/// * `symbols` - The symbol set configuration (same as [`evolve`])
+/// * `timer` - Controls the duration and interpolation of the effect
+///
+/// # Examples
+/// ```no_run
+/// use ratatui::style::{Color, Style};
+/// use tachyonfx::{fx, fx::EvolveSymbolSet, EffectTimer, Interpolation};
+/// use tachyonfx::pattern::CheckerboardPattern;
+///
+/// // Start from underlying text, evolve to symbols with checkerboard pattern
+/// let effect = fx::evolve_from(
+///     (EvolveSymbolSet::BlocksHorizontal, Style::default().fg(Color::Green)),
+///     EffectTimer::from_ms(1500, Interpolation::QuadOut)
+/// ).with_pattern(CheckerboardPattern::default());
+/// ```
+#[allow(private_bounds)]
+pub fn evolve_from<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
+where
+    T: Into<EffectTimer>,
+{
+    Evolve::new(symbols, timer.into())
+        .with_mode(EvolveMode::From)
+        .into_effect()
 }
 
 /// Creates an expand effect that stretches/expands bidirectionally using block
@@ -1643,7 +1705,7 @@ pub(crate) use invoke_fn;
 
 use crate::fx::{
     alpha_xform::{FreezeAt, RemapAlpha},
-    evolve::EvolveSymbolConfig,
+    evolve::{EvolveMode, EvolveSymbolConfig},
     expand::Expand,
     explode::Explode,
 };

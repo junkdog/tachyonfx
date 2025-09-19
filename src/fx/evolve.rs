@@ -10,30 +10,46 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Default)]
-pub(crate) struct Evolve {
+pub(super) struct Evolve {
     symbol_set: EvolveSymbolSet,
     pattern: AnyPattern,
     timer: EffectTimer,
     area: Option<Rect>,
     cell_filter: Option<FilterProcessor>,
     style: Option<Style>,
+    mode: EvolveMode,
+}
+
+/// Controls how evolve effects interact with underlying buffer content.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(super) enum EvolveMode {
+    /// Always updates buffer with evolved symbols
+    #[default]
+    Full,
+    /// Reveals underlying content at alpha=1.0 (evolves into existing content)
+    Into,
+    /// Reveals underlying content at alpha=0.0 (evolves from existing content)
+    From,
 }
 
 impl Evolve {
-    pub(crate) fn new(symbols: EvolveSymbolSet, lifetime: EffectTimer) -> Self {
+    pub(super) fn new(symbols: impl Into<EvolveSymbolConfig>, lifetime: EffectTimer) -> Self {
+        let (symbols, style) = match symbols.into() {
+            EvolveSymbolConfig::Plain(symbols) => (symbols, None),
+            EvolveSymbolConfig::Styled(symbols, style) => (symbols, Some(style)),
+        };
+
         Self {
             symbol_set: symbols,
             timer: lifetime,
             pattern: AnyPattern::Identity,
-            area: None,
-            cell_filter: None,
-            style: None,
+            style,
+            ..Self::default()
         }
     }
 
-    /// Sets a custom style for the evolve effect symbols
-    pub(crate) fn with_style(mut self, style: Style) -> Self {
-        self.style = Some(style);
+    pub(super) fn with_mode(mut self, mode: EvolveMode) -> Self {
+        self.mode = mode;
         self
     }
 }
@@ -42,24 +58,34 @@ impl Shader for Evolve {
     default_shader_impl!(area, timer, filter, clone);
 
     fn name(&self) -> &'static str {
-        "evolve"
+        match self.mode {
+            EvolveMode::Into => "evolve_into",
+            EvolveMode::From => "evolve_from",
+            EvolveMode::Full => "evolve",
+        }
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
         let alpha = self.timer.alpha();
         let symbols = self.symbol_set;
         let style = self.style;
+        let mode = self.mode;
 
         let mut pattern = self.pattern.for_frame(alpha, area);
         self.cell_iter(buf, area)
             .for_each_cell(|pos, cell| {
                 let cell_alpha = pattern.map_alpha(pos);
-                let symbol = symbols.get_symbol(cell_alpha);
-                cell.set_char(symbol);
 
-                // Apply custom style if provided
-                if let Some(style) = style {
-                    cell.set_style(style);
+                let should_draw = !((mode == EvolveMode::From && cell_alpha == 0.0)
+                    || (mode == EvolveMode::Into && cell_alpha == 1.0));
+
+                if should_draw {
+                    let symbol = symbols.get_symbol(cell_alpha);
+                    cell.set_char(symbol);
+
+                    if let Some(style) = style {
+                        cell.set_style(style);
+                    }
                 }
             });
     }

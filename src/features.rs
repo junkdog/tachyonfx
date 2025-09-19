@@ -7,7 +7,8 @@ compile_error!("Feature 'sendable' requires 'std' feature for thread synchroniza
 
 #[cfg(all(feature = "sendable", feature = "std"))]
 mod sendable {
-    use std::sync::{Arc, Mutex};
+    use alloc::sync::Arc;
+    use std::sync::Mutex;
 
     pub trait ThreadSafetyMarker: Send {}
     impl<T: Send> ThreadSafetyMarker for T {}

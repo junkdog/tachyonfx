@@ -3,7 +3,7 @@
 //! otherwise uses custom implementation
 
 #[cfg(feature = "std-duration")]
-pub type Duration = std::time::Duration;
+pub type Duration = core::time::Duration;
 
 #[cfg(not(feature = "std-duration"))]
 pub type Duration = duration::Duration;

@@ -1,6 +1,6 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::pattern::{InstancedPattern, Pattern, PreparedPattern};
+use crate::pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress};
 
 #[derive(Clone, Debug, Copy)]
 pub struct DiagonalPattern {
@@ -25,28 +25,28 @@ impl DiagonalPattern {
     pub fn top_left_to_bottom_right() -> Self {
         Self {
             direction: DiagonalDirection::TopLeftToBottomRight,
-            transition_width: 0.1,
+            transition_width: 2.0, // Default to 2 terminal cells
         }
     }
 
     pub fn top_right_to_bottom_left() -> Self {
         Self {
             direction: DiagonalDirection::TopRightToBottomLeft,
-            transition_width: 0.1,
+            transition_width: 2.0, // Default to 2 terminal cells
         }
     }
 
     pub fn bottom_left_to_top_right() -> Self {
         Self {
             direction: DiagonalDirection::BottomLeftToTopRight,
-            transition_width: 0.1,
+            transition_width: 2.0, // Default to 2 terminal cells
         }
     }
 
     pub fn bottom_right_to_top_left() -> Self {
         Self {
             direction: DiagonalDirection::BottomRightToTopLeft,
-            transition_width: 0.1,
+            transition_width: 2.0, // Default to 2 terminal cells
         }
     }
 
@@ -54,21 +54,21 @@ impl DiagonalPattern {
     ///
     /// # Arguments
     /// * `direction` - Direction of the diagonal sweep
-    /// * `transition_width` - Width of gradient transition zone (0.01-1.0, automatically
-    ///   clamped)
+    /// * `transition_width` - Width of gradient transition zone in terminal cells
+    ///   (minimum 0.1)
     pub fn new(direction: DiagonalDirection, transition_width: f32) -> Self {
         Self {
             direction,
-            transition_width: transition_width.clamp(0.01, 1.0),
+            transition_width: transition_width.max(0.1),
         }
     }
 
     /// Sets the transition width for gradient smoothing along the diagonal edge.
     ///
     /// # Arguments
-    /// * `width` - Width of gradient transition zone (0.01-1.0, automatically clamped)
+    /// * `width` - Width of gradient transition zone in terminal cells (minimum 0.1)
     pub fn with_transition_width(mut self, width: f32) -> Self {
-        self.transition_width = width.clamp(0.01, 1.0);
+        self.transition_width = width.max(0.1);
         self
     }
 }
@@ -102,22 +102,14 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), DiagonalPattern> {
             BottomRightToTopLeft => ((1.0 - norm_x) + (1.0 - norm_y)) / 2.0,
         };
 
-        let transition_width = pattern.transition_width;
-
-        // Scale global_alpha to include transition zone
-        let scaled_alpha = global_alpha * (1.0 + transition_width) - (transition_width / 2.0);
-
-        if diagonal_progress <= scaled_alpha {
-            // Fully active
-            1.0
-        } else if diagonal_progress <= scaled_alpha + transition_width {
-            // Transition zone
-            let distance_into_transition = diagonal_progress - scaled_alpha;
-            let progress = 1.0 - (distance_into_transition / transition_width);
-            progress.clamp(0.0, 1.0)
-        } else {
-            // Inactive
-            0.0
-        }
+        // Use TransitionProgress with inverse spatial mapping for correct character evolution
+        // Convert cell-based transition width to normalized units using diagonal length
+        let diagonal_length = ((area.width as f32).powi(2) + (area.height as f32).powi(2)).sqrt();
+        let normalized_transition_width = pattern.transition_width / diagonal_length;
+        TransitionProgress::from(normalized_transition_width).map_spatial(
+            global_alpha,
+            diagonal_progress,
+            1.0,
+        )
     }
 }

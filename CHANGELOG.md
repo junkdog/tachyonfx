@@ -3,8 +3,10 @@
 ## tachyonfx 0.19.0 - TBD
 
 ### Added
-- `fx::evolve`: Creates evolving text effects that transform characters through predefined symbol sets.
-  Can accept either plain symbol sets or styled tuples `(EvolveSymbolSet, Style)` for custom styling.
+- `fx::evolve`: Creates evolving text effects that transform characters through a series of symbols.
+  Combine with `.with_pattern()` for progressive transformation.
+- `fx::evolve_into`: Evolve effect variant that reveals underlying buffer content at completion (alpha=1.0).
+- `fx::evolve_from`: Evolve effect variant that reveals underlying buffer content at the start (alpha=0.0).
 - `EvolveSymbolSet` enum: Defines symbol progressions for evolve effects with variants:
   - `BlocksHorizontal`: Horizontal block progression (`▏▎▍▌▋▊▉█`)
   - `BlocksVertical`: Vertical block progression (`▁▂▃▄▅▆▇█`)
@@ -21,9 +23,9 @@
   - `RadialPattern`: Radial expansion effects from configurable center points with parameterized transition widths
   - `SweepPattern`: Linear sweep effects in four cardinal directions (left-to-right, right-to-left, up-to-down, down-to-up)
 - `Effect::with_pattern()`: Applies spatial patterns to pattern-compatible effects, supporting:
-  - `fx::dissolve`, `fx::dissolve_to`,
   - `fx::coalesce`, `fx::coalesce_from`
-  - `fx::evolve`
+  - `fx::dissolve`, `fx::dissolve_to`,
+  - `fx::evolve`, `fx::evolve_from`, `fx::evolve_into`
   - `fx::explode`
   - `fx::fade_from`, `fx::fade_from_fg`,
   - `fx::fade_to`, `fx::fade_to_fg`

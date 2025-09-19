@@ -46,7 +46,7 @@ impl Explode {
             cell_filter: None,
             sorted_cells: LruCache::new(),
             replacement_cell,
-            lcg: SimpleRng::new(0x12345678),
+            lcg: SimpleRng::default(),
             pattern: AnyPattern::Identity,
         }
     }
