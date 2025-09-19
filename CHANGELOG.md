@@ -30,6 +30,14 @@
   - `fx::fade_from`, `fx::fade_from_fg`,
   - `fx::fade_to`, `fx::fade_to_fg`
 
+### Changed
+- `FilterProcessor::validator()`: Changed visibility from `pub(crate)` to `pub`.
+- `CellValidator`: Changed visibility from `pub(crate)` to `pub`.
+- `CellValidator::is_valid()`: Changed visibility from `pub(crate)` to `pub`.
+
+### Deprecated
+- `FilterProcessor::predicate()`: Deprecated in favor of `validator()` method which provides better performance.
+
 
 ## tachyonfx 0.18.0 - 2025-09-07
 

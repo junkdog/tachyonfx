@@ -85,11 +85,7 @@ impl Shader for SlideCell {
         };
 
         let area = area.intersection(buf.area);
-        let cell_filter = self
-            .cell_filter
-            .as_ref()
-            .map(|f| f.predicate(area))
-            .unwrap_or(CellFilter::All.predicate(area));
+        let cell_filter = self.cell_filter.as_ref().map(|f| f.validator());
 
         if self.randomness_extent == 0
             || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction)
@@ -98,11 +94,15 @@ impl Shader for SlideCell {
                 let row_variance = axis_jitter.next();
                 for x in area.x..area.right() {
                     let pos = Position { x, y };
-                    let cell = buf.cell_mut(pos).unwrap();
-
-                    if cell_filter.is_valid(pos, cell) {
-                        update_cell(cell, offset(pos, row_variance));
+                    if cell_filter
+                        .as_ref()
+                        .is_some_and(|c| !c.is_valid(pos, &buf[pos]))
+                    {
+                        continue;
                     }
+
+                    let cell = buf.cell_mut(pos).unwrap();
+                    update_cell(cell, offset(pos, row_variance));
                 }
             }
         } else {
@@ -113,12 +113,16 @@ impl Shader for SlideCell {
             for y in area.y..area.bottom() {
                 for x in area.x..area.right() {
                     let pos = Position { x, y };
-                    let cell = buf.cell_mut(pos).unwrap();
-
-                    if cell_filter.is_valid(pos, cell) {
-                        let col_variance = (0, col_variances[(x - area.x) as usize]);
-                        update_cell(cell, offset(pos, col_variance));
+                    if cell_filter
+                        .as_ref()
+                        .is_some_and(|c| !c.is_valid(pos, &buf[pos]))
+                    {
+                        continue;
                     }
+
+                    let cell = buf.cell_mut(pos).unwrap();
+                    let col_variance = (0, col_variances[(x - area.x) as usize]);
+                    update_cell(cell, offset(pos, col_variance));
                 }
             }
         }

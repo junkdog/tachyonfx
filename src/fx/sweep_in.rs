@@ -108,8 +108,7 @@ impl Shader for SweepIn {
         let cell_filter = self
             .cell_filter
             .as_ref()
-            .map(|f| f.predicate(area))
-            .unwrap_or(CellFilter::All.predicate(area));
+            .map(FilterProcessor::validator);
 
         if self.randomness_extent == 0
             || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction)
@@ -120,9 +119,13 @@ impl Shader for SweepIn {
                     let pos = Position { x, y };
                     let cell = &mut buf[pos];
 
-                    if cell_filter.is_valid(pos, cell) {
-                        apply_alpha(cell, offset(pos, row_variance));
+                    if cell_filter
+                        .as_ref()
+                        .is_some_and(|c| !c.is_valid(pos, cell))
+                    {
+                        continue;
                     }
+                    apply_alpha(cell, offset(pos, row_variance));
                 }
             }
         } else {
@@ -135,10 +138,14 @@ impl Shader for SweepIn {
                     let pos = Position { x, y };
                     let cell = buf.cell_mut(pos).unwrap();
 
-                    if cell_filter.is_valid(pos, cell) {
-                        let col_variance = (0, col_variances[(x - area.x) as usize]);
-                        apply_alpha(cell, offset(pos, col_variance));
+                    if cell_filter
+                        .as_ref()
+                        .is_some_and(|c| !c.is_valid(pos, cell))
+                    {
+                        continue;
                     }
+                    let col_variance = (0, col_variances[(x - area.x) as usize]);
+                    apply_alpha(cell, offset(pos, col_variance));
                 }
             }
         }

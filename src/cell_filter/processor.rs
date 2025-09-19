@@ -53,8 +53,8 @@ impl FilterProcessor {
     ///
     /// # Returns
     /// A [`CellPredicate`] configured for the specified area
+    #[deprecated(note = "use validator() instead")]
     pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
-        // todo: deprecate and replace with validator()
         match self {
             FilterProcessor::Static(processor) => processor.filter.predicate(area),
             FilterProcessor::Dynamic(filter, _) => filter.predicate(area),
@@ -104,7 +104,7 @@ impl FilterProcessor {
     ///
     /// # Returns
     /// A [`CellValidator`] configured for optimal performance
-    pub(crate) fn validator(&self) -> CellValidator<'_> {
+    pub fn validator(&self) -> CellValidator<'_> {
         match self {
             FilterProcessor::Static(processor) => CellValidator::Static(processor),
             FilterProcessor::Dynamic(filter, area) => {
@@ -134,7 +134,7 @@ impl FilterProcessor {
 /// using the most efficient validation strategy based on the filter type. It abstracts
 /// over the difference between static (bitmask-based) and dynamic (predicate-based)
 /// validation methods.
-pub(crate) enum CellValidator<'a> {
+pub enum CellValidator<'a> {
     /// Validator using pre-computed static filter bitmask for O(1) validation.
     Static(&'a StaticFilterProcessor),
 
@@ -144,7 +144,7 @@ pub(crate) enum CellValidator<'a> {
 
 impl CellValidator<'_> {
     /// Determines if a cell at the given position meets the filter criteria.
-    pub(crate) fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
+    pub fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
         match self {
             CellValidator::Static(processor) => processor.is_valid(pos),
             CellValidator::Dynamic(predicate) => predicate.is_valid(pos, cell),

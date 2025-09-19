@@ -145,15 +145,13 @@ impl<'a> CellIterator<'a> {
         F: FnMut(Position, &mut Cell),
     {
         let area = self.area;
+        let predicate = self.predicate.as_ref();
+
         for y in area.y..area.bottom() {
             for x in area.x..area.right() {
                 let pos = Position::new(x, y);
                 if let Some(cell) = self.buf.cell_mut(pos) {
-                    if self
-                        .predicate
-                        .as_ref()
-                        .is_none_or(|p| p.is_valid(pos, cell))
-                    {
+                    if predicate.is_none_or(|p| p.is_valid(pos, cell)) {
                         f(pos, cell);
                     }
                 }
