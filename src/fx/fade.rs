@@ -118,7 +118,7 @@ mod plain_test {
                     buf[(x, y)].fg = Color::White;
                 }
             }
-            fade.process(Duration::from_millis(progress_ms), &mut buf, area);
+            fade.process(Duration::from_millis(progress_ms as _), &mut buf, area);
             buf
         };
 

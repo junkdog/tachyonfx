@@ -87,6 +87,8 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), CheckerboardPattern> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
+
     use ratatui::layout::{Position, Rect};
 
     use super::*;
