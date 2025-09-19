@@ -291,15 +291,14 @@ where
 /// fx::effect_fn_buf(no_state, timer, |_state, context, buf| {
 ///     let offset = context.timer.remaining().as_millis() as usize;
 ///
-///     // Note: Filter access through context is internal API
-///     let filter = CellFilter::All; // For demonstration purposes
-///     let cell_pred = filter.predicate(buf.area);
+///     let filter = context.filter();
+///     let cell_pred = filter.map(FilterProcessor::validator);
+///
 ///     for (i, pos) in buf.area.positions().enumerate() {
 ///         let cell = &mut buf[pos];
-///         if !cell_pred.is_valid(pos, &cell) {
-///             continue;
+///         if cell_pred.as_ref().is_some_and(|p| p.is_valid(pos, &cell)) {
+///             cell.set_fg(Color::Indexed(((offset + i) % 256) as u8));
 ///         }
-///         cell.set_fg(Color::Indexed(((offset + i) % 256) as u8));
 ///     }
 /// }).filter(CellFilter::Text);
 /// ```

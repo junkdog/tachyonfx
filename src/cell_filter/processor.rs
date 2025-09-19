@@ -53,7 +53,7 @@ impl FilterProcessor {
     ///
     /// # Returns
     /// A [`CellPredicate`] configured for the specified area
-    #[deprecated(note = "use validator() instead")]
+    #[deprecated(since = "0.19.0", note = "use validator() instead")]
     pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
         match self {
             FilterProcessor::Static(processor) => processor.filter.predicate(area),
