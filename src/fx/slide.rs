@@ -37,7 +37,7 @@ pub struct SlideCell {
 impl SlideCell {
     fn slided_cell(&self, alpha: f32) -> char {
         let alpha = alpha.clamp(0.0, 1.0);
-        let char_idx = (LAST_IDX as f32 * alpha).round() as usize;
+        let char_idx = crate::math::round(LAST_IDX as f32 * alpha) as usize;
 
         match self.direction {
             Motion::LeftToRight | Motion::RightToLeft => SHRINK_H[char_idx],

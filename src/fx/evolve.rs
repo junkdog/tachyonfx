@@ -145,7 +145,7 @@ impl EvolveSymbolSet {
 
     fn get_symbol(&self, alpha: f32) -> char {
         let len = self.len();
-        let idx = (alpha * (len as f32 - 1.0)).round() as usize;
+        let idx = crate::math::round(alpha * (len as f32 - 1.0)) as usize;
         self.symbols()[idx.min(len - 1)]
     }
 }

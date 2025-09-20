@@ -19,7 +19,7 @@ use ratatui::{
 
 use crate::{
     color_space::color_from_hsl,
-    color_to_hsl,
+    color_to_hsl, math,
     widget::{
         area_registry::AreaRegistry, color_resolver::color_registry, effect_span::effect_span_tree,
         CellFilterRegistry, ColorResolver, EffectSpan,
@@ -538,10 +538,10 @@ fn span_as_bar_line(span: &EffectSpan, scale_time_to_cell: f32) -> String {
     );
 
     match end as u16 - start as u16 {
-        0 => (if start.round() > start { "▐" } else { "█" }).to_string(),
+        0 => (if math::round(start) > start { "▐" } else { "█" }).to_string(),
         n => {
-            let l = if start.round() > start { "▐" } else { "█" };
-            let r = if end.round() < end { "▌" } else { "█" };
+            let l = if math::round(start) > start { "▐" } else { "█" };
+            let r = if math::round(end) < end { "▌" } else { "█" };
             format!("{}{}{}", l, "█".repeat(n as usize - 2), r)
         },
     }

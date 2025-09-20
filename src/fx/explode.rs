@@ -54,7 +54,7 @@ impl Explode {
 
     fn explosion_char(alpha: f32) -> char {
         // EXPLODED is 18 characters long
-        let explosion_index = (alpha * 17.0).round() as usize;
+        let explosion_index = math::round(alpha * 17.0) as usize;
         let explosion_char = EXPLODED
             .chars()
             .nth(explosion_index)
@@ -182,8 +182,8 @@ fn into_pos(x: f32, y: f32) -> Option<Position> {
     if x.is_sign_negative() || y.is_sign_negative() {
         None
     } else {
-        let x = x.round() as u16;
-        let y = y.round() as u16;
+        let x = math::round(x) as u16;
+        let y = math::round(y) as u16;
         Some(Position::new(x, y))
     }
 }

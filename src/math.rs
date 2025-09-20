@@ -78,6 +78,52 @@ pub(crate) fn powi(base: f32, exp: i32) -> f32 {
     pow_approx(base, exp as f32)
 }
 
+/// Round function that works in both std and no_std environments
+#[cfg(feature = "std")]
+#[inline]
+pub(crate) fn round(x: f32) -> f32 {
+    x.round()
+}
+
+/// Round function that works in both std and no_std environments
+#[cfg(not(feature = "std"))]
+#[inline]
+pub(crate) fn round(x: f32) -> f32 {
+    if x >= 0.0 {
+        (x + 0.5).floor_impl()
+    } else {
+        (x - 0.5).ceil_impl()
+    }
+}
+
+/// Floor function that works in both std and no_std environments
+#[cfg(feature = "std")]
+#[inline]
+pub(crate) fn floor(x: f32) -> f32 {
+    x.floor()
+}
+
+/// Floor function that works in both std and no_std environments
+#[cfg(not(feature = "std"))]
+#[inline]
+pub(crate) fn floor(x: f32) -> f32 {
+    x.floor_impl()
+}
+
+/// Ceiling function that works in both std and no_std environments
+#[cfg(feature = "std")]
+#[inline]
+pub(crate) fn ceil(x: f32) -> f32 {
+    x.ceil()
+}
+
+/// Ceiling function that works in both std and no_std environments
+#[cfg(not(feature = "std"))]
+#[inline]
+pub(crate) fn ceil(x: f32) -> f32 {
+    x.ceil_impl()
+}
+
 // Approximation functions for no_std environments
 #[cfg(not(feature = "std"))]
 fn sqrt_approx(x: f32) -> f32 {
@@ -203,6 +249,42 @@ fn cos_approx(x: f32) -> f32 {
     sin_approx(PI / 2.0 - x)
 }
 
+// Helper trait to add floor/ceil implementations for no_std
+#[cfg(not(feature = "std"))]
+trait FloorCeilImpl {
+    fn floor_impl(self) -> Self;
+    fn ceil_impl(self) -> Self;
+}
+
+#[cfg(not(feature = "std"))]
+impl FloorCeilImpl for f32 {
+    fn floor_impl(self) -> f32 {
+        if self >= 0.0 {
+            self as i32 as f32
+        } else {
+            let int_part = self as i32 as f32;
+            if self == int_part {
+                int_part
+            } else {
+                int_part - 1.0
+            }
+        }
+    }
+
+    fn ceil_impl(self) -> f32 {
+        if self >= 0.0 {
+            let int_part = self as i32 as f32;
+            if self == int_part {
+                int_part
+            } else {
+                int_part + 1.0
+            }
+        } else {
+            self as i32 as f32
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use core::f32::consts::PI;
@@ -239,5 +321,61 @@ mod tests {
         assert!((powi(2.0, -2) - 0.25).abs() < 0.013); // ~5% tolerance
         assert!((powi(5.0, 2) - 25.0).abs() < 3.75); // ~15% tolerance for embedded visual
                                                      // effects
+    }
+
+    #[test]
+    fn test_round_basic() {
+        assert_eq!(round(0.0), 0.0);
+        assert_eq!(round(1.0), 1.0);
+        assert_eq!(round(-1.0), -1.0);
+        assert_eq!(round(1.5), 2.0);
+        assert_eq!(round(1.4), 1.0);
+        assert_eq!(round(-1.5), -2.0);
+        assert_eq!(round(-1.4), -1.0);
+        assert_eq!(round(2.5), 3.0);
+        assert_eq!(round(-2.5), -3.0);
+    }
+
+    #[test]
+    fn test_floor_basic() {
+        assert_eq!(floor(0.0), 0.0);
+        assert_eq!(floor(1.0), 1.0);
+        assert_eq!(floor(-1.0), -1.0);
+        assert_eq!(floor(1.9), 1.0);
+        assert_eq!(floor(1.1), 1.0);
+        assert_eq!(floor(-1.1), -2.0);
+        assert_eq!(floor(-1.9), -2.0);
+        assert_eq!(floor(3.7), 3.0);
+        assert_eq!(floor(-3.7), -4.0);
+    }
+
+    #[test]
+    fn test_ceil_basic() {
+        assert_eq!(ceil(0.0), 0.0);
+        assert_eq!(ceil(1.0), 1.0);
+        assert_eq!(ceil(-1.0), -1.0);
+        assert_eq!(ceil(1.1), 2.0);
+        assert_eq!(ceil(1.9), 2.0);
+        assert_eq!(ceil(-1.1), -1.0);
+        assert_eq!(ceil(-1.9), -1.0);
+        assert_eq!(ceil(3.1), 4.0);
+        assert_eq!(ceil(-3.1), -3.0);
+    }
+
+    #[test]
+    fn test_round_floor_ceil_edge_cases() {
+        // Test very small values
+        assert_eq!(round(0.1), 0.0);
+        assert_eq!(round(-0.1), 0.0);
+        assert_eq!(floor(0.1), 0.0);
+        assert_eq!(floor(-0.1), -1.0);
+        assert_eq!(ceil(0.1), 1.0);
+        assert_eq!(ceil(-0.1), 0.0);
+
+        // Test values close to integers
+        assert_eq!(round(0.99999), 1.0);
+        assert_eq!(round(-0.99999), -1.0);
+        assert_eq!(floor(0.99999), 0.0);
+        assert_eq!(ceil(0.00001), 1.0);
     }
 }

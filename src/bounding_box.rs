@@ -1,5 +1,7 @@
 use ratatui::layout::Rect;
 
+use crate::math;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct BoundingBox {
     pub x: f32,
@@ -30,13 +32,13 @@ impl BoundingBox {
             _ if self.x > (screen.x + screen.width) as f32 => None,
             _ if self.y > (screen.y + screen.height) as f32 => None,
             _ => {
-                let dx: u16 = if self.x < 0.0 { self.x.round().abs() } else { 0.0 } as _;
-                let dy: u16 = if self.y < 0.0 { self.y.round().abs() } else { 0.0 } as _;
+                let dx: u16 = if self.x < 0.0 { math::round(self.x).abs() } else { 0.0 } as _;
+                let dy: u16 = if self.y < 0.0 { math::round(self.y).abs() } else { 0.0 } as _;
                 Some(Rect::new(
-                    self.x.max(0.0).round() as u16,
-                    self.y.max(0.0).round() as u16,
-                    self.width.round() as u16 - dx,
-                    self.height.round() as u16 - dy,
+                    math::round(self.x.max(0.0)) as u16,
+                    math::round(self.y.max(0.0)) as u16,
+                    math::round(self.width) as u16 - dx,
+                    math::round(self.height) as u16 - dy,
                 ))
             },
         }

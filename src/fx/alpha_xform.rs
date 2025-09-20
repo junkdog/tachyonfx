@@ -5,8 +5,8 @@ use ratatui::{buffer::Buffer, layout::Rect};
 use Interpolation::Linear;
 
 use crate::{
-    default_shader_impl, widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, EffectTimer,
-    Interpolation, Shader,
+    default_shader_impl, math, widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect,
+    EffectTimer, Interpolation, Shader,
 };
 
 #[derive(Debug, Clone)]
@@ -157,7 +157,7 @@ impl Shader for RemapAlpha {
 
         self.fx
             .process(Duration::from_millis(scaled_duration_ms as _), buf, area);
-        self.rest = scaled_duration_ms - scaled_duration_ms.floor();
+        self.rest = scaled_duration_ms - math::floor(scaled_duration_ms);
     }
 
     fn done(&self) -> bool {

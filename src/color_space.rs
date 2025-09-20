@@ -1,6 +1,6 @@
 use ratatui::style::Color;
 
-use crate::color_ext::ToRgbComponents;
+use crate::{color_ext::ToRgbComponents, math};
 
 /// Defines the color space to use for color interpolation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -195,14 +195,14 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
 
     if s <= 0.0 {
         return (
-            (v * 255.0).round() as u8,
-            (v * 255.0).round() as u8,
-            (v * 255.0).round() as u8,
+            math::round(v * 255.0) as u8,
+            math::round(v * 255.0) as u8,
+            math::round(v * 255.0) as u8,
         );
     }
 
     let h = h / 60.0;
-    let i = h.floor() as i32;
+    let i = math::floor(h) as i32;
     let f = h - i as f32;
 
     let p = v * (1.0 - s);
@@ -219,9 +219,9 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
     };
 
     (
-        (r * 255.0).round() as u8,
-        (g * 255.0).round() as u8,
-        (b * 255.0).round() as u8,
+        math::round(r * 255.0) as u8,
+        math::round(g * 255.0) as u8,
+        math::round(b * 255.0) as u8,
     )
 }
 
@@ -264,7 +264,7 @@ pub(crate) fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
 
     // If saturation is 0, color is a shade of gray
     if s == 0.0 {
-        let gray = (l * 255.0).round() as u8;
+        let gray = math::round(l * 255.0) as u8;
         return (gray, gray, gray);
     }
 
@@ -291,7 +291,7 @@ pub(crate) fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
             p
         };
 
-        (value * 255.0).round() as u8
+        math::round(value * 255.0) as u8
     };
 
     let h = h / 360.0;

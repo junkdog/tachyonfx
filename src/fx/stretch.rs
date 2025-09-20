@@ -4,7 +4,7 @@ use bon::{builder, Builder};
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
-    cell_filter::FilterProcessor, default_shader_impl, CellFilter, CellIterator, Duration,
+    cell_filter::FilterProcessor, default_shader_impl, math, CellFilter, CellIterator, Duration,
     EffectTimer, Interpolatable, Motion, Shader,
 };
 
@@ -39,12 +39,12 @@ impl Stretch {
             Motion::LeftToRight => {
                 let len = area.width as f32 * progress;
                 Regions {
-                    filled: Rect::new(area.x, area.y, len.floor() as u16, area.height),
-                    stretching: Rect::new(area.x + len.floor() as u16, area.y, 1, area.height),
+                    filled: Rect::new(area.x, area.y, math::floor(len) as u16, area.height),
+                    stretching: Rect::new(area.x + math::floor(len) as u16, area.y, 1, area.height),
                     empty: Rect::new(
-                        area.x + len.ceil() as u16,
+                        area.x + math::ceil(len) as u16,
                         area.y,
-                        area.width - len.ceil() as u16,
+                        area.width - math::ceil(len) as u16,
                         area.height,
                     ),
                 }
@@ -53,13 +53,13 @@ impl Stretch {
                 let len = area.width as f32 * progress;
                 Regions {
                     filled: Rect::new(
-                        area.x + area.width - len.ceil() as u16,
+                        area.x + area.width - math::ceil(len) as u16,
                         area.y,
-                        len.ceil() as u16,
+                        math::ceil(len) as u16,
                         area.height,
                     ),
                     stretching: Rect::new(
-                        area.x + area.width - len.floor() as u16 - 1,
+                        area.x + area.width - math::floor(len) as u16 - 1,
                         area.y,
                         1,
                         area.height,
@@ -67,7 +67,7 @@ impl Stretch {
                     empty: Rect::new(
                         area.x,
                         area.y,
-                        area.width - len.floor() as u16 - 1,
+                        area.width - math::floor(len) as u16 - 1,
                         area.height,
                     ),
                 }
@@ -75,13 +75,13 @@ impl Stretch {
             Motion::UpToDown => {
                 let len = area.height as f32 * progress;
                 Regions {
-                    filled: Rect::new(area.x, area.y, area.width, len.floor() as u16),
-                    stretching: Rect::new(area.x, area.y + len.floor() as u16, area.width, 1),
+                    filled: Rect::new(area.x, area.y, area.width, math::floor(len) as u16),
+                    stretching: Rect::new(area.x, area.y + math::floor(len) as u16, area.width, 1),
                     empty: Rect::new(
                         area.x,
-                        area.y + len.ceil() as u16,
+                        area.y + math::ceil(len) as u16,
                         area.width,
-                        area.height - len.ceil() as u16,
+                        area.height - math::ceil(len) as u16,
                     ),
                 }
             },
@@ -90,13 +90,13 @@ impl Stretch {
                 Regions {
                     filled: Rect::new(
                         area.x,
-                        area.y + area.height - len.ceil() as u16,
+                        area.y + area.height - math::ceil(len) as u16,
                         area.width,
-                        len.ceil() as u16,
+                        math::ceil(len) as u16,
                     ),
                     stretching: Rect::new(
                         area.x,
-                        area.y + area.height - len.floor() as u16 - 1,
+                        area.y + area.height - math::floor(len) as u16 - 1,
                         area.width,
                         1,
                     ),
@@ -104,7 +104,7 @@ impl Stretch {
                         area.x,
                         area.y,
                         area.width,
-                        area.height - len.floor() as u16 - 1,
+                        area.height - math::floor(len) as u16 - 1,
                     ),
                 }
             },
@@ -180,7 +180,7 @@ fn inverse_style(style: Style) -> Style {
 
 fn stretch_symbol_idx(alpha: f32) -> usize {
     let alpha = alpha.clamp(0.0, 1.0);
-    (LAST_IDX as f32 * alpha).round() as usize
+    math::round(LAST_IDX as f32 * alpha) as usize
 }
 
 fn stretch_char(inside_cell_alpha: f32, motion: Motion, style: Style) -> (char, Style) {

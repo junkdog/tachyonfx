@@ -51,7 +51,8 @@ pub struct Glitch {
 impl Glitch {
     fn ensure_population(&mut self, screen: &Rect) {
         let total_cells =
-            (screen.width as f32 * screen.height as f32 * self.cell_glitch_ratio).round() as u32;
+            crate::math::round(screen.width as f32 * screen.height as f32 * self.cell_glitch_ratio)
+                as u32;
 
         let current_population = self.glitch_cells.len() as u32;
         if current_population < total_cells {

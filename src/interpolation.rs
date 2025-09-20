@@ -3,7 +3,7 @@ use ratatui::{
     style::{Color, Style},
 };
 
-use crate::{color_space::hsl_to_rgb, color_to_hsl, ColorSpace};
+use crate::{color_space::hsl_to_rgb, color_to_hsl, math, ColorSpace};
 
 /// Easing functions for interpolation
 mod easing {
@@ -390,17 +390,13 @@ impl<T: Interpolatable> Interpolatable for (T, T) {
 
 impl Interpolatable for u16 {
     fn lerp(&self, target: &u16, alpha: f32) -> u16 {
-        (*self as f32)
-            .lerp(&(*target as f32), alpha)
-            .round() as u16
+        math::round((*self as f32).lerp(&(*target as f32), alpha)) as u16
     }
 }
 
 impl Interpolatable for i16 {
     fn lerp(&self, target: &i16, alpha: f32) -> i16 {
-        (*self as f32)
-            .lerp(&(*target as f32), alpha)
-            .round() as i16
+        math::round((*self as f32).lerp(&(*target as f32), alpha)) as i16
     }
 }
 
@@ -412,7 +408,7 @@ impl Interpolatable for f32 {
 
 impl Interpolatable for i32 {
     fn lerp(&self, target: &i32, alpha: f32) -> i32 {
-        self + ((target - self) as f64 * alpha as f64).round() as i32
+        self + math::round((target - self) as f32 * alpha) as i32
     }
 }
 
