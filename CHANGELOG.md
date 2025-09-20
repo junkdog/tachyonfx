@@ -27,6 +27,7 @@
   - `fx::dissolve`, `fx::dissolve_to`,
   - `fx::evolve`, `fx::evolve_from`, `fx::evolve_into`
   - `fx::explode`
+  - `fx::hsl_shift`, `fx::hsl_shift_fg`
   - `fx::fade_from`, `fx::fade_from_fg`,
   - `fx::fade_to`, `fx::fade_to_fg`
 

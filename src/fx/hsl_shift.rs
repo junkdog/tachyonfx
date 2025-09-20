@@ -4,8 +4,13 @@ use bon::{builder, Builder};
 use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 
 use crate::{
-    cell_filter::FilterProcessor, color_space::color_from_hsl, color_to_hsl, default_shader_impl,
-    effect_timer::EffectTimer, shader::Shader, CellFilter, ColorCache, Duration, Interpolatable,
+    cell_filter::FilterProcessor,
+    color_space::color_from_hsl,
+    color_to_hsl, default_shader_impl,
+    effect_timer::EffectTimer,
+    pattern::{AnyPattern, InstancedPattern, Pattern},
+    shader::Shader,
+    CellFilter, ColorCache, Duration, Interpolatable,
 };
 
 #[derive(Builder, Clone, Default, Debug)]
@@ -16,6 +21,8 @@ pub struct HslShift {
     hsl_mod_bg: Option<[f32; 3]>,
     area: Option<Rect>,
     cell_filter: Option<FilterProcessor>,
+    #[builder(default)]
+    pattern: AnyPattern,
 }
 
 impl Shader for HslShift {
@@ -26,9 +33,9 @@ impl Shader for HslShift {
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
-        let alpha = self.timer.alpha();
+        let global_alpha = self.timer.alpha();
 
-        let hsl_lerp = |c: Color, hsl: [f32; 3]| -> Color {
+        let hsl_lerp = |c: Color, hsl: [f32; 3], alpha: f32| -> Color {
             let (h, s, l) = color_to_hsl(&c);
 
             let (h, s, l) = (
@@ -43,19 +50,31 @@ impl Shader for HslShift {
         let hsl_mod_fg = self.hsl_mod_fg;
         let hsl_mod_bg = self.hsl_mod_bg;
 
-        let cell_iter = self.cell_iter(buf, area);
-        let mut color_cache: ColorCache<(), 8> = ColorCache::new();
+        let mut pattern = self.pattern.for_frame(global_alpha, area);
 
-        cell_iter.for_each_cell(|_, cell| {
+        let cell_iter = self.cell_iter(buf, area);
+        let mut color_cache: ColorCache<u32, 8> = ColorCache::new();
+
+        cell_iter.for_each_cell(|pos, cell| {
             if let Some(hsl_mod) = hsl_mod_fg {
-                let fg = color_cache.memoize_fg(cell.fg, (), |_| hsl_lerp(cell.fg, hsl_mod));
+                let alpha = pattern.map_alpha(pos);
+                let alpha_bits = u32::from_le_bytes(alpha.to_le_bytes());
+                let fg = color_cache
+                    .memoize_fg(cell.fg, alpha_bits, |_| hsl_lerp(cell.fg, hsl_mod, alpha));
                 cell.set_fg(fg);
             }
             if let Some(hsl_mod) = hsl_mod_bg {
-                let bg = color_cache.memoize_bg(cell.bg, (), |_| hsl_lerp(cell.bg, hsl_mod));
+                let alpha = pattern.map_alpha(pos);
+                let alpha_bits = u32::from_le_bytes(alpha.to_le_bytes());
+                let bg = color_cache
+                    .memoize_bg(cell.bg, alpha_bits, |_| hsl_lerp(cell.bg, hsl_mod, alpha));
                 cell.set_bg(bg);
             }
         });
+    }
+
+    fn set_pattern(&mut self, pattern: AnyPattern) {
+        self.pattern = pattern;
     }
 
     #[cfg(feature = "dsl")]

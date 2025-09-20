@@ -73,10 +73,9 @@ impl FilterProcessor {
     /// # Returns
     /// A `FilterProcessor` configured with the optimal strategy
     pub(crate) fn new(filter: CellFilter) -> Self {
-        let area = Rect::default();
         match filter.analyze() {
             FilterType::Static => FilterProcessor::Static(StaticFilterProcessor::new(filter)),
-            FilterType::Dynamic => FilterProcessor::Dynamic(filter, area),
+            FilterType::Dynamic => FilterProcessor::Dynamic(filter, Rect::default()),
         }
     }
 
