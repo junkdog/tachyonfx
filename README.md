@@ -15,6 +15,7 @@ A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. B
 ## ✨ Features
 
 - **30+ unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
+- **Spatial patterns** — control effect timing and distribution with radial, diagonal, checkerboard, and organic patterns
 - **Effect composition** — chain and combine effects for sophisticated animations
 - **Interactive browser editor** — design and preview effects in real-time with [TachyonFX FTL][tfx-ftl]
 - **Runtime effect compilation** — create effects from strings using the built-in DSL
@@ -142,6 +143,25 @@ let effects = fx::sequence(&[
 ]);
 ```
 
+### Using Patterns
+
+Apply spatial patterns to control how effects spread:
+
+```rust
+use tachyonfx::pattern::{RadialPattern, DiagonalPattern};
+
+// Radial dissolve from center
+let effect = fx::dissolve(800)
+    .with_pattern(RadialPattern::center());
+
+// Diagonal fade with transition width
+let effect = fx::fade_to_fg(Color::Cyan, 1000)
+    .with_pattern(
+        DiagonalPattern::top_left_to_bottom_right()
+            .with_transition_width(3.0)
+    );
+```
+
 ### Using the DSL
 
 Create effects from strings at runtime:
@@ -181,6 +201,15 @@ Fine-tune timing and behavior.
 - `repeat` — Loop effects with optional limits
 - `ping_pong` — Play forward then reverse
 - `with_duration` — Override effect duration
+
+### Spatial Patterns
+Control how effects spread and progress across the terminal.
+
+- `RadialPattern` — Expand outward from center point
+- `DiagonalPattern` — Sweep across diagonally
+- `CheckerboardPattern` — Alternate cell-by-cell in grid pattern
+- `SweepPattern` — Linear progression in cardinal directions
+- `CoalescePattern` / `DissolvePattern` — Organic, randomized reveals
 
 ### Geometry Effects
 Transform positions and layout.
@@ -224,6 +253,7 @@ Alternatively, implement the `Shader` trait and use it together with `.into_effe
 
 The DSL supports:
 - Most built-in effects (excludes: `effect_fn`, `effect_fn_buf`, `glitch`, `offscreen_buffer`, `resize_area`, `translate`, `translate_buf`)
+- All spatial patterns with method chaining
 - Variable bindings
 - Method chaining
 - Complex compositions
@@ -234,6 +264,7 @@ let expr = r#"
     fx::sequence(&[
         fx::fade_from(black, white, duration),
         fx::dissolve(duration)
+            .with_pattern(RadialPattern::center())
     ])
 "#;
 ```
