@@ -9,6 +9,8 @@ use crate::{color_space::hsl_to_rgb, color_to_hsl, ColorSpace};
 mod easing {
     use core::f32::consts::{PI, TAU};
 
+    use crate::math;
+
     pub(super) fn back_in(t: f32) -> f32 {
         let c1 = 1.70158;
         let c3 = c1 + 1.0;
@@ -18,7 +20,7 @@ mod easing {
     pub(super) fn back_out(t: f32) -> f32 {
         let c1 = 1.70158;
         let c3 = c1 + 1.0;
-        1.0 + c3 * (t - 1.0).powi(3) + c1 * (t - 1.0).powi(2)
+        1.0 + c3 * math::powi(t - 1.0, 3) + c1 * math::powi(t - 1.0, 2)
     }
 
     pub(super) fn back_in_out(t: f32) -> f32 {
@@ -26,9 +28,9 @@ mod easing {
         let c2 = c1 * 1.525;
 
         if t < 0.5 {
-            ((2.0 * t).powi(2) * ((c2 + 1.0) * 2.0 * t - c2)) / 2.0
+            (math::powi(2.0 * t, 2) * ((c2 + 1.0) * 2.0 * t - c2)) / 2.0
         } else {
-            ((2.0 * t - 2.0).powi(2) * ((c2 + 1.0) * (t * 2.0 - 2.0) + c2) + 2.0) / 2.0
+            (math::powi(2.0 * t - 2.0, 2) * ((c2 + 1.0) * (t * 2.0 - 2.0) + c2) + 2.0) / 2.0
         }
     }
 
@@ -62,24 +64,12 @@ mod easing {
         }
     }
 
-    #[cfg(feature = "std")]
     pub(super) fn circ_in(t: f32) -> f32 {
-        1.0 - (1.0 - t * t).sqrt()
+        1.0 - math::sqrt(1.0 - t * t)
     }
 
-    #[cfg(not(feature = "std"))]
-    pub(super) fn circ_in(t: f32) -> f32 {
-        1.0 - sqrt_approx(1.0 - t * t)
-    }
-
-    #[cfg(feature = "std")]
     pub(super) fn circ_out(t: f32) -> f32 {
-        (1.0 - (t - 1.0) * (t - 1.0)).sqrt()
-    }
-
-    #[cfg(not(feature = "std"))]
-    pub(super) fn circ_out(t: f32) -> f32 {
-        sqrt_approx(1.0 - (t - 1.0) * (t - 1.0))
+        math::sqrt(1.0 - (t - 1.0) * (t - 1.0))
     }
 
     pub(super) fn circ_in_out(t: f32) -> f32 {
@@ -95,18 +85,17 @@ mod easing {
     }
 
     pub(super) fn cubic_out(t: f32) -> f32 {
-        1.0 - (1.0 - t).powi(3)
+        1.0 - math::powi(1.0 - t, 3)
     }
 
     pub(super) fn cubic_in_out(t: f32) -> f32 {
         if t < 0.5 {
             4.0 * t * t * t
         } else {
-            1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+            1.0 - math::powi(-2.0 * t + 2.0, 3) / 2.0
         }
     }
 
-    #[cfg(feature = "std")]
     pub(super) fn elastic_in(t: f32) -> f32 {
         if t == 0.0 {
             0.0
@@ -114,23 +103,10 @@ mod easing {
             1.0
         } else {
             let c4 = TAU / 3.0;
-            -(2.0_f32.powf(10.0 * (t - 1.0))) * ((t - 1.0) * c4 - PI / 2.0).sin()
+            -math::powf(2.0, 10.0 * (t - 1.0)) * math::sin((t - 1.0) * c4 - PI / 2.0)
         }
     }
 
-    #[cfg(not(feature = "std"))]
-    pub(super) fn elastic_in(t: f32) -> f32 {
-        if t == 0.0 {
-            0.0
-        } else if t == 1.0 {
-            1.0
-        } else {
-            let c4 = TAU / 3.0;
-            -(pow_approx(2.0, 10.0 * (t - 1.0))) * sin_approx((t - 1.0) * c4 - PI / 2.0)
-        }
-    }
-
-    #[cfg(feature = "std")]
     pub(super) fn elastic_out(t: f32) -> f32 {
         if t == 0.0 {
             0.0
@@ -138,19 +114,7 @@ mod easing {
             1.0
         } else {
             let c4 = TAU / 3.0;
-            2.0_f32.powf(-10.0 * t) * (t * c4 - PI / 2.0).sin() + 1.0
-        }
-    }
-
-    #[cfg(not(feature = "std"))]
-    pub(super) fn elastic_out(t: f32) -> f32 {
-        if t == 0.0 {
-            0.0
-        } else if t == 1.0 {
-            1.0
-        } else {
-            let c4 = TAU / 3.0;
-            pow_approx(2.0, -10.0 * t) * sin_approx(t * c4 - PI / 2.0) + 1.0
+            math::powf(2.0, -10.0 * t) * math::sin(t * c4 - PI / 2.0) + 1.0
         }
     }
 
@@ -166,39 +130,19 @@ mod easing {
         }
     }
 
-    #[cfg(feature = "std")]
     pub(super) fn expo_in(t: f32) -> f32 {
         if t == 0.0 {
             0.0
         } else {
-            2.0_f32.powf(10.0 * (t - 1.0))
+            math::powf(2.0, 10.0 * (t - 1.0))
         }
     }
 
-    #[cfg(not(feature = "std"))]
-    pub(super) fn expo_in(t: f32) -> f32 {
-        if t == 0.0 {
-            0.0
-        } else {
-            pow_approx(2.0, 10.0 * (t - 1.0))
-        }
-    }
-
-    #[cfg(feature = "std")]
     pub(super) fn expo_out(t: f32) -> f32 {
         if t == 1.0 {
             1.0
         } else {
-            1.0 - 2.0_f32.powf(-10.0 * t)
-        }
-    }
-
-    #[cfg(not(feature = "std"))]
-    pub(super) fn expo_out(t: f32) -> f32 {
-        if t == 1.0 {
-            1.0
-        } else {
-            1.0 - pow_approx(2.0, -10.0 * t)
+            1.0 - math::powf(2.0, -10.0 * t)
         }
     }
 
@@ -226,7 +170,7 @@ mod easing {
         if t < 0.5 {
             2.0 * t * t
         } else {
-            1.0 - (-2.0 * t + 2.0).powi(2) / 2.0
+            1.0 - math::powi(-2.0 * t + 2.0, 2) / 2.0
         }
     }
 
@@ -235,14 +179,14 @@ mod easing {
     }
 
     pub(super) fn quart_out(t: f32) -> f32 {
-        1.0 - (1.0 - t).powi(4)
+        1.0 - math::powi(1.0 - t, 4)
     }
 
     pub(super) fn quart_in_out(t: f32) -> f32 {
         if t < 0.5 {
             8.0 * t * t * t * t
         } else {
-            1.0 - (-2.0 * t + 2.0).powi(4) / 2.0
+            1.0 - math::powi(-2.0 * t + 2.0, 4) / 2.0
         }
     }
 
@@ -251,14 +195,14 @@ mod easing {
     }
 
     pub(super) fn quint_out(t: f32) -> f32 {
-        1.0 - (1.0 - t).powi(5)
+        1.0 - math::powi(1.0 - t, 5)
     }
 
     pub(super) fn quint_in_out(t: f32) -> f32 {
         if t < 0.5 {
             16.0 * t * t * t * t * t
         } else {
-            1.0 - (-2.0 * t + 2.0).powi(5) / 2.0
+            1.0 - math::powi(-2.0 * t + 2.0, 5) / 2.0
         }
     }
 
@@ -266,159 +210,16 @@ mod easing {
         1.0 - t
     }
 
-    #[cfg(feature = "std")]
     pub(super) fn sine_in(t: f32) -> f32 {
-        1.0 - (t * PI / 2.0).cos()
+        1.0 - math::cos(t * PI / 2.0)
     }
 
-    #[cfg(not(feature = "std"))]
-    pub(super) fn sine_in(t: f32) -> f32 {
-        1.0 - cos_approx(t * PI / 2.0)
-    }
-
-    #[cfg(feature = "std")]
     pub(super) fn sine_out(t: f32) -> f32 {
-        (t * PI / 2.0).sin()
+        math::sin(t * PI / 2.0)
     }
 
-    #[cfg(not(feature = "std"))]
-    pub(super) fn sine_out(t: f32) -> f32 {
-        sin_approx(t * PI / 2.0)
-    }
-
-    #[cfg(feature = "std")]
     pub(super) fn sine_in_out(t: f32) -> f32 {
-        -(t * PI).cos() / 2.0 + 0.5
-    }
-
-    #[cfg(not(feature = "std"))]
-    pub(super) fn sine_in_out(t: f32) -> f32 {
-        -cos_approx(t * PI) / 2.0 + 0.5
-    }
-
-    // Approximation functions for no_std environments
-    #[cfg(not(feature = "std"))]
-    fn sqrt_approx(x: f32) -> f32 {
-        if x <= 0.0 {
-            return 0.0;
-        }
-
-        // Newton-Raphson method
-        // 4 iterations provides 1e-4 accuracy, good balance for embedded systems
-        let mut guess = x / 2.0;
-        for _ in 0..4 {
-            guess = (guess + x / guess) / 2.0;
-        }
-        guess
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn pow_approx(base: f32, exp: f32) -> f32 {
-        if exp == 0.0 {
-            return 1.0;
-        }
-        if base == 0.0 {
-            return 0.0;
-        }
-        if exp == 1.0 {
-            return base;
-        }
-
-        // For 2^x, use bit manipulation approximation
-        if base == 2.0 {
-            let exp_int = exp as i32;
-            let exp_frac = exp - exp_int as f32;
-
-            let int_part = if exp_int >= 0 {
-                (1u32 << exp_int.min(30)) as f32
-            } else {
-                1.0 / (1u32 << (-exp_int).min(30)) as f32
-            };
-
-            // Linear approximation for fractional part
-            let frac_part = 1.0 + exp_frac * 0.693147; // ln(2)
-
-            int_part as f32 * frac_part
-        } else {
-            // General case using exp(exp * ln(base))
-            exp_approx(exp * ln_approx(base))
-        }
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn exp_approx(x: f32) -> f32 {
-        if x > 10.0 {
-            return 22026.5;
-        } // e^10 ≈ 22026
-        if x < -10.0 {
-            return 0.0;
-        }
-
-        // Taylor series: e^x = 1 + x + x²/2! + x³/3! + ...
-        // 6 iterations provides 1e-3 accuracy, good balance for embedded systems
-        let mut result = 1.0;
-        let mut term = 1.0;
-
-        for i in 1..6 {
-            term *= x / i as f32;
-            result += term;
-        }
-
-        result
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn ln_approx(x: f32) -> f32 {
-        if x <= 0.0 {
-            return -100.0;
-        }
-        if x == 1.0 {
-            return 0.0;
-        }
-
-        // Use the identity ln(x) = 2 * arctanh((x-1)/(x+1))
-        let y = (x - 1.0) / (x + 1.0);
-        let y2 = y * y;
-
-        // arctanh series: arctanh(y) = y + y³/3 + y⁵/5 + ...
-        let mut sum = y;
-        let mut term = y;
-
-        for i in 1..10 {
-            term *= y2;
-            sum += term / (2 * i + 1) as f32;
-        }
-
-        2.0 * sum
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn sin_approx(x: f32) -> f32 {
-        let mut x = x % TAU;
-        if x > PI {
-            x -= TAU;
-        }
-        if x < -PI {
-            x += TAU;
-        }
-
-        // taylor series: sin(x) = x - x³/3! + x⁵/5! - x⁷/7! + ...
-        // 3 iterations provides 1e-3 accuracy, good balance for embedded systems
-        let x2 = x * x;
-        let mut result = x;
-        let mut term = x;
-
-        for i in 1..3 {
-            term *= -x2 / ((2 * i) * (2 * i + 1)) as f32;
-            result += term;
-        }
-
-        result
-    }
-
-    #[cfg(not(feature = "std"))]
-    fn cos_approx(x: f32) -> f32 {
-        sin_approx(PI / 2.0 - x)
+        -math::cos(t * PI) / 2.0 + 0.5
     }
 }
 

@@ -9,6 +9,7 @@ use ratatui::{
 use crate::{
     default_shader_impl,
     effect_timer::EffectTimer,
+    math,
     pattern::{AnyPattern, InstancedPattern, Pattern},
     shader::Shader,
     simple_rng::SimpleRng,
@@ -91,7 +92,7 @@ impl Shader for Explode {
                     let dy = pos.y as f32 - center_y;
 
                     // distance and normalized direction
-                    let distance = (dx * dx + dy * dy).sqrt();
+                    let distance = math::sqrt(dx * dx + dy * dy);
                     if distance > 0.1 {
                         let normalized = (dx / distance, dy / distance);
                         cells.push((pos, normalized));

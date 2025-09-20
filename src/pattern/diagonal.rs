@@ -1,6 +1,9 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress};
+use crate::{
+    math,
+    pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress},
+};
 
 #[derive(Clone, Debug, Copy)]
 pub struct DiagonalPattern {
@@ -104,7 +107,8 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), DiagonalPattern> {
 
         // Use TransitionProgress with inverse spatial mapping for correct character evolution
         // Convert cell-based transition width to normalized units using diagonal length
-        let diagonal_length = ((area.width as f32).powi(2) + (area.height as f32).powi(2)).sqrt();
+        let diagonal_length =
+            math::sqrt(math::powi(area.width as f32, 2) + math::powi(area.height as f32, 2));
         let normalized_transition_width = pattern.transition_width / diagonal_length;
         TransitionProgress::from(normalized_transition_width).map_spatial(
             global_alpha,

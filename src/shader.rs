@@ -38,7 +38,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///
     /// # Example
     /// ```no_compile
-    /// use std::time::Duration;
+    /// use tachyonfx::Duration;
     /// use ratatui::buffer::Buffer;
     /// use ratatui::layout::Rect;
     ///

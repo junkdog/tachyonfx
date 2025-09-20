@@ -106,7 +106,6 @@ impl EffectTimer {
     /// # Example
     /// ```
     /// use tachyonfx::{EffectTimer, Interpolation};
-    /// use std::time::Duration;
     ///
     /// let timer = EffectTimer::from_ms(1000, Interpolation::QuadIn);
     /// let mirrored = timer.mirrored(); // Direction reversed, interpolation becomes QuadOut

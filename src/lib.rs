@@ -41,6 +41,7 @@ mod effect_timer;
 mod features;
 mod interpolation;
 mod lru_cache;
+mod math;
 mod motion;
 pub mod pattern;
 mod rect_ext;

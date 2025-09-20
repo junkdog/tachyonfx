@@ -1,6 +1,9 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress};
+use crate::{
+    math,
+    pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress},
+};
 
 #[derive(Clone, Debug, Copy)]
 pub struct RadialPattern {
@@ -89,7 +92,7 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), RadialPattern> {
         let dx = pos.x as f32 - center_x;
         let dy = pos.y as f32 - center_y;
         // Compensate for terminal cell aspect ratio (typically 2:1 height to width)
-        let distance = (dx * dx + 2.0 * dy * 2.0 * dy).sqrt();
+        let distance = math::sqrt(dx * dx + 2.0 * dy * 2.0 * dy);
 
         // Calculate maximum radius (distance to the farthest corner) - also with aspect ratio
         let max_radius = {
@@ -105,7 +108,7 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), RadialPattern> {
                     let dx = x - center_x;
                     let dy = y - center_y;
                     // Apply same aspect ratio compensation as distance calculation
-                    (dx * dx + 2.0 * dy * 2.0 * dy).sqrt()
+                    math::sqrt(dx * dx + 2.0 * dy * 2.0 * dy)
                 })
                 .fold(0.0f32, f32::max)
         };
