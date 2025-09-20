@@ -280,6 +280,121 @@ let stretch_with_vars = dsl.compiler()
     .expect("Valid effect");
 ```
 
+### Pattern System
+
+Patterns control how effects are applied spatially across the terminal. All patterns can be applied using `.with_pattern()` and support method chaining.
+
+#### Pattern Types
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Radial patterns - emanate from center point
+let radial_effect = dsl.compiler().compile(r#"
+    fx::dissolve(1000).with_pattern(
+        RadialPattern::center()
+            .with_transition_width(2.5)
+            .with_center(0.3, 0.7)
+    )
+"#).expect("Valid effect");
+
+// Diagonal patterns - directional sweeps
+let diagonal_effect = dsl.compiler().compile(r#"
+    fx::fade_to_fg(Color::Green, (800, QuadOut))
+        .with_pattern(
+            DiagonalPattern::top_left_to_bottom_right()
+                .with_transition_width(4.0)
+        )
+"#).expect("Valid effect");
+
+// Checkerboard patterns - alternating cells
+let checkerboard_effect = dsl.compiler().compile(r#"
+    fx::coalesce((600, BounceOut))
+        .with_pattern(
+            CheckerboardPattern::with_cell_size(2)
+                .with_transition_width(1.5)
+        )
+"#).expect("Valid effect");
+
+// Sweep patterns - directional waves
+let sweep_effect = dsl.compiler().compile(r#"
+    fx::slide_in(Motion::LeftToRight, 8, 2, Color::Blue, (1000, Linear))
+        .with_pattern(SweepPattern::left_to_right(5))
+"#).expect("Valid effect");
+
+// Organic patterns - randomized effects
+let organic_effect = dsl.compiler().compile(r#"
+    fx::parallel(&[
+        fx::fade_to_fg(Color::Red, (800, Linear))
+            .with_pattern(CoalescePattern::new()),
+        fx::fade_to(Color::Black, Color::Black, (800, Linear))
+            .with_pattern(DissolvePattern::new())
+    ])
+"#).expect("Valid effect");
+```
+
+#### Available Pattern Factory Methods
+
+**Radial**: `RadialPattern::center()`, `RadialPattern::new(x, y)`
+**Diagonal**: `DiagonalPattern::top_left_to_bottom_right()`, `top_right_to_bottom_left()`, `bottom_left_to_top_right()`, `bottom_right_to_top_left()`
+**Checkerboard**: `CheckerboardPattern::default()`, `CheckerboardPattern::with_cell_size(size)`
+**Sweep**: `SweepPattern::left_to_right(width)`, `right_to_left(width)`, `up_to_down(width)`, `down_to_up(width)`
+**Organic**: `CoalescePattern::new()`, `DissolvePattern::new()`
+
+#### Pattern Method Chaining
+
+- **All patterns**: `.clone()`
+- **RadialPattern**: `.with_transition_width(f32)`, `.with_center(x, y)`
+- **DiagonalPattern, CheckerboardPattern**: `.with_transition_width(f32)`
+
+### Evolution Effects
+
+Evolution effects transform characters through predefined symbol progressions, useful for progress indicators and dynamic text.
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+
+// Basic evolution effects
+let evolution_effects = dsl.compiler().compile(r#"
+    fx::sequence(&[
+        fx::evolve(EvolveSymbolSet::Circles, (800, Linear)),
+        fx::evolve_from(EvolveSymbolSet::BlocksHorizontal, (600, QuadOut)),
+        fx::evolve_into(EvolveSymbolSet::Shaded, (400, BounceIn))
+    ])
+"#).expect("Valid effect");
+
+// Styled evolution with patterns
+let styled_evolution = dsl.compiler().compile(r#"
+    fx::evolve(
+        (EvolveSymbolSet::Quadrants, Style::new().fg(Color::Cyan)),
+        (1000, SineInOut)
+    ).with_pattern(RadialPattern::center())
+"#).expect("Valid effect");
+
+// Loading animation
+let loading_spinner = dsl.compiler().compile(r#"
+    fx::repeating(
+        fx::ping_pong(
+            fx::evolve(EvolveSymbolSet::Circles, (300, Linear))
+        )
+    )
+"#).expect("Valid effect");
+```
+
+#### EvolveSymbolSet Variants
+
+- **Circles**: ` ·•◉●`
+- **BlocksHorizontal**: ` ▏▎▍▌▋▊▉█`
+- **BlocksVertical**: ` ▁▂▃▄▅▆▇█`
+- **CircleFill**: ` ◌◎◍●`
+- **Quadrants**: ` ▖▘▗▝▚▞▙▛▜▟█`
+- **Shaded**: ` ░▒▓█`
+- **Squares**: ` ·▫▪◼█`          
+
 ### Color Effects
 
 #### HSL Color Manipulation
@@ -733,6 +848,164 @@ let animation_dsl = r#"
 // Compile the DSL expression into an effect
 let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(animation_dsl).expect("Valid effect");
+```
+
+## Method Chaining Reference
+
+The DSL supports method chaining for all major types, allowing you to configure objects by calling methods on them. Each type has its own set of chainable methods:
+
+### Effect Methods
+
+All effects support these common methods:
+
+````rust,ignore
+// Basic methods
+effect.clone()                          // Create effect copy
+effect.reversed()                       // Reverse effect direction
+
+// Configuration methods
+effect.with_area(rect)                  // Apply to specific area
+effect.with_color_space(color_space)    // Set color interpolation space
+effect.with_duration(duration)          // Override effect duration
+effect.with_filter(filter)              // Apply cell filter
+effect.with_pattern(pattern)            // Apply spatial pattern
+```
+
+### Pattern Methods
+
+#### RadialPattern
+```rust,ignore
+RadialPattern::center()
+    .clone()                      // Create pattern copy
+    .with_transition_width(f32)   // Set transition width
+    .with_center(x, y)            // Set center position (0.0-1.0)
+```
+
+#### DiagonalPattern
+```rust,ignore
+DiagonalPattern::top_left_to_bottom_right()
+    .clone()                      // Create pattern copy
+    .with_transition_width(f32)   // Set transition width
+```
+
+#### CheckerboardPattern
+```rust,ignore
+CheckerboardPattern::with_cell_size(2)
+    .clone()                      // Create pattern copy
+    .with_transition_width(f32)   // Set transition width
+```
+
+#### SweepPattern, CoalescePattern, DissolvePattern
+```rust,ignore
+// These patterns support basic cloning only
+pattern.clone()                   // Create pattern copy
+```
+
+### Layout Methods
+
+```rust,ignore
+Layout::horizontal([Percentage(50), Percentage(50)])
+    .clone()                      // Create layout copy
+    .constraints(constraints)     // Set layout constraints
+    .margin(margin)               // Set uniform margin
+    .horizontal_margin(margin)    // Set horizontal margin
+    .vertical_margin(margin)      // Set vertical margin
+    .spacing(spacing)             // Set spacing between elements
+```
+
+### Style Methods
+
+```rust,ignore`
+Style::new()
+    .clone()                      // Create style copy
+    .fg(color)                    // Set foreground color
+    .bg(color)                    // Set background color
+    .add_modifier(modifier)       // Add style modifier
+    .remove_modifier(modifier)    // Remove style modifier
+```
+
+### Rect Methods
+
+```rust,ignore
+Rect::new(x, y, width, height)
+    .clone()                      // Create rect copy
+    .clamp(rect)                  // Clamp to bounds
+    .inner(margin)                // Create inner rect
+    .intersection(rect)           // Find intersection
+    .union(rect)                  // Find union
+    .offset(offset)               // Apply offset
+```
+
+### CellFilter Methods
+
+```rust,ignore
+CellFilter::Text
+    .clone()                      // Create filter copy
+    .negated()                    // Negate filter logic
+    .into_static()                // Convert to static lifetime
+```
+
+### Advanced Method Chaining Examples
+
+#### Complex Effect Configuration
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+let _effect = dsl.compiler().compile(r#"
+    fx::fade_to_fg(Color::Red, (1000, QuadOut))
+        .with_pattern(
+            RadialPattern::center()
+                .with_transition_width(2.5)
+                .with_center(0.5, 0.5)
+        )
+        .with_filter(
+            CellFilter::AllOf(vec![
+                CellFilter::Text,
+                CellFilter::FgColor(Color::White)
+            ])
+        )
+        .with_color_space(ColorSpace::Hsv)
+"#).expect("Valid effect");
+```
+
+#### Layout Integration
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+let _effect = dsl.compiler().compile(r#"
+    let layout = Layout::horizontal([Percentage(50), Percentage(50)])
+        .spacing(1)
+        .horizontal_margin(2);
+
+    fx::dissolve(500)
+        .with_filter(CellFilter::Layout(layout, 0))
+        .with_pattern(CheckerboardPattern::with_cell_size(3))
+"#).expect("Valid effect");
+```
+
+#### Pattern Combinations
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
+let _effect = dsl.compiler().compile(r#"
+    // Complex pattern chaining with multiple effects
+    fx::parallel(&[
+        fx::fade_to_fg(Color::Blue, (500, QuadOut))
+            .with_pattern(
+                RadialPattern::center()
+                    .with_transition_width(3.0)
+                    .with_center(0.3, 0.7)
+            ),
+        fx::evolve(EvolveSymbolSet::Circles, (800, SineInOut))
+            .with_pattern(
+                DiagonalPattern::top_left_to_bottom_right()
+                    .with_transition_width(2.0)
+            )
+    ])
+"#).expect("Valid effect");
 ```
 
 ## Effects Not Available in DSL
