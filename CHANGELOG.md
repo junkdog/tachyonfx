@@ -31,6 +31,9 @@
   - `fx::fade_from`, `fx::fade_from_fg`,
   - `fx::fade_to`, `fx::fade_to_fg`
 
+### DSL
+- `CellFilter` method chaining: supports `.negated()`, `.into_static()`, and `.clone()` methods in DSL expressions.
+
 ### Changed
 - `FilterProcessor::validator()`: Changed visibility from `pub(crate)` to `pub`.
 - `CellValidator`: Changed visibility from `pub(crate)` to `pub`.

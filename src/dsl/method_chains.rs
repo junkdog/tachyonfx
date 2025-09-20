@@ -6,7 +6,7 @@ use ratatui::{
 use crate::{
     dsl::{environment::DslEnv, expressions::FnCallInfo, Arguments, DslError, EffectDsl},
     fx::IntoTemporaryEffect,
-    Effect,
+    CellFilter, Effect,
 };
 
 /// A trait for types that support method chaining in the tachyonfx DSL.
@@ -49,6 +49,17 @@ where
     }
 
     fn apply_fn(object: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError>;
+}
+
+impl ChainableMethods for CellFilter {
+    fn apply_fn(filter: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => filter.clone(),
+            "negated" => filter.negated(),
+            "into_static" => filter.into_static(),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
 }
 
 impl ChainableMethods for Effect {

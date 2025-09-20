@@ -135,42 +135,37 @@ impl<'dsl> Arguments<'dsl> {
     /// Consumes the next argument and returns a [`Color`].
     pub fn cell_filter(&mut self) -> Result<CellFilter, DslError> {
         match self.next("cell_filter")? {
-            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
                 let filter_type = name.trim_start_matches("CellFilter::");
                 let mut inner_args = Arguments::new(args.into(), self.context, self.vars, span);
 
+                // All and Text are as literals
                 match filter_type {
-                    "Area" => Ok(CellFilter::Area(inner_args.rect()?)),
-                    "RefArea" => Ok(CellFilter::RefArea(inner_args.ref_rect()?)),
-                    "FgColor" => Ok(CellFilter::FgColor(inner_args.color()?)),
-                    "BgColor" => Ok(CellFilter::BgColor(inner_args.color()?)),
-                    "Inner" => Ok(CellFilter::Inner(inner_args.margin()?)),
-                    "Outer" => Ok(CellFilter::Outer(inner_args.margin()?)),
-                    "AllOf" => Ok(CellFilter::AllOf(inner_args.array(Arguments::cell_filter)?)),
-                    "AnyOf" => Ok(CellFilter::AnyOf(inner_args.array(Arguments::cell_filter)?)),
-                    "NoneOf" => Ok(CellFilter::NoneOf(
-                        inner_args.array(Arguments::cell_filter)?,
-                    )),
-                    "Not" => Ok(CellFilter::Not(
-                        inner_args.boxed(Arguments::cell_filter, span)?,
-                    )),
-                    "Static" => Ok(CellFilter::Static(
-                        inner_args.boxed(Arguments::cell_filter, span)?,
-                    )),
-                    "Layout" => Ok(CellFilter::Layout(
-                        inner_args.layout()?,
-                        inner_args.read_u16()?,
-                    )),
-                    "PositionFn" => Ok(CellFilter::PositionFn(inner_args.any_var()?)),
-                    "EvalCell" => Ok(CellFilter::EvalCell(inner_args.any_var()?)),
+                    "Area" => CellFilter::Area(inner_args.rect()?),
+                    "RefArea" => CellFilter::RefArea(inner_args.ref_rect()?),
+                    "FgColor" => CellFilter::FgColor(inner_args.color()?),
+                    "BgColor" => CellFilter::BgColor(inner_args.color()?),
+                    "Inner" => CellFilter::Inner(inner_args.margin()?),
+                    "Outer" => CellFilter::Outer(inner_args.margin()?),
+                    "AllOf" => CellFilter::AllOf(inner_args.array(Arguments::cell_filter)?),
+                    "AnyOf" => CellFilter::AnyOf(inner_args.array(Arguments::cell_filter)?),
+                    "NoneOf" => CellFilter::NoneOf(inner_args.array(Arguments::cell_filter)?),
+                    "Not" => CellFilter::Not(inner_args.boxed(Arguments::cell_filter, span)?),
+                    "Static" => CellFilter::Static(inner_args.boxed(Arguments::cell_filter, span)?),
+                    "Layout" => CellFilter::Layout(inner_args.layout()?, inner_args.read_u16()?),
+                    "PositionFn" => CellFilter::PositionFn(inner_args.any_var()?),
+                    "EvalCell" => CellFilter::EvalCell(inner_args.any_var()?),
                     e => Err(DslError::UnknownCellFilter {
                         name: e.to_compact_string(),
                         location: span,
                     })?,
                 }
+                .fold_fns(self_fns, self.context, self.vars)
             },
-            Expr::Literal(Value::CellFilter(f), _) => Ok(f),
-            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            Expr::Literal(Value::CellFilter(f), _) => Ok(f), // fixme: no self_fns on literals?
+            Expr::Var { name, span, self_fns } => self
+                .bound_var::<CellFilter>(name, span)?
+                .fold_fns(self_fns, self.context, self.vars),
             e => self.expected_type_expr("cell_filter", e),
         }
     }
@@ -1432,5 +1427,19 @@ mod tests {
         // Test Offset struct initialization
         let expected = Offset { x: 5, y: -3 };
         assert_result("Offset { x: 5, y: -3 }", expected, Arguments::offset);
+    }
+
+    #[test]
+    fn test_cell_filter_method_chaining() {
+        // Test CellFilter with method chaining
+        let expected = CellFilter::FgColor(Color::Red)
+            .negated()
+            .into_static();
+
+        let input = r#"CellFilter::FgColor(Color::Red)
+            .negated()
+            .into_static()"#;
+
+        assert_result(input, expected, Arguments::cell_filter);
     }
 }
