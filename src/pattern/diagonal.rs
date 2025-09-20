@@ -1,18 +1,22 @@
+#[cfg(feature = "dsl")]
+use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::layout::{Position, Rect};
 
+#[cfg(feature = "dsl")]
+use crate::dsl::DslFormat;
 use crate::{
     math,
     pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress},
 };
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub struct DiagonalPattern {
     direction: DiagonalDirection,
     transition_width: f32,
 }
 
 /// Direction variants for diagonal sweep patterns.
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub enum DiagonalDirection {
     /// Sweeps diagonally from top-left corner to bottom-right corner
     TopLeftToBottomRight,
@@ -115,5 +119,73 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), DiagonalPattern> {
             diagonal_progress,
             1.0,
         )
+    }
+}
+
+#[cfg(feature = "dsl")]
+impl DslFormat for DiagonalDirection {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            DiagonalDirection::TopLeftToBottomRight => {
+                "DiagonalDirection::TopLeftToBottomRight".to_compact_string()
+            },
+            DiagonalDirection::TopRightToBottomLeft => {
+                "DiagonalDirection::TopRightToBottomLeft".to_compact_string()
+            },
+            DiagonalDirection::BottomLeftToTopRight => {
+                "DiagonalDirection::BottomLeftToTopRight".to_compact_string()
+            },
+            DiagonalDirection::BottomRightToTopLeft => {
+                "DiagonalDirection::BottomRightToTopLeft".to_compact_string()
+            },
+        }
+    }
+}
+
+#[cfg(feature = "dsl")]
+impl DslFormat for DiagonalPattern {
+    fn dsl_format(&self) -> CompactString {
+        if (self.transition_width - 2.0).abs() < f32::EPSILON {
+            // Use named constructor for default transition width
+            match self.direction {
+                DiagonalDirection::TopLeftToBottomRight => {
+                    "DiagonalPattern::top_left_to_bottom_right()".to_compact_string()
+                },
+                DiagonalDirection::TopRightToBottomLeft => {
+                    "DiagonalPattern::top_right_to_bottom_left()".to_compact_string()
+                },
+                DiagonalDirection::BottomLeftToTopRight => {
+                    "DiagonalPattern::bottom_left_to_top_right()".to_compact_string()
+                },
+                DiagonalDirection::BottomRightToTopLeft => {
+                    "DiagonalPattern::bottom_right_to_top_left()".to_compact_string()
+                },
+            }
+        } else {
+            // Use with_transition_width for custom transition width
+            let base = match self.direction {
+                DiagonalDirection::TopLeftToBottomRight => {
+                    "DiagonalPattern::top_left_to_bottom_right()"
+                },
+                DiagonalDirection::TopRightToBottomLeft => {
+                    "DiagonalPattern::top_right_to_bottom_left()"
+                },
+                DiagonalDirection::BottomLeftToTopRight => {
+                    "DiagonalPattern::bottom_left_to_top_right()"
+                },
+                DiagonalDirection::BottomRightToTopLeft => {
+                    "DiagonalPattern::bottom_right_to_top_left()"
+                },
+            };
+            if self.transition_width.fract() == 0.0 {
+                format_compact!(
+                    "{}.with_transition_width({})",
+                    base,
+                    self.transition_width as u32
+                )
+            } else {
+                format_compact!("{}.with_transition_width({})", base, self.transition_width)
+            }
+        }
     }
 }

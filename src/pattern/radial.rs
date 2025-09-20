@@ -1,11 +1,15 @@
+#[cfg(feature = "dsl")]
+use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::layout::{Position, Rect};
 
+#[cfg(feature = "dsl")]
+use crate::dsl::DslFormat;
 use crate::{
     math,
     pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress},
 };
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub struct RadialPattern {
     center_x: f32,
     center_y: f32,
@@ -118,6 +122,27 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), RadialPattern> {
             distance,
             max_radius,
         )
+    }
+}
+
+#[cfg(feature = "dsl")]
+impl DslFormat for RadialPattern {
+    fn dsl_format(&self) -> CompactString {
+        if (self.center_x - 0.5).abs() < f32::EPSILON
+            && (self.center_y - 0.5).abs() < f32::EPSILON
+            && (self.transition_width - 2.0).abs() < f32::EPSILON
+        {
+            "RadialPattern::center()".to_compact_string()
+        } else if (self.transition_width - 2.0).abs() < f32::EPSILON {
+            format_compact!("RadialPattern::new({}, {})", self.center_x, self.center_y)
+        } else {
+            format_compact!(
+                "RadialPattern::with_transition(({}, {}), {})",
+                self.center_x,
+                self.center_y,
+                self.transition_width
+            )
+        }
     }
 }
 

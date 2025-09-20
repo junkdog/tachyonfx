@@ -1,5 +1,9 @@
+#[cfg(feature = "dsl")]
+use compact_str::{CompactString, ToCompactString};
 use ratatui::layout::{Position, Rect};
 
+#[cfg(feature = "dsl")]
+use crate::dsl::DslFormat;
 use crate::{
     pattern::{InstancedPattern, Pattern, PreparedPattern},
     SimpleRng,
@@ -13,7 +17,7 @@ use crate::{
 ///
 /// Unlike structured patterns (checkerboard, radial), coalesce creates truly random
 /// distributions that feel natural and unpredictable.
-#[derive(Clone, Debug, Copy, Default)]
+#[derive(Clone, Debug, Copy, Default, PartialEq)]
 pub struct CoalescePattern {
     rng: SimpleRng,
 }
@@ -61,5 +65,12 @@ impl InstancedPattern for PreparedPattern<(f32, SimpleRng), CoalescePattern> {
 impl From<SimpleRng> for CoalescePattern {
     fn from(rng: SimpleRng) -> Self {
         Self { rng }
+    }
+}
+
+#[cfg(feature = "dsl")]
+impl DslFormat for CoalescePattern {
+    fn dsl_format(&self) -> CompactString {
+        "CoalescePattern::new()".to_compact_string()
     }
 }

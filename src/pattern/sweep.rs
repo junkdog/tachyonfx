@@ -1,12 +1,16 @@
+#[cfg(feature = "dsl")]
+use compact_str::{format_compact, CompactString};
 use ratatui::layout::{Position, Rect};
 
+#[cfg(feature = "dsl")]
+use crate::dsl::DslFormat;
 use crate::{
     fx::sliding_window_alpha::SlidingWindowAlpha,
     pattern::{InstancedPattern, Pattern, PreparedPattern},
     Motion,
 };
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub struct SweepPattern {
     direction: Motion,
     gradient_span: u16,
@@ -66,5 +70,21 @@ impl Pattern for SweepPattern {
 impl InstancedPattern for PreparedPattern<SlidingWindowAlpha, SweepPattern> {
     fn map_alpha(&mut self, pos: Position) -> f32 {
         self.context.alpha(pos)
+    }
+}
+
+#[cfg(feature = "dsl")]
+impl DslFormat for SweepPattern {
+    fn dsl_format(&self) -> CompactString {
+        match self.direction {
+            Motion::LeftToRight => {
+                format_compact!("SweepPattern::left_to_right({})", self.gradient_span)
+            },
+            Motion::RightToLeft => {
+                format_compact!("SweepPattern::right_to_left({})", self.gradient_span)
+            },
+            Motion::UpToDown => format_compact!("SweepPattern::up_to_down({})", self.gradient_span),
+            Motion::DownToUp => format_compact!("SweepPattern::down_to_up({})", self.gradient_span),
+        }
     }
 }

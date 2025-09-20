@@ -21,7 +21,7 @@ use web_time::SystemTime;
 /// let random_float = rng.gen_f32();
 /// println!("u32={} f32={}", random_u32, random_float);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SimpleRng {
     state: u32,
 }

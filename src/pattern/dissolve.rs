@@ -1,5 +1,9 @@
+#[cfg(feature = "dsl")]
+use compact_str::{CompactString, ToCompactString};
 use ratatui::layout::{Position, Rect};
 
+#[cfg(feature = "dsl")]
+use crate::dsl::DslFormat;
 use crate::{
     pattern::{InstancedPattern, Pattern, PreparedPattern},
     SimpleRng,
@@ -14,7 +18,7 @@ use crate::{
 /// Unlike structured patterns (checkerboard, radial), dissolve creates truly random
 /// distributions that feel natural and unpredictable. It's the reverse of coalesce -
 /// where coalesce reveals cells as alpha increases, dissolve hides them.
-#[derive(Clone, Debug, Copy, Default)]
+#[derive(Clone, Debug, Copy, Default, PartialEq)]
 pub struct DissolvePattern {
     rng: SimpleRng,
 }
@@ -63,5 +67,12 @@ impl InstancedPattern for PreparedPattern<(f32, SimpleRng), DissolvePattern> {
 impl From<SimpleRng> for DissolvePattern {
     fn from(rng: SimpleRng) -> Self {
         Self { rng }
+    }
+}
+
+#[cfg(feature = "dsl")]
+impl DslFormat for DissolvePattern {
+    fn dsl_format(&self) -> CompactString {
+        "DissolvePattern::new()".to_compact_string()
     }
 }

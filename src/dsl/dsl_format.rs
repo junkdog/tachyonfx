@@ -113,6 +113,32 @@ impl DslFormat for crate::fx::ExpandDirection {
     }
 }
 
+impl DslFormat for crate::pattern::AnyPattern {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            crate::pattern::AnyPattern::Identity => "AnyPattern::Identity".to_compact_string(),
+            crate::pattern::AnyPattern::Radial(p) => {
+                format_compact!("AnyPattern::Radial({})", p.dsl_format())
+            },
+            crate::pattern::AnyPattern::Diagonal(p) => {
+                format_compact!("AnyPattern::Diagonal({})", p.dsl_format())
+            },
+            crate::pattern::AnyPattern::Checkerboard(p) => {
+                format_compact!("AnyPattern::Checkerboard({})", p.dsl_format())
+            },
+            crate::pattern::AnyPattern::Sweep(p) => {
+                format_compact!("AnyPattern::Sweep({})", p.dsl_format())
+            },
+            crate::pattern::AnyPattern::Coalesce(p) => {
+                format_compact!("AnyPattern::Coalesce({})", p.dsl_format())
+            },
+            crate::pattern::AnyPattern::Dissolve(p) => {
+                format_compact!("AnyPattern::Dissolve({})", p.dsl_format())
+            },
+        }
+    }
+}
+
 impl DslFormat for Style {
     fn dsl_format(&self) -> CompactString {
         let mut methods = CompactString::new("");
@@ -651,5 +677,81 @@ mod tests {
 
         assert_eq!(Direction::Horizontal.dsl_format(), "Direction::Horizontal");
         assert_eq!(Direction::Vertical.dsl_format(), "Direction::Vertical");
+    }
+
+    #[cfg(feature = "dsl")]
+    #[test]
+    fn test_pattern_dsl_format() {
+        use crate::pattern::*;
+
+        // Test RadialPattern
+        assert_eq!(
+            RadialPattern::center().dsl_format(),
+            "RadialPattern::center()"
+        );
+        assert_eq!(
+            RadialPattern::new(0.3, 0.7).dsl_format(),
+            "RadialPattern::new(0.3, 0.7)"
+        );
+        assert_eq!(
+            RadialPattern::with_transition((0.2, 0.8), 3.5).dsl_format(),
+            "RadialPattern::with_transition((0.2, 0.8), 3.5)"
+        );
+
+        // Test DiagonalPattern
+        assert_eq!(
+            DiagonalPattern::top_left_to_bottom_right().dsl_format(),
+            "DiagonalPattern::top_left_to_bottom_right()"
+        );
+        assert_eq!(
+            DiagonalPattern::top_left_to_bottom_right()
+                .with_transition_width(4.0)
+                .dsl_format(),
+            "DiagonalPattern::top_left_to_bottom_right().with_transition_width(4)"
+        );
+
+        // Test CheckerboardPattern
+        assert_eq!(
+            CheckerboardPattern::default().dsl_format(),
+            "CheckerboardPattern::default()"
+        );
+        assert_eq!(
+            CheckerboardPattern::with_cell_size(3).dsl_format(),
+            "CheckerboardPattern::with_cell_size(3)"
+        );
+        assert_eq!(
+            CheckerboardPattern::new(4, 1.5).dsl_format(),
+            "CheckerboardPattern::new(4, 1.5)"
+        );
+
+        // Test SweepPattern
+        assert_eq!(
+            SweepPattern::left_to_right(5).dsl_format(),
+            "SweepPattern::left_to_right(5)"
+        );
+        assert_eq!(
+            SweepPattern::right_to_left(3).dsl_format(),
+            "SweepPattern::right_to_left(3)"
+        );
+        assert_eq!(
+            SweepPattern::up_to_down(7).dsl_format(),
+            "SweepPattern::up_to_down(7)"
+        );
+        assert_eq!(
+            SweepPattern::down_to_up(2).dsl_format(),
+            "SweepPattern::down_to_up(2)"
+        );
+
+        // Test CoalescePattern
+        assert_eq!(
+            CoalescePattern::new().dsl_format(),
+            "CoalescePattern::new()"
+        );
+
+        // Test DissolvePattern
+        assert_eq!(
+            DissolvePattern::new().dsl_format(),
+            "DissolvePattern::new()"
+        );
     }
 }

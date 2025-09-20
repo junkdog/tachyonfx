@@ -1,8 +1,12 @@
+#[cfg(feature = "dsl")]
+use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::layout::{Position, Rect};
 
+#[cfg(feature = "dsl")]
+use crate::dsl::DslFormat;
 use crate::pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress};
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub struct CheckerboardPattern {
     cell_size: u16,
     transition_width: f32,
@@ -82,6 +86,23 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), CheckerboardPattern> {
 
         TransitionProgress::from(pattern.transition_width)
             .map_threshold(global_alpha, cell_threshold)
+    }
+}
+
+#[cfg(feature = "dsl")]
+impl DslFormat for CheckerboardPattern {
+    fn dsl_format(&self) -> CompactString {
+        if self.cell_size == 2 && (self.transition_width - 2.0).abs() < f32::EPSILON {
+            "CheckerboardPattern::default()".to_compact_string()
+        } else if (self.transition_width - 2.0).abs() < f32::EPSILON {
+            format_compact!("CheckerboardPattern::with_cell_size({})", self.cell_size)
+        } else {
+            format_compact!(
+                "CheckerboardPattern::new({}, {})",
+                self.cell_size,
+                self.transition_width
+            )
+        }
     }
 }
 

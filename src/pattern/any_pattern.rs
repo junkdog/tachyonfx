@@ -12,7 +12,7 @@ use crate::{
 /// An enum that can hold any concrete pattern type.
 /// This allows shaders to store patterns without knowing their concrete types at compile
 /// time.
-#[derive(Clone, Debug, Copy, Default)]
+#[derive(Clone, Debug, Copy, Default, PartialEq)]
 pub enum AnyPattern {
     #[default]
     Identity, // Returns global alpha unchanged - allows single code path for all effects
