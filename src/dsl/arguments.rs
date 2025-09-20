@@ -22,6 +22,7 @@ use crate::{
         DslError,
     },
     fx::RepeatMode,
+    pattern::AnyPattern,
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
 };
 
@@ -493,6 +494,85 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    pub fn pattern(&mut self) -> Result<AnyPattern, DslError> {
+        use crate::pattern::*;
+        match self.next("pattern")? {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
+                let pattern = match name.as_str() {
+                    "CheckerboardPattern::default" => {
+                        AnyPattern::from(CheckerboardPattern::default())
+                    },
+                    "CheckerboardPattern::with_cell_size" => {
+                        let cell_size = self.extract_nested(args, Arguments::read_u16, span)?;
+                        AnyPattern::from(CheckerboardPattern::with_cell_size(cell_size))
+                    },
+
+                    "CoalescePattern::new" | "CoalescePattern::default" => {
+                        AnyPattern::from(CoalescePattern::default())
+                    },
+
+                    "DiagonalPattern::top_left_to_bottom_right" => {
+                        AnyPattern::from(DiagonalPattern::top_left_to_bottom_right())
+                    },
+                    "DiagonalPattern::top_right_to_bottom_left" => {
+                        AnyPattern::from(DiagonalPattern::top_right_to_bottom_left())
+                    },
+                    "DiagonalPattern::bottom_left_to_top_right" => {
+                        AnyPattern::from(DiagonalPattern::bottom_left_to_top_right())
+                    },
+                    "DiagonalPattern::bottom_right_to_top_left" => {
+                        AnyPattern::from(DiagonalPattern::bottom_right_to_top_left())
+                    },
+
+                    "DissolvePattern::new" | "DissolvePattern::default" => {
+                        AnyPattern::from(DissolvePattern::default())
+                    },
+
+                    "RadialPattern::center" => AnyPattern::from(RadialPattern::center()),
+                    "RadialPattern::new" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let center_x = inner_args.read_f32()?;
+                        let center_y = inner_args.read_f32()?;
+                        AnyPattern::from(RadialPattern::new(center_x, center_y))
+                    },
+                    "RadialPattern::with_transition" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let center_xy =
+                            inner_args.tuple_2(Arguments::read_f32, Arguments::read_f32)?;
+                        let transition_width = inner_args.read_f32()?;
+                        AnyPattern::from(RadialPattern::with_transition(
+                            center_xy,
+                            transition_width,
+                        ))
+                    },
+
+                    "SweepPattern::left_to_right" => {
+                        let width = self.extract_nested(args, Arguments::read_u16, span)?;
+                        AnyPattern::from(SweepPattern::left_to_right(width))
+                    },
+                    "SweepPattern::right_to_left" => {
+                        let width = self.extract_nested(args, Arguments::read_u16, span)?;
+                        AnyPattern::from(SweepPattern::right_to_left(width))
+                    },
+                    "SweepPattern::up_to_down" => {
+                        let width = self.extract_nested(args, Arguments::read_u16, span)?;
+                        AnyPattern::from(SweepPattern::up_to_down(width))
+                    },
+                    "SweepPattern::down_to_up" => {
+                        let width = self.extract_nested(args, Arguments::read_u16, span)?;
+                        AnyPattern::from(SweepPattern::down_to_up(width))
+                    },
+
+                    _ => self.expected_type("pattern", name, span)?,
+                };
+
+                // Handle method chaining for patterns
+                pattern.fold_fns(self_fns, self.context, self.vars)
+            },
+            e => self.expected_type_expr("pattern", e),
+        }
+    }
+
     /// Consumes the next argument and returns a [`Margin`].
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
@@ -587,6 +667,28 @@ impl<'dsl> Arguments<'dsl> {
             },
             Expr::Var { name, span, .. } => self.bound_var(name, span),
             e => self.expected_type_expr("offset", e),
+        }
+    }
+
+    fn tuple_2<A, B>(
+        &mut self,
+        inner_a: impl Fn(&mut Self) -> Result<A, DslError>,
+        inner_b: impl Fn(&mut Self) -> Result<B, DslError>,
+    ) -> Result<(A, B), DslError>
+    where
+        A: Clone + FromDslExpr + 'static,
+        B: Clone + FromDslExpr + 'static,
+    {
+        match self.next("tuple_2")? {
+            Expr::Tuple(exprs, span) => {
+                let mut args = self.nested_args(exprs, 2, span)?;
+                let a = inner_a(&mut args)?;
+                let b = inner_b(&mut args)?;
+                Ok((a, b))
+            },
+
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("tuple_2", e),
         }
     }
 
@@ -943,6 +1045,16 @@ impl<const N: usize> FromDslExpr for [f32; N] {
             arr.copy_from_slice(&v);
             arr
         })
+    }
+}
+
+impl<A, B> FromDslExpr for (A, B)
+where
+    A: Clone + FromDslExpr + 'static,
+    B: Clone + FromDslExpr + 'static,
+{
+    fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        args.tuple_2(A::from_expr, B::from_expr)
     }
 }
 
@@ -1441,5 +1553,90 @@ mod tests {
             .into_static()"#;
 
         assert_result(input, expected, Arguments::cell_filter);
+    }
+
+    #[test]
+    fn test_pattern_method_chaining() {
+        use crate::pattern::{
+            AnyPattern, CheckerboardPattern, DiagonalPattern, RadialPattern, SweepPattern,
+        };
+
+        // RadialPattern method chaining
+        let expected = AnyPattern::Radial(RadialPattern::center().with_transition_width(3.5));
+        assert_result(
+            "RadialPattern::center().with_transition_width(3.5)",
+            expected,
+            Arguments::pattern,
+        );
+
+        let expected = AnyPattern::Radial(RadialPattern::center().with_center((0.3, 0.7)));
+        assert_result(
+            "RadialPattern::center().with_center(0.3, 0.7)",
+            expected,
+            Arguments::pattern,
+        );
+
+        let expected = AnyPattern::Radial(
+            RadialPattern::center()
+                .with_center((0.2, 0.8))
+                .with_transition_width(2.0),
+        );
+        assert_result(
+            "RadialPattern::center().with_center(0.2, 0.8).with_transition_width(2.0)",
+            expected,
+            Arguments::pattern,
+        );
+
+        // CheckerboardPattern method chaining
+        let expected = AnyPattern::Checkerboard(
+            CheckerboardPattern::with_cell_size(2).with_transition_width(1.5),
+        );
+        assert_result(
+            "CheckerboardPattern::with_cell_size(2).with_transition_width(1.5)",
+            expected,
+            Arguments::pattern,
+        );
+
+        // DiagonalPattern method chaining
+        let expected = AnyPattern::Diagonal(
+            DiagonalPattern::top_left_to_bottom_right().with_transition_width(4.0),
+        );
+        assert_result(
+            "DiagonalPattern::top_left_to_bottom_right().with_transition_width(4.0)",
+            expected,
+            Arguments::pattern,
+        );
+
+        // CoalescePattern method chaining (clone only) - test that it compiles and returns a
+        // Coalesce variant
+        let result = {
+            let dsl = Box::leak(Box::new(EffectDsl::new()));
+            let env = Box::leak(Box::new(DslEnv::new()));
+            let args = parse_expr("CoalescePattern::new().clone()");
+            let mut args = Arguments::new([args].into(), dsl, env, ExprSpan::default());
+            args.pattern()
+                .expect("CoalescePattern with clone should work")
+        };
+        assert!(matches!(result, AnyPattern::Coalesce(_)));
+
+        // DissolvePattern method chaining (clone only) - test that it compiles and returns a
+        // Dissolve variant
+        let result = {
+            let dsl = Box::leak(Box::new(EffectDsl::new()));
+            let env = Box::leak(Box::new(DslEnv::new()));
+            let args = parse_expr("DissolvePattern::new().clone()");
+            let mut args = Arguments::new([args].into(), dsl, env, ExprSpan::default());
+            args.pattern()
+                .expect("DissolvePattern with clone should work")
+        };
+        assert!(matches!(result, AnyPattern::Dissolve(_)));
+
+        // SweepPattern method chaining (clone only)
+        let expected = AnyPattern::Sweep(SweepPattern::left_to_right(5));
+        assert_result(
+            "SweepPattern::left_to_right(5).clone()",
+            expected,
+            Arguments::pattern,
+        );
     }
 }

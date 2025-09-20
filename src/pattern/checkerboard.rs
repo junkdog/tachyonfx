@@ -32,8 +32,7 @@ impl CheckerboardPattern {
     /// * `cell_size` - Size of each checkerboard cell in terminal cells (automatically
     ///   clamped to minimum 1)
     pub fn with_cell_size(cell_size: u16) -> Self {
-        Self { cell_size: cell_size.max(1), transition_width: 2.0 } // Default to 2
-                                                                    // terminal cells
+        Self { cell_size: cell_size.max(1), transition_width: 2.0 }
     }
 
     /// Sets the transition width for gradient smoothing between cells.

@@ -747,6 +747,37 @@ mod tests {
     }
 
     #[test]
+    fn test_pattern_method_chaining_with_dissolve() {
+        use crate::pattern::RadialPattern;
+
+        let expected = fx::dissolve(EffectTimer::from_ms(1000, Linear))
+            .with_pattern(RadialPattern::center().with_transition_width(3.5));
+
+        let input = r#"fx::dissolve(1000)
+            .with_pattern(RadialPattern::center().with_transition_width(3.5))"#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        // Handle random number generator state differences like other tests
+        let regex = Regex::new("SimpleRng \\{\\s*state: \\d+,?\\s*\\}").unwrap();
+        let sanitized = |t| {
+            let debugged = format!("{t:#?}");
+            regex
+                .replace_all(&debugged, "SimpleRng")
+                .to_string()
+        };
+
+        assert_eq!(effect.name(), "dissolve");
+        assert_eq!(
+            format!("{:?}", sanitized(expected)),
+            format!("{:?}", sanitized(effect)),
+        );
+    }
+
+    #[test]
     fn happy_path_with_let_binding() {
         let motion = Motion::LeftToRight;
         let c = Color::from_u32(0x1d2021);
@@ -831,6 +862,30 @@ mod tests {
 
         assert_eq!("fade_to", effect.name());
         assert_eq!(format!("{expected:?}"), format!("{effect:?}"));
+    }
+
+    #[test]
+    fn test_effect_with_pattern_chaining() {
+        use crate::pattern::CheckerboardPattern;
+
+        let pattern = CheckerboardPattern::with_cell_size(2).with_transition_width(1.5);
+        let expected = fx::fade_to_fg(Color::Green, EffectTimer::from_ms(800, QuadOut))
+            .with_pattern(pattern)
+            .with_filter(CellFilter::Text);
+
+        let input = r#"
+            fx::fade_to_fg(Color::Green, (800, QuadOut))
+                .with_pattern(CheckerboardPattern::with_cell_size(2).with_transition_width(1.5))
+                .with_filter(CellFilter::Text)
+        "#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        assert_eq!("fade_to", effect.name());
+        assert_eq!(format!("{expected:#?}"), format!("{effect:#?}"));
     }
 
     #[test]
