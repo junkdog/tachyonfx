@@ -41,6 +41,7 @@
 
 ### Fixed
 - no_std compatibility: removed `simple-easing` crate dependency.
+- no_std compatibility: removed implicit std math function usage with feature-gated implementations.
 - Fixed `Interpolation::CubicOut` and `Interpolation::CubicInOut` incorrectly calling circular easing functions.
 - Fixed `Interpolation::QuintIn` to use correct mathematical formula.
 
