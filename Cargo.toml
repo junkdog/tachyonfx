@@ -37,7 +37,6 @@ anpa = { version = "0.10.0", optional = true }
 bon = { workspace = true }
 compact_str = { workspace = true }
 ratatui = { workspace = true }
-simple-easing = "1.0.1"
 thiserror = { version = "2.0.15", default-features = false, features = [] }
 unicode-width = "0.2.0"
 web-time = { version = "1.1.0", optional = true }

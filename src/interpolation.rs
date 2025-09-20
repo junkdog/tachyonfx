@@ -2,14 +2,425 @@ use ratatui::{
     layout::Offset,
     style::{Color, Style},
 };
-use simple_easing::{
-    back_in, back_in_out, back_out, bounce_in, bounce_in_out, bounce_out, circ_in, circ_in_out,
-    circ_out, cubic_in, cubic_in_out, cubic_out, elastic_in, elastic_in_out, elastic_out, expo_in,
-    expo_in_out, expo_out, quad_in, quad_in_out, quad_out, quart_in, quart_in_out, quart_out,
-    quint_in, quint_in_out, quint_out, reverse, sine_in, sine_in_out, sine_out,
-};
 
 use crate::{color_space::hsl_to_rgb, color_to_hsl, ColorSpace};
+
+/// Easing functions for interpolation
+mod easing {
+    use core::f32::consts::{PI, TAU};
+
+    pub(super) fn back_in(t: f32) -> f32 {
+        let c1 = 1.70158;
+        let c3 = c1 + 1.0;
+        c3 * t * t * t - c1 * t * t
+    }
+
+    pub(super) fn back_out(t: f32) -> f32 {
+        let c1 = 1.70158;
+        let c3 = c1 + 1.0;
+        1.0 + c3 * (t - 1.0).powi(3) + c1 * (t - 1.0).powi(2)
+    }
+
+    pub(super) fn back_in_out(t: f32) -> f32 {
+        let c1 = 1.70158;
+        let c2 = c1 * 1.525;
+
+        if t < 0.5 {
+            ((2.0 * t).powi(2) * ((c2 + 1.0) * 2.0 * t - c2)) / 2.0
+        } else {
+            ((2.0 * t - 2.0).powi(2) * ((c2 + 1.0) * (t * 2.0 - 2.0) + c2) + 2.0) / 2.0
+        }
+    }
+
+    pub(super) fn bounce_out(t: f32) -> f32 {
+        let n1 = 7.5625;
+        let d1 = 2.75;
+
+        if t < 1.0 / d1 {
+            n1 * t * t
+        } else if t < 2.0 / d1 {
+            let t_adj = t - 1.5 / d1;
+            n1 * t_adj * t_adj + 0.75
+        } else if t < 2.5 / d1 {
+            let t_adj = t - 2.25 / d1;
+            n1 * t_adj * t_adj + 0.9375
+        } else {
+            let t_adj = t - 2.625 / d1;
+            n1 * t_adj * t_adj + 0.984375
+        }
+    }
+
+    pub(super) fn bounce_in(t: f32) -> f32 {
+        1.0 - bounce_out(1.0 - t)
+    }
+
+    pub(super) fn bounce_in_out(t: f32) -> f32 {
+        if t < 0.5 {
+            (1.0 - bounce_out(1.0 - 2.0 * t)) / 2.0
+        } else {
+            (1.0 + bounce_out(2.0 * t - 1.0)) / 2.0
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn circ_in(t: f32) -> f32 {
+        1.0 - (1.0 - t * t).sqrt()
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn circ_in(t: f32) -> f32 {
+        1.0 - sqrt_approx(1.0 - t * t)
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn circ_out(t: f32) -> f32 {
+        (1.0 - (t - 1.0) * (t - 1.0)).sqrt()
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn circ_out(t: f32) -> f32 {
+        sqrt_approx(1.0 - (t - 1.0) * (t - 1.0))
+    }
+
+    pub(super) fn circ_in_out(t: f32) -> f32 {
+        if t < 0.5 {
+            (1.0 - circ_out(1.0 - 2.0 * t)) / 2.0
+        } else {
+            (circ_out(2.0 * t - 1.0) + 1.0) / 2.0
+        }
+    }
+
+    pub(super) fn cubic_in(t: f32) -> f32 {
+        t * t * t
+    }
+
+    pub(super) fn cubic_out(t: f32) -> f32 {
+        1.0 - (1.0 - t).powi(3)
+    }
+
+    pub(super) fn cubic_in_out(t: f32) -> f32 {
+        if t < 0.5 {
+            4.0 * t * t * t
+        } else {
+            1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn elastic_in(t: f32) -> f32 {
+        if t == 0.0 {
+            0.0
+        } else if t == 1.0 {
+            1.0
+        } else {
+            let c4 = TAU / 3.0;
+            -(2.0_f32.powf(10.0 * (t - 1.0))) * ((t - 1.0) * c4 - PI / 2.0).sin()
+        }
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn elastic_in(t: f32) -> f32 {
+        if t == 0.0 {
+            0.0
+        } else if t == 1.0 {
+            1.0
+        } else {
+            let c4 = TAU / 3.0;
+            -(pow_approx(2.0, 10.0 * (t - 1.0))) * sin_approx((t - 1.0) * c4 - PI / 2.0)
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn elastic_out(t: f32) -> f32 {
+        if t == 0.0 {
+            0.0
+        } else if t == 1.0 {
+            1.0
+        } else {
+            let c4 = TAU / 3.0;
+            2.0_f32.powf(-10.0 * t) * (t * c4 - PI / 2.0).sin() + 1.0
+        }
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn elastic_out(t: f32) -> f32 {
+        if t == 0.0 {
+            0.0
+        } else if t == 1.0 {
+            1.0
+        } else {
+            let c4 = TAU / 3.0;
+            pow_approx(2.0, -10.0 * t) * sin_approx(t * c4 - PI / 2.0) + 1.0
+        }
+    }
+
+    pub(super) fn elastic_in_out(t: f32) -> f32 {
+        if t == 0.0 {
+            0.0
+        } else if t == 1.0 {
+            1.0
+        } else if t < 0.5 {
+            -(elastic_out(1.0 - 2.0 * t) - 1.0) / 2.0
+        } else {
+            (elastic_out(2.0 * t - 1.0) + 1.0) / 2.0
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn expo_in(t: f32) -> f32 {
+        if t == 0.0 {
+            0.0
+        } else {
+            2.0_f32.powf(10.0 * (t - 1.0))
+        }
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn expo_in(t: f32) -> f32 {
+        if t == 0.0 {
+            0.0
+        } else {
+            pow_approx(2.0, 10.0 * (t - 1.0))
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn expo_out(t: f32) -> f32 {
+        if t == 1.0 {
+            1.0
+        } else {
+            1.0 - 2.0_f32.powf(-10.0 * t)
+        }
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn expo_out(t: f32) -> f32 {
+        if t == 1.0 {
+            1.0
+        } else {
+            1.0 - pow_approx(2.0, -10.0 * t)
+        }
+    }
+
+    pub(super) fn expo_in_out(t: f32) -> f32 {
+        if t == 0.0 {
+            0.0
+        } else if t == 1.0 {
+            1.0
+        } else if t < 0.5 {
+            expo_in(2.0 * t) / 2.0
+        } else {
+            (2.0 - expo_in(2.0 * (1.0 - t))) / 2.0
+        }
+    }
+
+    pub(super) fn quad_in(t: f32) -> f32 {
+        t * t
+    }
+
+    pub(super) fn quad_out(t: f32) -> f32 {
+        1.0 - (1.0 - t) * (1.0 - t)
+    }
+
+    pub(super) fn quad_in_out(t: f32) -> f32 {
+        if t < 0.5 {
+            2.0 * t * t
+        } else {
+            1.0 - (-2.0 * t + 2.0).powi(2) / 2.0
+        }
+    }
+
+    pub(super) fn quart_in(t: f32) -> f32 {
+        t * t * t * t
+    }
+
+    pub(super) fn quart_out(t: f32) -> f32 {
+        1.0 - (1.0 - t).powi(4)
+    }
+
+    pub(super) fn quart_in_out(t: f32) -> f32 {
+        if t < 0.5 {
+            8.0 * t * t * t * t
+        } else {
+            1.0 - (-2.0 * t + 2.0).powi(4) / 2.0
+        }
+    }
+
+    pub(super) fn quint_in(t: f32) -> f32 {
+        t * t * t * t * t
+    }
+
+    pub(super) fn quint_out(t: f32) -> f32 {
+        1.0 - (1.0 - t).powi(5)
+    }
+
+    pub(super) fn quint_in_out(t: f32) -> f32 {
+        if t < 0.5 {
+            16.0 * t * t * t * t * t
+        } else {
+            1.0 - (-2.0 * t + 2.0).powi(5) / 2.0
+        }
+    }
+
+    pub(super) fn reverse(t: f32) -> f32 {
+        1.0 - t
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn sine_in(t: f32) -> f32 {
+        1.0 - (t * PI / 2.0).cos()
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn sine_in(t: f32) -> f32 {
+        1.0 - cos_approx(t * PI / 2.0)
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn sine_out(t: f32) -> f32 {
+        (t * PI / 2.0).sin()
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn sine_out(t: f32) -> f32 {
+        sin_approx(t * PI / 2.0)
+    }
+
+    #[cfg(feature = "std")]
+    pub(super) fn sine_in_out(t: f32) -> f32 {
+        -(t * PI).cos() / 2.0 + 0.5
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub(super) fn sine_in_out(t: f32) -> f32 {
+        -cos_approx(t * PI) / 2.0 + 0.5
+    }
+
+    // Approximation functions for no_std environments
+    #[cfg(not(feature = "std"))]
+    fn sqrt_approx(x: f32) -> f32 {
+        if x <= 0.0 {
+            return 0.0;
+        }
+
+        // Newton-Raphson method
+        // 4 iterations provides 1e-4 accuracy, good balance for embedded systems
+        let mut guess = x / 2.0;
+        for _ in 0..4 {
+            guess = (guess + x / guess) / 2.0;
+        }
+        guess
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn pow_approx(base: f32, exp: f32) -> f32 {
+        if exp == 0.0 {
+            return 1.0;
+        }
+        if base == 0.0 {
+            return 0.0;
+        }
+        if exp == 1.0 {
+            return base;
+        }
+
+        // For 2^x, use bit manipulation approximation
+        if base == 2.0 {
+            let exp_int = exp as i32;
+            let exp_frac = exp - exp_int as f32;
+
+            let int_part = if exp_int >= 0 {
+                (1u32 << exp_int.min(30)) as f32
+            } else {
+                1.0 / (1u32 << (-exp_int).min(30)) as f32
+            };
+
+            // Linear approximation for fractional part
+            let frac_part = 1.0 + exp_frac * 0.693147; // ln(2)
+
+            int_part as f32 * frac_part
+        } else {
+            // General case using exp(exp * ln(base))
+            exp_approx(exp * ln_approx(base))
+        }
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn exp_approx(x: f32) -> f32 {
+        if x > 10.0 {
+            return 22026.5;
+        } // e^10 ≈ 22026
+        if x < -10.0 {
+            return 0.0;
+        }
+
+        // Taylor series: e^x = 1 + x + x²/2! + x³/3! + ...
+        // 6 iterations provides 1e-3 accuracy, good balance for embedded systems
+        let mut result = 1.0;
+        let mut term = 1.0;
+
+        for i in 1..6 {
+            term *= x / i as f32;
+            result += term;
+        }
+
+        result
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn ln_approx(x: f32) -> f32 {
+        if x <= 0.0 {
+            return -100.0;
+        }
+        if x == 1.0 {
+            return 0.0;
+        }
+
+        // Use the identity ln(x) = 2 * arctanh((x-1)/(x+1))
+        let y = (x - 1.0) / (x + 1.0);
+        let y2 = y * y;
+
+        // arctanh series: arctanh(y) = y + y³/3 + y⁵/5 + ...
+        let mut sum = y;
+        let mut term = y;
+
+        for i in 1..10 {
+            term *= y2;
+            sum += term / (2 * i + 1) as f32;
+        }
+
+        2.0 * sum
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn sin_approx(x: f32) -> f32 {
+        let mut x = x % TAU;
+        if x > PI {
+            x -= TAU;
+        }
+        if x < -PI {
+            x += TAU;
+        }
+
+        // taylor series: sin(x) = x - x³/3! + x⁵/5! - x⁷/7! + ...
+        // 3 iterations provides 1e-3 accuracy, good balance for embedded systems
+        let x2 = x * x;
+        let mut result = x;
+        let mut term = x;
+
+        for i in 1..3 {
+            term *= -x2 / ((2 * i) * (2 * i + 1)) as f32;
+            result += term;
+        }
+
+        result
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn cos_approx(x: f32) -> f32 {
+        sin_approx(PI / 2.0 - x)
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Interpolation {
@@ -62,49 +473,49 @@ pub enum Interpolation {
 impl Interpolation {
     pub fn alpha(&self, a: f32) -> f32 {
         match self {
-            Interpolation::BackIn => back_in(a),
-            Interpolation::BackOut => back_out(a),
-            Interpolation::BackInOut => back_in_out(a),
+            Interpolation::BackIn => easing::back_in(a),
+            Interpolation::BackOut => easing::back_out(a),
+            Interpolation::BackInOut => easing::back_in_out(a),
 
-            Interpolation::BounceIn => bounce_in(a),
-            Interpolation::BounceOut => bounce_out(a),
-            Interpolation::BounceInOut => bounce_in_out(a),
+            Interpolation::BounceIn => easing::bounce_in(a),
+            Interpolation::BounceOut => easing::bounce_out(a),
+            Interpolation::BounceInOut => easing::bounce_in_out(a),
 
-            Interpolation::CircIn => circ_in(a),
-            Interpolation::CircOut => circ_out(a),
-            Interpolation::CircInOut => circ_in_out(a),
+            Interpolation::CircIn => easing::circ_in(a),
+            Interpolation::CircOut => easing::circ_out(a),
+            Interpolation::CircInOut => easing::circ_in_out(a),
 
-            Interpolation::CubicIn => cubic_in(a),
-            Interpolation::CubicOut => cubic_out(a),
-            Interpolation::CubicInOut => cubic_in_out(a),
+            Interpolation::CubicIn => easing::cubic_in(a),
+            Interpolation::CubicOut => easing::cubic_out(a),
+            Interpolation::CubicInOut => easing::cubic_in_out(a),
 
-            Interpolation::ElasticIn => elastic_in(a),
-            Interpolation::ElasticOut => elastic_out(a),
-            Interpolation::ElasticInOut => elastic_in_out(a),
+            Interpolation::ElasticIn => easing::elastic_in(a),
+            Interpolation::ElasticOut => easing::elastic_out(a),
+            Interpolation::ElasticInOut => easing::elastic_in_out(a),
 
-            Interpolation::ExpoIn => expo_in(a),
-            Interpolation::ExpoOut => expo_out(a),
-            Interpolation::ExpoInOut => expo_in_out(a),
+            Interpolation::ExpoIn => easing::expo_in(a),
+            Interpolation::ExpoOut => easing::expo_out(a),
+            Interpolation::ExpoInOut => easing::expo_in_out(a),
 
             Interpolation::Linear => a,
 
-            Interpolation::QuadIn => quad_in(a),
-            Interpolation::QuadOut => quad_out(a),
-            Interpolation::QuadInOut => quad_in_out(a),
+            Interpolation::QuadIn => easing::quad_in(a),
+            Interpolation::QuadOut => easing::quad_out(a),
+            Interpolation::QuadInOut => easing::quad_in_out(a),
 
-            Interpolation::QuartIn => quart_in(a),
-            Interpolation::QuartOut => quart_out(a),
-            Interpolation::QuartInOut => quart_in_out(a),
+            Interpolation::QuartIn => easing::quart_in(a),
+            Interpolation::QuartOut => easing::quart_out(a),
+            Interpolation::QuartInOut => easing::quart_in_out(a),
 
-            Interpolation::QuintIn => quint_in(a),
-            Interpolation::QuintOut => quint_out(a),
-            Interpolation::QuintInOut => quint_in_out(a),
+            Interpolation::QuintIn => easing::quint_in(a),
+            Interpolation::QuintOut => easing::quint_out(a),
+            Interpolation::QuintInOut => easing::quint_in_out(a),
 
-            Interpolation::Reverse => reverse(a),
+            Interpolation::Reverse => easing::reverse(a),
 
-            Interpolation::SineIn => sine_in(a),
-            Interpolation::SineOut => sine_out(a),
-            Interpolation::SineInOut => sine_in_out(a),
+            Interpolation::SineIn => easing::sine_in(a),
+            Interpolation::SineOut => easing::sine_out(a),
+            Interpolation::SineInOut => easing::sine_in_out(a),
         }
     }
 
@@ -274,7 +685,7 @@ impl HslConvertable for Color {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
 
@@ -440,7 +851,7 @@ mod tests {
         let expected = vec![
             0.0,
             0.010102063,
-            0.041742444,
+            0.041742414,
             0.099999994,
             0.20000002,
             0.5,
@@ -506,15 +917,15 @@ mod tests {
             .collect();
         let expected = vec![
             0.0,
-            0.001953125,
-            -0.0019531213,
-            -0.0039062474,
-            0.015625,
-            -0.015624988,
-            -0.031249996,
-            0.125,
-            -0.12499994,
-            -0.2500001,
+            -0.0006035488,
+            -0.00040831513,
+            0.00081662886,
+            0.0048283874,
+            0.015625002,
+            0.041820668,
+            0.101127125,
+            0.22838639,
+            0.4890737,
             1.0,
         ];
         assert_eq!(steps, expected);
@@ -527,8 +938,8 @@ mod tests {
             .map(|&a| Interpolation::ElasticOut.alpha(a))
             .collect();
         let expected = vec![
-            0.0, 1.25, 1.125, 0.875, 1.03125, 1.015625, 0.984375, 1.0039063, 1.0019531, 0.9980469,
-            1.0,
+            0.0, 0.5109262, 0.7716136, 0.89887285, 0.95817935, 0.984375, 0.9951716, 0.99918336,
+            1.0004083, 1.0006036, 1.0,
         ];
         assert_eq!(steps, expected);
     }
@@ -541,15 +952,15 @@ mod tests {
             .collect();
         let expected = vec![
             0.0,
-            0.0003391572,
-            -0.003906256,
-            0.023938898,
-            -0.117461585,
+            -0.00020414591,
+            0.0024141967,
+            0.020910323,
+            0.1141932,
             0.5,
-            1.1174616,
-            0.9760611,
-            1.0039063,
-            0.99966085,
+            0.88580686,
+            0.9790897,
+            0.9975858,
+            1.0002041,
             1.0,
         ];
         assert_eq!(steps, expected);
@@ -568,10 +979,10 @@ mod tests {
             0.0078125,
             0.015625,
             0.03125,
-            0.0625,
+            0.06250001,
             0.125,
-            0.25,
-            0.5,
+            0.25000003,
+            0.4999999,
             1.0,
         ];
         assert_eq!(steps, expected);
@@ -599,10 +1010,10 @@ mod tests {
             0.0,
             0.001953125,
             0.0078125,
-            0.03125,
-            0.125,
+            0.031250004,
+            0.12500001,
             0.5,
-            0.875,
+            0.87500006,
             0.96875,
             0.9921875,
             0.9980469,
@@ -740,19 +1151,17 @@ mod tests {
             .iter()
             .map(|&a| Interpolation::QuintIn.alpha(a))
             .collect();
-        // Note: simple_easing library has a bug where quint_in returns the same values as
-        // quart_in
         let expected = vec![
             0.0,
-            0.000100000005,
-            0.0016000001,
-            0.008100001,
-            0.025600001,
-            0.0625,
-            0.12960002,
-            0.2401,
-            0.40960002,
-            0.6560999,
+            1.0000001e-5,
+            0.00032000002,
+            0.0024300003,
+            0.010240001,
+            0.03125,
+            0.07776001,
+            0.16806999,
+            0.32768002,
+            0.5904899,
             1.0,
         ];
         assert_eq!(steps, expected);

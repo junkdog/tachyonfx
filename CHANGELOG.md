@@ -40,7 +40,12 @@
 - `FilterProcessor::predicate()`: Deprecated in favor of `validator()` method which provides better performance.
 
 ### Fixed
-- Fixed `Interpolation::CubicOut` and `Interpolation::CubicInOut` incorrectly calling circular easing functions instead of cubic easing functions.
+- no_std compatibility: removed `simple-easing` crate dependency.
+- Fixed `Interpolation::CubicOut` and `Interpolation::CubicInOut` incorrectly calling circular easing functions.
+- Fixed `Interpolation::QuintIn` to use correct mathematical formula.
+
+### Removed
+- `simple-easing` dependency: replaced with internal easing implementations for better no_std compatibility.
 
 
 ## tachyonfx 0.18.0 - 2025-09-07
