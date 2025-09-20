@@ -92,5 +92,12 @@ echo "=================="
 run_step "Format code (nightly)" cargo +nightly fmt --check
 
 echo ""
+echo "📚 Documentation Validation"
+echo "==========================="
+run_step "Doc build (std features)" cargo doc --no-deps --features="std,crossterm,dsl"
+run_step "Doc build with warnings as errors" cargo doc --no-deps --features="std,crossterm,dsl" -- -D warnings
+run_step "Doc build (no-std)" cargo doc --no-deps --no-default-features
+
+echo ""
 echo "🎉 All build and test steps completed successfully!"
-echo "   Pipeline matches GitHub Actions workflow + additional clippy checks + formatting"
+echo "   Pipeline matches GitHub Actions workflow + additional clippy checks + formatting + doc validation"
