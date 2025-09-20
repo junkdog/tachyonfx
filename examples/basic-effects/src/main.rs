@@ -21,7 +21,7 @@ use ratatui::{
 use tachyonfx::{
     CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, IntoEffect,
     Motion, SimpleRng, color_from_hsl,
-    fx::{self, ExpandDirection, Glitch, never_complete, parallel, sequence, sleep},
+    fx::{self, ExpandDirection, Glitch, never_complete, parallel, sequence},
 };
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;

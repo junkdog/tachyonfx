@@ -47,6 +47,7 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
         .or_else(|| interpolation(text))
         .or_else(|| color(text))
         .or_else(|| repeat_mode(text))
+        .or_else(|| evolve_symbol_set(text))
         .or_else(|| none(text))
         .map(|v| Expr::Literal(v, *span))
 }
@@ -198,6 +199,22 @@ fn repeat_mode(text: &str) -> Option<Value> {
     matches!(text.trim_start_matches("RepeatMode::"), "Forever")
         .then(|| RepeatMode::Forever)
         .map(Value::RepeatMode)
+}
+
+fn evolve_symbol_set(text: &str) -> Option<Value> {
+    use crate::fx::EvolveSymbolSet::*;
+    Some(Value::EvolveSymbolSet(
+        match text.trim_start_matches("EvolveSymbolSet::") {
+            "BlocksHorizontal" => BlocksHorizontal,
+            "BlocksVertical" => BlocksVertical,
+            "CircleFill" => CircleFill,
+            "Circles" => Circles,
+            "Quadrants" => Quadrants,
+            "Shaded" => Shaded,
+            "Squares" => Squares,
+            _ => None?,
+        },
+    ))
 }
 
 fn none(text: &str) -> Option<Value> {

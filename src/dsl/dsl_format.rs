@@ -4,7 +4,10 @@ use ratatui::{
     style::{Color, Modifier, Style},
 };
 
-use crate::{fx::RepeatMode, CellFilter, ColorSpace, Duration, EffectTimer, Interpolation, Motion};
+use crate::{
+    fx::{EvolveSymbolSet, RepeatMode},
+    CellFilter, ColorSpace, Duration, EffectTimer, Interpolation, Motion,
+};
 
 /// A trait for converting types into their DSL (Domain Specific Language) string
 /// representation.
@@ -108,6 +111,21 @@ impl DslFormat for crate::fx::ExpandDirection {
         match self {
             crate::fx::ExpandDirection::Horizontal => "ExpandDirection::Horizontal",
             crate::fx::ExpandDirection::Vertical => "ExpandDirection::Vertical",
+        }
+        .to_compact_string()
+    }
+}
+
+impl DslFormat for EvolveSymbolSet {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            EvolveSymbolSet::BlocksHorizontal => "EvolveSymbolSet::BlocksHorizontal",
+            EvolveSymbolSet::BlocksVertical => "EvolveSymbolSet::BlocksVertical",
+            EvolveSymbolSet::CircleFill => "EvolveSymbolSet::CircleFill",
+            EvolveSymbolSet::Circles => "EvolveSymbolSet::Circles",
+            EvolveSymbolSet::Quadrants => "EvolveSymbolSet::Quadrants",
+            EvolveSymbolSet::Shaded => "EvolveSymbolSet::Shaded",
+            EvolveSymbolSet::Squares => "EvolveSymbolSet::Squares",
         }
         .to_compact_string()
     }

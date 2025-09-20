@@ -326,6 +326,9 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("delay", compilers::delay)
         .register("dissolve", |args| dissolve(args.effect_timer()?).into())
         .register("dissolve_to", compilers::dissolve_to)
+        .register("evolve", compilers::evolve)
+        .register("evolve_into", compilers::evolve_into)
+        .register("evolve_from", compilers::evolve_from)
         .register("expand", compilers::expand)
         .register("explode", compilers::explode)
         .register("fade_from", compilers::fade_from)
@@ -372,7 +375,7 @@ impl From<Effect> for Result<Effect, DslError> {
 
 mod compilers {
     use crate::{
-        dsl::{dsl::Arguments, DslError},
+        dsl::{dsl::Arguments, expressions::Expr, DslError},
         fx, Effect,
     };
 
@@ -382,6 +385,42 @@ mod compilers {
 
     pub(super) fn coalesce_from(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::coalesce_from(args.style()?, args.effect_timer()?).into()
+    }
+
+    pub(super) fn evolve(args: &mut Arguments) -> Result<Effect, DslError> {
+        if let Some(Expr::Tuple(_, _)) = args.peek() {
+            let symbols = args.tuple_2(Arguments::evolve_symbol_set, Arguments::style)?;
+            let timer = args.effect_timer()?;
+            fx::evolve(symbols, timer).into()
+        } else {
+            let symbols = args.evolve_symbol_set()?;
+            let timer = args.effect_timer()?;
+            fx::evolve(symbols, timer).into()
+        }
+    }
+
+    pub(super) fn evolve_into(args: &mut Arguments) -> Result<Effect, DslError> {
+        if let Some(Expr::Tuple(_, _)) = args.peek() {
+            let symbols = args.tuple_2(Arguments::evolve_symbol_set, Arguments::style)?;
+            let timer = args.effect_timer()?;
+            fx::evolve_into(symbols, timer).into()
+        } else {
+            let symbols = args.evolve_symbol_set()?;
+            let timer = args.effect_timer()?;
+            fx::evolve_into(symbols, timer).into()
+        }
+    }
+
+    pub(super) fn evolve_from(args: &mut Arguments) -> Result<Effect, DslError> {
+        if let Some(Expr::Tuple(_, _)) = args.peek() {
+            let symbols = args.tuple_2(Arguments::evolve_symbol_set, Arguments::style)?;
+            let timer = args.effect_timer()?;
+            fx::evolve_from(symbols, timer).into()
+        } else {
+            let symbols = args.evolve_symbol_set()?;
+            let timer = args.effect_timer()?;
+            fx::evolve_from(symbols, timer).into()
+        }
     }
 
     pub(super) fn expand(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -1064,6 +1103,102 @@ mod tests {
                 "expr: {expr} - {err:?}"
             );
         }
+    }
+
+    #[test]
+    fn test_evolve_effects() {
+        use crate::{
+            fx, fx::EvolveSymbolSet, pattern::RadialPattern, EffectTimer, Interpolation::*,
+        };
+
+        // Test fx::evolve with EvolveSymbolSet, style tuple, and pattern chaining
+        let pattern = RadialPattern::center().with_transition_width(2.5);
+        let expected = fx::evolve(
+            (
+                EvolveSymbolSet::Circles,
+                Style::default()
+                    .fg(Color::Red)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            EffectTimer::from_ms(800, QuadOut),
+        )
+        .with_pattern(pattern);
+
+        let input = r#"
+            let symbols = EvolveSymbolSet::Circles;
+            let style = Style::new()
+                .fg(Color::Red)
+                .add_modifier(Modifier::BOLD);
+
+            fx::evolve((symbols, style), (800, QuadOut))
+                .with_pattern(RadialPattern::center().with_transition_width(2.5))
+        "#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        let without_rng_state = |e: Effect| -> String {
+            let regex = Regex::new("SimpleRng \\{ state: \\d+ }").unwrap();
+            let s = format!("{e:?}");
+            regex.replace_all(&s, "SimpleRng").to_string()
+        };
+
+        assert_eq!("evolve", effect.name());
+        assert_eq!(without_rng_state(expected), without_rng_state(effect));
+    }
+
+    #[test]
+    fn test_evolve_from_and_into_effects() {
+        use crate::{
+            fx, fx::EvolveSymbolSet, pattern::DiagonalPattern, EffectTimer, Interpolation::*,
+        };
+
+        // Test fx::evolve_from and fx::evolve_into with patterns
+        let diagonal_pattern =
+            DiagonalPattern::top_left_to_bottom_right().with_transition_width(1.8);
+        let _expected_from = fx::evolve_from(
+            EvolveSymbolSet::BlocksHorizontal,
+            EffectTimer::from_ms(1000, BounceIn),
+        )
+        .with_pattern(diagonal_pattern);
+        let _expected_into = fx::evolve_into(
+            (EvolveSymbolSet::Quadrants, Style::default().bg(Color::Blue)),
+            EffectTimer::from_ms(600, CubicOut),
+        );
+
+        let input = r#"
+            let blocks_symbols = EvolveSymbolSet::BlocksHorizontal;
+            let quadrants_symbols = EvolveSymbolSet::Quadrants;
+            let style = Style::new().bg(Color::Blue);
+
+            let from_effect = fx::evolve_from(blocks_symbols, (1000, BounceIn))
+                .with_pattern(DiagonalPattern::top_left_to_bottom_right().with_transition_width(1.8));
+            let into_effect = fx::evolve_into((quadrants_symbols, style), (600, CubicOut));
+
+            fx::sequence(&[from_effect, into_effect])
+        "#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        let without_rng_state = |e: Effect| -> String {
+            let regex = Regex::new("SimpleRng \\{ state: \\d+ }").unwrap();
+            let s = format!("{e:?}");
+            regex.replace_all(&s, "SimpleRng").to_string()
+        };
+
+        assert_eq!("sequence", effect.name());
+        // Verify the sequence contains our evolve effects with patterns
+        let effect_debug = without_rng_state(effect);
+        assert!(effect_debug.contains("mode: From"));
+        assert!(effect_debug.contains("mode: Into"));
+        assert!(effect_debug.contains("BlocksHorizontal"));
+        assert!(effect_debug.contains("Quadrants"));
+        assert!(effect_debug.contains("DiagonalPattern"));
     }
 
     #[test]

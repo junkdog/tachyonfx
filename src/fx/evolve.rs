@@ -112,7 +112,7 @@ impl From<(EvolveSymbolSet, Style)> for EvolveSymbolConfig {
     }
 }
 
-#[derive(Clone, Debug, Copy, Default)]
+#[derive(Clone, Debug, Copy, Default, PartialEq)]
 pub enum EvolveSymbolSet {
     BlocksHorizontal,
     BlocksVertical,

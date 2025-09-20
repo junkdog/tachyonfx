@@ -21,7 +21,7 @@ use crate::{
         method_chains::ChainableMethods,
         DslError,
     },
-    fx::RepeatMode,
+    fx::{EvolveSymbolSet, RepeatMode},
     pattern::AnyPattern,
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
 };
@@ -475,6 +475,14 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    pub fn evolve_symbol_set(&mut self) -> Result<crate::fx::EvolveSymbolSet, DslError> {
+        match self.next("evolve_symbol_set")? {
+            Expr::Literal(Value::EvolveSymbolSet(s), _) => Ok(s),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("evolve_symbol_set", e),
+        }
+    }
+
     /// Consumes the next argument and returns a [`RepeatMode`].
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
@@ -670,7 +678,7 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    fn tuple_2<A, B>(
+    pub(super) fn tuple_2<A, B>(
         &mut self,
         inner_a: impl Fn(&mut Self) -> Result<A, DslError>,
         inner_b: impl Fn(&mut Self) -> Result<B, DslError>,
@@ -798,7 +806,7 @@ impl<'dsl> Arguments<'dsl> {
             })
     }
 
-    fn peek(&self) -> Option<&Expr> {
+    pub(super) fn peek(&self) -> Option<&Expr> {
         self.args.front()
     }
 
@@ -1045,6 +1053,12 @@ impl<const N: usize> FromDslExpr for [f32; N] {
             arr.copy_from_slice(&v);
             arr
         })
+    }
+}
+
+impl FromDslExpr for EvolveSymbolSet {
+    fn from_expr(args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        args.evolve_symbol_set()
     }
 }
 

@@ -84,6 +84,7 @@ pub(super) enum Value {
     RepeatMode(RepeatMode),
     Interpolation(Interpolation),
     ExpandDirection(crate::fx::ExpandDirection),
+    EvolveSymbolSet(crate::fx::EvolveSymbolSet),
 }
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -191,6 +192,7 @@ impl Value {
             Value::ColorSpace(c) => c.dsl_format(),
             Value::Bool(b) => b.dsl_format(),
             Value::ExpandDirection(d) => d.dsl_format(),
+            Value::EvolveSymbolSet(s) => s.dsl_format(),
         }
     }
 
@@ -211,6 +213,7 @@ impl Value {
             Value::Direction(_) => "direction",
             Value::ColorSpace(_) => "color_space",
             Value::ExpandDirection(_) => "expand_direction",
+            Value::EvolveSymbolSet(_) => "evolve_symbol_set",
         }
     }
 }
