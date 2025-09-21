@@ -5,7 +5,7 @@
 [![interactive-examples](images/tfx-ftl.png)](https://junkdog.github.io/tachyonfx-ftl/?example=evolve_patterned)
 
 _The [documentation][tfx-fx-docs] for most effects now contain links to interactive examples powered by
-[tachyoonfx-ftl][tfx-ftl]_.
+[tachyonfx-ftl][tfx-ftl]_.
 
  [tfx-ftl]: https://junkdog.github.io/tachyonfx-ftl/
  [tfx-fx-docs]: https://docs.rs/tachyonfx/latest/tachyonfx/dsl/index.html
@@ -43,6 +43,7 @@ _The [documentation][tfx-fx-docs] for most effects now contain links to interact
 ### DSL
 - `CellFilter` method chaining: supports `.negated()`, `.into_static()`, and `.clone()` methods in DSL expressions.
 - `fx::translate` effect now available in DSL expressions with full roundtrip support.
+- Documentation revised for conciseness and to reflect current DSL capabilities and limitations.
 
 ### Changed
 - `FilterProcessor::validator()`: Changed visibility from `pub(crate)` to `pub`.
