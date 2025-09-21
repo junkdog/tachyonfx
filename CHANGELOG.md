@@ -30,6 +30,7 @@
   - `fx::hsl_shift`, `fx::hsl_shift_fg`
   - `fx::fade_from`, `fx::fade_from_fg`,
   - `fx::fade_to`, `fx::fade_to_fg`
+- **Interactive Examples**: DSL examples for most effects at <https://junkdog.github.io/tachyonfx-ftl/> and linked from docs.
 
 ### DSL
 - `CellFilter` method chaining: supports `.negated()`, `.into_static()`, and `.clone()` methods in DSL expressions.
