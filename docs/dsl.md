@@ -19,8 +19,10 @@ The tachyonfx Effect DSL serves several use cases:
    recompilation
  - **Live Reloading**: Update effects while your application is running
  - **Serialization**: Convert effects to/from string representations for storage or transmission
- - **Rapid Prototyping**: Experiment with different effect combinations through text editing
+ - **[Rapid Prototyping][ftl]**: Experiment with different effect combinations through text editing
  - **User Customization**: Allow end-users to define their own effects without modifying your codebase
+
+ [ftl]: https://junkdog.github.io/tachyonfx-ftl/
 
 ## Basic Usage
 
