@@ -197,6 +197,34 @@ The DSL provides conveniences for readable code:
 2. **Unqualified Enum Variants**: `CellFilter::Text` can be written as just `Text`
 3. **Timer Shorthand**: `(500, Linear)` instead of `EffectTimer::from_ms(500, Linear)`
 
+## Error Handling
+
+DSL compilation returns `DslParseError` on failure, providing detailed location information:
+
+```rust
+use tachyonfx::dsl::EffectDsl;
+
+let result = EffectDsl::new().compiler().compile("fx::invalid_effect(500)");
+
+match result {
+    Ok(effect) => { /* use effect */ }
+    Err(parse_error) => {
+        eprintln!("Error at line {}:{}: {}",
+            parse_error.start_line(),
+            parse_error.start_column(),
+            parse_error.source
+        );
+        eprintln!("{}", parse_error.context()); // Shows code with error highlighted
+    }
+}
+```
+
+`DslParseError` provides:
+- **Line/column location**: `start_line()`, `start_column()`, `end_line()`, `end_column()`
+- **Error context**: `context()` - surrounding code with error highlighted
+- **Error text**: `error_text()` - the specific problematic text
+- **Underlying cause**: `source` field contains the detailed `DslError`
+
 ## Converting Between Code and DSL
 
 ### From Code to DSL
