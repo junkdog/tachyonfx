@@ -8,16 +8,19 @@ terminal effects. It mirrors regular Rust syntax while focusing specifically on 
 **Key principle**: Valid tachyonfx Effect DSL code is valid Rust code with the appropriate imports. This makes the 
 DSL immediately familiar and enables flexible development workflows.
 
+Note that the DSL is enabled by the `"dsl"` feature. It is part of the default feature set and depends on `"std"`, as
+such it does not work in `no_std` environments.
+
 ## Purpose
 
-The tachyonfx Effect DSL serves several key purposes:
+The tachyonfx Effect DSL serves several use cases:
 
-1. **Runtime Configuration**: Define effects in config files that can be loaded, parsed, and applied without
+ - **Runtime Configuration**: Define effects in config files that can be loaded, parsed, and applied without
    recompilation
-2. **Live Reloading**: Update effects while your application is running
-3. **Serialization**: Convert effects to/from string representations for storage or transmission
-4. **Rapid Prototyping**: Experiment with different effect combinations through text editing
-5. **User Customization**: Allow end-users to define their own effects without modifying your codebase
+ - **Live Reloading**: Update effects while your application is running
+ - **Serialization**: Convert effects to/from string representations for storage or transmission
+ - **Rapid Prototyping**: Experiment with different effect combinations through text editing
+ - **User Customization**: Allow end-users to define their own effects without modifying your codebase
 
 ## Basic Usage
 
