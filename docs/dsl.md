@@ -337,11 +337,11 @@ let organic_effect = dsl.compiler().compile(r#"
 
 #### Available Pattern Factory Methods
 
-**Radial**: `RadialPattern::center()`, `RadialPattern::new(x, y)`
-**Diagonal**: `DiagonalPattern::top_left_to_bottom_right()`, `top_right_to_bottom_left()`, `bottom_left_to_top_right()`, `bottom_right_to_top_left()`
-**Checkerboard**: `CheckerboardPattern::default()`, `CheckerboardPattern::with_cell_size(size)`
-**Sweep**: `SweepPattern::left_to_right(width)`, `right_to_left(width)`, `up_to_down(width)`, `down_to_up(width)`
-**Organic**: `CoalescePattern::new()`, `DissolvePattern::new()`
+- **Radial**: `RadialPattern::center()`, `RadialPattern::new(x, y)`
+- **Diagonal**: `DiagonalPattern::top_left_to_bottom_right()`, `top_right_to_bottom_left()`, `bottom_left_to_top_right()`, `bottom_right_to_top_left()`
+- **Checkerboard**: `CheckerboardPattern::default()`, `CheckerboardPattern::with_cell_size(size)`
+- **Sweep**: `SweepPattern::left_to_right(width)`, `right_to_left(width)`, `up_to_down(width)`, `down_to_up(width)`
+- **Organic**: `CoalescePattern::new()`, `DissolvePattern::new()`
 
 #### Pattern Method Chaining
 
@@ -575,13 +575,9 @@ The Effect DSL supports all the types and methods needed to create tachyonfx eff
 
 ### Basic Types
 
-In the Effect DSL, these types work exactly like their Rust counterparts:
+In the Effect DSL, these types work like their Rust counterparts:
 
-```rust
-use tachyonfx::Duration;
-use ratatui::style::Color;
-use tachyonfx::ColorSpace;
-
+```rust,ignore
 // Numbers
 let n1 = 42;        // u32
 let n2 = -5;        // i32
@@ -607,10 +603,7 @@ let s = "hello world";
 
 The Effect DSL support all tachyonfx effect-related types:
 
-```rust
-use ratatui::style::Color;
-use tachyonfx::{Duration, EffectTimer, Interpolation, Interpolation::QuadOut, fx::RepeatMode, Motion, ColorSpace};
-
+```rust,ignore
 // EffectTimer (with shorthand syntax)
 let t1 = EffectTimer::from_ms(500, Interpolation::Linear);
 let t2 = (500, QuadOut);  // Shorthand for EffectTimer
@@ -639,9 +632,7 @@ let cs3 = ColorSpace::Hsv;   // HSV interpolation
 
 ratatui layout types work the same in the Effect DSL:
 
-```rust
-use ratatui::prelude::{Constraint, Margin, Layout, Rect};
-
+```rust,ignore
 // Rect
 let rect = Rect::new(0, 0, 10, 10);
 let inner = rect.inner(Margin::new(1, 1));
@@ -660,10 +651,7 @@ let margin = Margin::new(1, 1);
 
 All CellFilter variants are supported in the Effect DSL:
 
-```rust
-use tachyonfx::{CellFilter, Duration};
-use ratatui::prelude::{Color, Margin};
-
+```rust,ignore
 // Basic filters
 let f1 = CellFilter::Text;
 let f2 = CellFilter::All;
@@ -682,9 +670,7 @@ let f9 = CellFilter::Not(Box::new(CellFilter::Text));
 
 Style and Modifier types are fully supported:
 
-```rust
-use ratatui::style::{Style, Color, Modifier};
-
+```rust,ignore
 // Style
 let style = Style::new()
     .fg(Color::Red)
@@ -804,7 +790,7 @@ impl Shader for PulseShader {
         // Use DslFormat trait to get the DSL representation of color and duration
         let expr = format!("fx::pulse({}, {})",
             self.color.dsl_format(),
-            self.timer.duration().as_millis()
+            self.timer.dsl_format(),
         );
 
         // Parse the string into an EffectExpression
@@ -858,7 +844,7 @@ The DSL supports method chaining for all major types, allowing you to configure 
 
 All effects support these common methods:
 
-````rust,ignore
+```rust,ignore
 // Basic methods
 effect.clone()                          // Create effect copy
 effect.reversed()                       // Reverse effect direction
@@ -915,7 +901,7 @@ Layout::horizontal([Percentage(50), Percentage(50)])
 
 ### Style Methods
 
-```rust,ignore`
+```rust,ignore
 Style::new()
     .clone()                      // Create style copy
     .fg(color)                    // Set foreground color
