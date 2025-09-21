@@ -14,12 +14,12 @@ A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. B
 
 ## ✨ Features
 
-- **30+ unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
+- **40+ unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
 - **Spatial patterns** — control effect timing and distribution with radial, diagonal, checkerboard, and organic patterns
 - **Effect composition** — chain and combine effects for sophisticated animations
+- **Cell-precise targeting** — apply effects to specific regions or cells matching custom criteria
 - **Interactive browser editor** — design and preview effects in real-time with [TachyonFX FTL][tfx-ftl]
 - **Runtime effect compilation** — create effects from strings using the built-in DSL
-- **Cell-precise targeting** — apply effects to specific regions or cells matching custom criteria
 
 ## 🚀 Quick Start
 
@@ -180,26 +180,37 @@ let effect = EffectDsl::new()
 ### Color Effects
 Transform colors over time for smooth transitions.
 
-- `fade_from` / `fade_to` — Transition colors  
+- `fade_from` / `fade_to` — Transition colors
 - `fade_from_fg` / `fade_to_fg` — Foreground color transitions
-- `hsl_shift` — Animate through HSL color space
+- `hsl_shift` / `hsl_shift_fg` — Animate through HSL color space
 - `term256_colors` — Downsample to 256-color mode
 
-### Text & Motion Effects  
+### Text & Motion Effects
 Animate text and cell positions for dynamic content.
 
-- `coalesce` / `dissolve` — Text materialization effects
-- `slide_in` / `slide_out` — Directional sliding animations  
+- `coalesce` / `coalesce_from` — Text materialization effects
+- `dissolve` / `dissolve_to` — Text dissolution effects
+- `evolve` / `evolve_into` / `evolve_from` — Character evolution through symbol sets
+- `slide_in` / `slide_out` — Directional sliding animations
 - `sweep_in` / `sweep_out` — Color sweep transitions
 - `explode` — Particle dispersion effect
+- `expand` — Bidirectional expansion from center
+- `stretch` — Unidirectional stretching with block characters
 
 ### Control Effects
 Fine-tune timing and behavior.
 
 - `parallel` — Run multiple effects simultaneously
 - `sequence` — Chain effects one after another
-- `repeat` — Loop effects with optional limits
+- `repeat` / `repeating` — Loop effects with optional limits or indefinitely
 - `ping_pong` — Play forward then reverse
+- `delay` / `sleep` — Add pauses before or during effects
+- `prolong_start` / `prolong_end` — Extend effect duration
+- `freeze_at` — Freeze effect at specific transition point
+- `remap_alpha` — Remap effect progress to smaller range
+- `run_once` — Ensure effect runs exactly once
+- `never_complete` / `timed_never_complete` — Run indefinitely (with optional time limit)
+- `consume_tick` — Minimal single-frame delay
 - `with_duration` — Override effect duration
 
 ### Spatial Patterns
