@@ -34,6 +34,7 @@
 
 ### DSL
 - `CellFilter` method chaining: supports `.negated()`, `.into_static()`, and `.clone()` methods in DSL expressions.
+- `fx::translate` effect now available in DSL expressions with full roundtrip support.
 
 ### Changed
 - `FilterProcessor::validator()`: Changed visibility from `pub(crate)` to `pub`.
@@ -42,6 +43,7 @@
 
 ### Deprecated
 - `FilterProcessor::predicate()`: Deprecated in favor of `validator()` method which provides better performance.
+- `fx::resize_area()`: Deprecated due to poor design and functionality issues. No replacement planned.
 
 ### Fixed
 - no_std compatibility: removed `simple-easing` crate dependency.

@@ -1,7 +1,5 @@
 use alloc::boxed::Box;
 
-#[cfg(feature = "dsl")]
-use compact_str::ToCompactString;
 use ratatui::{buffer::Buffer, prelude::Rect};
 
 use crate::{
@@ -129,7 +127,21 @@ impl Shader for Translate {
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-        Err(crate::dsl::DslError::UnsupportedEffect { name: self.name().to_compact_string() })
+        use crate::dsl::{DslFormat, EffectExpression};
+
+        let fx_str = match &self.fx {
+            Some(fx) => format!("Some({})", fx.to_dsl()?),
+            None => "None".to_string(),
+        };
+
+        let (x, y) = self.translate_by;
+        EffectExpression::parse(&format!(
+            "fx::translate({}, ({}, {}), {})",
+            fx_str,
+            x as i16,
+            y as i16,
+            self.timer.dsl_format()
+        ))
     }
 }
 

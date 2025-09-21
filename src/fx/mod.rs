@@ -1093,6 +1093,10 @@ pub fn translate_buf<T: Into<EffectTimer>>(
 ///
 /// This example creates a resizing effect that changes the dimensions of a fade-to-blue
 /// effect's rendering area to 20 by 10 over two seconds.
+#[deprecated(
+    since = "0.19.0",
+    note = "fx::resize_area has poor design and functionality issues. No replacement planned."
+)]
 pub fn resize_area<T: Into<EffectTimer>>(
     fx: Option<Effect>,
     initial_size: Size,
