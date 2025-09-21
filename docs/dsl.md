@@ -5,8 +5,8 @@
 The tachyonfx Effect DSL (Domain Specific Language) provides a text-based way to create, combine, and manipulate
 terminal effects. It mirrors regular Rust syntax while focusing specifically on effect creation and manipulation.
 
-**Key principle**: Valid tachyonfx Effect DSL code is valid Rust code with the appropriate imports. This intentional
-is done to make the DSL immediately familiar and enables flexible development workflows.
+**Key principle**: Valid tachyonfx Effect DSL code is valid Rust code with the appropriate imports. This makes the 
+DSL immediately familiar and enables flexible development workflows.
 
 ## Purpose
 
