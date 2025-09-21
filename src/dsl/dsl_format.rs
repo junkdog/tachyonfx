@@ -68,6 +68,12 @@ impl DslFormat for Rect {
     }
 }
 
+impl DslFormat for ratatui::layout::Size {
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("Size::new({}, {})", self.width, self.height)
+    }
+}
+
 impl DslFormat for ColorSpace {
     fn dsl_format(&self) -> CompactString {
         format_compact!("{:?}", self)

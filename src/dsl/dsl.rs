@@ -356,6 +356,7 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("sweep_out", compilers::sweep_out)
         .register("with_duration", compilers::with_duration)
         .register("timed_never_complete", compilers::timed_never_complete)
+        .register("translate", compilers::translate)
 }
 
 impl EffectCompiler {
@@ -577,6 +578,12 @@ mod compilers {
     pub(super) fn timed_never_complete(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::timed_never_complete(args.duration()?, args.effect()?).into()
     }
+
+    pub(super) fn translate(args: &mut Arguments) -> Result<Effect, DslError> {
+        let fx = args.option(|args| args.effect())?;
+        let (x, y) = args.tuple_2(Arguments::read_i32, Arguments::read_i32)?;
+        fx::translate(fx, (x as i16, y as i16), args.effect_timer()?).into()
+    }
 }
 
 impl fmt::Debug for EffectCompiler {
@@ -686,6 +693,11 @@ mod tests {
             fx::sweep_out(Motion::UpToDown, 10, 5, color, (1000, Linear)),
             fx::term256_colors(),
             fx::timed_never_complete(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
+            fx::translate(
+                Some(fx::fade_to_fg(color, (500, Linear))),
+                (15, -10),
+                (1500, Linear),
+            ),
             fx::with_duration(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
         ]
         .into_iter()
@@ -1270,6 +1282,35 @@ mod tests {
         };
 
         assert_eq!(effect.name(), "fade_to");
+        assert_eq!(
+            format!("{:?}", sanitized(expected)),
+            format!("{:?}", sanitized(effect)),
+        );
+    }
+
+    #[test]
+    fn test_translate_effect() {
+        let expected = fx::translate(
+            Some(fx::dissolve((500, Linear))),
+            (10, -5),
+            EffectTimer::from_ms(1000, Linear),
+        );
+
+        let input = r#"fx::translate(Some(fx::dissolve((500, Linear))), (10, -5), (1000, Linear))"#;
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        // Handle random number generator state differences like other tests
+        let regex = Regex::new("SimpleRng \\{\\s*state: \\d+,?\\s*\\}").unwrap();
+        let sanitized = |t| {
+            let debugged = format!("{t:#?}");
+            regex
+                .replace_all(&debugged, "SimpleRng")
+                .to_string()
+        };
+        assert_eq!(effect.name(), "translate_by");
         assert_eq!(
             format!("{:?}", sanitized(expected)),
             format!("{:?}", sanitized(effect)),
