@@ -82,6 +82,9 @@ let effect = dsl.compiler().compile(r#"
 Combine effects with `fx::sequence()` and `fx::parallel()`:
 
 ```rust
+use tachyonfx::dsl::EffectDsl;
+
+let dsl = EffectDsl::new();
 let effect = dsl.compiler().compile(r#"
     fx::sequence(&[
         fx::dissolve(300),
@@ -230,7 +233,10 @@ match result {
 ### From Code to DSL
 
 ```rust
-let effect = fx::sequence( & [
+use tachyonfx::fx;
+use ratatui::style::Color;
+
+let effect = fx::sequence(&[
     fx::fade_from(Color::Black, Color::Reset, 500),
     fx::dissolve(300)
 ]);
@@ -254,23 +260,23 @@ Register custom effects by providing a compiler function:
 
 ```rust
 use tachyonfx::dsl::{EffectDsl, Arguments, DslError};
-use tachyonfx::{fx, Effect, Shader, ColorSpace};
+use tachyonfx::{fx, Effect};
 use ratatui::style::Color;
 
 let dsl = EffectDsl::new()
     .register("color_pulse", | args: &mut Arguments| {
         let color = args.color()?;
         let duration = args.read_u32()?;
-        
+
         Ok(fx::sequence(&[
             fx::fade_from_fg(color, duration / 2),
             fx::fade_to_fg(color, duration / 2)
-        ])
-});
+        ]))
+    });
 
 // Use the custom effect
 let effect = dsl.compiler().compile(r#"
-    fx::color_pulse(Color::Blue, 1000, Some(Hsv))
+    fx::color_pulse(Color::Blue, 1000)
 "#).expect("Valid effect");
 ```
 

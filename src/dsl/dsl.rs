@@ -1234,4 +1234,45 @@ mod tests {
             "expr: {expr} - {err:?}"
         );
     }
+
+    #[test]
+    fn test_pattern_variable_binding() {
+        use crate::{pattern::RadialPattern, ColorSpace};
+
+        let expected = fx::fade_to_fg(
+            Color::from_u32(0x32302F),
+            EffectTimer::from_ms(1500, QuadOut),
+        )
+        .with_color_space(ColorSpace::Rgb)
+        .with_pattern(RadialPattern::center().with_transition_width(15.0));
+
+        let input = r#"
+            let p = RadialPattern::center()
+                .with_transition_width(15.0);
+
+            fx::fade_to_fg(Color::from_u32(0x32302F), (1500, QuadOut))
+                .with_color_space(ColorSpace::Rgb)
+                .with_pattern(p)
+        "#;
+
+        let effect = EffectDsl::new()
+            .compiler()
+            .compile(input)
+            .expect("effect to be compiled");
+
+        // Handle random number generator state differences like other tests
+        let regex = Regex::new("SimpleRng \\{\\s*state: \\d+,?\\s*\\}").unwrap();
+        let sanitized = |t| {
+            let debugged = format!("{t:#?}");
+            regex
+                .replace_all(&debugged, "SimpleRng")
+                .to_string()
+        };
+
+        assert_eq!(effect.name(), "fade_to");
+        assert_eq!(
+            format!("{:?}", sanitized(expected)),
+            format!("{:?}", sanitized(effect)),
+        );
+    }
 }

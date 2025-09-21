@@ -577,6 +577,10 @@ impl<'dsl> Arguments<'dsl> {
                 // Handle method chaining for patterns
                 pattern.fold_fns(self_fns, self.context, self.vars)
             },
+            Expr::Var { name, span, self_fns } => self
+                .bound_var::<AnyPattern>(name, span)?
+                .fold_fns(self_fns, self.context, self.vars),
+
             e => self.expected_type_expr("pattern", e),
         }
     }
@@ -1118,6 +1122,9 @@ impl_from_args!(crate::fx::ExpandDirection, expand_direction);
 impl_from_args!(RepeatMode, repeat_mode);
 impl_from_args!(CellFilter, cell_filter);
 impl_from_args!(ColorSpace, color_space);
+
+// Pattern types
+impl_from_args!(AnyPattern, pattern);
 
 #[cfg(test)]
 mod tests {
