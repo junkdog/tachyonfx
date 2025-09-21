@@ -41,7 +41,6 @@ impl Shader for FadeColors {
         let fg = self.fg;
         let bg = self.bg;
         let color_space = self.color_space;
-        let is_reversed = self.timer.is_reversed();
 
         let mut pattern = self.pattern.for_frame(global_alpha, area);
         let cell_iter = self.cell_iter(buf, area);
@@ -53,17 +52,15 @@ impl Shader for FadeColors {
             let cache_key = (alpha.clamp(0.0, 1.0) * 255.0) as u8;
 
             if let Some(fg) = fg.as_ref() {
-                let (from, to) = if is_reversed { (fg, &cell.fg) } else { (&cell.fg, fg) };
                 let color = color_cache.memoize_fg(cell.fg, (*fg, cache_key), |_| {
-                    color_space.lerp(from, to, alpha)
+                    color_space.lerp(&cell.fg, fg, alpha)
                 });
                 cell.set_fg(color);
             }
 
             if let Some(bg) = bg.as_ref() {
-                let (from, to) = if is_reversed { (bg, &cell.bg) } else { (&cell.bg, bg) };
                 let color = color_cache.memoize_bg(cell.bg, (*bg, cache_key), |_| {
-                    color_space.lerp(from, to, alpha)
+                    color_space.lerp(&cell.bg, bg, alpha)
                 });
                 cell.set_bg(color);
             }
@@ -175,6 +172,35 @@ mod plain_test {
         assert_ne!(
             right_75_left, right_75_right,
             "Right-to-left at 75% should show gradient"
+        );
+    }
+
+    #[test]
+    fn test_fade_reversal_works_correctly() {
+        let area = Rect::new(0, 0, 1, 1);
+        let mut buf1 = Buffer::empty(area);
+        let mut buf2 = Buffer::empty(area);
+
+        // Set initial color to white
+        buf1[(0, 0)].fg = Color::White;
+        buf2[(0, 0)].fg = Color::White;
+
+        // Test at 25% progress where effects should clearly differ
+        let mut normal_fade = fx::fade_to_fg(Color::Red, 1000);
+        let mut reversed_fade = fx::fade_from_fg(Color::Red, 1000);
+
+        normal_fade.process(Duration::from_millis(250), &mut buf1, area);
+        reversed_fade.process(Duration::from_millis(250), &mut buf2, area);
+
+        let normal_color = buf1[(0, 0)].fg;
+        let reversed_color = buf2[(0, 0)].fg;
+
+        // At 25%:
+        // - fade_to_fg: alpha=0.25, lerp(White, Red, 0.25) = mostly white
+        // - fade_from_fg: alpha=0.75, lerp(White, Red, 0.75) = mostly red
+        assert_ne!(
+            normal_color, reversed_color,
+            "fade_to_fg and fade_from_fg should produce different results"
         );
     }
 
