@@ -2,6 +2,14 @@
 
 ## tachyonfx 0.19.0 - TBD
 
+[![interactive-examples](images/tfx-ftl.png)](https://junkdog.github.io/tachyonfx-ftl/?example=evolve_patterned)
+
+_The [documentation][tfx-fx-docs] for most effects now contain links to interactive examples powered by
+[tachyoonfx-ftl][tfx-ftl]_.
+
+ [tfx-ftl]: https://junkdog.github.io/tachyonfx-ftl/
+ [tfx-fx-docs]: https://docs.rs/tachyonfx/latest/tachyonfx/dsl/index.html
+
 ### Added
 - `fx::evolve`: Creates evolving text effects that transform characters through a series of symbols.
   Combine with `.with_pattern()` for progressive transformation.
