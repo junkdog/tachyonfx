@@ -2,7 +2,7 @@
 
 ## tachyonfx 0.19.0 - TBD
 
-[![interactive-examples](images/tfx-ftl.png)](https://junkdog.github.io/tachyonfx-ftl/?example=evolve_patterned)
+[![interactive-examples](images/tfx-ftl.png)](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned)
 
 _The [documentation][tfx-fx-docs] for most effects now contain links to interactive examples powered by
 [tachyonfx-ftl][tfx-ftl]_.
