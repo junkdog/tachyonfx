@@ -88,7 +88,8 @@ impl Shader for PingPong {
     }
 
     fn reset(&mut self) {
-        // self.fx.reset(); ?
+        // Do NOT reset the wrapped effect - ping_pong needs to preserve the effect's current
+        // state to continue the animation seamlessly when direction reverses
         self.is_reversing = false;
     }
 

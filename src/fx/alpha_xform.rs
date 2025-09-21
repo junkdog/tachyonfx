@@ -211,6 +211,8 @@ impl Shader for RemapAlpha {
     }
 
     fn reset(&mut self) {
+        self.rest = 0.0;
+        self.timer.reset();
         self.fx.reset();
     }
 }

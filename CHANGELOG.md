@@ -48,6 +48,7 @@
 - no_std compatibility: removed implicit std math function usage with feature-gated implementations.
 - Fixed `Interpolation::CubicOut` and `Interpolation::CubicInOut` incorrectly calling circular easing functions.
 - Fixed `Interpolation::QuintIn` to use correct mathematical formula.
+- `fx::remap_alpha`: Fixed incomplete reset implementation that could cause state persistence across effect resets.
 
 ### Removed
 - `simple-easing` dependency: replaced with internal easing implementations for better no_std compatibility.
