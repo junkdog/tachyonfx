@@ -18,8 +18,8 @@ A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. B
 - **Spatial patterns** — control effect timing and distribution with radial, diagonal, checkerboard, and organic patterns
 - **Effect composition** — chain and combine effects for sophisticated animations
 - **Cell-precise targeting** — apply effects to specific regions or cells matching custom criteria
-- **Interactive browser editor** — design and preview effects in real-time with [TachyonFX FTL][tfx-ftl]
-- **Runtime effect compilation** — create effects from strings using the built-in DSL
+- **WebAssembly & no_std support** — run in browsers and embedded environments
+- **Interactive browser editor** — iterate on effects in real-time with [TachyonFX FTL][tfx-ftl] using the built-in DSL
 
 ## 🚀 Quick Start
 
