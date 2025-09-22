@@ -19,6 +19,9 @@
 //! | [`fade_to_fg()`] ⟳    | Fades to specified foreground color    | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/fade_to_fg.gif) |
 //! | [`hsl_shift()`] 🌈    | Changes hue, saturation, and lightness | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/hsl_shift.gif) |
 //! | [`hsl_shift_fg()`] 🌈 | Changes foreground HSL values          | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/hsl_shift_fg.gif) |
+//! | [`paint()`] 🎨        | Paints foreground and/or background    | N/A |
+//! | [`paint_fg()`] 🎨     | Paints foreground color                | N/A |
+//! | [`paint_bg()`] 🎨     | Paints background color                | N/A |
 //!
 //! ## Text/Character Effects ✍️
 //! Text effects modify the actual characters or their placement in the terminal. These
@@ -124,6 +127,7 @@ use crate::{
         fade::FadeColors,
         hsl_shift::HslShift,
         never_complete::NeverComplete,
+        paint::Paint,
         repeat::Repeat,
         resize::ResizeArea,
         run_once::RunOnce,
@@ -150,6 +154,7 @@ mod glitch;
 mod hsl_shift;
 mod never_complete;
 mod offscreen_buffer;
+mod paint;
 mod ping_pong;
 mod prolong;
 mod repeat;
@@ -1320,6 +1325,71 @@ pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effe
 /// Fade in content, excluding borders, from the bg color.
 pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect {
     fade(Some(fg), None, timer.into(), true)
+}
+
+/// Paints the foreground and/or background colors.
+///
+/// This is a static effect that immediately applies the specified colors without any
+/// animation. It's useful for instantly changing the appearance of cells without
+/// transitions.
+///
+/// # Arguments
+/// * `fg` - The foreground color to apply
+/// * `bg` - The background color to apply
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::prelude::Color;
+/// use tachyonfx::*;
+///
+/// fx::paint(Color::Red, Color::Blue, 100);
+/// ```
+pub fn paint<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Effect {
+    Paint::new(Some(fg.into()), Some(bg.into()), timer.into()).into_effect()
+}
+
+/// Paints only the foreground color.
+///
+/// This is a static effect that immediately applies the specified foreground color
+/// without any animation.
+///
+/// # Arguments
+/// * `fg` - The foreground color to apply
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::prelude::Color;
+/// use tachyonfx::*;
+///
+/// fx::paint_fg(Color::Red, 100);
+/// ```
+pub fn paint_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect {
+    Paint::new(Some(fg.into()), None, timer.into()).into_effect()
+}
+
+/// Paints only the background color.
+///
+/// This is a static effect that immediately applies the specified background color
+/// without any animation.
+///
+/// # Arguments
+/// * `bg` - The background color to apply
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Examples
+///
+/// ```no_run
+/// use ratatui::prelude::Color;
+/// use tachyonfx::*;
+///
+/// fx::paint_bg(Color::Blue, 100);
+/// ```
+pub fn paint_bg<T: Into<EffectTimer>, C: Into<Color>>(bg: C, timer: T) -> Effect {
+    Paint::new(None, Some(bg.into()), timer.into()).into_effect()
 }
 
 /// Fades to the specified the background and foreground colors over the specified

@@ -38,12 +38,18 @@ _The [documentation][tfx-fx-docs] for most effects now contain links to interact
   - `fx::hsl_shift`, `fx::hsl_shift_fg`
   - `fx::fade_from`, `fx::fade_from_fg`,
   - `fx::fade_to`, `fx::fade_to_fg`
+  - `fx::paint`, `fx::paint_fg`, `fx::paint_bg`
 - **Interactive Examples**: DSL examples for most effects at <https://junkdog.github.io/tachyonfx-ftl/> and linked from docs.
+- `fx::paint`: Applies color painting effects to foreground and background.
+- `fx::paint_fg`: Paints only the foreground color.
+- `fx::paint_bg`: Paints only the background color.
 
 ### DSL
 - `CellFilter` method chaining: supports `.negated()`, `.into_static()`, and `.clone()` methods in DSL expressions.
 - `fx::translate` effect now available in DSL expressions with full roundtrip support.
-- Documentation revised for conciseness and to reflect current DSL capabilities and limitations.
+- [Documentation][dsl-docs] revised for conciseness and to reflect current DSL capabilities and limitations.
+
+  [dsl-docs]: https://github.com/junkdog/tachyonfx/blob/development/docs/dsl.md
 
 ### Changed
 - `FilterProcessor::validator()`: Changed visibility from `pub(crate)` to `pub`.

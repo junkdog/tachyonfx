@@ -341,6 +341,9 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("never_complete", |args| {
             never_complete(args.effect()?).into()
         })
+        .register("paint", compilers::paint)
+        .register("paint_bg", compilers::paint_bg)
+        .register("paint_fg", compilers::paint_fg)
         .register("ping_pong", |args| ping_pong(args.effect()?).into())
         .register("prolong_end", compilers::prolong_end)
         .register("prolong_start", compilers::prolong_start)
@@ -518,6 +521,18 @@ mod compilers {
         fx::delay(args.effect_timer()?, args.effect()?).into()
     }
 
+    pub(super) fn paint(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::paint(args.color()?, args.color()?, args.effect_timer()?).into()
+    }
+
+    pub(super) fn paint_fg(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::paint_fg(args.color()?, args.effect_timer()?).into()
+    }
+
+    pub(super) fn paint_bg(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::paint_bg(args.color()?, args.effect_timer()?).into()
+    }
+
     pub(super) fn prolong_start(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::prolong_start(args.effect_timer()?, args.effect()?).into()
     }
@@ -674,6 +689,9 @@ mod tests {
             fx::hsl_shift(Some([1.0, 2.0, 3.0]), Some([1.0, 2.0, 3.0]), (1000, Linear)),
             fx::hsl_shift_fg([1.0, 2.0, 3.0], (1000, Linear)),
             fx::never_complete(fx::dissolve((1000, Linear))),
+            fx::paint(color, color, (1000, Linear)),
+            fx::paint_fg(color, (1000, Linear)),
+            fx::paint_bg(color, (1000, Linear)),
             fx::ping_pong(fx::dissolve((1000, Linear))),
             fx::prolong_end((1000, Linear), fx::dissolve((1000, Linear))),
             fx::prolong_start((1000, Linear), fx::dissolve((1000, Linear))),
