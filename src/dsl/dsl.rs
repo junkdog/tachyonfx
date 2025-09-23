@@ -595,9 +595,10 @@ mod compilers {
     }
 
     pub(super) fn translate(args: &mut Arguments) -> Result<Effect, DslError> {
-        let fx = args.option(|args| args.effect())?;
-        let (x, y) = args.tuple_2(Arguments::read_i32, Arguments::read_i32)?;
-        fx::translate(fx, (x as i16, y as i16), args.effect_timer()?).into()
+        let fx = args.effect()?;
+        let offset = args.offset()?;
+
+        fx::translate(fx, offset, args.effect_timer()?).into()
     }
 }
 
@@ -666,6 +667,7 @@ mod tests {
     #[test]
     #[allow(deprecated)]
     fn test_compiler_dsl_roundtrips() {
+        use ratatui::layout::Offset;
         let color = Color::from_u32(0);
 
         [
@@ -712,8 +714,8 @@ mod tests {
             fx::term256_colors(),
             fx::timed_never_complete(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
             fx::translate(
-                Some(fx::fade_to_fg(color, (500, Linear))),
-                (15, -10),
+                fx::fade_to_fg(color, (500, Linear)),
+                Offset { x: 15, y: -10 },
                 (1500, Linear),
             ),
             fx::with_duration(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
@@ -1308,13 +1310,14 @@ mod tests {
 
     #[test]
     fn test_translate_effect() {
+        use ratatui::layout::Offset;
         let expected = fx::translate(
-            Some(fx::dissolve((500, Linear))),
-            (10, -5),
+            fx::dissolve((500, Linear)),
+            Offset { x: 10, y: -5 },
             EffectTimer::from_ms(1000, Linear),
         );
 
-        let input = r#"fx::translate(Some(fx::dissolve((500, Linear))), (10, -5), (1000, Linear))"#;
+        let input = r#"fx::translate(fx::dissolve((500, Linear)), Offset { x: 10, y: -5 }, (1000, Linear))"#;
         let effect = EffectDsl::new()
             .compiler()
             .compile(input)

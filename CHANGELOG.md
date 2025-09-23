@@ -8,7 +8,7 @@ _The [documentation][tfx-fx-docs] for most effects now contain links to interact
 [tachyonfx-ftl][tfx-ftl]_.
 
  [tfx-ftl]: https://junkdog.github.io/tachyonfx-ftl/
- [tfx-fx-docs]: https://docs.rs/tachyonfx/latest/tachyonfx/dsl/index.html
+ [tfx-fx-docs]: https://docs.rs/tachyonfx/latest/tachyonfx/fx/index.html
 
 ### Added
 - `fx::evolve`: Creates evolving text effects that transform characters through a series of symbols.
@@ -43,6 +43,9 @@ _The [documentation][tfx-fx-docs] for most effects now contain links to interact
 - `fx::paint`: Applies color painting effects to foreground and background.
 - `fx::paint_fg`: Paints only the foreground color.
 - `fx::paint_bg`: Paints only the background color.
+
+### Breaking Changes
+- `fx::translate`: Changed from `translate(Option<Effect>, (i16, i16), timer)` to `translate(Effect, Offset, timer)`.
 
 ### DSL
 - `CellFilter` method chaining: supports `.negated()`, `.into_static()`, and `.clone()` methods in DSL expressions.

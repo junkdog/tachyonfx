@@ -1,15 +1,15 @@
 use alloc::boxed::Box;
 
-use ratatui::{buffer::Buffer, prelude::Rect};
+use ratatui::{buffer::Buffer, layout::Offset, prelude::Rect};
 
 use crate::{
     bounding_box::BoundingBox, effect::Effect, effect_timer::EffectTimer,
     interpolation::Interpolatable, shader::Shader, CellFilter, ColorSpace, Duration,
 };
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct Translate {
-    fx: Option<Effect>,
+    fx: Effect,
     area: Option<Rect>,
     original_area: Option<BoundingBox>,
     translate_by: (f32, f32),
@@ -17,14 +17,14 @@ pub struct Translate {
 }
 
 impl Translate {
-    pub fn new(fx: Option<Effect>, translate_by: (i16, i16), lifetime: EffectTimer) -> Self {
-        let (dx, dy) = translate_by;
-        let translate_by = (dx as f32, dy as f32);
+    pub fn new(fx: Effect, translate_by: Offset, lifetime: EffectTimer) -> Self {
+        let translate_by = (translate_by.x as f32, translate_by.y as f32);
         Self {
             fx,
             translate_by,
             timer: lifetime,
-            ..Self::default()
+            area: None,
+            original_area: None,
         }
     }
 }
@@ -51,22 +51,19 @@ impl Shader for Translate {
 
         self.area = translated_area;
 
-        if let Some(fx) = &mut self.fx {
-            let fx_area = translated_area.unwrap_or_default();
-            fx.set_area(fx_area);
-            let hosted_overflow = fx.process(duration, buf, fx_area);
-            // only return the overflow if the fx is done and this translate is done
-            match (overflow, hosted_overflow) {
-                (Some(a), Some(b)) => Some(a.min(b)),
-                _ => None,
-            }
-        } else {
-            overflow
+        let fx_area = translated_area.unwrap_or_default();
+        self.fx.set_area(fx_area);
+        let hosted_overflow = self.fx.process(duration, buf, fx_area);
+
+        // only return the overflow if the fx is done and this translate is done
+        match (overflow, hosted_overflow) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            _ => None,
         }
     }
 
     fn done(&self) -> bool {
-        self.timer.done() && self.fx.as_ref().is_none_or(Effect::done)
+        self.timer.done() && self.fx.done()
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -79,15 +76,11 @@ impl Shader for Translate {
 
     fn set_area(&mut self, area: Rect) {
         self.area = Some(area);
-        if let Some(fx) = &mut self.fx {
-            fx.set_area(area)
-        }
+        self.fx.set_area(area)
     }
 
     fn filter(&mut self, strategy: CellFilter) {
-        if let Some(fx) = &mut self.fx {
-            fx.filter(strategy)
-        }
+        self.fx.filter(strategy)
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
@@ -99,40 +92,27 @@ impl Shader for Translate {
     }
 
     fn cell_filter(&self) -> Option<&CellFilter> {
-        if let Some(fx) = self.fx.as_ref() {
-            return fx.cell_filter();
-        }
-        None
+        self.fx.cell_filter()
     }
 
     fn set_color_space(&mut self, color_space: ColorSpace) {
-        if let Some(fx) = &mut self.fx {
-            fx.set_color_space(color_space);
-        }
+        self.fx.set_color_space(color_space);
     }
 
     fn color_space(&self) -> ColorSpace {
-        self.fx
-            .as_ref()
-            .map(|e| e.color_space())
-            .unwrap_or_default()
+        self.fx.color_space()
     }
 
     fn reset(&mut self) {
         self.timer.reset();
-        if let Some(fx) = &mut self.fx {
-            fx.reset();
-        }
+        self.fx.reset();
     }
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
 
-        let fx_str = match &self.fx {
-            Some(fx) => format!("Some({})", fx.to_dsl()?),
-            None => "None".to_string(),
-        };
+        let fx_str = self.fx.to_dsl()?;
 
         let (x, y) = self.translate_by;
         EffectExpression::parse(&format!(
@@ -152,12 +132,13 @@ mod tests {
     use super::*;
     use crate::{CenteredShrink, Interpolation::Linear};
 
-    fn assert_translation(translate_by: (i16, i16), percent: u8, expected: Buffer) {
+    fn assert_translation(translate_by: Offset, percent: u8, expected: Buffer) {
         assert_translation_fx(translate_fx(translate_by), percent, expected);
     }
 
-    fn translate_fx(translate_by: (i16, i16)) -> Translate {
-        Translate::new(None, translate_by, EffectTimer::from_ms(100, Linear))
+    fn translate_fx(translate_by: Offset) -> Translate {
+        let fx = crate::fx::consume_tick();
+        Translate::new(fx, translate_by, EffectTimer::from_ms(100, Linear))
     }
 
     fn assert_translation_fx(fx: Translate, percent: u8, expected: Buffer) {
@@ -179,7 +160,7 @@ mod tests {
     #[test]
     fn test_translate_within_bounds() {
         assert_translation(
-            (0, 3),
+            Offset { x: 0, y: 3 },
             0,
             Buffer::with_lines([
                 "                    ",
@@ -195,7 +176,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (0, 3),
+            Offset { x: 0, y: 3 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -211,7 +192,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (0, -3),
+            Offset { x: 0, y: -3 },
             100,
             Buffer::with_lines([
                 "     ┌hello───┐     ",
@@ -227,7 +208,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (-5, -3),
+            Offset { x: -5, y: -3 },
             100,
             Buffer::with_lines([
                 "┌hello───┐          ",
@@ -243,7 +224,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (5, 3),
+            Offset { x: 5, y: 3 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -262,7 +243,7 @@ mod tests {
 
     #[test]
     fn translate_reversed() {
-        let mut fx = translate_fx((-5, -3));
+        let mut fx = translate_fx(Offset { x: -5, y: -3 });
         fx.reverse();
         assert_translation_fx(
             fx,
@@ -281,7 +262,7 @@ mod tests {
             ]),
         );
 
-        let mut fx = translate_fx((5, 3));
+        let mut fx = translate_fx(Offset { x: 5, y: 3 });
         fx.reverse();
         assert_translation_fx(
             fx,
@@ -305,7 +286,7 @@ mod tests {
     fn translate_oob() {
         // down
         assert_translation(
-            (0, 5),
+            Offset { x: 0, y: 5 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -321,7 +302,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (0, 6),
+            Offset { x: 0, y: 6 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -337,7 +318,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (0, 7),
+            Offset { x: 0, y: 7 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -355,7 +336,7 @@ mod tests {
 
         // up
         assert_translation(
-            (0, -5),
+            Offset { x: 0, y: -5 },
             100,
             Buffer::with_lines([
                 "     ┌hello───┐     ",
@@ -371,7 +352,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (0, -7),
+            Offset { x: 0, y: -7 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -389,7 +370,7 @@ mod tests {
 
         // right
         assert_translation(
-            (7, 0),
+            Offset { x: 7, y: 0 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -406,7 +387,7 @@ mod tests {
         );
         // right
         assert_translation(
-            (12, 0),
+            Offset { x: 12, y: 0 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -422,7 +403,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (15, 0),
+            Offset { x: 15, y: 0 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -440,7 +421,7 @@ mod tests {
 
         // left
         assert_translation(
-            (-7, 0),
+            Offset { x: -7, y: 0 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -456,7 +437,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (-12, 0),
+            Offset { x: -12, y: 0 },
             100,
             Buffer::with_lines([
                 "                    ",
@@ -472,7 +453,7 @@ mod tests {
             ]),
         );
         assert_translation(
-            (-15, 0),
+            Offset { x: -15, y: 0 },
             100,
             Buffer::with_lines([
                 "                    ",

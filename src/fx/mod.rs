@@ -1015,21 +1015,18 @@ pub fn expand<T: Into<EffectTimer>>(direction: ExpandDirection, style: Style, ti
 /// # Examples
 ///
 /// ```no_run
+/// use ratatui::layout::Offset;
 /// use ratatui::style::Color;
 /// use tachyonfx::*;
 ///
 /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
 /// let effect = fx::fade_to_fg(Color::Red, timer);
-/// fx::translate(Some(effect), (5, 10), timer);
+/// fx::translate(effect, Offset { x: 5, y: 10 }, timer);
 /// ```
 ///
 /// This example creates a translation effect that moves a fade-to-red effect by 5 rows
 /// and 10 columns over one second.
-pub fn translate<T: Into<EffectTimer>>(
-    fx: Option<Effect>,
-    translate_by: (i16, i16),
-    timer: T,
-) -> Effect {
+pub fn translate<T: Into<EffectTimer>>(fx: Effect, translate_by: Offset, timer: T) -> Effect {
     translate::Translate::new(fx, translate_by, timer.into()).into_effect()
 }
 
