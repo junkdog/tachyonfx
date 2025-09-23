@@ -1013,6 +1013,8 @@ pub fn expand<T: Into<EffectTimer>>(direction: ExpandDirection, style: Style, ti
 ///
 /// # Examples
 ///
+/// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=translate>
+///
 /// ```no_run
 /// use ratatui::layout::Offset;
 /// use ratatui::style::Color;
@@ -1336,6 +1338,8 @@ pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Ef
 ///
 /// # Examples
 ///
+/// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=paint>
+///
 /// ```no_run
 /// use ratatui::prelude::Color;
 /// use tachyonfx::*;
@@ -1357,6 +1361,8 @@ pub fn paint<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Ef
 ///
 /// # Examples
 ///
+/// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=paint_fg>
+///
 /// ```no_run
 /// use ratatui::prelude::Color;
 /// use tachyonfx::*;
@@ -1377,6 +1383,8 @@ pub fn paint_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect
 /// * `timer` - Timer controlling the effect duration
 ///
 /// # Examples
+///
+/// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=paint_bg>
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
