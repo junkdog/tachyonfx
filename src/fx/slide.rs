@@ -15,7 +15,7 @@ use crate::{
 
 /// A shader that applies a directional sliding effect to terminal cells.
 #[derive(Builder, Clone, Debug)]
-pub struct SlideCell {
+pub(super) struct SlideCell {
     /// The color behind the sliding cell.
     color_behind_cell: Color,
     /// The direction of the sliding effect.

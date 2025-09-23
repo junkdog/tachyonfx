@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[derive(Builder, Clone, Debug)]
-pub struct FadeColors {
+pub(super) struct FadeColors {
     fg: Option<Color>,
     bg: Option<Color>,
     #[builder(into)]

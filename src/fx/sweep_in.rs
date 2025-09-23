@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct SweepIn {
+pub(super) struct SweepIn {
     gradient_length: u16,
     randomness_extent: u16,
     faded_color: Color,

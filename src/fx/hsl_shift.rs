@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[derive(Builder, Clone, Default, Debug)]
-pub struct HslShift {
+pub(super) struct HslShift {
     #[builder(into)]
     timer: EffectTimer,
     hsl_mod_fg: Option<[f32; 3]>,

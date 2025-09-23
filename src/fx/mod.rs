@@ -99,7 +99,6 @@
 //! Additional effects can be created by implementing the [Shader](crate::Shader) trait.
 
 pub use direction::*;
-pub use dynamic_area::DynamicArea;
 pub use evolve::EvolveSymbolSet;
 pub use expand::ExpandDirection;
 pub use glitch::Glitch;
@@ -1716,7 +1715,7 @@ pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
 /// area_ref.set(Rect::new(0, 0, 30, 8));
 /// ```
 pub fn dynamic_area(area: RefRect, effect: Effect) -> Effect {
-    DynamicArea::new(area, effect).into_effect()
+    dynamic_area::DynamicArea::new(area, effect).into_effect()
 }
 
 /// Creates an effect that dispatches an event as soon as it starts.

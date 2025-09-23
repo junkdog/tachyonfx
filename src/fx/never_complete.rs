@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct NeverComplete {
+pub(super) struct NeverComplete {
     effect: Effect,
 }
 

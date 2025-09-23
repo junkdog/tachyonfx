@@ -16,36 +16,8 @@ use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefRect, Shad
 /// - Dynamic layout updates
 /// - Responsive design adjustments
 /// - Content-driven sizing
-///
-/// # Examples
-///
-/// ```rust
-/// use ratatui::layout::Rect;
-/// use ratatui::prelude::Color;
-/// use tachyonfx::{fx, RefRect, Duration};
-/// use tachyonfx::fx::DynamicArea;
-///
-/// // Create a shared area reference
-/// let area_ref = RefRect::new(Rect::new(0, 0, 20, 5));
-///
-/// // Create an effect that will adapt to area changes
-/// let mut dynamic_effect = DynamicArea::new(
-///     area_ref.clone(),
-///     fx::fade_to(Color::Red, Color::Blue, Duration::from_millis(1000))
-/// );
-///
-/// // Later, if the widget area changes, update the effect area
-/// area_ref.set(Rect::new(0, 0, 30, 8));
-/// // The effect will now use the new area for subsequent processing
-/// ```
-///
-/// # Architecture
-///
-/// `DynamicArea` acts as a wrapper around any `Effect`, delegating most `Shader` trait
-/// methods while overriding area-related functionality to use the dynamic area reference.
-/// Multiple `DynamicArea` instances can share the same area reference using `RefRect`.
 #[derive(Clone, Debug)]
-pub struct DynamicArea {
+pub(super) struct DynamicArea {
     rect: RefRect,
     fx: Effect,
 }

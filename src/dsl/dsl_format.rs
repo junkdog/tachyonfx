@@ -1,6 +1,6 @@
 use compact_str::{format_compact, CompactString, CompactStringExt, ToCompactString};
 use ratatui::{
-    layout::{Constraint, Direction, Margin, Rect},
+    layout::{Constraint, Direction, Margin, Offset, Rect},
     style::{Color, Modifier, Style},
 };
 
@@ -250,6 +250,12 @@ impl DslFormat for EffectTimer {
             self.duration().as_millis(),
             interpolation.dsl_format(),
         )
+    }
+}
+
+impl DslFormat for Offset {
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("Offset {{ x: {}, y: {} }}", self.x, self.y)
     }
 }
 

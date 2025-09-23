@@ -17,7 +17,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Explode {
+pub(super) struct Explode {
     timer: EffectTimer,
     force: f32,
     force_rng_factor: f32,

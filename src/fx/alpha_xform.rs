@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct FreezeAt {
+pub(super) struct FreezeAt {
     alpha: f32,
     set_raw_alpha: bool,
     fx: Effect,
@@ -116,7 +116,7 @@ impl Shader for FreezeAt {
 }
 
 #[derive(Debug, Clone)]
-pub struct RemapAlpha {
+pub(super) struct RemapAlpha {
     raw_alpha_range: Range<f32>,
     fx: Effect,
     timer: EffectTimer, // copy of fx timer but linear interpolation

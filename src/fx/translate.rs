@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct Translate {
+pub(super) struct Translate {
     fx: Effect,
     area: Option<Rect>,
     original_area: Option<BoundingBox>,
@@ -112,14 +112,15 @@ impl Shader for Translate {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
 
-        let fx_str = self.fx.to_dsl()?;
+        let offset = Offset {
+            x: self.translate_by.0 as i32,
+            y: self.translate_by.1 as i32,
+        };
 
-        let (x, y) = self.translate_by;
         EffectExpression::parse(&format!(
-            "fx::translate({}, ({}, {}), {})",
-            fx_str,
-            x as i16,
-            y as i16,
+            "fx::translate({}, {}, {})",
+            self.fx.to_dsl()?,
+            offset.dsl_format(),
             self.timer.dsl_format()
         ))
     }

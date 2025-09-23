@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct Repeat {
+pub(super) struct Repeat {
     fx: Effect,
     mode: RepeatMode,
     original_mode: RepeatMode,

@@ -12,7 +12,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct TemporaryEffect {
+pub(super) struct TemporaryEffect {
     effect: Effect,
     timer: EffectTimer,
 }

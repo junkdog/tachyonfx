@@ -7,7 +7,7 @@ use ratatui::{buffer::Buffer, layout::Rect};
 use crate::{widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, RefCount, Shader};
 
 #[derive(Clone, Debug)]
-pub struct OffscreenBuffer {
+pub(super) struct OffscreenBuffer {
     fx: Effect,
     render_target: RefCount<Buffer>,
 }

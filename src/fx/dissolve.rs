@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Default)]
-pub struct Dissolve {
+pub(super) struct Dissolve {
     timer: EffectTimer,
     dissolved_style: Option<Style>,
     area: Option<Rect>,

@@ -8,13 +8,13 @@ use crate::{
 };
 
 #[derive(Default, Clone, Debug)]
-pub struct SequentialEffect {
+pub(super) struct SequentialEffect {
     effects: Vec<Effect>,
     current: usize,
 }
 
 #[derive(Default, Clone, Debug)]
-pub struct ParallelEffect {
+pub(super) struct ParallelEffect {
     effects: Vec<Effect>,
 }
 

@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct ResizeArea {
+pub(super) struct ResizeArea {
     fx: Option<Effect>,
     area: Option<Rect>,
     original_area: Option<Rect>,

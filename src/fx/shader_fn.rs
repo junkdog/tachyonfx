@@ -12,7 +12,7 @@ use crate::{
 };
 
 #[derive(Builder, Clone)]
-pub struct ShaderFn<S: Clone> {
+pub(super) struct ShaderFn<S: Clone> {
     state: S,
     original_state: Option<S>,
     name: &'static str,

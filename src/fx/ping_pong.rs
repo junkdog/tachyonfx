@@ -5,7 +5,7 @@ use ratatui::{buffer::Buffer, layout::Rect};
 use crate::{widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, EffectTimer, Shader};
 
 #[derive(Clone, Debug)]
-pub struct PingPong {
+pub(super) struct PingPong {
     fx: Effect,
     is_reversing: bool,
     strategy: CellFilter,

@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct Sleep {
+pub(super) struct Sleep {
     timer: EffectTimer,
 }
 

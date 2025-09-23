@@ -8,7 +8,7 @@ use ratatui::{
 use crate::{default_shader_impl, shader::Shader, CellFilter, ColorCache, Duration};
 
 #[derive(Clone, Default, Debug)]
-pub struct Ansi256 {
+pub(super) struct Ansi256 {
     area: Option<Rect>,
 }
 

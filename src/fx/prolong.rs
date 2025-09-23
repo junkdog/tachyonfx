@@ -16,7 +16,7 @@ pub(crate) enum ProlongPosition {
 }
 
 #[derive(Clone, Debug)]
-pub struct Prolong {
+pub(super) struct Prolong {
     inner: Effect,
     timer: EffectTimer,
     position: ProlongPosition,
