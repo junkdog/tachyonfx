@@ -1,6 +1,6 @@
 # Changelog
 
-## tachyonfx 0.19.0 - TBD
+## tachyonfx 0.19.0 - 2025-09-27
 
 [![interactive-examples](images/tfx-ftl.png)](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned)
 
