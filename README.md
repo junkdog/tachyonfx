@@ -6,13 +6,14 @@
 [![Downloads](https://img.shields.io/crates/d/tachyonfx.svg)](https://crates.io/crates/tachyonfx)
 [![Deps.rs](https://deps.rs/repo/github/junkdog/tachyonfx/status.svg)](https://deps.rs/repo/github/junkdog/tachyonfx)
 
-A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. Build complex animations by composing and layering simple effects, bringing smooth transitions and visual polish to the terminal.
+An effects and animation library for [Ratatui][ratatui] applications. Build complex animations by composing and
+layering simple effects, bringing smooth transitions and visual polish to the terminal.
 
 ![demo](images/demo-0.6.0.gif)
 
-**➡️ [Try exabind](https://junkdog.github.io/exabind/) - experience tachyonfx in your browser without installing anything!**
+** [Try exabind](https://junkdog.github.io/exabind/) - experience tachyonfx in your browser without installing anything!**
 
-## ✨ Features
+## Features
 
 - **40+ unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
 - **Spatial patterns** — control effect timing and distribution with radial, diagonal, checkerboard, and organic patterns
@@ -21,7 +22,7 @@ A [ratatui][ratatui] library for creating shader-like effects in terminal UIs. B
 - **WebAssembly & no_std support** — run in browsers and embedded environments
 - **Interactive browser editor** — iterate on effects in real-time with [TachyonFX FTL][tfx-ftl] using the built-in DSL
 
-## 🚀 Quick Start
+## Quick Start
 
 Add tachyonfx to your `Cargo.toml`:
 
@@ -75,7 +76,7 @@ fn main() -> io::Result<()> {
 
 ```
 
-## 📸 Examples
+## Examples
 
 Explore the examples to see effects in action:
 
@@ -99,11 +100,16 @@ cargo run -p effect-showcase
 cargo run -p tweens
 ```
 
-## 🎯 Getting Started
+## Getting Started
 
 ### Try it in your browser
 
-[TachyonFX FTL][tfx-ftl] is a browser-based editor for creating and tweaking effects in real-time.
+![TachyonFX FTL](https://raw.githubusercontent.com/junkdog/tachyonfx/development/images/tfx-ftl.png)
+
+[TachyonFX FTL][tfx-ftl] is a browser-based editor for creating and tweaking effects in real-time, using
+the [Effect DSL][dsl-md] (don't worry, it mimics rust syntax).
+
+ [dsl-md]: https://github.com/junkdog/tachyonfx/blob/development/docs/dsl.md
 
 ### Basic Concepts
 
@@ -114,8 +120,6 @@ cargo run -p tweens
 ### Simple Example: Fade In
 
 ```rust
-use tachyonfx::{fx, Effect, CellFilter};
-
 // Create a fade-in effect
 let mut fade = fx::fade_from(Color::Black, Color::White, 
     EffectTimer::from_ms(500, QuadOut));
@@ -148,8 +152,6 @@ let effects = fx::sequence(&[
 Apply spatial patterns to control how effects spread:
 
 ```rust
-use tachyonfx::pattern::{RadialPattern, DiagonalPattern};
-
 // Radial dissolve from center
 let effect = fx::dissolve(800)
     .with_pattern(RadialPattern::center());
@@ -175,7 +177,9 @@ let effect = EffectDsl::new()
     .expect("valid effect");
 ```
 
-## 📦 Effect Reference
+## Effect Reference
+
+Below is a non-exhaustive list of built-in effects.
 
 ### Color Effects
 Transform colors over time for smooth transitions.
@@ -229,7 +233,7 @@ Transform positions and layout.
 - `resize_area` — Scale effect bounds
 - `translate_buf` — Copy and move buffer content
 
-## 🔧 Advanced Features
+## Advanced Features
 
 ### Cell Filtering
 
@@ -280,7 +284,7 @@ let expr = r#"
 "#;
 ```
 
-## 🛠️ Configuration
+## Configuration
 
 ### Features
 
@@ -292,11 +296,11 @@ let expr = r#"
 - `web-time` — WebAssembly compatibility
 
 
-## 🤝 Contributing
+## Contributing
 
 Contributions welcome! Please check existing issues or create new ones to discuss changes.
 
-## 📝 License
+## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
