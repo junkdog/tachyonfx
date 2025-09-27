@@ -6,77 +6,77 @@
 //! 1. Render your widget to the screen
 //! 2. Apply effects to transform the rendered content
 //!
-//! ## Color Effects 🎨
+//! ## Color Effects
 //! Color effects are used to modify or transition between colors, either for foreground
 //! text, background, or both. These are ideal for highlighting changes, drawing
 //! attention, or creating smooth visual transitions between states.
 //!
 //! | Effect              | Description | Example  |
 //! |---------------------|-------------|----------|
-//! | [`fade_from()`] ⟳     | Fades from specified colors            | [fade_from](https://junkdog.github.io/tachyonfx-ftl/?example=fade_from), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
-//! | [`fade_from_fg()`] ⟳  | Fades from specified foreground color  | [fade_from_fg](https://junkdog.github.io/tachyonfx-ftl/?example=fade_from_fg), [prolong_start](https://junkdog.github.io/tachyonfx-ftl/?example=prolong_start), [parallel](https://junkdog.github.io/tachyonfx-ftl/?example=parallel), [sequence](https://junkdog.github.io/tachyonfx-ftl/?example=sequence) |
-//! | [`fade_to()`] ⟳       | Fades to specified colors              | [fade_to](https://junkdog.github.io/tachyonfx-ftl/?example=fade_to), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned) |
-//! | [`fade_to_fg()`] ⟳    | Fades to specified foreground color    | [fade_to_fg](https://junkdog.github.io/tachyonfx-ftl/?example=fade_to_fg), [prolong_end](https://junkdog.github.io/tachyonfx-ftl/?example=prolong_end), [never_complete](https://junkdog.github.io/tachyonfx-ftl/?example=never_complete), [repeat_times](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_times), [freeze_at](https://junkdog.github.io/tachyonfx-ftl/?example=freeze_at), [remap_alpha](https://junkdog.github.io/tachyonfx-ftl/?example=remap_alpha), [with_duration](https://junkdog.github.io/tachyonfx-ftl/?example=with_duration), [timed_never_complete](https://junkdog.github.io/tachyonfx-ftl/?example=timed_never_complete) |
-//! | [`hsl_shift()`] 🌈    | Changes hue, saturation, and lightness | [hsl_shift](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2) |
-//! | [`hsl_shift_fg()`] 🌈 | Changes foreground HSL values          | [hsl_shift_fg](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_fg), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2), [repeat_forever](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever) |
-//! | [`paint()`] 🎨        | Paints foreground and/or background    | [paint](https://junkdog.github.io/tachyonfx-ftl/?example=paint) |
-//! | [`paint_fg()`] 🎨     | Paints foreground color                | [paint_fg](https://junkdog.github.io/tachyonfx-ftl/?example=paint_fg) |
-//! | [`paint_bg()`] 🎨     | Paints background color                | [paint_bg](https://junkdog.github.io/tachyonfx-ftl/?example=paint_bg), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned) |
+//! | [`fade_from()`]      | Fades from specified colors            | [fade_from](https://junkdog.github.io/tachyonfx-ftl/?example=fade_from), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
+//! | [`fade_from_fg()`]   | Fades from specified foreground color  | [fade_from_fg](https://junkdog.github.io/tachyonfx-ftl/?example=fade_from_fg), [prolong_start](https://junkdog.github.io/tachyonfx-ftl/?example=prolong_start), [parallel](https://junkdog.github.io/tachyonfx-ftl/?example=parallel), [sequence](https://junkdog.github.io/tachyonfx-ftl/?example=sequence) |
+//! | [`fade_to()`]        | Fades to specified colors              | [fade_to](https://junkdog.github.io/tachyonfx-ftl/?example=fade_to), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned) |
+//! | [`fade_to_fg()`]     | Fades to specified foreground color    | [fade_to_fg](https://junkdog.github.io/tachyonfx-ftl/?example=fade_to_fg), [prolong_end](https://junkdog.github.io/tachyonfx-ftl/?example=prolong_end), [never_complete](https://junkdog.github.io/tachyonfx-ftl/?example=never_complete), [repeat_times](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_times), [freeze_at](https://junkdog.github.io/tachyonfx-ftl/?example=freeze_at), [remap_alpha](https://junkdog.github.io/tachyonfx-ftl/?example=remap_alpha), [with_duration](https://junkdog.github.io/tachyonfx-ftl/?example=with_duration), [timed_never_complete](https://junkdog.github.io/tachyonfx-ftl/?example=timed_never_complete) |
+//! | [`hsl_shift()`]     | Changes hue, saturation, and lightness | [hsl_shift](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2) |
+//! | [`hsl_shift_fg()`]  | Changes foreground HSL values          | [hsl_shift_fg](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_fg), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2), [repeat_forever](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever) |
+//! | [`paint()`]         | Paints foreground and/or background    | [paint](https://junkdog.github.io/tachyonfx-ftl/?example=paint) |
+//! | [`paint_fg()`]      | Paints foreground color                | [paint_fg](https://junkdog.github.io/tachyonfx-ftl/?example=paint_fg) |
+//! | [`paint_bg()`]      | Paints background color                | [paint_bg](https://junkdog.github.io/tachyonfx-ftl/?example=paint_bg), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned) |
 //!
-//! ## Text/Character Effects ✍️
+//! ## Text/Character Effects
 //! Text effects modify the actual characters or their placement in the terminal. These
 //! are perfect for transitions, reveals, and dynamic text animations.
 //!
 //! | Effect                 | Description | Example  |
 //! |------------------------|-------------|----------|
-//! | [`coalesce()`] ⬆️      | Reforms dissolved foreground | [coalesce](https://junkdog.github.io/tachyonfx-ftl/?example=coalesce), [ping_pong](https://junkdog.github.io/tachyonfx-ftl/?example=ping_pong), [parallel](https://junkdog.github.io/tachyonfx-ftl/?example=parallel) |
-//! | [`coalesce_from()`] ⬆️ | Reforms dissolved foreground | [coalesce_from](https://junkdog.github.io/tachyonfx-ftl/?example=coalesce_from) |
-//! | [`evolve()`] 🔄        | Transforms characters through symbol sets | [evolve](https://junkdog.github.io/tachyonfx-ftl/?example=evolve), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
-//! | [`evolve_into()`] 🔄   | Evolves into underlying content | [evolve_into](https://junkdog.github.io/tachyonfx-ftl/?example=evolve_into) |
-//! | [`evolve_from()`] 🔄   | Evolves from underlying content | [evolve_from](https://junkdog.github.io/tachyonfx-ftl/?example=evolve_from), [translate](https://junkdog.github.io/tachyonfx-ftl/?example=translate), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
-//! | [`explode()`] 💥       | Explodes content outward     | [explode](https://junkdog.github.io/tachyonfx-ftl/?example=explode), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned) |
-//! | [`dissolve()`] ⬇️      | Dissolves foreground content | [dissolve](https://junkdog.github.io/tachyonfx-ftl/?example=dissolve), [delay](https://junkdog.github.io/tachyonfx-ftl/?example=delay), [sequence](https://junkdog.github.io/tachyonfx-ftl/?example=sequence) |
-//! | [`dissolve_to()`] ⬇️   | Dissolves foreground content | [dissolve_to](https://junkdog.github.io/tachyonfx-ftl/?example=dissolve_to) |
-//! | [`slide_in()`] ↔️      | Slides content with gradient | [slide_in](https://junkdog.github.io/tachyonfx-ftl/?example=slide_in) |
-//! | [`slide_out()`] ↔️     | Slides content with gradient | [slide_out](https://junkdog.github.io/tachyonfx-ftl/?example=slide_out) |
-//! | [`sweep_in()`] ↔️      | Sweeps content with color    | [sweep_in](https://junkdog.github.io/tachyonfx-ftl/?example=sweep_in) |
-//! | [`sweep_out()`] ↔️     | Sweeps content with color    | [sweep_out](https://junkdog.github.io/tachyonfx-ftl/?example=sweep_out) |
+//! | [`coalesce()`]       | Reforms dissolved foreground | [coalesce](https://junkdog.github.io/tachyonfx-ftl/?example=coalesce), [ping_pong](https://junkdog.github.io/tachyonfx-ftl/?example=ping_pong), [parallel](https://junkdog.github.io/tachyonfx-ftl/?example=parallel) |
+//! | [`coalesce_from()`]  | Reforms dissolved foreground | [coalesce_from](https://junkdog.github.io/tachyonfx-ftl/?example=coalesce_from) |
+//! | [`evolve()`]         | Transforms characters through symbol sets | [evolve](https://junkdog.github.io/tachyonfx-ftl/?example=evolve), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
+//! | [`evolve_into()`]    | Evolves into underlying content | [evolve_into](https://junkdog.github.io/tachyonfx-ftl/?example=evolve_into) |
+//! | [`evolve_from()`]    | Evolves from underlying content | [evolve_from](https://junkdog.github.io/tachyonfx-ftl/?example=evolve_from), [translate](https://junkdog.github.io/tachyonfx-ftl/?example=translate), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
+//! | [`explode()`]        | Explodes content outward     | [explode](https://junkdog.github.io/tachyonfx-ftl/?example=explode), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned) |
+//! | [`dissolve()`] ️      | Dissolves foreground content | [dissolve](https://junkdog.github.io/tachyonfx-ftl/?example=dissolve), [delay](https://junkdog.github.io/tachyonfx-ftl/?example=delay), [sequence](https://junkdog.github.io/tachyonfx-ftl/?example=sequence) |
+//! | [`dissolve_to()`] ️   | Dissolves foreground content | [dissolve_to](https://junkdog.github.io/tachyonfx-ftl/?example=dissolve_to) |
+//! | [`slide_in()`]       | Slides content with gradient | [slide_in](https://junkdog.github.io/tachyonfx-ftl/?example=slide_in) |
+//! | [`slide_out()`]      | Slides content with gradient | [slide_out](https://junkdog.github.io/tachyonfx-ftl/?example=slide_out) |
+//! | [`sweep_in()`]       | Sweeps content with color    | [sweep_in](https://junkdog.github.io/tachyonfx-ftl/?example=sweep_in) |
+//! | [`sweep_out()`]      | Sweeps content with color    | [sweep_out](https://junkdog.github.io/tachyonfx-ftl/?example=sweep_out) |
 //!
-//! ## Timing and Control Effects ⏱️
+//! ## Timing and Control Effects
 //! Control effects modify how other effects behave over time. They're essential for
 //! creating complex animations and controlling the flow of multiple effects.
 //!
 //! | Effect              | Description | Example  |
 //! |---------------------|-------------|----------|
-//! | [`consume_tick()`] ⌛ | Consumes a single tick            | N/A |
-//! | [`delay()`] ⏳ | Delays effect by specified duration      | [delay](https://junkdog.github.io/tachyonfx-ftl/?example=delay), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned)|
-//! | [`freeze_at()`] ⏳ | Freezes another effect at a specific alpha (transition) value      | [freeze_at](https://junkdog.github.io/tachyonfx-ftl/?example=freeze_at) |
-//! | [`never_complete()`] ♾️ | Makes effect run indefinitely   | [never_complete](https://junkdog.github.io/tachyonfx-ftl/?example=never_complete) |
-//! | [`ping_pong()`] 🔄 | Plays effect forward then backward   | [ping_pong](https://junkdog.github.io/tachyonfx-ftl/?example=ping_pong), [repeat_forever](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever)|
-//! | [`prolong_start()`] ⏳ | Extends effect duration          | [prolong_start](https://junkdog.github.io/tachyonfx-ftl/?example=prolong_start), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire)|
-//! | [`prolong_end()`] ⏳ | Extends effect duration            | [prolong_end](https://junkdog.github.io/tachyonfx-ftl/?example=prolong_end)|
-//! | [`remap_alpha()`] 🔁 | Remaps an effect's alpha progression to operate within a smaller range | [remap_alpha](https://junkdog.github.io/tachyonfx-ftl/?example=remap_alpha), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2) |
-//! | [`repeat()`] 🔁 | Repeats effect by count or duration     | [repeat_times](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_times) |
-//! | [`repeating()`] 🔁 | Repeats an effect indefinitely       | [repeat_forever](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2) |
-//! | [`run_once()`] 🔂 | Ensures wrapped effect runs exactly once | N/A |
-//! | [`sleep()`] 💤 | Pauses for specified duration            | N/A |
-//! | [`timed_never_complete()`] ⏰ | Makes effect run indefinitely with time limit | [timed_never_complete](https://junkdog.github.io/tachyonfx-ftl/?example=timed_never_complete) |
-//! | [`with_duration()`] ⏱️ | Applies duration limit to effect | [with_duration](https://junkdog.github.io/tachyonfx-ftl/?example=with_duration) |
+//! | [`consume_tick()`]  | Consumes a single tick            | N/A |
+//! | [`delay()`]  | Delays effect by specified duration      | [delay](https://junkdog.github.io/tachyonfx-ftl/?example=delay), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned)|
+//! | [`freeze_at()`]  | Freezes another effect at a specific alpha (transition) value      | [freeze_at](https://junkdog.github.io/tachyonfx-ftl/?example=freeze_at) |
+//! | [`never_complete()`]  | Makes effect run indefinitely   | [never_complete](https://junkdog.github.io/tachyonfx-ftl/?example=never_complete) |
+//! | [`ping_pong()`]  | Plays effect forward then backward   | [ping_pong](https://junkdog.github.io/tachyonfx-ftl/?example=ping_pong), [repeat_forever](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever)|
+//! | [`prolong_start()`]  | Extends effect duration          | [prolong_start](https://junkdog.github.io/tachyonfx-ftl/?example=prolong_start), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire)|
+//! | [`prolong_end()`]  | Extends effect duration            | [prolong_end](https://junkdog.github.io/tachyonfx-ftl/?example=prolong_end)|
+//! | [`remap_alpha()`]  | Remaps an effect's alpha progression to operate within a smaller range | [remap_alpha](https://junkdog.github.io/tachyonfx-ftl/?example=remap_alpha), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2) |
+//! | [`repeat()`]  | Repeats effect by count or duration     | [repeat_times](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_times) |
+//! | [`repeating()`]  | Repeats an effect indefinitely       | [repeat_forever](https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2) |
+//! | [`run_once()`]  | Ensures wrapped effect runs exactly once | N/A |
+//! | [`sleep()`]  | Pauses for specified duration            | N/A |
+//! | [`timed_never_complete()`]  | Makes effect run indefinitely with time limit | [timed_never_complete](https://junkdog.github.io/tachyonfx-ftl/?example=timed_never_complete) |
+//! | [`with_duration()`]  | Applies duration limit to effect | [with_duration](https://junkdog.github.io/tachyonfx-ftl/?example=with_duration) |
 //!
 //!
-//! ## Geometry Effects 📐
+//! ## Geometry Effects
 //! Geometry effects modify the position or size of content. These are useful for creating
 //! dynamic layouts and transitions.
 //!
 //! | Effect                 | Description | Example  |
 //! |------------------------|-------------|----------|
-//! | [`expand()`] ⬌         | Expands bidirectionally from center | [expand](https://junkdog.github.io/tachyonfx-ftl/?example=expand) |
-//! | [`resize_area()`] ⬌   | Resizes effect area   | N/A |
-//! | [`stretch()`] ⬌        | Stretches unidirectionally using block chars | [stretch](https://junkdog.github.io/tachyonfx-ftl/?example=stretch) |
-//! | [`translate()`] ➡️     | Moves effect area     | [translate](https://junkdog.github.io/tachyonfx-ftl/?example=translate), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
-//! | [`translate_buf()`] ➡️ | Moves buffer contents | N/A |
+//! | [`expand()`]           | Expands bidirectionally from center | [expand](https://junkdog.github.io/tachyonfx-ftl/?example=expand) |
+//! | [`resize_area()`]      | Resizes effect area   | N/A |
+//! | [`stretch()`]          | Stretches unidirectionally using block chars | [stretch](https://junkdog.github.io/tachyonfx-ftl/?example=stretch) |
+//! | [`translate()`]      | Moves effect area     | [translate](https://junkdog.github.io/tachyonfx-ftl/?example=translate), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
+//! | [`translate_buf()`]  | Moves buffer contents | N/A |
 //!
-//! ## Combination Effects 🔗
+//! ## Combination Effects
 //! Combination effects allow multiple effects to be composed together. These are crucial
 //! for creating complex animations.
 //!
@@ -85,16 +85,101 @@
 //! | [`parallel()`] ⫽ | Runs effects simultaneously | [parallel](https://junkdog.github.io/tachyonfx-ftl/?example=parallel), [hsl_shift_2](https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2), [explode_patterned](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
 //! | [`sequence()`] ⟶ | Runs effects sequentially   | [sequence](https://junkdog.github.io/tachyonfx-ftl/?example=sequence), [fire](https://junkdog.github.io/tachyonfx-ftl/?example=fire) |
 //!
-//! ## Other Effects 🛠️
+//! ## Other Effects
 //! Advanced effects for custom behaviors or quick one-off effects.
 //!
 //! | Effect & Description | Preview | Example |
 //! |---------------------|---------|----------|
-//! | [`dispatch_event()`] 📨   | Dispatches events when effects start | N/A |
-//! | [`dynamic_area()`] 📱     | Wraps effects for responsive layouts | N/A |
-//! | [`effect_fn()`] 🔧        | Custom effects with cell iterator | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn.gif) |
-//! | [`effect_fn_buf()`] 🔧    | Custom effects with buffer        | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn_buf.gif) |
-//! | [`offscreen_buffer()`] 📺 | Renders to separate buffer        | N/A |
+//! | [`dispatch_event()`]    | Dispatches events when effects start | N/A |
+//! | [`dynamic_area()`]      | Wraps effects for responsive layouts | N/A |
+//! | [`effect_fn()`]         | Custom effects with cell iterator | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn.gif) |
+//! | [`effect_fn_buf()`]     | Custom effects with buffer        | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn_buf.gif) |
+//! | [`offscreen_buffer()`]  | Renders to separate buffer        | N/A |
+//!
+//! ## Interpolation & Timing
+//! Most effects support timing control through the [`EffectTimer`] which combines
+//! duration with [`crate::Interpolation`] functions to determine how animations progress
+//! over time. The interpolation enum provides 32 easing functions for creating natural,
+//! smooth animations.
+//!
+//!
+//! | Category        | Functions                                 | Description                                     |
+//! |-----------------|-------------------------------------------|-------------------------------------------------|
+//! | **Basic**       | `Linear` (default), `Reverse`             | Constant-rate and inverted progression          |
+//! | **Back**        | `BackIn`, `BackOut`, `BackInOut`          | Slight overshoot before settling                |
+//! | **Bounce**      | `BounceIn`, `BounceOut`, `BounceInOut`    | Ball-dropping physics simulation                |
+//! | **Circular**    | `CircIn`, `CircOut`, `CircInOut`          | Smooth circular arc progression                 |
+//! | **Cubic**       | `CubicIn`, `CubicOut`, `CubicInOut`       | Third-power curves with moderate acceleration   |
+//! | **Elastic**     | `ElasticIn`, `ElasticOut`, `ElasticInOut` | Bouncy, spring-like animations                  |
+//! | **Exponential** | `ExpoIn`, `ExpoOut`, `ExpoInOut`          | Rapid acceleration/deceleration                 |
+//! | **Quadratic**   | `QuadIn`, `QuadOut`, `QuadInOut`          | Second-power curves with gentle acceleration    |
+//! | **Quartic**     | `QuartIn`, `QuartOut`, `QuartInOut`       | Fourth-power curves with sharper acceleration   |
+//! | **Quintic**     | `QuintIn`, `QuintOut`, `QuintInOut`       | Fifth-power curves with very sharp acceleration |
+//! | **Sine**        | `SineIn`, `SineOut`, `SineInOut`          | Smooth sinusoidal curves                        |
+//!
+//! Effects can be timed using various `EffectTimer` creation methods:
+//!
+//! ```rust
+//! use tachyonfx::{fx, EffectTimer, Interpolation, Duration};
+//! use ratatui::style::Color;
+//!
+//! fx::fade_to_fg(Color::Red, 1000);  // 1 second, linear (shorthand)
+//! fx::fade_to_fg(Color::Red, (1000, Interpolation::BounceOut));  // 1 second, bouncy
+//! fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));  // explicit
+//! fx::fade_to_fg(Color::Red, Duration::from_secs(2));  // 2 seconds, linear
+//! ```
+//!
+//! ## Spatial Patterns
+//! Effects can be enhanced with spatial patterns that control how animations progress
+//! across the screen area. These patterns transform global alpha values into
+//! position-specific values, creating various spatial progressions.
+//!
+//! | Pattern                                                      | Description                      |
+//! |--------------------------------------------------------------|----------------------------------|
+//! | [`CheckerboardPattern`](crate::pattern::CheckerboardPattern) | Alternating cell activation      |
+//! | [`CoalescePattern`](crate::pattern::CoalescePattern)         | Reform pattern for text effects  |
+//! | [`DiagonalPattern`](crate::pattern::DiagonalPattern)         | Diagonal sweep progression       |
+//! | [`DissolvePattern`](crate::pattern::DissolvePattern)         | Dissolve pattern for text effects|
+//! | [`RadialPattern`](crate::pattern::RadialPattern)             | Circular progression from center |
+//! | [`SweepPattern`](crate::pattern::SweepPattern)               | Directional sweep                |
+//!
+//! Example showing a sweeping dissolve effect:
+//! ```rust
+//! use tachyonfx::{fx, pattern::SweepPattern, EffectTimer, Interpolation};
+//!
+//! // Text dissolves outward from center in a circular pattern
+//! let effect = fx::dissolve(EffectTimer::from_ms(2000, Interpolation::QuadOut))
+//!     .with_pattern(SweepPattern::left_to_right(25));
+//! ```
+//!
+//! ## Cell Filtering
+//! Effects can be selectively applied to specific cells using [`crate::CellFilter`]. This
+//! allows precise control over which parts of the terminal receive effects.
+//!
+//! Basic filtering example:
+//! ```rust
+//! use tachyonfx::{fx, CellFilter};
+//! use ratatui::style::Color;
+//!
+//! // Apply fade effect only to text cells (non-whitespace)
+//! fx::fade_to_fg(Color::Yellow, 1000)
+//!     .with_filter(CellFilter::Text);
+//! ```
+//!
+//! Complex filtering with logical operators:
+//! ```rust
+//! use tachyonfx::{fx, CellFilter, EffectTimer, Interpolation};
+//! use ratatui::{style::Color, layout::Margin};
+//!
+//! let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
+//! // Apply effect to inner area, excluding borders and black text
+//! fx::hsl_shift_fg([180.0, 50.0, 0.0], timer)
+//!     .with_filter(CellFilter::AllOf(vec![
+//!         CellFilter::Inner(Margin::new(1, 1)),       // Skip border cells
+//!         CellFilter::Text,                           // Only text cells
+//!         CellFilter::FgColor(Color::Black).negated() // Exclude black text
+//!     ]));
+//! ```
 //!
 //! Additional effects can be created by implementing the [Shader](crate::Shader) trait.
 
