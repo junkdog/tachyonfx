@@ -284,9 +284,17 @@ fn variable<'a>() -> impl TokenParser<'a, Expr> {
 fn qualified_name<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
-    yield_consumed(tuplify!(identifier(), token(DoubleColon), identifier())).map(
-        |(span, (owner, _, member))| {
-            Expr::QualifiedMember(format_compact!("{owner}::{member}"), span)
+    yield_consumed(tuplify!(
+        identifier(),
+        token(DoubleColon),
+        identifier(),
+        method_chain()
+    ))
+    .map(
+        |(span, (owner, _, member, self_fns))| Expr::QualifiedMember {
+            name: format_compact!("{owner}::{member}"),
+            self_fns,
+            span,
         },
     )
 }
@@ -443,7 +451,7 @@ mod tests {
                 ArrayRef(args, _) => ArrayRef(args, span),
                 Array(args, _) => Array(args, span),
                 FnCall { call, self_fns, .. } => FnCall { call: call.with_span(span), self_fns },
-                QualifiedMember(name, _) => QualifiedMember(name, span),
+                QualifiedMember { name, self_fns, .. } => QualifiedMember { name, self_fns, span },
                 OptionSome(expr, _) => OptionSome(expr, span),
                 Sequence { effects, self_fns, .. } => Sequence { effects, self_fns, span },
                 Parallel { effects, self_fns, .. } => Parallel { effects, self_fns, span },
@@ -587,10 +595,11 @@ mod tests {
         with_tokens("Color::Red", |tokens| {
             assert_eq!(
                 parse(qualified_name(), tokens).result,
-                Some(Expr::QualifiedMember(
-                    "Color::Red".into(),
-                    ExprSpan::new(0, 10)
-                ))
+                Some(Expr::QualifiedMember {
+                    name: "Color::Red".into(),
+                    self_fns: vec![],
+                    span: ExprSpan::new(0, 10)
+                })
             );
         });
 

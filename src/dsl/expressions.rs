@@ -34,7 +34,11 @@ pub(super) enum Expr {
         call: FnCallInfo,
         self_fns: Vec<FnCallInfo>,
     },
-    QualifiedMember(CompactString, ExprSpan), // enums, struct fields
+    QualifiedMember {
+        name: CompactString,
+        self_fns: Vec<FnCallInfo>,
+        span: ExprSpan,
+    },
     OptionSome(Box<Expr>, ExprSpan),
     Sequence {
         effects: Vec<Expr>,
@@ -133,7 +137,7 @@ impl Expr {
             Expr::ArrayRef(_, span) => span,
             Expr::Array(_, span) => span,
             Expr::FnCall { call, .. } => &call.span,
-            Expr::QualifiedMember(_, span) => span,
+            Expr::QualifiedMember { span, .. } => span,
             Expr::OptionSome(_, span) => span,
             Expr::Sequence { span, .. } => span,
             Expr::Parallel { span, .. } => span,
@@ -158,7 +162,7 @@ impl Expr {
             Expr::OptionSome(_, _) => "some",
             Expr::FnCall { .. } => "fn_call",
             Expr::LetBinding { .. } => "let_binding",
-            Expr::QualifiedMember(_, _) => "qualified_name",
+            Expr::QualifiedMember { .. } => "qualified_name",
             Expr::StructInit { .. } => "struct",
             Expr::Tuple(_, _) => "tuple",
             Expr::Macro { .. } => "macro",

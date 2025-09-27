@@ -28,7 +28,9 @@ use crate::{
 /// The promoted expression if a match was found, or the original expression unchanged
 pub(super) fn maybe_promote(expr: Expr) -> Expr {
     match &expr {
-        Expr::QualifiedMember(s, span) => promote(s, span),
+        Expr::QualifiedMember { name, self_fns, span } => {
+            promote(name, span).map(|f| f.self_fns(self_fns.clone()))
+        },
         Expr::Var { name, self_fns, span } => {
             promote(name, span).map(|f| f.self_fns(self_fns.clone()))
         },
@@ -225,6 +227,9 @@ impl Expr {
     fn self_fns(self, self_fns: Vec<FnCallInfo>) -> Expr {
         match self {
             Expr::Var { name, span, .. } => Expr::Var { name, self_fns, span },
+            Expr::QualifiedMember { name, span, .. } => {
+                Expr::QualifiedMember { name, self_fns, span }
+            },
             _ => self,
         }
     }

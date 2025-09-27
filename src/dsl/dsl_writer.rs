@@ -48,7 +48,7 @@ impl DslWriter {
             Expr::ArrayRef(exprs, _) => self.write_array_ref(exprs),
             Expr::Array(exprs, _) => self.write_array(exprs),
             Expr::FnCall { call, self_fns, .. } => self.write_fn_call(call, self_fns),
-            Expr::QualifiedMember(name, _) => self.write(name),
+            Expr::QualifiedMember { name, self_fns, .. } => self.write_var(name, self_fns),
             Expr::OptionSome(expr, _) => self.write_option_some(expr),
             Expr::Sequence { effects, self_fns, .. } => self.write_sequence(effects, self_fns),
             Expr::Parallel { effects, self_fns, .. } => self.write_parallel(effects, self_fns),
@@ -414,8 +414,10 @@ impl DslWriter {
                         .any(|e| self.is_complex_expr_impl(e, depth + 1))
             },
 
-            // Variables with method chains are complex
-            Expr::Var { self_fns, .. } => !self_fns.is_empty(),
+            // Variables and qualified members with method chains are complex
+            Expr::Var { self_fns, .. } | Expr::QualifiedMember { self_fns, .. } => {
+                !self_fns.is_empty()
+            },
 
             // Other expression types are generally simple
             _ => false,
@@ -440,7 +442,18 @@ impl DslWriter {
                 }
                 len
             },
-            Expr::QualifiedMember(name, _) => name.len(),
+            Expr::QualifiedMember { name, self_fns, .. } => {
+                let mut len = name.len();
+                for method in self_fns {
+                    len += method.name.len() + 2; // +2 for ".()"
+                    len += method
+                        .args
+                        .iter()
+                        .map(|arg| self.estimate_expr_length(arg))
+                        .sum::<usize>();
+                }
+                len
+            },
             Expr::OptionSome(inner, _) => 5 + self.estimate_expr_length(inner), /* "Some()" = 5 */
             // chars
             Expr::FnCall { call, self_fns, .. } => {
