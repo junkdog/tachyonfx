@@ -293,7 +293,7 @@ let expr = r#"
 - `dsl` — Effect DSL support (enabled by default)
 - `sendable` — Make effects `Send` (but not `Sync`)
 - `std-duration` — Use `std::time::Duration` instead of 32-bit custom type
-- `web-time` — WebAssembly compatibility
+- `wasm` — WebAssembly compatibility
 
 
 ## Contributing

@@ -62,6 +62,7 @@ _The [documentation][tfx-fx-docs] for most effects now contain links to interact
 ### Deprecated
 - `FilterProcessor::predicate()`: Deprecated in favor of `validator()` method which provides better performance.
 - `fx::resize_area()`: Deprecated due to poor design and functionality issues. No replacement planned.
+- Feature `web-time`: Use the `wasm` feature instead.
 
 ### Fixed
 - no_std compatibility: removed `simple-easing` crate dependency.

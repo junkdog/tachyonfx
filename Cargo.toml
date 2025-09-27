@@ -56,7 +56,8 @@ crossterm = ["std", "ratatui/crossterm"]
 dsl = ["dep:anpa"]
 sendable = []
 std-duration = ["std"]
-web-time = ["dep:web-time"]
+wasm = ["dep:web-time"]
+web-time = ["wasm"]  # deprecated: use `wasm` instead
 
 
 
