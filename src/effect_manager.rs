@@ -39,7 +39,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// # Returns
     /// A new effect that includes unique identification logic. The effect must still be
     /// added to the manager to be processed.
-    pub fn unique(&mut self, key: impl Into<K>, fx: impl Into<Effect>) -> Effect {
+    pub fn unique(&mut self, key: impl Into<K>, fx: Effect) -> Effect {
         let key = key.into();
         let ctx = self
             .uniques
@@ -57,7 +57,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     ///
     /// # Arguments
     /// * `effect` - The effect to add to the manager
-    pub fn add_effect(&mut self, effect: impl Into<Effect>) {
+    pub fn add_effect(&mut self, effect: Effect) {
         self.effects.push(effect.into());
     }
 
@@ -71,7 +71,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     ///   exists, the existing effect will be cancelled.
     /// * `fx` - The effect to be wrapped with unique identification and added to the
     ///   manager.
-    pub fn add_unique_effect(&mut self, key: impl Into<K>, fx: impl Into<Effect>) {
+    pub fn add_unique_effect(&mut self, key: impl Into<K>, fx: Effect) {
         let fx = self.unique(key, fx);
         self.add_effect(fx);
     }
