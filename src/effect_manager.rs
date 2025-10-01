@@ -48,7 +48,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
             .or_insert_with(|| ref_count(UniqueContext::new(self.rng.gen())))
             .clone();
 
-        Unique::new(ctx, fx.into()).into_effect()
+        Unique::new(ctx, fx).into_effect()
     }
 
     /// Adds an effect to be processed by the manager.
@@ -58,7 +58,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// # Arguments
     /// * `effect` - The effect to add to the manager
     pub fn add_effect(&mut self, effect: Effect) {
-        self.effects.push(effect.into());
+        self.effects.push(effect);
     }
 
     /// Creates and adds a unique effect to the manager in a single operation.
