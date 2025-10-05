@@ -11,7 +11,7 @@ layering simple effects, bringing smooth transitions and visual polish to the te
 
 ![demo](images/demo-0.6.0.gif)
 
-** [Try exabind](https://junkdog.github.io/exabind/) - experience tachyonfx in your browser without installing anything!**
+**[Try exabind](https://junkdog.github.io/exabind/) - experience tachyonfx in your browser without installing anything!**
 
 ## Features
 
