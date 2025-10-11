@@ -1,8 +1,8 @@
 use core::ops::Range;
-#[cfg(all(feature = "std", not(feature = "web-time")))]
+#[cfg(all(feature = "std", not(feature = "wasm")))]
 use std::time::SystemTime;
 
-#[cfg(feature = "web-time")]
+#[cfg(feature = "wasm")]
 use web_time::SystemTime;
 
 /// A simple pseudo-random number generator using the Linear Congruential Generator
@@ -76,7 +76,7 @@ impl SimpleRng {
     }
 }
 
-#[cfg(any(feature = "std", feature = "web-time"))]
+#[cfg(any(feature = "std", feature = "wasm"))]
 impl Default for SimpleRng {
     fn default() -> Self {
         let seed = SystemTime::now()
@@ -88,7 +88,7 @@ impl Default for SimpleRng {
     }
 }
 
-#[cfg(not(any(feature = "std", feature = "web-time")))]
+#[cfg(not(any(feature = "std", feature = "wasm")))]
 impl Default for SimpleRng {
     fn default() -> Self {
         // Use a fixed seed in no-std environments where SystemTime is unavailable
@@ -305,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(any(feature = "std", feature = "web-time"))] // Only run when we have SystemTime
+    #[cfg(any(feature = "std", feature = "wasm"))] // Only run when we have SystemTime
     #[allow(clippy::std_instead_of_core)]
     fn test_default_lcg() {
         let lcg1 = SimpleRng::default();
@@ -314,7 +314,7 @@ mod tests {
             let duration = std::time::Duration::from_millis(10);
             std::thread::sleep(duration);
         }
-        #[cfg(all(feature = "web-time", not(feature = "std")))]
+        #[cfg(all(feature = "wasm", not(feature = "std")))]
         {
             // In web environments, we can't sleep, but we can just create another RNG
             // The timestamp should be different enough to produce different seeds

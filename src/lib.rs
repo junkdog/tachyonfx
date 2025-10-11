@@ -10,8 +10,8 @@ extern crate alloc;
 extern crate core;
 
 // Feature validation
-#[cfg(all(feature = "std-duration", feature = "web-time"))]
-compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");
+#[cfg(all(feature = "std-duration", feature = "wasm"))]
+compile_error!("Features 'std-duration' and 'wasm' cannot be enabled simultaneously");
 
 #[cfg(all(feature = "std-duration", not(feature = "std")))]
 compile_error!("Feature 'std-duration' requires 'std' feature");
@@ -22,8 +22,8 @@ compile_error!("Feature 'crossterm' requires 'std' feature");
 #[cfg(all(feature = "dsl", not(feature = "std")))]
 compile_error!("DSL feature is not supported in no-std environments. Use either 'dsl' with 'std' or disable 'dsl' for no-std builds.");
 
-#[cfg(all(feature = "std-duration", feature = "web-time"))]
-compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");
+#[cfg(all(feature = "std-duration", feature = "wasm"))]
+compile_error!("Features 'std-duration' and 'wasm' cannot be enabled simultaneously");
 
 mod bitvec;
 mod bounding_box;

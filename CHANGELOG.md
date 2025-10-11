@@ -1,5 +1,11 @@
 # Changelog
 
+## tachyonfx 0.19.1 - TBD
+
+### Fixed
+- fix `wasm` feature by updating internal `web-time` references
+
+
 ## tachyonfx 0.19.0 - 2025-09-27
 
 [![interactive-examples](images/tfx-ftl.png)](https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned)

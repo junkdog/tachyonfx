@@ -145,7 +145,7 @@ pub mod duration {
         }
     }
 
-    #[cfg(all(feature = "std", not(feature = "web-time")))]
+    #[cfg(all(feature = "std", not(feature = "wasm")))]
     #[allow(clippy::std_instead_of_core)]
     impl From<std::time::Duration> for Duration {
         fn from(d: std::time::Duration) -> Self {
@@ -153,14 +153,14 @@ pub mod duration {
         }
     }
 
-    #[cfg(feature = "web-time")]
+    #[cfg(feature = "wasm")]
     impl From<web_time::Duration> for Duration {
         fn from(d: web_time::Duration) -> Self {
             Self { milliseconds: d.as_millis() as u32 }
         }
     }
 
-    #[cfg(all(feature = "std", not(feature = "web-time")))]
+    #[cfg(all(feature = "std", not(feature = "wasm")))]
     #[allow(clippy::std_instead_of_core)]
     impl From<Duration> for std::time::Duration {
         fn from(d: Duration) -> Self {
@@ -168,7 +168,7 @@ pub mod duration {
         }
     }
 
-    #[cfg(feature = "web-time")]
+    #[cfg(feature = "wasm")]
     impl From<Duration> for web_time::Duration {
         fn from(d: Duration) -> Self {
             web_time::Duration::from_millis(d.milliseconds as u64)
