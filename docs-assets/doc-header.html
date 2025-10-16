@@ -270,16 +270,35 @@
     return div.innerHTML;
   }
 
+  // Auto-initialize all demos with data-tachyonfx-demo attribute
+  async function autoInitializeDemos() {
+    if (!await initTachyonFX()) return;
+
+    // Find all elements with data-tachyonfx-demo attribute
+    const demoElements = document.querySelectorAll('[data-tachyonfx-demo]');
+
+    for (const element of demoElements) {
+      const demoId = element.getAttribute('data-tachyonfx-demo');
+      const dslCode = element.getAttribute('data-dsl');
+      const ansiContent = element.getAttribute('data-ansi') || null;
+
+      if (!dslCode) {
+        console.warn(`Demo ${demoId} missing data-dsl attribute`);
+        continue;
+      }
+
+      // Convert the element into a proper demo container
+      element.id = `demo-${demoId}`;
+      await effectExample(`demo-${demoId}`, dslCode, ansiContent);
+    }
+
+    document.dispatchEvent(new Event('tachyonfx-ready'));
+  }
+
   // Auto-initialize demos when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      initTachyonFX().then(() => {
-        document.dispatchEvent(new Event('tachyonfx-ready'));
-      });
-    });
+    document.addEventListener('DOMContentLoaded', autoInitializeDemos);
   } else {
-    initTachyonFX().then(() => {
-      document.dispatchEvent(new Event('tachyonfx-ready'));
-    });
+    autoInitializeDemos();
   }
 </script>
