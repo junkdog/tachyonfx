@@ -713,6 +713,17 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=sweep_in>
 ///
+/// <div id="demo-sweep-in"></div>
+///
+/// <script type="module">
+///   document.addEventListener('tachyonfx-ready', async () => {
+///     await effectExample(
+///       'demo-sweep-in',
+///       'fx::sweep_in(Motion::LeftToRight, 10, 0, Color::Black, (1200,
+/// Interpolation::QuadOut))'     );
+///   });
+/// </script>
+///
 /// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/sweep_in.gif)
 ///
 /// ```no_run
@@ -794,6 +805,22 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
 /// # Examples
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=slide_in>
+///
+/// <div id="demo-slide-in-1"></div>
+/// <div id="demo-slide-in-2"></div>
+///
+/// <script type="module">
+///   document.addEventListener('tachyonfx-ready', async () => {
+///     await effectExample(
+///       'demo-slide-in-1',
+///       'fx::slide_in(Motion::RightToLeft, 10, 0, Color::Black, (800,
+/// Interpolation::QuadOut))'     );
+///     await effectExample(
+///       'demo-slide-in-2',
+///       'fx::slide_in(Motion::UpToDown, 8, 5, Color::Blue, (1000,
+/// Interpolation::SineInOut))'     );
+///   });
+/// </script>
 ///
 /// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/slide_in.gif)
 ///
