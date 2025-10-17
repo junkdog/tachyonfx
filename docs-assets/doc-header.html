@@ -85,7 +85,7 @@
   }
 
   .tachyonfx-example .tachyonfx-canvas-wrapper {
-    cursor: help;
+    cursor: pointer;
   }
 
   /* Hover tooltip for DSL code */
@@ -235,6 +235,12 @@
     canvasWrapper.addEventListener('mouseleave', () => {
       tooltip.style.opacity = '0';
       tooltip.style.visibility = 'hidden';
+    });
+
+    // Click to open in tachyonfx-ftl playground
+    canvasWrapper.addEventListener('click', () => {
+      const playgroundUrl = `https://junkdog.github.io/tachyonfx-ftl/?canvas_id=tfxdocs&code_raw=${encodeURIComponent(dslCode)}`;
+      window.open(playgroundUrl, '_blank');
     });
 
     // Initialize the renderer
