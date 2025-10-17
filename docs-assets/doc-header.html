@@ -270,6 +270,30 @@
     return div.innerHTML;
   }
 
+  // Normalize multi-line DSL code by trimming alignment indentation
+  function normalizeDslCode(dsl) {
+    const lines = dsl.split('\n');
+    if (lines.length === 1) return dsl;
+
+    // Find minimum indentation on continuation lines (skip first line)
+    let minIndent = Infinity;
+    for (let i = 1; i < lines.length; i++) {
+      const match = lines[i].match(/^(\s*)/);
+      if (match && lines[i].trim().length > 0) {
+        minIndent = Math.min(minIndent, match[1].length);
+      }
+    }
+
+    // Trim the common indentation from continuation lines
+    if (minIndent !== Infinity) {
+      for (let i = 1; i < lines.length; i++) {
+        lines[i] = lines[i].substring(minIndent);
+      }
+    }
+
+    return lines.join('\n');
+  }
+
   // Auto-initialize all demos with data-tachyonfx-demo attribute
   async function autoInitializeDemos() {
     if (!await initTachyonFX()) return;
@@ -287,9 +311,12 @@
         continue;
       }
 
+      // Normalize multi-line DSL code
+      const normalizedDsl = normalizeDslCode(dslCode);
+
       // Convert the element into a proper demo container
       element.id = `demo-${demoId}`;
-      await effectExample(`demo-${demoId}`, dslCode, ansiContent);
+      await effectExample(`demo-${demoId}`, normalizedDsl, ansiContent);
     }
 
     document.dispatchEvent(new Event('tachyonfx-ready'));

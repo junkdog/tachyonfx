@@ -800,11 +800,9 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=slide_in>
 ///
 /// <div data-tachyonfx-demo="slide-in-1"
-///      data-dsl="fx::slide_in(Motion::RightToLeft, 10, 0, Color::Black, (800,
-/// Interpolation::QuadOut))"> </div>
-/// <div data-tachyonfx-demo="slide-in-2"
-///      data-dsl="fx::slide_in(Motion::UpToDown, 8, 5, Color::Blue, (1000,
-/// Interpolation::SineInOut))"> </div>
+///      data-dsl="let c = Color::from_u32(0x1d2021);
+///                let timer = (1000, Interpolation::Linear);
+///                fx::slide_in(Motion::UpToDown, 10, 0, c, timer)"></div>
 ///
 /// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/slide_in.gif)
 ///
