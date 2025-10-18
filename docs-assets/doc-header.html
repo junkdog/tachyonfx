@@ -160,8 +160,6 @@
       console.log('✅ TachyonFX renderer initialized (local)');
       return true;
     } catch (localError) {
-      console.log('Local build not found, loading from CDN...');
-
       // Fallback to CDN (works on docs.rs and other hosted environments)
       try {
         const module = await import(paths.cdn);
@@ -169,7 +167,6 @@
         tachyonModule = module;
         createRenderer = module.createRenderer;
         RendererConfig = module.RendererConfig;
-        console.log('✅ TachyonFX renderer initialized (CDN)');
         return true;
       } catch (cdnError) {
         console.warn('⚠️  TachyonFX renderer not available');
