@@ -224,6 +224,15 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns a [`Flex`].
+    pub fn flex(&mut self) -> Result<ratatui::layout::Flex, DslError> {
+        match self.next("flex")? {
+            Expr::Literal(Value::Flex(f), _) => Ok(f),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("flex", e),
+        }
+    }
+
     /// Consumes the next argument and returns a [`Layout`].
     pub fn layout(&mut self) -> Result<Layout, DslError> {
         match self.next("layout")? {
@@ -1104,6 +1113,7 @@ impl_from_args!(Modifier, modifier);
 
 // Layout related
 impl_from_args!(Direction, direction);
+impl_from_args!(ratatui::layout::Flex, flex);
 impl_from_args!(Layout, layout);
 impl_from_args!(Constraint, constraint);
 impl_from_args!(Margin, margin);

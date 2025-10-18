@@ -1,4 +1,8 @@
-use ratatui::{layout::Direction, prelude::Modifier, style::Color};
+use ratatui::{
+    layout::{Direction, Flex},
+    prelude::Modifier,
+    style::Color,
+};
 
 use crate::{
     dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value},
@@ -12,6 +16,7 @@ use crate::{
 /// Supported types for promotion:
 /// - Motion enum variants
 /// - Direction enum variants
+/// - Flex enum variants
 /// - ExpandDirection enum variants
 /// - ColorSpace enum variants
 /// - CellFilter enum variants
@@ -42,6 +47,7 @@ pub(super) fn maybe_promote(expr: Expr) -> Expr {
 fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
     motion(text)
         .or_else(|| direction(text))
+        .or_else(|| flex(text))
         .or_else(|| expand_direction(text))
         .or_else(|| cell_filter(text))
         .or_else(|| modifier(text))
@@ -93,6 +99,18 @@ fn direction(text: &str) -> Option<Value> {
             _ => None?,
         },
     ))
+}
+
+fn flex(text: &str) -> Option<Value> {
+    Some(Value::Flex(match text.trim_start_matches("Flex::") {
+        "Legacy" => Flex::Legacy,
+        "Start" => Flex::Start,
+        "End" => Flex::End,
+        "Center" => Flex::Center,
+        "SpaceBetween" => Flex::SpaceBetween,
+        "SpaceAround" => Flex::SpaceAround,
+        _ => None?,
+    }))
 }
 
 fn expand_direction(text: &str) -> Option<Value> {

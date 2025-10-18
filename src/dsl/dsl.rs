@@ -616,7 +616,7 @@ mod tests {
 
     use compact_str::ToCompactString;
     use ratatui::{
-        layout::{Constraint::Percentage, Layout, Margin, Rect},
+        layout::{Constraint::Percentage, Flex, Layout, Margin, Rect},
         style::{Color, Modifier, Style},
     };
     use regex::Regex;
@@ -783,9 +783,10 @@ mod tests {
             EffectTimer::from_ms(1000, QuadOut),
         )
         .with_filter(CellFilter::Not(Box::new(CellFilter::Layout(
-            Layout::horizontal([Percentage(50), Percentage(50)])
+            Layout::horizontal([Percentage(40), Percentage(40)])
                 .spacing(1)
                 .vertical_margin(1)
+                .flex(Flex::SpaceBetween)
                 .horizontal_margin(2),
             1,
         ))))
@@ -799,9 +800,10 @@ mod tests {
             EffectTimer::from_ms(1000, QuadOut)
         ).with_filter(
             CellFilter::Not(Box::new(CellFilter::Layout(
-                Layout::horizontal([Percentage(50), Percentage(50)])
+                Layout::horizontal([Percentage(40), Percentage(40)])
                     .spacing(1)
                     .vertical_margin(1)
+                    .flex(Flex::SpaceBetween)
                     .horizontal_margin(2),
                 1)
             ))

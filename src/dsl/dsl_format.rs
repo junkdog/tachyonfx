@@ -1,6 +1,6 @@
 use compact_str::{format_compact, CompactString, CompactStringExt, ToCompactString};
 use ratatui::{
-    layout::{Constraint, Direction, Margin, Offset, Rect},
+    layout::{Constraint, Direction, Flex, Margin, Offset, Rect},
     style::{Color, Modifier, Style},
 };
 
@@ -283,6 +283,20 @@ impl DslFormat for Direction {
         match self {
             Direction::Horizontal => "Direction::Horizontal",
             Direction::Vertical => "Direction::Vertical",
+        }
+        .to_compact_string()
+    }
+}
+
+impl DslFormat for Flex {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            Flex::Legacy => "Flex::Legacy",
+            Flex::Start => "Flex::Start",
+            Flex::End => "Flex::End",
+            Flex::Center => "Flex::Center",
+            Flex::SpaceBetween => "Flex::SpaceBetween",
+            Flex::SpaceAround => "Flex::SpaceAround",
         }
         .to_compact_string()
     }

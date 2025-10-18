@@ -85,6 +85,8 @@ impl ChainableMethods for Layout {
     fn apply_fn(layout: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match name {
             "clone" => layout.clone(),
+            "direction" => layout.direction(args.direction()?),
+            "flex" => layout.flex(args.flex()?),
             "constraints" => layout.constraints(args.array(Arguments::constraint)?),
             "margin" => layout.margin(args.read_u16()?),
             "horizontal_margin" => layout.horizontal_margin(args.read_u16()?),

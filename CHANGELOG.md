@@ -7,6 +7,9 @@
 - `EffectManager::is_running()`: Returns whether there are any active effects.
 - `EffectManager::cancel_unique_effect()`: Cancels a running unique effect by its key.
 
+### DSL
+- **`Layout` methods**: Added `.direction(Direction)` and `.flex(Flex)` methods.
+
 ### Fixed
 - fix `wasm` feature by updating internal `web-time` references.
 - `DslParseError` is now exported when the `dsl` feature is enabled.

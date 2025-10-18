@@ -2,7 +2,7 @@ use core::fmt;
 
 use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui::{
-    layout::Direction,
+    layout::{Direction, Flex},
     prelude::{Color, Modifier},
 };
 
@@ -76,6 +76,7 @@ pub(super) enum Value {
     CellFilter(CellFilter),
     Color(Color),
     Direction(Direction),
+    Flex(Flex),
     String(CompactString),
     Bool(bool),
     I32(i32),
@@ -193,6 +194,7 @@ impl Value {
             Value::OptionNone => "None".to_compact_string(),
             Value::Modifier(m) => m.dsl_format(),
             Value::Direction(dir) => dir.dsl_format(),
+            Value::Flex(f) => f.dsl_format(),
             Value::ColorSpace(c) => c.dsl_format(),
             Value::Bool(b) => b.dsl_format(),
             Value::ExpandDirection(d) => d.dsl_format(),
@@ -215,6 +217,7 @@ impl Value {
             Value::OptionNone => "option",
             Value::Modifier(_) => "modifier",
             Value::Direction(_) => "direction",
+            Value::Flex(_) => "flex",
             Value::ColorSpace(_) => "color_space",
             Value::ExpandDirection(_) => "expand_direction",
             Value::EvolveSymbolSet(_) => "evolve_symbol_set",
