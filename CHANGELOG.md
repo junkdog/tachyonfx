@@ -1,6 +1,6 @@
 # Changelog
 
-## tachyonfx 0.19.1 - TBD
+## tachyonfx 0.20.0 - TBD
 
 ### Added
 - **DSL Examples in docs**: All DSL-supported effects now include interactive demo snippets in their documentation.
