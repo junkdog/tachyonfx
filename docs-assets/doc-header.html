@@ -217,22 +217,36 @@
       <div class="tachyonfx-canvas-wrapper">
         <div id="${canvasId}"></div>
       </div>
-      <div class="tachyonfx-code-tooltip" id="${codeId}"><code>${escapeHtml(dslCode)}</code></div>
     `;
+
+    // Create tooltip in body (not inside container) for proper fixed positioning
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tachyonfx-code-tooltip';
+    tooltip.id = codeId;
+    tooltip.innerHTML = `<code>${escapeHtml(dslCode)}</code>`;
+    document.body.appendChild(tooltip);
 
     // Position and show/hide tooltip on hover
     const canvasWrapper = container.querySelector('.tachyonfx-canvas-wrapper');
-    const tooltip = container.querySelector('.tachyonfx-code-tooltip');
+
+    let isVisible = false;
 
     canvasWrapper.addEventListener('mouseenter', () => {
-      const rect = canvasWrapper.getBoundingClientRect();
-      tooltip.style.top = (rect.bottom + 8) + 'px';
-      tooltip.style.left = rect.left + 'px';
-      tooltip.style.opacity = '1';
+      isVisible = true;
       tooltip.style.visibility = 'visible';
+      tooltip.style.opacity = '1';
+    });
+
+    canvasWrapper.addEventListener('mousemove', (e) => {
+      if (!isVisible) return;
+
+      // Simple positioning: 15px offset from cursor
+      tooltip.style.left = (e.clientX + 15) + 'px';
+      tooltip.style.top = (e.clientY + 15) + 'px';
     });
 
     canvasWrapper.addEventListener('mouseleave', () => {
+      isVisible = false;
       tooltip.style.opacity = '0';
       tooltip.style.visibility = 'hidden';
     });
