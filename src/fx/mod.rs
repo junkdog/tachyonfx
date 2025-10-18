@@ -561,6 +561,8 @@ pub fn explode(force: f32, force_rng_factor: f32, timer: impl Into<EffectTimer>)
 ///                fx::freeze_at(0.5, false, fade_effect)"></div>
 ///
 /// ```no_run
+/// use tachyonfx::fx;
+///
 /// let fade_effect = fx::dissolve(1000);
 /// fx::freeze_at(0.5, false, fade_effect);
 /// ```
@@ -601,9 +603,12 @@ pub fn freeze_at(alpha: f32, set_raw_alpha: bool, effect: Effect) -> Effect {
 ///                fx::remap_alpha(0.1, 0.5, fade_effect)"></div>
 ///
 /// ```no_run
+/// use tachyonfx::{fx, ColorSpace};
+/// use ratatui::style::Color;
+///
 /// let fade_effect = fx::fade_to_fg(Color::Cyan, 3000)
 ///     .with_color_space(ColorSpace::Rgb);
-/// fx::remap_alpha(0.1, 0.5, fade_effect)
+/// fx::remap_alpha(0.1, 0.5, fade_effect);
 /// ```
 pub fn remap_alpha(alpha_start: f32, alpha_end: f32, effect: Effect) -> Effect {
     let range = alpha_start.max(0.0)..alpha_end.min(1.0);
@@ -866,7 +871,7 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 /// let c = Color::from_u32(0xffaf00);
 /// let timer = (1000, Interpolation::Linear);
-/// fx::slide_in(Motion::UpToDown, 5, 0, c, timer)
+/// fx::slide_in(Motion::UpToDown, 5, 0, c, timer);
 /// ```
 /// Slides in from the top, with no randomness
 pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
@@ -1019,10 +1024,11 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 ///
 /// ```no_run
 /// use tachyonfx::{fx, fx::EvolveSymbolSet, Interpolation};
+/// use tachyonfx::pattern::RadialPattern;
 ///
 /// let p = RadialPattern::center().with_transition_width(10.0);
 /// fx::evolve(EvolveSymbolSet::CircleFill, 500)
-///     .with_pattern(p)
+///     .with_pattern(p);
 /// ```
 #[allow(private_bounds)]
 pub fn evolve<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
@@ -1062,7 +1068,7 @@ where
 /// fx::evolve_into(
 ///     EvolveSymbolSet::Circles,
 ///     (1000, Interpolation::SineOut)
-/// ).with_pattern(p)
+/// ).with_pattern(p);
 /// ```
 #[allow(private_bounds)]
 pub fn evolve_into<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
@@ -1099,11 +1105,11 @@ where
 ///
 /// ```no_run
 /// use tachyonfx::{fx, fx::EvolveSymbolSet, Interpolation};
-/// use tachyonfx::pattern::CheckerboardPattern;
+/// use tachyonfx::pattern::DissolvePattern;
 ///
 /// let timer = (1500, Interpolation::QuadOut);
 /// fx::evolve_from(EvolveSymbolSet::Quadrants, timer)
-///     .with_pattern(DissolvePattern::new())
+///     .with_pattern(DissolvePattern::new());
 /// ```
 #[allow(private_bounds)]
 pub fn evolve_from<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
@@ -1205,6 +1211,7 @@ pub fn expand<T: Into<EffectTimer>>(direction: ExpandDirection, style: Style, ti
 /// use tachyonfx::{fx, fx::EvolveSymbolSet, Interpolation};
 /// use tachyonfx::pattern::DissolvePattern;
 ///
+/// let content_area = Rect::new(0, 0, 80, 24);
 /// let style = Style::default()
 ///     .bg(Color::from_u32(0x32302F))  // content area bg
 ///     .fg(Color::from_u32(0x1D2021)); // screen area bg
