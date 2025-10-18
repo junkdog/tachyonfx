@@ -5,6 +5,7 @@ use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
     features::acquire_mut,
+    fx,
     fx::unique::{Unique, UniqueContext},
     ref_count, Duration, Effect, IntoEffect, RefCount, SimpleRng, ThreadSafetyMarker,
 };
@@ -59,6 +60,22 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// * `effect` - The effect to add to the manager
     pub fn add_effect(&mut self, effect: Effect) {
         self.effects.push(effect);
+    }
+
+    /// Cancels a unique effect by its key.
+    ///
+    /// This method stops a running unique effect by replacing it with a zero-duration
+    /// effect that completes immediately. The cancelled effect will be removed on the
+    /// next call to [`Self::process_effects`].
+    ///
+    /// Note: This only works for effects added via [`Self::add_unique_effect`] or
+    /// [`Self::unique`]. Regular effects added through [`Self::add_effect`] cannot
+    /// be stopped this way.
+    ///
+    /// # Arguments
+    /// * `id` - The unique identifier of the effect to cancel
+    pub fn cancel_unique_effect(&mut self, id: impl Into<K>) {
+        self.add_unique_effect(id, fx::consume_tick());
     }
 
     /// Creates and adds a unique effect to the manager in a single operation.

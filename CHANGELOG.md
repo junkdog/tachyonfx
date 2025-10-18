@@ -5,6 +5,7 @@
 ### Added
 - **DSL Examples in docs**: All DSL-supported effects now include interactive demo snippets in their documentation.
 - `EffectManager::is_running()`: Returns whether there are any active effects.
+- `EffectManager::cancel_unique_effect()`: Cancels a running unique effect by its key.
 
 ### Fixed
 - fix `wasm` feature by updating internal `web-time` references
