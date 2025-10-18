@@ -8,7 +8,8 @@
 - `EffectManager::cancel_unique_effect()`: Cancels a running unique effect by its key.
 
 ### Fixed
-- fix `wasm` feature by updating internal `web-time` references
+- fix `wasm` feature by updating internal `web-time` references.
+- `DslParseError` is now exported when the `dsl` feature is enabled.
 
 
 ## tachyonfx 0.19.0 - 2025-09-27

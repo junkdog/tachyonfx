@@ -19,6 +19,7 @@ use compact_str::CompactString;
 pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
 use dsl_writer::DslWriter;
+pub use parse_error::DslParseError;
 
 use crate::dsl::{
     expressions::{Expr, ExprSpan},
