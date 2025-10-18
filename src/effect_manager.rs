@@ -76,6 +76,26 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
         self.add_effect(fx);
     }
 
+    /// Returns whether there are any active effects currently being managed.
+    ///
+    /// This method is useful for optimizing render loops: if `is_running()` returns
+    /// `false` and there are no other state changes, the UI redraw can be skipped.
+    ///
+    /// # Returns
+    /// `true` if there are active effects, `false` otherwise.
+    ///
+    /// # Example
+    /// ```ignore
+    /// if effect_manager.is_running() || other_state_changed {
+    ///     terminal.draw(|frame| {
+    ///         // render UI
+    ///     })?;
+    /// }
+    /// ```
+    pub fn is_running(&self) -> bool {
+        !self.effects.is_empty()
+    }
+
     /// Processes all active effects for the given duration.
     ///
     /// This method should be called each frame in your render loop. It will:

@@ -4,6 +4,7 @@
 
 ### Added
 - **DSL Examples in docs**: All DSL-supported effects now include interactive demo snippets in their documentation.
+- `EffectManager::is_running()`: Returns whether there are any active effects.
 
 ### Fixed
 - fix `wasm` feature by updating internal `web-time` references
