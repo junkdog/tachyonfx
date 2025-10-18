@@ -114,6 +114,7 @@
   // TachyonFX Live Demo System for Rustdoc
   let tachyonModule = null;
   let createRenderer = null;
+  let RendererConfig = null;
 
   // Sample ANSI content for demos
   const SAMPLE_ANSI = `\x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m┌\x1b[0m\x1b[38;5;142m\x1b[48;2;29;32;33m\x1b[1m tachyonfx live demo \x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m─────────────────┐\x1b[0m
@@ -137,7 +138,7 @@
     const localPath = '../'.repeat(depth) + 'tachyonfx-renderer/tachyonfx_renderer.js';
 
     // Fallback to CDN for docs.rs or other hosted environments
-    const cdnPath = 'https://unpkg.com/tachyonfx-renderer@0.1.0/tachyonfx_renderer.js';
+    const cdnPath = 'https://unpkg.com/tachyonfx-renderer@0.2.0/tachyonfx_renderer.js';
 
     return { local: localPath, cdn: cdnPath };
   }
@@ -155,6 +156,7 @@
       await module.default();
       tachyonModule = module;
       createRenderer = module.createRenderer;
+      RendererConfig = module.RendererConfig;
       console.log('✅ TachyonFX renderer initialized (local)');
       return true;
     } catch (localError) {
@@ -166,6 +168,7 @@
         await module.default();
         tachyonModule = module;
         createRenderer = module.createRenderer;
+        RendererConfig = module.RendererConfig;
         console.log('✅ TachyonFX renderer initialized (CDN)');
         return true;
       } catch (cdnError) {
@@ -186,11 +189,11 @@
     }
 
     try {
-      const renderer = createRenderer(
-        containerId,
-        dslCode,
-        ansiContent || SAMPLE_ANSI
-      );
+      const config = new RendererConfig(containerId)
+        .withDsl(dslCode)
+        .withCanvas(ansiContent || SAMPLE_ANSI)
+        .withSleepBetweenReplay(3000);
+      const renderer = createRenderer(config);
       return renderer;
     } catch (error) {
       console.error('Failed to create demo:', error);
@@ -264,13 +267,11 @@
     }
 
     try {
-      const renderer = createRenderer(
-        canvasId,
-        dslCode,
-        ansiContent || SAMPLE_ANSI,
-        40,  // width in columns
-        8    // height in rows
-      );
+      const config = new RendererConfig(canvasId)
+        .withDsl(dslCode)
+        .withCanvas(ansiContent || SAMPLE_ANSI)
+        .withSleepBetweenReplay(3000);
+      const renderer = createRenderer(config);
 
       // Store renderer globally for button onclick access
       window[`${containerId}_renderer`] = renderer;

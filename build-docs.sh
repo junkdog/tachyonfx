@@ -11,8 +11,8 @@ mkdir -p "$DOCS_DIR"
 if [ -f "$DOCS_DIR/tachyonfx_renderer.js" ] && [ -f "$DOCS_DIR/tachyonfx_renderer_bg.wasm" ]; then
     echo "✅ Using existing tachyonfx-renderer assets from $DOCS_DIR/"
 else
-    # Download tachyonfx-renderer 0.1.0 from npm
-    echo "📦 Downloading tachyonfx-renderer 0.1.0 from npm..."
+    # Download tachyonfx-renderer from npm
+    echo "📦 Downloading tachyonfx-renderer from npm..."
 
     # Save current directory
     ORIGINAL_DIR=$(pwd)
@@ -20,7 +20,7 @@ else
     trap "rm -rf $TEMP_DIR" EXIT
 
     cd "$TEMP_DIR"
-    npm pack tachyonfx-renderer@0.1.0 >/dev/null 2>&1
+    npm pack tachyonfx-renderer@0.2.0 >/dev/null 2>&1
     tar -xzf tachyonfx-renderer-*.tgz
 
     # Copy WASM and JS files to docs assets (using absolute path)
