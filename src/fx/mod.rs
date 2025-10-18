@@ -418,7 +418,12 @@ where
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/hsl_shift.gif)
+/// <div data-tachyonfx-demo="hsl_shift"
+///      data-dsl="let timer = (1000, Interpolation::Linear);
+///                let fg_shift = [120.0, 25.0, 25.0];
+///                let bg_shift = [-20.0, -50.0, 15.0];
+///                fx::hsl_shift(Some(fg_shift), Some(bg_shift), timer)
+///                    .with_pattern(SweepPattern::left_to_right(80))"> </div>
 ///
 /// ```no_run
 /// // shift the hue of the entire area
@@ -426,7 +431,7 @@ where
 ///
 /// let timer = (1000, Interpolation::Linear);
 /// let fg_shift = [120.0, 25.0, 25.0];
-/// let bg_shift = [-40.0, -50.0, -50.0];
+/// let bg_shift = [-20.0, -50.0, 15.0];
 /// fx::hsl_shift(Some(fg_shift), Some(bg_shift), timer);
 /// ```
 pub fn hsl_shift<T: Into<EffectTimer>>(
@@ -456,7 +461,10 @@ pub fn hsl_shift<T: Into<EffectTimer>>(
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/hsl_shift_fg.gif)
+/// <div data-tachyonfx-demo="hsl_shift_fg"
+///      data-dsl="let timer = (1000, Interpolation::Linear);
+///      let fg_shift = [120.0, 25.0, 25.0];
+///      fx::hsl_shift(Some(fg_shift), None, timer)"></div>
 ///
 /// ```no_run
 /// use tachyonfx::{fx, Interpolation};
@@ -471,6 +479,9 @@ pub fn hsl_shift_fg<T: Into<EffectTimer>>(hsl_fg_change: [f32; 3], timer: T) -> 
 }
 
 /// Returns an effect that downsamples to 256 color mode.
+///
+/// <div data-tachyonfx-demo="term256_colors"
+///      data-dsl="fx::term256_colors()"></div>
 #[deprecated(since = "0.16.0", note = "not considered widely useful")]
 pub fn term256_colors() -> Effect {
     Ansi256::default().into_effect()
@@ -504,6 +515,11 @@ pub fn term256_colors() -> Effect {
 /// Interactive examples:
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=explode>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned>
+///
+/// <div data-tachyonfx-demo="explode"
+///      data-dsl="let content_area = Rect::new(1, 1, 38, 5);
+///                fx::explode(10.0, 3.0, 800)
+///                    .with_area(content_area)"></div>
 ///
 /// ```no_run
 /// use tachyonfx::{fx, Interpolation::Linear};
@@ -539,6 +555,15 @@ pub fn explode(force: f32, force_rng_factor: f32, timer: impl Into<EffectTimer>)
 /// # Examples
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=freeze_at>
+///
+/// <div data-tachyonfx-demo="freeze_at"
+///      data-dsl="let fade_effect = fx::dissolve(1000);
+///                fx::freeze_at(0.5, false, fade_effect)"></div>
+///
+/// ```no_run
+/// let fade_effect = fx::dissolve(1000);
+/// fx::freeze_at(0.5, false, fade_effect);
+/// ```
 pub fn freeze_at(alpha: f32, set_raw_alpha: bool, effect: Effect) -> Effect {
     FreezeAt::new(alpha, set_raw_alpha, effect).into_effect()
 }
@@ -569,6 +594,17 @@ pub fn freeze_at(alpha: f32, set_raw_alpha: bool, effect: Effect) -> Effect {
 /// Interactive examples:
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=remap_alpha>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2>
+///
+/// <div data-tachyonfx-demo="remap_alpha"
+///      data-dsl="let fade_effect = fx::fade_to_fg(Color::Cyan, 3000)
+///                    .with_color_space(ColorSpace::Rgb);
+///                fx::remap_alpha(0.1, 0.5, fade_effect)"></div>
+///
+/// ```no_run
+/// let fade_effect = fx::fade_to_fg(Color::Cyan, 3000)
+///     .with_color_space(ColorSpace::Rgb);
+/// fx::remap_alpha(0.1, 0.5, fade_effect)
+/// ```
 pub fn remap_alpha(alpha_start: f32, alpha_end: f32, effect: Effect) -> Effect {
     let range = alpha_start.max(0.0)..alpha_end.min(1.0);
     RemapAlpha::new(range, effect).into_effect()
@@ -589,17 +625,18 @@ pub fn remap_alpha(alpha_start: f32, alpha_end: f32, effect: Effect) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=repeat_times>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever>
 ///
+/// <div data-tachyonfx-demo="repeat"
+///      data-dsl="let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::CubicOut));
+///                fx::repeat(fade, RepeatMode::Times(3))">
+/// </div>
+///
 /// ```no_run
 /// use tachyonfx::{fx, fx::RepeatMode, Duration, EffectTimer, Interpolation};
 /// use ratatui::style::Color;
 ///
 /// // Repeat a fade effect 3 times
-/// let fade = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));
+/// let fade = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::CubicOut));
 /// let repeated = fx::repeat(fade, RepeatMode::Times(3));
-///
-/// // Repeat an effect for 5 seconds
-/// let fade = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));
-/// let repeat_duration = fx::repeat(fade, RepeatMode::Duration(Duration::from_secs(5)));
 /// ```
 pub fn repeat(effect: Effect, mode: RepeatMode) -> Effect {
     Repeat::new(effect, mode).into_effect()
@@ -620,7 +657,8 @@ pub fn repeat(effect: Effect, mode: RepeatMode) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=ping_pong>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/ping_pong.gif)
+/// <div data-tachyonfx-demo="ping_pong"
+///      data-dsl="fx::ping_pong(fx::coalesce((1500, QuintIn)))"></div>
 ///
 /// ```no_run
 /// use tachyonfx::{fx, Interpolation};
@@ -645,12 +683,15 @@ pub fn ping_pong(effect: Effect) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=repeat_forever>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=hsl_shift_2>
 ///
-/// ```no_run
-/// use tachyonfx::{fx, EffectTimer, Interpolation};
-/// use ratatui::style::Color;
+/// <div data-tachyonfx-demo="repeating"
+///      data-dsl="let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));
+///                fx::repeating(fade)"></div>
 ///
-/// // Create an endless color cycling effect
-/// let fade = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));
+/// ```no_run
+/// use ratatui::style::Color;
+/// use tachyonfx::{fx, Interpolation};
+///
+/// let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));
 /// let endless = fx::repeating(fade);
 /// ```
 pub fn repeating(effect: Effect) -> Effect {
@@ -660,6 +701,22 @@ pub fn repeating(effect: Effect) -> Effect {
 /// Creates an effect that sweeps out from a specified color with optional randomness.
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=sweep_out>
+///
+/// <div data-tachyonfx-demo="sweep_out"
+///      data-dsl="fx::sweep_out(
+///                    Motion::LeftToRight,
+///                    10,
+///                    0,
+///                    Color::Black,
+///                    (1200, Interpolation::QuadOut)
+///                )"></div>
+///
+/// ```no_run
+/// use ratatui::prelude::Color;
+/// use tachyonfx::{fx, Interpolation, Motion};
+///
+/// fx::sweep_out(Motion::LeftToRight, 10, 0, Color::Black, (1200, Interpolation::QuadOut));
+/// ```
 ///
 /// Refer to [`sweep_in`](fn.sweep_in.html) for more information.
 pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
@@ -713,7 +770,9 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=sweep_in>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/sweep_in.gif)
+/// <div data-tachyonfx-demo="sweep-in"
+///      data-dsl="fx::sweep_in(Motion::LeftToRight, 10, 0, Color::Black, (1200,
+/// Interpolation::QuadOut))"> </div>
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
@@ -795,15 +854,19 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=slide_in>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/slide_in.gif)
+/// <div data-tachyonfx-demo="slide-in-1"
+///      data-dsl="let c = Color::from_u32(0xffaf00);
+///                let timer = (1000, Interpolation::Linear);
+///                fx::slide_in(Motion::UpToDown, 5, 0, c, timer)"></div>
+///
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
 /// use tachyonfx::*;
 ///
-/// let c = Color::from_u32(0x1d2021);
+/// let c = Color::from_u32(0xffaf00);
 /// let timer = (1000, Interpolation::Linear);
-/// fx::slide_in(Motion::UpToDown, 10, 0, c, timer);
+/// fx::slide_in(Motion::UpToDown, 5, 0, c, timer)
 /// ```
 /// Slides in from the top, with no randomness
 pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
@@ -844,16 +907,19 @@ pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=slide_out>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/slide_out.gif)
+/// <div data-tachyonfx-demo="slide_out"
+///      data-dsl="let c = Color::from_u32(0xffaf00);
+///                let timer = (1000, Interpolation::Linear);
+///                fx::slide_out(Motion::UpToDown, 10, 0, c, timer)"></div>
+///
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::{fx, Interpolation, Motion};
 ///
-/// // slide in from the top, with no randomness
-/// let c = Color::from_u32(0x1d2021);
+/// let c = Color::from_u32(0xffaf00);
 /// let timer = (1000, Interpolation::Linear);
-/// fx::slide_in(Motion::UpToDown, 10, 0, c, timer);
+/// fx::slide_out(Motion::UpToDown, 10, 0, c, timer);
 /// ```
 pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
     direction: Motion,
@@ -901,22 +967,21 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=stretch>
 ///
+/// <div data-tachyonfx-demo="stretch"
+///      data-dsl="fx::stretch(
+///                    Motion::UpToDown,
+///                    Style::default().bg(Color::Black),
+///                    (1000, Interpolation::BounceOut)
+///                )"></div>
+///
 /// ```no_run
-/// use tachyonfx::{fx, EffectTimer, Interpolation, Motion};
 /// use ratatui::style::{Color, Style};
+/// use tachyonfx::{fx, Interpolation, Motion};
 ///
-/// // Stretch from left to right with white foreground on black background
-/// let stretch_effect = fx::stretch(
-///     Motion::LeftToRight,
-///     Style::default().fg(Color::White).bg(Color::Black),
-///     EffectTimer::from_ms(1000, Interpolation::Linear)
-/// );
-///
-/// // Stretch upward with colored background
-/// let upward_stretch = fx::stretch(
-///     Motion::DownToUp,
-///     Style::default().bg(Color::Blue),
-///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
+/// fx::stretch(
+///     Motion::UpToDown,
+///     Style::default().bg(Color::Black),
+///     (1000, Interpolation::BounceOut)
 /// );
 /// ```
 pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) -> Effect {
@@ -947,22 +1012,17 @@ pub fn stretch<T: Into<EffectTimer>>(direction: Motion, style: Style, timer: T) 
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=evolve>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fire>
 ///
+/// <div data-tachyonfx-demo="evolve"
+///      data-dsl="let p = RadialPattern::center().with_transition_width(10.0);
+///                fx::evolve(EvolveSymbolSet::CircleFill, 500)
+///                    .with_pattern(p)"></div>
+///
 /// ```no_run
-/// use ratatui::style::{Color, Style};
-/// use tachyonfx::{fx, fx::EvolveSymbolSet, EffectTimer, Interpolation};
-/// use tachyonfx::pattern::{DiagonalPattern, DiagonalDirection};
+/// use tachyonfx::{fx, fx::EvolveSymbolSet, Interpolation};
 ///
-/// // Basic evolve effect (all cells transform simultaneously)
-/// let evolve_effect = fx::evolve(
-///     EvolveSymbolSet::Circles,
-///     EffectTimer::from_ms(2000, Interpolation::Linear)
-/// );
-///
-/// // Evolve effect with spatial pattern for progressive transformation
-/// let patterned_effect = fx::evolve(
-///     (EvolveSymbolSet::BlocksHorizontal, Style::default().fg(Color::Red)),
-///     EffectTimer::from_ms(1500, Interpolation::QuadOut)
-/// ).with_pattern(DiagonalPattern::new(DiagonalDirection::TopLeftToBottomRight, 2.0));
+/// let p = RadialPattern::center().with_transition_width(10.0);
+/// fx::evolve(EvolveSymbolSet::CircleFill, 500)
+///     .with_pattern(p)
 /// ```
 #[allow(private_bounds)]
 pub fn evolve<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
@@ -987,15 +1047,22 @@ where
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=evolve_into>
 ///
+/// <div data-tachyonfx-demo="evolve_into"
+///      data-dsl="let p = RadialPattern::with_transition((0.5, 0.5), 5.0);
+///                fx::evolve_into(
+///                    EvolveSymbolSet::Circles,
+///                    (1000, Interpolation::SineOut)
+///                ).with_pattern(p)"></div>
+///
 /// ```no_run
-/// use tachyonfx::{fx, fx::EvolveSymbolSet, EffectTimer, Interpolation};
+/// use tachyonfx::{fx, fx::EvolveSymbolSet, Interpolation};
 /// use tachyonfx::pattern::RadialPattern;
 ///
-/// // Evolve characters with radial pattern, then reveal underlying text
-/// let effect = fx::evolve_into(
+/// let p = RadialPattern::with_transition((0.5, 0.5), 5.0);
+/// fx::evolve_into(
 ///     EvolveSymbolSet::Circles,
-///     EffectTimer::from_ms(2000, Interpolation::Linear)
-/// ).with_pattern(RadialPattern::center());
+///     (1000, Interpolation::SineOut)
+/// ).with_pattern(p)
 /// ```
 #[allow(private_bounds)]
 pub fn evolve_into<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
@@ -1025,16 +1092,18 @@ where
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=translate>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fire>
 ///
+/// <div data-tachyonfx-demo="evolve_from"
+///      data-dsl="let timer = (1500, Interpolation::QuadOut);
+///                fx::evolve_from(EvolveSymbolSet::Quadrants, timer)
+///                    .with_pattern(DissolvePattern::new())"></div>
+///
 /// ```no_run
-/// use ratatui::style::{Color, Style};
-/// use tachyonfx::{fx, fx::EvolveSymbolSet, EffectTimer, Interpolation};
+/// use tachyonfx::{fx, fx::EvolveSymbolSet, Interpolation};
 /// use tachyonfx::pattern::CheckerboardPattern;
 ///
-/// // Start from underlying text, evolve to symbols with checkerboard pattern
-/// let effect = fx::evolve_from(
-///     (EvolveSymbolSet::BlocksHorizontal, Style::default().fg(Color::Green)),
-///     EffectTimer::from_ms(1500, Interpolation::QuadOut)
-/// ).with_pattern(CheckerboardPattern::default());
+/// let timer = (1500, Interpolation::QuadOut);
+/// fx::evolve_from(EvolveSymbolSet::Quadrants, timer)
+///     .with_pattern(DissolvePattern::new())
 /// ```
 #[allow(private_bounds)]
 pub fn evolve_from<T>(symbols: impl Into<EvolveSymbolConfig>, timer: T) -> Effect
@@ -1071,23 +1140,21 @@ where
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=expand>
 ///
-/// ```no_run
-/// use tachyonfx::{fx, EffectTimer, Interpolation};
-/// use tachyonfx::fx::ExpandDirection;
-/// use ratatui::style::{Color, Style};
+/// <div data-tachyonfx-demo="expand"
+///      data-dsl="fx::expand(
+///                    ExpandDirection::Horizontal,
+///                    Style::default().bg(Color::Blue),
+///                    (1000, Interpolation::Linear)
+///                )"></div>
 ///
-/// // Expand horizontally from center with colored background
-/// let expand_effect = fx::expand(
+/// ```no_run
+/// use ratatui::style::{Color, Style};
+/// use tachyonfx::{fx, fx::ExpandDirection, Interpolation};
+///
+/// fx::expand(
 ///     ExpandDirection::Horizontal,
 ///     Style::default().bg(Color::Blue),
-///     EffectTimer::from_ms(1000, Interpolation::Linear)
-/// );
-///
-/// // Expand vertically from center
-/// let vertical_expand = fx::expand(
-///     ExpandDirection::Vertical,
-///     Style::default().fg(Color::White).bg(Color::Black),
-///     EffectTimer::from_ms(2000, Interpolation::QuadOut)
+///     (1000, Interpolation::Linear)
 /// );
 /// ```
 pub fn expand<T: Into<EffectTimer>>(direction: ExpandDirection, style: Style, timer: T) -> Effect {
@@ -1123,18 +1190,32 @@ pub fn expand<T: Into<EffectTimer>>(direction: ExpandDirection, style: Style, ti
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=translate>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fire>
 ///
+/// <div data-tachyonfx-demo="translate"
+///      data-dsl="let style = Style::default()
+///                    .bg(Color::from_u32(0x32302F))
+///                    .fg(Color::from_u32(0x1D2021));
+///                let timer = (1000, QuadIn);
+///                let inner = fx::evolve_from((EvolveSymbolSet::Quadrants, style), timer)
+///                    .with_pattern(DissolvePattern::new());
+///                fx::translate(inner, Offset { x: 0, y: -8 }, timer)"></div>
+///
 /// ```no_run
-/// use ratatui::layout::Offset;
-/// use ratatui::style::Color;
-/// use tachyonfx::*;
+/// use ratatui::layout::{Offset, Rect};
+/// use ratatui::style::{Color, Style};
+/// use tachyonfx::{fx, fx::EvolveSymbolSet, Interpolation};
+/// use tachyonfx::pattern::DissolvePattern;
 ///
-/// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
-/// let effect = fx::fade_to_fg(Color::Red, timer);
-/// fx::translate(effect, Offset { x: 5, y: 10 }, timer);
+/// let style = Style::default()
+///     .bg(Color::from_u32(0x32302F))  // content area bg
+///     .fg(Color::from_u32(0x1D2021)); // screen area bg
+///
+/// let timer = (1000, Interpolation::QuadIn);
+/// let inner_effect = fx::evolve_from((EvolveSymbolSet::Quadrants, style), timer)
+///     .with_pattern(DissolvePattern::new());
+///
+/// fx::translate(inner_effect, Offset { x: 0, y: -8 }, timer)
+///     .with_area(content_area);
 /// ```
-///
-/// This example creates a translation effect that moves a fade-to-red effect by 5 rows
-/// and 10 columns over one second.
 pub fn translate<T: Into<EffectTimer>>(fx: Effect, translate_by: Offset, timer: T) -> Effect {
     translate::Translate::new(fx, translate_by, timer.into()).into_effect()
 }
@@ -1268,19 +1349,35 @@ pub fn offscreen_buffer(fx: Effect, render_target: RefCount<Buffer>) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=sequence>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fire>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/sequence.gif)
+/// <div data-tachyonfx-demo="sequence"
+///      data-dsl="let style = Style::default()
+///                    .fg(Color::from_u32(0xfbf1c7))
+///                    .bg(Color::from_u32(0xfbf1c7));
+///                let dissolve_effect = fx::dissolve_to(style, 1000)
+///                    .with_pattern(SweepPattern::left_to_right(35));
+///                let fade_effect = fx::fade_from(
+///                    Color::from_u32(0xfbf1c7),
+///                    Color::from_u32(0xfbf1c7),
+///                    1000
+///                );
+///                fx::sequence(&[dissolve_effect, fade_effect])"></div>
+///
 ///
 /// ```no_run
-/// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use ratatui::prelude::{Color, Style};
+/// use tachyonfx::{fx, pattern::SweepPattern};
 ///
-/// // fade in the entire area from the out-of-bounds color
-/// let c = Color::from_u32(0x504945);
-/// let timer = (500, Interpolation::CircOut);
-/// fx::sequence(&[
-///     fx::fade_from_fg(c, timer),
-///     fx::dissolve(timer),
-/// ]);
+/// let style = Style::default()
+///     .fg(Color::from_u32(0xfbf1c7))
+///     .bg(Color::from_u32(0xfbf1c7));
+/// let dissolve_effect = fx::dissolve_to(style, 1000)
+///     .with_pattern(SweepPattern::left_to_right(35));
+/// let fade_effect = fx::fade_from(
+///     Color::from_u32(0xfbf1c7),
+///     Color::from_u32(0xfbf1c7),
+///     1000
+/// );
+/// fx::sequence(&[dissolve_effect, fade_effect]);
 /// ```
 pub fn sequence(effects: &[Effect]) -> Effect {
     SequentialEffect::new(effects.into()).into_effect()
@@ -1297,20 +1394,25 @@ pub fn sequence(effects: &[Effect]) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fire>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/parallel.gif)
+/// <div data-tachyonfx-demo="parallel"
+///      data-dsl="let timer = (1800, Interpolation::QuadOut);
+///                let p = RadialPattern::center().with_transition_width(8.0);
+///                fx::parallel(&[
+///                    fx::coalesce(timer).with_pattern(p),
+///                    fx::hsl_shift_fg([240.0, 30.0, 15.0], timer).reversed()
+///                ])"></div>
 ///
 /// ```no_run
-/// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::{fx, Interpolation};
+/// use tachyonfx::pattern::RadialPattern;
 ///
-/// let c = Color::from_u32(0x504945);
-/// let timer = (1000, Interpolation::CircOut);
+/// let timer = (1800, Interpolation::QuadOut);
 /// fx::parallel(&[
-///     fx::fade_from_fg(c, timer),
-///     fx::coalesce(timer),
+///     fx::coalesce(timer)
+///         .with_pattern(RadialPattern::center().with_transition_width(8.0)),
+///     fx::hsl_shift_fg([240.0, 30.0, 15.0], timer).reversed(),
 /// ]);
 /// ```
-/// Fade in the entire area from the out-of-bounds color.
 pub fn parallel(effects: &[Effect]) -> Effect {
     ParallelEffect::new(effects.into()).into_effect()
 }
@@ -1326,12 +1428,14 @@ pub fn parallel(effects: &[Effect]) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=delay>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=sequence>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/dissolve.gif)
+/// <div data-tachyonfx-demo="dissolve"
+///      data-dsl="fx::dissolve(1000)"></div>
+///
 ///
 /// ```no_run
-/// use tachyonfx::{fx, Interpolation};
+/// use tachyonfx::fx;
 ///
-/// fx::dissolve(1000); // linear interpolation
+/// fx::dissolve(1000);
 /// ```
 pub fn dissolve<T: Into<EffectTimer>>(timer: T) -> Effect {
     Dissolve::new(timer.into()).into_effect()
@@ -1342,12 +1446,22 @@ pub fn dissolve<T: Into<EffectTimer>>(timer: T) -> Effect {
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=dissolve_to>
 ///
+/// <div data-tachyonfx-demo="dissolve_to"
+///      data-dsl="fx::dissolve_to(Style::default(), 1000)"></div>
+///
 /// This is similar to [`dissolve()`] but also transitions the background to match the
 /// target style.
 ///
 /// # Arguments
 /// * `timer` - Controls the duration and interpolation of the effect
 /// * `style` - The target style to dissolve to
+///
+/// ```no_run
+/// use ratatui::style::Style;
+/// use tachyonfx::fx;
+///
+/// fx::dissolve_to(Style::default(), 1000);
+/// ```
 pub fn dissolve_to<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
     Dissolve::with_style(style, timer.into()).into_effect()
 }
@@ -1361,12 +1475,14 @@ pub fn dissolve_to<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=ping_pong>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=parallel>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce.gif)
+/// <div data-tachyonfx-demo="coalesce"
+///      data-dsl="fx::coalesce((1500, Interpolation::QuintIn))"></div>
+///
 ///
 /// ```no_run
 /// use tachyonfx::{fx, Interpolation};
 ///
-/// fx::coalesce((1000, Interpolation::BounceOut));
+/// fx::coalesce((1500, Interpolation::QuintIn));
 /// ```
 pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
     Dissolve::new(timer.into().mirrored()).into_effect()
@@ -1386,11 +1502,15 @@ pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=coalesce_from>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/coalesce_from.gif)
+/// <div data-tachyonfx-demo="coalesce_from"
+///      data-dsl="let c = Color::from_u32(0x1d2021);
+///                let style = Style::default().bg(c);
+///                fx::coalesce_from(style, (1000, Interpolation::ExpoInOut))"></div>
+///
 ///
 /// ```no_run
 /// use ratatui::prelude::{Color, Style};
-/// use tachyonfx::*;
+/// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x1d2021);
 /// let style = Style::default().bg(c);
@@ -1414,19 +1534,18 @@ pub fn coalesce_from<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=with_duration>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=timed_never_complete>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/fade_to_fg.gif)
+/// <div data-tachyonfx-demo="fade_to_fg"
+///      data-dsl="let c = Color::from_u32(0x504945);
+///                fx::fade_to_fg(c, (1000, Interpolation::CircOut))"></div>
+///
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x504945);
-/// let filter = CellFilter::FgColor(Color::from_u32(0xfabd2f));
-/// fx::fade_to_fg(c, (1000, Interpolation::CircOut))
-///     .filter(filter);
+/// fx::fade_to_fg(c, (1000, Interpolation::CircOut));
 /// ```
-///
-/// Fade out blake by targeting the author fg color.
 pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect {
     fade(Some(fg), None, timer.into(), false)
 }
@@ -1441,18 +1560,18 @@ pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effe
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=parallel>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=sequence>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/fade_from_fg.gif)
+/// <div data-tachyonfx-demo="fade_from_fg"
+///      data-dsl="let c = Color::from_u32(0x504945);
+///                fx::fade_from_fg(c, (1000, Interpolation::QuadInOut))"></div>
+///
 ///
 /// ```no_run
-/// use ratatui::prelude::{Color, Margin};
-/// use tachyonfx::*;
+/// use ratatui::prelude::Color;
+/// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x504945);
-/// let filter = CellFilter::Inner(Margin::new(1, 1));
-/// fx::fade_from_fg(c, (1000, Interpolation::QuadInOut))
-///     .filter(filter);
+/// fx::fade_from_fg(c, (1000, Interpolation::QuadInOut));
 /// ```
-/// Fade in content, excluding borders, from the bg color.
 pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect {
     fade(Some(fg), None, timer.into(), true)
 }
@@ -1472,11 +1591,14 @@ pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Ef
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=paint>
 ///
+/// <div data-tachyonfx-demo="paint"
+///      data-dsl="fx::paint(Color::Cyan, Color::DarkGray, 1000)"></div>
+///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::fx;
 ///
-/// fx::paint(Color::Red, Color::Blue, 100);
+/// fx::paint(Color::Cyan, Color::DarkGray, 1000);
 /// ```
 pub fn paint<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Effect {
     Paint::new(Some(fg.into()), Some(bg.into()), timer.into()).into_effect()
@@ -1495,9 +1617,12 @@ pub fn paint<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Ef
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=paint_fg>
 ///
+/// <div data-tachyonfx-demo="paint_fg"
+///      data-dsl="fx::paint_fg(Color::Red, 100)"></div>
+///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::fx;
 ///
 /// fx::paint_fg(Color::Red, 100);
 /// ```
@@ -1520,9 +1645,12 @@ pub fn paint_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=paint_bg>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned>
 ///
+/// <div data-tachyonfx-demo="paint_bg"
+///      data-dsl="fx::paint_bg(Color::Blue, 100)"></div>
+///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::fx;
 ///
 /// fx::paint_bg(Color::Blue, 100);
 /// ```
@@ -1539,17 +1667,18 @@ pub fn paint_bg<T: Into<EffectTimer>, C: Into<Color>>(bg: C, timer: T) -> Effect
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fade_to>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/fade_to.gif)
+/// <div data-tachyonfx-demo="fade_to"
+///      data-dsl="let c = Color::from_u32(0x1d2021);
+///                fx::fade_to(c, c, (1000, Interpolation::CircOut))"></div>
+///
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x1d2021);
 /// fx::fade_to(c, c, (1000, Interpolation::CircOut));
 /// ```
-///
-/// Fade the entire area to the out-of-bounds color.
 pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Effect {
     fade(Some(fg), Some(bg), timer.into(), false)
 }
@@ -1563,17 +1692,18 @@ pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> 
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fade_from>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fire>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/fade_from.gif)
+/// <div data-tachyonfx-demo="fade_from"
+///      data-dsl="let c = Color::from_u32(0x1d2021);
+///                fx::fade_from(c, c, (1000, Interpolation::CircOut))"></div>
+///
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x1d2021);
 /// fx::fade_from(c, c, (1000, Interpolation::CircOut));
 /// ```
-///
-/// fade in the entire area from the out-of-bounds color
 pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Effect {
     fade(Some(fg), Some(bg), timer.into(), true)
 }
@@ -1583,6 +1713,9 @@ pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -
 /// This function creates an effect that does nothing for the given duration,
 /// effectively creating a pause or delay in a sequence of effects.
 ///
+/// <div data-tachyonfx-demo="sleep"
+///      data-dsl="fx::sleep(1000)"></div>
+///
 /// # Arguments
 ///
 /// * `duration` - The duration of the sleep effect. This can be any type that can be
@@ -1591,6 +1724,12 @@ pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -
 /// # Returns
 ///
 /// An `Effect` that, when processed, will pause for the specified duration.
+///
+/// ```no_run
+/// use tachyonfx::fx;
+///
+/// fx::sleep(1000);
+/// ```
 pub fn sleep<T: Into<EffectTimer>>(duration: T) -> Effect {
     Sleep::new(duration).into_effect()
 }
@@ -1618,12 +1757,13 @@ pub fn sleep<T: Into<EffectTimer>>(duration: T) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=delay>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=explode_patterned>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/delay.gif)
+/// <div data-tachyonfx-demo="delay"
+///      data-dsl="fx::delay(800, fx::dissolve(200))"></div>
+///
 ///
 /// ```no_run
 /// use tachyonfx::fx;
 ///
-/// // wait 800ms before dissolving the content
 /// fx::delay(800, fx::dissolve(200));
 /// ```
 pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
@@ -1652,30 +1792,20 @@ pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=prolong_start>
 /// - <https://junkdog.github.io/tachyonfx-ftl/?example=fire>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/prolong_start.gif)
+/// <div data-tachyonfx-demo="prolong_start"
+///      data-dsl="let c = Color::from_u32(0x504945);
+///                let timer = (500, Interpolation::CircOut);
+///                fx::prolong_start(1000, fx::fade_from_fg(c, timer))"></div>
+///
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x504945);
 /// let timer = (500, Interpolation::CircOut);
-/// fx::prolong_start(timer, fx::fade_from_fg(c, timer));
+/// fx::prolong_start(1000, fx::fade_from_fg(c, timer));
 /// ```
-///  This example holds the initial state of the fade effect for 500ms before starting the
-/// fade.
-///
-/// ```
-/// use ratatui::style::Color;
-/// use tachyonfx::{Effect, fx, EffectTimer, Interpolation};
-///
-/// fx::prolong_start(500, // 500ms
-///     fx::fade_from_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear))
-/// );
-/// ```
-/// This example creates an effect that waits for 500ms before starting a fade effect from
-/// red to the original color over 1000ms. The total duration of this combined effect will
-/// be 1500ms.
 pub fn prolong_start<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
     Prolong::new(ProlongPosition::Start, duration.into(), effect).into_effect()
 }
@@ -1700,32 +1830,20 @@ pub fn prolong_start<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effec
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=prolong_end>
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/prolong_end.gif)
+/// <div data-tachyonfx-demo="prolong_end"
+///      data-dsl="let c = Color::from_u32(0x504945);
+///                let timer = (500, Interpolation::CircOut);
+///                fx::prolong_end(timer, fx::fade_to_fg(c, timer))"></div>
+///
 ///
 /// ```no_run
 /// use ratatui::prelude::Color;
-/// use tachyonfx::*;
+/// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x504945);
 /// let timer = (500, Interpolation::CircOut);
 /// fx::prolong_end(timer, fx::fade_to_fg(c, timer));
 /// ```
-/// This example holds the final state of the fade effect for another 500ms after it
-/// completes.
-///
-/// ```
-/// use std::time::Duration;
-/// use ratatui::style::Color;
-/// use tachyonfx::{Effect, fx, EffectTimer, Interpolation};
-///
-/// fx::prolong_end(500, // 500ms
-///     fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear))
-/// );
-/// ```
-///
-/// This example creates an effect that fades the foreground color to red over 1000ms,
-/// then holds the red color for an additional 500ms. The total duration of this combined
-/// effect will be 1500ms.
 pub fn prolong_end<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
     Prolong::new(ProlongPosition::End, duration.into(), effect).into_effect()
 }
@@ -1736,9 +1854,18 @@ pub fn prolong_end<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect 
 /// after a single processing tick. It can be useful for creating very short pauses
 /// or for synchronizing effects in complex sequences.
 ///
+/// <div data-tachyonfx-demo="consume_tick"
+///      data-dsl="fx::consume_tick()"></div>
+///
 /// # Returns
 ///
 /// An `Effect` that completes after a single processing tick.
+///
+/// ```no_run
+/// use tachyonfx::fx;
+///
+/// fx::consume_tick();
+/// ```
 pub fn consume_tick() -> Effect {
     ConsumeTick::default().into_effect()
 }
@@ -1763,18 +1890,16 @@ pub fn consume_tick() -> Effect {
 ///
 /// # Examples
 ///
-/// ```rust
-/// use tachyonfx::fx;
-/// use ratatui::style::Color;
+/// <div data-tachyonfx-demo="run_once"
+///      data-dsl="fx::run_once(fx::dissolve(1000))"></div>
 ///
-/// // Ensure a zero-duration effect runs in a sequence
-/// let zero_duration_effect = fx::effect_fn((), 0, |_, _, _| {
-///     // Some instant transformation
-/// });
+/// ```no_run
+/// use ratatui::style::Color;
+/// use tachyonfx::fx;
 ///
 /// fx::sequence(&[
 ///     fx::fade_to_fg(Color::Red, 1000),
-///     fx::run_once(zero_duration_effect),
+///     fx::run_once(fx::dissolve(500)),
 ///     fx::fade_to_fg(Color::Blue, 1000),
 /// ]);
 /// ```
@@ -1803,12 +1928,15 @@ pub fn run_once(effect: Effect) -> Effect {
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=never_complete>
 ///
-/// ```no_run
-/// use tachyonfx::{fx, EffectTimer, Interpolation};
-/// use ratatui::style::Color;
+/// <div data-tachyonfx-demo="never_complete"
+///      data-dsl="let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));
+///                fx::never_complete(fade)"></div>
 ///
-/// // Create a permanent color change over 1 second
-/// let fade = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::Linear));
+/// ```no_run
+/// use ratatui::style::Color;
+/// use tachyonfx::{fx, Interpolation};
+///
+/// let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));
 /// let permanent = fx::never_complete(fade);
 /// ```
 pub fn never_complete(effect: Effect) -> Effect {
@@ -1819,6 +1947,16 @@ pub fn never_complete(effect: Effect) -> Effect {
 /// elapsed or the wrapped effect has finished, the effect will be marked as complete.
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=with_duration>
+///
+/// <div data-tachyonfx-demo="with_duration"
+///      data-dsl="fx::with_duration(Duration::from_millis(1000),
+///                    fx::dissolve(2000))"></div>
+///
+/// ```no_run
+/// use tachyonfx::{fx, Duration};
+///
+/// fx::with_duration(Duration::from_millis(1000), fx::dissolve(2000));
+/// ```
 pub fn with_duration(duration: Duration, effect: Effect) -> Effect {
     effect.with_duration(duration)
 }
@@ -1827,6 +1965,16 @@ pub fn with_duration(duration: Duration, effect: Effect) -> Effect {
 /// after which the effect will be marked as complete.
 ///
 /// Interactive example: <https://junkdog.github.io/tachyonfx-ftl/?example=timed_never_complete>
+///
+/// <div data-tachyonfx-demo="timed_never_complete"
+///      data-dsl="let d = Duration::from_millis(1000);
+///                fx::timed_never_complete(d, fx::dissolve(2000))"></div>
+///
+/// ```no_run
+/// use tachyonfx::{fx, Duration};
+///
+/// fx::timed_never_complete(Duration::from_millis(1000), fx::dissolve(2000));
+/// ```
 pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
     TemporaryEffect::new(never_complete(effect), duration).into_effect()
 }

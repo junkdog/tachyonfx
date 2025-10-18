@@ -1,0 +1,351 @@
+<style>
+  /* Terminal effect demo styling */
+  .tachyonfx-demo {
+    background: #1d2021;
+    border: 2px solid #504945;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 20px 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .tachyonfx-demo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #3c3836;
+  }
+
+  .tachyonfx-demo-title {
+    color: #fabd2f;
+    font-weight: bold;
+    font-size: 0.95rem;
+  }
+
+  .tachyonfx-canvas-wrapper {
+    background: #1d2021;
+    border: 1px solid #3c3836;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0;
+    line-height: 0;
+  }
+
+  .tachyonfx-canvas-wrapper canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .tachyonfx-controls {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tachyonfx-btn {
+    background: #3c3836;
+    color: #ebdbb2;
+    border: 1px solid #504945;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .tachyonfx-btn:hover {
+    background: #504945;
+    border-color: #665c54;
+    transform: translateY(-1px);
+  }
+
+  .tachyonfx-btn:active {
+    transform: translateY(0);
+  }
+
+  .tachyonfx-btn-primary {
+    background: #458588;
+    border-color: #83a598;
+  }
+
+  .tachyonfx-btn-primary:hover {
+    background: #83a598;
+  }
+
+  /* Inline effect examples */
+  .tachyonfx-example {
+    display: inline-block;
+    margin: 10px 10px 10px 0;
+    vertical-align: top;
+    position: relative;
+  }
+
+  .tachyonfx-example .tachyonfx-canvas-wrapper {
+    cursor: pointer;
+  }
+
+  /* Hover tooltip for DSL code */
+  .tachyonfx-code-tooltip {
+    position: fixed;
+    background: #282828;
+    color: #ebdbb2;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #504945;
+    font-size: 0.85em;
+    line-height: 1.4;
+    white-space: pre;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+  }
+
+  /* Tooltip shown via JavaScript, not CSS :hover */
+</style>
+
+<script type="module">
+  // TachyonFX Live Demo System for Rustdoc
+  let tachyonModule = null;
+  let createRenderer = null;
+
+  // Sample ANSI content for demos
+  const SAMPLE_ANSI = `\x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m┌\x1b[0m\x1b[38;5;142m\x1b[48;2;29;32;33m\x1b[1m tachyonfx live demo \x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m─────────────────┐\x1b[0m
+\x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m│\x1b[0m\x1b[48;2;29;32;33m      \x1b[0m\x1b[38;5;214m\x1b[48;2;29;32;33mTerminal effects\x1b[0m\x1b[48;2;29;32;33m rendered       \x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m│\x1b[0m
+\x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m│\x1b[0m\x1b[48;2;29;32;33m     in your \x1b[0m\x1b[38;5;109m\x1b[48;2;29;32;33mbrowser\x1b[0m\x1b[48;2;29;32;33m with \x1b[0m\x1b[38;5;167m\x1b[48;2;29;32;33mWebGL2\x1b[0m\x1b[48;2;29;32;33m!     \x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m│\x1b[0m
+\x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m│\x1b[0m\x1b[48;2;29;32;33m                                      \x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m│\x1b[0m
+\x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m│\x1b[0m\x1b[48;2;29;32;33m      ▁▂▃▄▅▆▇█  \x1b[0m\x1b[38;5;142m\x1b[48;2;29;32;33m● \x1b[0m\x1b[38;5;214m\x1b[48;2;29;32;33m● \x1b[0m\x1b[38;5;167m\x1b[48;2;29;32;33m●\x1b[0m\x1b[48;2;29;32;33m  █▇▆▅▄▃▂▁       \x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m│\x1b[0m
+\x1b[0m\x1b[38;5;208m\x1b[48;2;29;32;33m└──────────────────────────────────────┘\x1b[0m`;
+
+  // Calculate path to tachyonfx-renderer
+  function getRendererPath() {
+    const currentPath = window.location.pathname;
+
+    // Count directory depth from current page to doc root
+    let depth = 1; // Default: from tachyonfx/ to doc/
+    if (currentPath.includes('/fx/')) depth = 2;
+    if (currentPath.includes('/effect/')) depth = 2;
+    if (currentPath.includes('/widget/')) depth = 2;
+
+    // Try local build first (build-docs.sh copies files here)
+    const localPath = '../'.repeat(depth) + 'tachyonfx-renderer/tachyonfx_renderer.js';
+
+    // Fallback to CDN for docs.rs or other hosted environments
+    const cdnPath = 'https://unpkg.com/tachyonfx-renderer@0.1.0/tachyonfx_renderer.js';
+
+    return { local: localPath, cdn: cdnPath };
+  }
+
+  // Initialize WASM module
+  async function initTachyonFX() {
+    if (tachyonModule) return true;
+
+    const paths = getRendererPath();
+
+    // Try local build first (faster, no network dependency)
+    try {
+      console.log('🔍 Loading TachyonFX renderer from local build...');
+      const module = await import(paths.local);
+      await module.default();
+      tachyonModule = module;
+      createRenderer = module.createRenderer;
+      console.log('✅ TachyonFX renderer initialized (local)');
+      return true;
+    } catch (localError) {
+      console.log('Local build not found, loading from CDN...');
+
+      // Fallback to CDN (works on docs.rs and other hosted environments)
+      try {
+        const module = await import(paths.cdn);
+        await module.default();
+        tachyonModule = module;
+        createRenderer = module.createRenderer;
+        console.log('✅ TachyonFX renderer initialized (CDN)');
+        return true;
+      } catch (cdnError) {
+        console.warn('⚠️  TachyonFX renderer not available');
+        console.warn('  Local:', localError.message);
+        console.warn('  CDN:', cdnError.message);
+        return false;
+      }
+    }
+  }
+
+  // Create a live demo element (legacy API for backward compatibility)
+  window.createTachyonDemo = async function(containerId, dslCode, ansiContent = null) {
+    if (!await initTachyonFX()) {
+      document.getElementById(containerId).innerHTML =
+        '<div style="padding: 10px; color: #fb4934;">⚠️ Live demo requires local build</div>';
+      return null;
+    }
+
+    try {
+      const renderer = createRenderer(
+        containerId,
+        dslCode,
+        ansiContent || SAMPLE_ANSI
+      );
+      return renderer;
+    } catch (error) {
+      console.error('Failed to create demo:', error);
+      document.getElementById(containerId).innerHTML =
+        `<div style="padding: 10px; color: #fb4934;">⚠️ Demo error: ${error.message}</div>`;
+      return null;
+    }
+  };
+
+  // Simplified API: creates an inline effect example with code on hover
+  window.effectExample = async function(containerId, dslCode, ansiContent = null) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error(`Container ${containerId} not found`);
+      return null;
+    }
+
+    // Create HTML structure with inline-block layout
+    const canvasId = `${containerId}-canvas`;
+    const codeId = `${containerId}-code`;
+
+    container.className = 'tachyonfx-example';
+    container.innerHTML = `
+      <div class="tachyonfx-canvas-wrapper">
+        <div id="${canvasId}"></div>
+      </div>
+    `;
+
+    // Create tooltip in body (not inside container) for proper fixed positioning
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tachyonfx-code-tooltip';
+    tooltip.id = codeId;
+    tooltip.innerHTML = `<code>${escapeHtml(dslCode)}</code>`;
+    document.body.appendChild(tooltip);
+
+    // Position and show/hide tooltip on hover
+    const canvasWrapper = container.querySelector('.tachyonfx-canvas-wrapper');
+
+    let isVisible = false;
+
+    canvasWrapper.addEventListener('mouseenter', () => {
+      isVisible = true;
+      tooltip.style.visibility = 'visible';
+      tooltip.style.opacity = '1';
+    });
+
+    canvasWrapper.addEventListener('mousemove', (e) => {
+      if (!isVisible) return;
+
+      // Simple positioning: 15px offset from cursor
+      tooltip.style.left = (e.clientX + 15) + 'px';
+      tooltip.style.top = (e.clientY + 15) + 'px';
+    });
+
+    canvasWrapper.addEventListener('mouseleave', () => {
+      isVisible = false;
+      tooltip.style.opacity = '0';
+      tooltip.style.visibility = 'hidden';
+    });
+
+    // Click to open in tachyonfx-ftl playground
+    canvasWrapper.addEventListener('click', () => {
+      const playgroundUrl = `https://junkdog.github.io/tachyonfx-ftl/?canvas_id=tfxdocs&code_raw=${encodeURIComponent(dslCode)}`;
+      window.open(playgroundUrl, '_blank');
+    });
+
+    // Initialize the renderer
+    if (!await initTachyonFX()) {
+      container.innerHTML = '<div style="padding: 10px; color: #fb4934;">⚠️ Live demo unavailable</div>';
+      return null;
+    }
+
+    try {
+      const renderer = createRenderer(
+        canvasId,
+        dslCode,
+        ansiContent || SAMPLE_ANSI,
+        40,  // width in columns
+        8    // height in rows
+      );
+
+      // Store renderer globally for button onclick access
+      window[`${containerId}_renderer`] = renderer;
+
+      return renderer;
+    } catch (error) {
+      console.error('Failed to create demo:', error);
+      container.innerHTML = `<div style="padding: 10px; color: #fb4934;">⚠️ Demo error: ${error.message}</div>`;
+      return null;
+    }
+  };
+
+  // Helper function to escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Normalize multi-line DSL code by trimming alignment indentation
+  function normalizeDslCode(dsl) {
+    const lines = dsl.split('\n');
+    if (lines.length === 1) return dsl;
+
+    // Find minimum indentation on continuation lines (skip first line)
+    let minIndent = Infinity;
+    for (let i = 1; i < lines.length; i++) {
+      const match = lines[i].match(/^(\s*)/);
+      if (match && lines[i].trim().length > 0) {
+        minIndent = Math.min(minIndent, match[1].length);
+      }
+    }
+
+    // Trim the common indentation from continuation lines
+    if (minIndent !== Infinity) {
+      for (let i = 1; i < lines.length; i++) {
+        lines[i] = lines[i].substring(minIndent);
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  // Auto-initialize all demos with data-tachyonfx-demo attribute
+  async function autoInitializeDemos() {
+    if (!await initTachyonFX()) return;
+
+    // Find all elements with data-tachyonfx-demo attribute
+    const demoElements = document.querySelectorAll('[data-tachyonfx-demo]');
+
+    for (const element of demoElements) {
+      const demoId = element.getAttribute('data-tachyonfx-demo');
+      const dslCode = element.getAttribute('data-dsl');
+      const ansiContent = element.getAttribute('data-ansi') || null;
+
+      if (!dslCode) {
+        console.warn(`Demo ${demoId} missing data-dsl attribute`);
+        continue;
+      }
+
+      // Normalize multi-line DSL code
+      const normalizedDsl = normalizeDslCode(dslCode);
+
+      // Convert the element into a proper demo container
+      element.id = `demo-${demoId}`;
+      await effectExample(`demo-${demoId}`, normalizedDsl, ansiContent);
+    }
+
+    document.dispatchEvent(new Event('tachyonfx-ready'));
+  }
+
+  // Auto-initialize demos when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', autoInitializeDemos);
+  } else {
+    autoInitializeDemos();
+  }
+</script>

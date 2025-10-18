@@ -2,6 +2,9 @@
 
 ## tachyonfx 0.19.1 - TBD
 
+### Added
+- **DSL Examples in docs**: All DSL-supported effects now include interactive demo snippets in their documentation.
+
 ### Fixed
 - fix `wasm` feature by updating internal `web-time` references
 

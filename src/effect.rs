@@ -314,7 +314,7 @@ impl Effect {
     /// This is a no-op for effects that don't support patterns.
     ///
     /// # Arguments
-    /// * `pattern` - A pattern that implements Into<AnyPattern>
+    /// * `pattern` - A pattern that implements `Into<AnyPattern>`
     ///
     /// # Returns
     /// * The same effect with the pattern applied (if supported)

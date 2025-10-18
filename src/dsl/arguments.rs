@@ -21,7 +21,7 @@ use crate::{
         method_chains::ChainableMethods,
         DslError,
     },
-    fx::{EvolveSymbolSet, RepeatMode},
+    fx::{EvolveSymbolSet, ExpandDirection, RepeatMode},
     pattern::AnyPattern,
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
 };
@@ -467,7 +467,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an [`ExpandDirection`].
-    pub fn expand_direction(&mut self) -> Result<crate::fx::ExpandDirection, DslError> {
+    pub fn expand_direction(&mut self) -> Result<ExpandDirection, DslError> {
         match self.next("expand_direction")? {
             Expr::Literal(Value::ExpandDirection(d), _) => Ok(d),
             Expr::Var { name, span, .. } => self.bound_var(name, span),
@@ -475,7 +475,7 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    pub fn evolve_symbol_set(&mut self) -> Result<crate::fx::EvolveSymbolSet, DslError> {
+    pub fn evolve_symbol_set(&mut self) -> Result<EvolveSymbolSet, DslError> {
         match self.next("evolve_symbol_set")? {
             Expr::Literal(Value::EvolveSymbolSet(s), _) => Ok(s),
             Expr::Var { name, span, .. } => self.bound_var(name, span),

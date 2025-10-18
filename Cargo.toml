@@ -92,3 +92,8 @@ debug = false
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(not_disabled_due_to_version_conflict)'] }
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "docs-assets/doc-header.html"]
+# Ensure WASM files are available during docs.rs build
+# (files are committed to repo in docs-assets/)
+
