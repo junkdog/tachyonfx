@@ -9,6 +9,7 @@
 
 ### DSL
 - **`Layout` methods**: Added `.direction(Direction)` and `.flex(Flex)` methods.
+- **Zero-argument validation**: DSL now properly rejects arguments passed to zero-argument constructors.
 
 ### Fixed
 - fix `wasm` feature by updating internal `web-time` references.

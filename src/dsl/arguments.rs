@@ -238,6 +238,10 @@ impl<'dsl> Arguments<'dsl> {
         match self.next("layout")? {
             Expr::FnCall { call, self_fns } => {
                 let base_layout = match call.name.as_str() {
+                    "Layout::default" => {
+                        self.verify_no_nested_args(call.args, call.span)?;
+                        Ok(Layout::default())
+                    },
                     "Layout::horizontal" => {
                         let constraints = self.extract_nested(
                             call.args,
@@ -453,6 +457,7 @@ impl<'dsl> Arguments<'dsl> {
         match self.next("style")? {
             Expr::FnCall { call, self_fns } => {
                 if call.name == "Style::new" || call.name == "Style::default" {
+                    self.verify_no_nested_args(call.args, call.span)?;
                     Style::new().fold_fns(self_fns, self.context, self.vars)
                 } else {
                     self.expected_type("style", call.name.to_compact_string(), call.span)?
@@ -496,7 +501,6 @@ impl<'dsl> Arguments<'dsl> {
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
-                "RepeatMode::Forever" => RepeatMode::Forever,
                 "RepeatMode::Times" => {
                     RepeatMode::Times(self.extract_nested(args, Arguments::read_u32, span)?)
                 },
@@ -517,6 +521,7 @@ impl<'dsl> Arguments<'dsl> {
             Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
                 let pattern = match name.as_str() {
                     "CheckerboardPattern::default" => {
+                        self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(CheckerboardPattern::default())
                     },
                     "CheckerboardPattern::with_cell_size" => {
@@ -525,27 +530,36 @@ impl<'dsl> Arguments<'dsl> {
                     },
 
                     "CoalescePattern::new" | "CoalescePattern::default" => {
+                        self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(CoalescePattern::default())
                     },
 
                     "DiagonalPattern::top_left_to_bottom_right" => {
+                        self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(DiagonalPattern::top_left_to_bottom_right())
                     },
                     "DiagonalPattern::top_right_to_bottom_left" => {
+                        self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(DiagonalPattern::top_right_to_bottom_left())
                     },
                     "DiagonalPattern::bottom_left_to_top_right" => {
+                        self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(DiagonalPattern::bottom_left_to_top_right())
                     },
                     "DiagonalPattern::bottom_right_to_top_left" => {
+                        self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(DiagonalPattern::bottom_right_to_top_left())
                     },
 
                     "DissolvePattern::new" | "DissolvePattern::default" => {
+                        self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(DissolvePattern::default())
                     },
 
-                    "RadialPattern::center" => AnyPattern::from(RadialPattern::center()),
+                    "RadialPattern::center" => {
+                        self.verify_no_nested_args(args, span)?;
+                        AnyPattern::from(RadialPattern::center())
+                    },
                     "RadialPattern::new" => {
                         let mut inner_args = self.nested_args(args, 2, span)?;
                         let center_x = inner_args.read_f32()?;
@@ -660,7 +674,10 @@ impl<'dsl> Arguments<'dsl> {
                     let rect = inner_args.rect()?;
                     Ok(RefRect::new(rect))
                 },
-                "RefRect::default" => Ok(RefRect::default()),
+                "RefRect::default" => {
+                    self.verify_no_nested_args(call.args, call.span)?;
+                    Ok(RefRect::default())
+                },
                 e => Err(DslError::UnknownFunction {
                     name: e.to_compact_string(),
                     location: call.span,
@@ -838,6 +855,14 @@ impl<'dsl> Arguments<'dsl> {
             actual.type_name().to_compact_string(),
             actual.span(),
         )
+    }
+
+    fn verify_no_nested_args(
+        &mut self,
+        exprs: Vec<Expr>,
+        span: ExprSpan,
+    ) -> Result<Self, DslError> {
+        self.nested_args(exprs, 0, span)
     }
 
     fn nested_args(
@@ -1160,6 +1185,17 @@ mod tests {
         CellFilter, Motion, RefRect,
     };
 
+    fn parse_expr(input: &str) -> Expr {
+        tokenize(input)
+            .map(sanitize_tokens)
+            .and_then(verify_tokens)
+            .and_then(parse_ast)
+            .unwrap()
+            .last()
+            .unwrap()
+            .clone()
+    }
+
     fn prepare_test<'a>(args: impl Into<VecDeque<Expr>>) -> Arguments<'a> {
         // leaking, but it's fine for tests as it reduces boilerplate
         let dsl = Box::leak(Box::new(EffectDsl::new()));
@@ -1251,17 +1287,6 @@ mod tests {
         let mut args = prepare_test(vec![Expr::Literal(Value::OptionNone, span)]);
         let inner_arg = args.option(Arguments::read_u32).unwrap();
         assert_eq!(inner_arg, None);
-    }
-
-    fn parse_expr(input: &str) -> Expr {
-        tokenize(input)
-            .map(sanitize_tokens)
-            .and_then(verify_tokens)
-            .and_then(parse_ast)
-            .unwrap()
-            .last()
-            .unwrap()
-            .clone()
     }
 
     #[test]
@@ -1584,6 +1609,60 @@ mod tests {
             .into_static()"#;
 
         assert_result(input, expected, Arguments::cell_filter);
+    }
+
+    #[test]
+    fn negative_test_arg_in_zero_arg_fn() {
+        // Test that zero-argument functions reject arguments when provided
+        let test_cases = vec![
+            ("Style::default(42)", "style"),
+            ("Style::new(42)", "style"),
+            ("Layout::default(42)", "layout"),
+            ("CheckerboardPattern::default(42)", "pattern"),
+            ("CoalescePattern::new(42)", "pattern"),
+            ("CoalescePattern::default(42)", "pattern"),
+            ("DiagonalPattern::top_left_to_bottom_right(42)", "pattern"),
+            ("DiagonalPattern::top_right_to_bottom_left(42)", "pattern"),
+            ("DiagonalPattern::bottom_left_to_top_right(42)", "pattern"),
+            ("DiagonalPattern::bottom_right_to_top_left(42)", "pattern"),
+            ("DissolvePattern::new(42)", "pattern"),
+            ("DissolvePattern::default(42)", "pattern"),
+            ("RadialPattern::center(42)", "pattern"),
+            ("RefRect::default(42)", "ref_rect"),
+        ];
+
+        for (input, method_name) in test_cases {
+            let dsl = EffectDsl::new();
+            let env = DslEnv::new();
+
+            let expr = parse_expr(input);
+            let mut args = Arguments::new([expr].into(), &dsl, &env, ExprSpan::default());
+
+            let result = match method_name {
+                "style" => args.style().map(|_| ()),
+                "layout" => args.layout().map(|_| ()),
+                "pattern" => args.pattern().map(|_| ()),
+                "ref_rect" => args.ref_rect().map(|_| ()),
+                _ => panic!("Unknown method: {}", method_name),
+            };
+
+            assert!(
+                result.is_err(),
+                "Expected error for input '{}', but got Ok",
+                input
+            );
+
+            // Verify it's specifically an InvalidArgumentLength error
+            if let Err(DslError::InvalidArgumentLength { expected, actual, .. }) = result {
+                assert_eq!(expected, 0, "Expected 0 arguments for '{}'", input);
+                assert_eq!(actual, 1, "Got 1 argument for '{}'", input);
+            } else {
+                panic!(
+                    "Expected InvalidArgumentLength error for '{}', got {:?}",
+                    input, result
+                );
+            }
+        }
     }
 
     #[test]
