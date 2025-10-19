@@ -52,15 +52,15 @@ impl Shader for FadeColors {
             let cache_key = (alpha.clamp(0.0, 1.0) * 255.0) as u8;
 
             if let Some(fg) = fg.as_ref() {
-                let color = color_cache.memoize_fg(cell.fg, (*fg, cache_key), |_| {
-                    color_space.lerp(&cell.fg, fg, alpha)
+                let color = color_cache.memoize_fg(cell.fg, (*fg, cache_key), |c| {
+                    color_space.lerp(c, fg, alpha)
                 });
                 cell.set_fg(color);
             }
 
             if let Some(bg) = bg.as_ref() {
-                let color = color_cache.memoize_bg(cell.bg, (*bg, cache_key), |_| {
-                    color_space.lerp(&cell.bg, bg, alpha)
+                let color = color_cache.memoize_bg(cell.bg, (*bg, cache_key), |c| {
+                    color_space.lerp(c, bg, alpha)
                 });
                 cell.set_bg(color);
             }
@@ -99,7 +99,7 @@ impl Shader for FadeColors {
 mod plain_test {
     use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 
-    use crate::{fx, pattern::SweepPattern, Duration};
+    use crate::{fx, pattern::SweepPattern, ColorSpace, Duration, ToRgbComponents};
 
     #[test]
     fn test_fade_with_sweep_patterns() {
@@ -241,11 +241,33 @@ mod plain_test {
             left_color, middle_color, right_color
         );
     }
+
+    #[test]
+    fn test_fade_over_buffer_reset_cells() {
+        use ratatui::{buffer::Buffer, layout::Rect, style::Color};
+
+        use crate::{fx, Duration};
+
+        let area = Rect::new(0, 0, 1, 1);
+        let mut buf = Buffer::empty(area);
+
+        let mut fade_effect = fx::fade_to_fg(Color::Black, 1000).with_color_space(ColorSpace::Rgb);
+
+        // Process the effect halfway
+        fade_effect.process(Duration::from_millis(500), &mut buf, area);
+
+        // Check that cells have been modified (not equal to initial colors)
+        let cell = &buf[(0, 0)];
+
+        // confirm 50% fade towards white
+        let (r, g, b) = Color::White.to_rgb();
+        assert_eq!(cell.fg, Color::Rgb(r / 2, g / 2, b / 2));
+    }
 }
 
 #[cfg(test)]
 #[cfg(feature = "dsl")]
-mod tests {
+mod dsl_tests {
     use indoc::indoc;
     use ratatui::style::Color;
 

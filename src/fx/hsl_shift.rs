@@ -35,8 +35,8 @@ impl Shader for HslShift {
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
         let global_alpha = self.timer.alpha();
 
-        let hsl_lerp = |c: Color, hsl: [f32; 3], alpha: f32| -> Color {
-            let (h, s, l) = color_to_hsl(&c);
+        let hsl_lerp = |c: &Color, hsl: [f32; 3], alpha: f32| -> Color {
+            let (h, s, l) = color_to_hsl(c);
 
             let (h, s, l) = (
                 (h + 0.0.lerp(&hsl[0], alpha)) % 360.0,
@@ -59,15 +59,15 @@ impl Shader for HslShift {
             if let Some(hsl_mod) = hsl_mod_fg {
                 let alpha = pattern.map_alpha(pos);
                 let alpha_bits = u32::from_le_bytes(alpha.to_le_bytes());
-                let fg = color_cache
-                    .memoize_fg(cell.fg, alpha_bits, |_| hsl_lerp(cell.fg, hsl_mod, alpha));
+                let fg =
+                    color_cache.memoize_fg(cell.fg, alpha_bits, |c| hsl_lerp(c, hsl_mod, alpha));
                 cell.set_fg(fg);
             }
             if let Some(hsl_mod) = hsl_mod_bg {
                 let alpha = pattern.map_alpha(pos);
                 let alpha_bits = u32::from_le_bytes(alpha.to_le_bytes());
-                let bg = color_cache
-                    .memoize_bg(cell.bg, alpha_bits, |_| hsl_lerp(cell.bg, hsl_mod, alpha));
+                let bg =
+                    color_cache.memoize_bg(cell.bg, alpha_bits, |c| hsl_lerp(c, hsl_mod, alpha));
                 cell.set_bg(bg);
             }
         });
