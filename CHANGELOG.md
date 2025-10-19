@@ -1,6 +1,6 @@
 # Changelog
 
-## tachyonfx 0.20.0 - TBD
+## tachyonfx 0.20.0 - 2025-10-19
 
 ### Added
 - **DSL Examples in docs**: All DSL-supported effects now include interactive demo snippets in their documentation.
@@ -8,7 +8,7 @@
 - `EffectManager::cancel_unique_effect()`: Cancels a running unique effect by its key.
 
 ### DSL
-- **`Layout` methods**: Added `.direction(Direction)` and `.flex(Flex)` methods.
+- **`Layout` methods**: Added `.direction(Direction)` and `.flex(Flex)`.
 - **Zero-argument validation**: DSL now properly rejects arguments passed to zero-argument constructors.
 
 ### Fixed
