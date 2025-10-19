@@ -1,4 +1,5 @@
 mod arguments;
+mod completions;
 #[allow(clippy::module_inception)]
 mod dsl;
 mod dsl_format;
@@ -16,6 +17,7 @@ use alloc::fmt;
 
 pub use arguments::Arguments;
 use compact_str::CompactString;
+pub use completions::{Completion, CompletionEngine, CompletionKind};
 pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
 use dsl_writer::DslWriter;

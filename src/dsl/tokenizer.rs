@@ -69,6 +69,12 @@ impl<'a> Token<'a> {
     pub(super) fn new(kind: TokenKind, text: &'a str, span: Range<usize>) -> Self {
         Self { kind, text, span: (span.start as _, span.end as _) }
     }
+
+    /// Checks if the token's span contains the given index
+    pub(super) fn contains_index(&self, idx: u32) -> bool {
+        let (start, end) = self.span;
+        idx >= start && idx < end
+    }
 }
 
 pub(super) fn sanitize_tokens(tokens: Vec<Token>) -> Vec<Token> {

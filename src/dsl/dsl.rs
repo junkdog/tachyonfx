@@ -220,6 +220,14 @@ impl EffectDsl {
         }
     }
 
+    /// Returns a list of all registered effect names in the DSL.
+    pub(super) fn registered_effects(&self) -> Vec<&'static str> {
+        self.compilers
+            .iter()
+            .map(|c| c.effect_name)
+            .collect()
+    }
+
     fn compile_let_bindings(&self, expr: Vec<Expr>, env: &DslEnv) -> Result<Expr, DslError> {
         let mut expr = expr;
         let final_effect_expr = expr.remove(expr.len() - 1);

@@ -1,5 +1,10 @@
 # Changelog
 
+## tachyonfx 0.21.0 - TBD
+
+### Added
+- **DSL Completion Engine**: Context-aware autocompletion for DSL expressions with intelligent matching.
+
 ## tachyonfx 0.20.1 - 2025-10-19
 
 ### Fixed
