@@ -1,9 +1,10 @@
 # Changelog
 
-## tachyonfx 0.20.1 - TBD
+## tachyonfx 0.20.1 - 2025-10-19
 
 ### Fixed
 - Resolve `Color::Reset` during color interpolation (fade and hsl effects). 
+
 
 ## tachyonfx 0.20.0 - 2025-10-19
 
