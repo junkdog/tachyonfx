@@ -1,6 +1,47 @@
 #!/usr/bin/env zsh
 
-output="${1:-output.mp4}"
+function usage() {
+    cat << EOF
+Usage: $(basename $0) [-r|--region] [output.mp4]
+
+Records a window or screen region to a video file using ffmpeg.
+
+Options:
+  -r, --region    Select a region with the mouse (requires 'slop')
+                  Without this flag, select a window by clicking on it
+
+Arguments:
+  output.mp4      Output filename (default: output.mp4)
+
+Examples:
+  $(basename $0)                    # Record a window to output.mp4
+  $(basename $0) recording.mp4      # Record a window to recording.mp4
+  $(basename $0) -r screen.mp4      # Record a region to screen.mp4
+EOF
+    exit 0
+}
+
+# Parse command-line options
+mode="window"
+output=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            usage
+            ;;
+        -r|--region)
+            mode="region"
+            shift
+            ;;
+        *)
+            output="$1"
+            shift
+            ;;
+    esac
+done
+
+output="${output:-output.mp4}"
 
 function record() {
     if [[ $geometry =~ ([0-9]+)x([0-9]+)[+]([0-9]+)[+]([0-9]+) ]]; then
@@ -17,8 +58,12 @@ function record() {
 
     # ensure width and height are divisible by 2
     if (( w % 2 != 0 || h % 2 != 0 )); then
-        echo "Width ($w) and height ($h) must be divisible by 2 for yuv420p encoding"
-        return 1
+        echo "Adjusting dimensions for yuv420p encoding (must be divisible by 2)"
+        echo "Original: ${w}x${h}"
+        # Round down to nearest even number
+        w=$(( w - (w % 2) ))
+        h=$(( h - (h % 2) ))
+        echo "Adjusted: ${w}x${h}"
     fi
 
     # ensure output file doesn't exist
@@ -41,10 +86,22 @@ function record() {
 }
 
 
-echo "select window to record"
-geometry=$(xwininfo \
-    | grep -e '-geometry' \
-    | sed --regexp-extended 's/.*geometry[[:space:]]+(.+)/\1/'
-)
+if [[ $mode == "region" ]]; then
+    # Check if slop is installed
+    if ! command -v slop &> /dev/null; then
+        echo "Error: 'slop' is required for region selection but not found"
+        echo "Install it with: sudo apt install slop (Ubuntu/Debian) or sudo pacman -S slop (Arch)"
+        exit 1
+    fi
+
+    echo "select region to record (click and drag)"
+    geometry=$(slop -f "%wx%h+%x+%y")
+else
+    echo "select window to record"
+    geometry=$(xwininfo \
+        | grep -e '-geometry' \
+        | sed --regexp-extended 's/.*geometry[[:space:]]+(.+)/\1/'
+    )
+fi
 
 record
