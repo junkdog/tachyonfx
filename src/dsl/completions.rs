@@ -167,7 +167,7 @@ impl CompletionMatcher {
 #[derive(Debug, Clone)]
 pub struct CompletionEngine {
     effect_types: Vec<&'static str>,
-    methods: HashMap<&'static str, Vec<Method>>,
+    methods: HashMap<&'static str, Vec<CallableItem>>,
     interpolations: Vec<&'static str>,
     motions: Vec<&'static str>,
     color_spaces: Vec<&'static str>,
@@ -483,21 +483,22 @@ impl CompletionEngine {
             },
 
             CompletionContext::DotAccess { receiver_type } => {
-                // Method completions for the receiver type
+                // Instance method completions for the receiver type
                 self.methods
                     .get(receiver_type.as_str())
-                    .map(|methods| {
-                        methods
+                    .map(|items| {
+                        items
                             .iter()
-                            .map(|method| {
-                                let detail = if method.argument_types.is_empty() {
-                                    format!("{}()", method.name)
+                            .filter(|item| item.is_instance())
+                            .map(|item| {
+                                let detail = if item.params().is_empty() {
+                                    format!("{}()", item.name())
                                 } else {
-                                    format!("{}({})", method.name, method.argument_types.join(", "))
+                                    format!("{}({})", item.name(), item.params().join(", "))
                                 };
 
                                 Completion {
-                                    label: method.name.clone(),
+                                    label: item.name().to_string(),
                                     kind: CompletionKind::Method,
                                     meta: Some(detail),
                                 }
@@ -535,19 +536,21 @@ impl CompletionEngine {
                         let mut completions =
                             self.const_completions(&self.repeat_modes, "Repeat mode");
                         // Also add RepeatMode constructors from methods
-                        if let Some(methods) = self.methods.get("RepeatMode") {
-                            completions.extend(methods.iter().map(|method| {
-                                let detail = if method.argument_types.is_empty() {
-                                    format!("{}()", method.name)
-                                } else {
-                                    format!("{}({})", method.name, method.argument_types.join(", "))
-                                };
-                                Completion {
-                                    label: method.name.clone(),
-                                    kind: CompletionKind::Function,
-                                    meta: Some(detail),
-                                }
-                            }));
+                        if let Some(items) = self.methods.get("RepeatMode") {
+                            completions.extend(items.iter().filter(|item| item.is_static()).map(
+                                |item| {
+                                    let detail = if item.params().is_empty() {
+                                        format!("{}()", item.name())
+                                    } else {
+                                        format!("{}({})", item.name(), item.params().join(", "))
+                                    };
+                                    Completion {
+                                        label: item.name().to_string(),
+                                        kind: CompletionKind::Function,
+                                        meta: Some(detail),
+                                    }
+                                },
+                            ));
                         }
                         completions
                     },
@@ -558,19 +561,21 @@ impl CompletionEngine {
                         let mut completions =
                             self.const_completions(&self.cell_filter_constants, "Cell filter");
                         // Also add CellFilter constructors from methods
-                        if let Some(methods) = self.methods.get("CellFilter") {
-                            completions.extend(methods.iter().map(|method| {
-                                let detail = if method.argument_types.is_empty() {
-                                    format!("{}()", method.name)
-                                } else {
-                                    format!("{}({})", method.name, method.argument_types.join(", "))
-                                };
-                                Completion {
-                                    label: method.name.clone(),
-                                    kind: CompletionKind::Function,
-                                    meta: Some(detail),
-                                }
-                            }));
+                        if let Some(items) = self.methods.get("CellFilter") {
+                            completions.extend(items.iter().filter(|item| item.is_static()).map(
+                                |item| {
+                                    let detail = if item.params().is_empty() {
+                                        format!("{}()", item.name())
+                                    } else {
+                                        format!("{}({})", item.name(), item.params().join(", "))
+                                    };
+                                    Completion {
+                                        label: item.name().to_string(),
+                                        kind: CompletionKind::Function,
+                                        meta: Some(detail),
+                                    }
+                                },
+                            ));
                         }
                         completions
                     },
@@ -578,43 +583,42 @@ impl CompletionEngine {
                         let mut completions =
                             self.const_completions(&self.color_constants, "Color constant");
                         // Also add Color constructors from methods
-                        if let Some(methods) = self.methods.get("Color") {
-                            completions.extend(methods.iter().map(|method| {
-                                let detail = if method.argument_types.is_empty() {
-                                    format!("{}()", method.name)
-                                } else {
-                                    format!("{}({})", method.name, method.argument_types.join(", "))
-                                };
-                                Completion {
-                                    label: method.name.clone(),
-                                    kind: CompletionKind::Function,
-                                    meta: Some(detail),
-                                }
-                            }));
+                        if let Some(items) = self.methods.get("Color") {
+                            completions.extend(items.iter().filter(|item| item.is_static()).map(
+                                |item| {
+                                    let detail = if item.params().is_empty() {
+                                        format!("{}()", item.name())
+                                    } else {
+                                        format!("{}({})", item.name(), item.params().join(", "))
+                                    };
+                                    Completion {
+                                        label: item.name().to_string(),
+                                        kind: CompletionKind::Function,
+                                        meta: Some(detail),
+                                    }
+                                },
+                            ));
                         }
                         completions
                     },
 
-                    // For other types, use the methods list (constructors are included)
+                    // For other types, use the methods list (constructors/static methods only)
                     _ => self
                         .methods
                         .get(namespace.as_str())
-                        .map(|methods| {
-                            methods
+                        .map(|items| {
+                            items
                                 .iter()
-                                .map(|method| {
-                                    let detail = if method.argument_types.is_empty() {
-                                        format!("{}()", method.name)
+                                .filter(|item| item.is_static())
+                                .map(|item| {
+                                    let detail = if item.params().is_empty() {
+                                        format!("{}()", item.name())
                                     } else {
-                                        format!(
-                                            "{}({})",
-                                            method.name,
-                                            method.argument_types.join(", ")
-                                        )
+                                        format!("{}({})", item.name(), item.params().join(", "))
                                     };
 
                                     Completion {
-                                        label: method.name.clone(),
+                                        label: item.name().to_string(),
                                         kind: CompletionKind::Function,
                                         meta: Some(detail),
                                     }
@@ -628,9 +632,9 @@ impl CompletionEngine {
             CompletionContext::FnCall { fn_name, arg_index } => {
                 // Argument type hints based on function signature
                 // Look up the function in methods and return type hint for the specific argument
-                for methods in self.methods.values() {
-                    if let Some(method) = methods.iter().find(|m| m.name == fn_name) {
-                        if let Some(arg_type) = method.argument_types.get(arg_index) {
+                for items in self.methods.values() {
+                    if let Some(item) = items.iter().find(|i| i.name() == fn_name) {
+                        if let Some(arg_type) = item.params().get(arg_index) {
                             return vec![Completion {
                                 label: format!("<{}>", arg_type),
                                 kind: CompletionKind::Variable,
@@ -881,51 +885,112 @@ fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> CompletionCont
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MethodKind {
-    Constructor,
-    Method,
-}
-
 #[derive(Debug, Clone)]
-struct Method {
-    name: String,
-    argument_types: Vec<String>,
+enum CallableItem {
+    Constructor {
+        name: String,
+        params: Vec<String>,
+        #[allow(dead_code)]
+        declaring_type: String,
+    },
     #[allow(dead_code)]
-    kind: MethodKind,
+    StaticMethod {
+        name: String,
+        params: Vec<String>,
+        declaring_type: String,
+    },
+    InstanceMethod {
+        name: String,
+        params: Vec<String>,
+        #[allow(dead_code)]
+        declaring_type: String,
+    },
 }
 
-impl Method {
-    fn with_args(name: &str, argument_types: &[&'static str]) -> Self {
-        Self {
+impl CallableItem {
+    fn constructor(declaring_type: &str, name: &str, params: &[&'static str]) -> Self {
+        Self::Constructor {
             name: name.to_string(),
-            argument_types: argument_types
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
-            kind: MethodKind::Method,
+            params: params.iter().map(|s| s.to_string()).collect(),
+            declaring_type: declaring_type.to_string(),
         }
     }
 
-    fn zero_args(name: &str) -> Self {
-        Self {
+    #[allow(dead_code)]
+    fn static_method(declaring_type: &str, name: &str, params: &[&'static str]) -> Self {
+        Self::StaticMethod {
             name: name.to_string(),
-            argument_types: Default::default(),
-            kind: MethodKind::Method,
+            params: params.iter().map(|s| s.to_string()).collect(),
+            declaring_type: declaring_type.to_string(),
         }
     }
 
-    fn ctor(self) -> Self {
-        Self { kind: MethodKind::Constructor, ..self }
+    fn instance_method(declaring_type: &str, name: &str, params: &[&'static str]) -> Self {
+        Self::InstanceMethod {
+            name: name.to_string(),
+            params: params.iter().map(|s| s.to_string()).collect(),
+            declaring_type: declaring_type.to_string(),
+        }
+    }
+
+    fn name(&self) -> &str {
+        match self {
+            Self::Constructor { name, .. }
+            | Self::StaticMethod { name, .. }
+            | Self::InstanceMethod { name, .. } => name,
+        }
+    }
+
+    fn params(&self) -> &[String] {
+        match self {
+            Self::Constructor { params, .. }
+            | Self::StaticMethod { params, .. }
+            | Self::InstanceMethod { params, .. } => params,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn declaring_type(&self) -> &str {
+        match self {
+            Self::Constructor { declaring_type, .. }
+            | Self::StaticMethod { declaring_type, .. }
+            | Self::InstanceMethod { declaring_type, .. } => declaring_type,
+        }
+    }
+
+    fn is_static(&self) -> bool {
+        matches!(self, Self::Constructor { .. } | Self::StaticMethod { .. })
+    }
+
+    fn is_instance(&self) -> bool {
+        matches!(self, Self::InstanceMethod { .. })
     }
 }
 
 mod dsl_fns {
     use std::collections::HashMap;
 
-    use crate::dsl::completions::Method;
+    use crate::dsl::completions::CallableItem;
 
-    pub(super) fn all_methods() -> HashMap<&'static str, Vec<Method>> {
+    macro_rules! ctor {
+        ($type:expr, $name:expr, $($params:expr),*) => {
+            CallableItem::constructor($type, $name, &[$($params),*])
+        };
+        ($type:expr, $name:expr) => {
+            CallableItem::constructor($type, $name, &[])
+        };
+    }
+
+    macro_rules! method {
+        ($type:expr, $name:expr, $($params:expr),*) => {
+            CallableItem::instance_method($type, $name, &[$($params),*])
+        };
+        ($type:expr, $name:expr) => {
+            CallableItem::instance_method($type, $name, &[])
+        };
+    }
+
+    pub(super) fn all_methods() -> HashMap<&'static str, Vec<CallableItem>> {
         let mut methods = HashMap::new();
 
         // Core types
@@ -960,224 +1025,243 @@ mod dsl_fns {
         methods
     }
 
-    fn rect() -> Vec<Method> {
+    fn rect() -> Vec<CallableItem> {
+        const T: &str = "Rect";
         vec![
             // Constructors
-            Method::with_args("new", &["u16", "u16", "u16", "u16"]).ctor(),
+            ctor!(T, "new", "u16", "u16", "u16", "u16"),
             // Methods
-            Method::zero_args("clone"),
-            Method::with_args("clamp", &["Rect"]),
-            Method::with_args("inner", &["Margin"]),
-            Method::with_args("intersection", &["Rect"]),
-            Method::with_args("union", &["Rect"]),
-            Method::with_args("offset", &["Offset"]),
+            method!(T, "clone"),
+            method!(T, "clamp", "Rect"),
+            method!(T, "inner", "Margin"),
+            method!(T, "intersection", "Rect"),
+            method!(T, "union", "Rect"),
+            method!(T, "offset", "Offset"),
         ]
     }
 
-    fn effect() -> Vec<Method> {
+    fn effect() -> Vec<CallableItem> {
+        const T: &str = "Effect";
         vec![
             // Methods
-            Method::zero_args("clone"),
-            Method::zero_args("reversed"),
-            Method::with_args("with_area", &["Rect"]),
-            Method::with_args("with_color_space", &["ColorSpace"]),
-            Method::with_args("with_duration", &["Duration"]),
-            Method::with_args("with_filter", &["CellFilter"]),
-            Method::with_args("filter", &["CellFilter"]),
-            Method::with_args("with_pattern", &["AnyPattern"]),
+            method!(T, "clone"),
+            method!(T, "reversed"),
+            method!(T, "with_area", "Rect"),
+            method!(T, "with_color_space", "ColorSpace"),
+            method!(T, "with_duration", "Duration"),
+            method!(T, "with_filter", "CellFilter"),
+            method!(T, "filter", "CellFilter"),
+            method!(T, "with_pattern", "AnyPattern"),
         ]
     }
 
-    fn cell_filter() -> Vec<Method> {
+    fn cell_filter() -> Vec<CallableItem> {
+        const T: &str = "CellFilter";
         vec![
             // Constructors
-            Method::with_args("Area", &["Rect"]).ctor(),
-            Method::with_args("RefArea", &["RefRect"]).ctor(),
-            Method::with_args("FgColor", &["Color"]).ctor(),
-            Method::with_args("BgColor", &["Color"]).ctor(),
-            Method::with_args("Inner", &["Margin"]).ctor(),
-            Method::with_args("Outer", &["Margin"]).ctor(),
-            Method::with_args("AllOf", &["Vec<CellFilter>"]).ctor(),
-            Method::with_args("AnyOf", &["Vec<CellFilter>"]).ctor(),
-            Method::with_args("NoneOf", &["Vec<CellFilter>"]).ctor(),
-            Method::with_args("Not", &["Box<CellFilter>"]).ctor(),
-            Method::with_args("Static", &["Box<CellFilter>"]).ctor(),
-            Method::with_args("Layout", &["Layout", "u16"]).ctor(),
-            Method::with_args("PositionFn", &["var"]).ctor(),
-            Method::with_args("EvalCell", &["var"]).ctor(),
+            ctor!(T, "Area", "Rect"),
+            ctor!(T, "RefArea", "RefRect"),
+            ctor!(T, "FgColor", "Color"),
+            ctor!(T, "BgColor", "Color"),
+            ctor!(T, "Inner", "Margin"),
+            ctor!(T, "Outer", "Margin"),
+            ctor!(T, "AllOf", "Vec<CellFilter>"),
+            ctor!(T, "AnyOf", "Vec<CellFilter>"),
+            ctor!(T, "NoneOf", "Vec<CellFilter>"),
+            ctor!(T, "Not", "Box<CellFilter>"),
+            ctor!(T, "Static", "Box<CellFilter>"),
+            ctor!(T, "Layout", "Layout", "u16"),
+            ctor!(T, "PositionFn", "var"),
+            ctor!(T, "EvalCell", "var"),
             // Methods
-            Method::zero_args("clone"),
-            Method::zero_args("negated"),
-            Method::zero_args("into_static"),
+            method!(T, "clone"),
+            method!(T, "negated"),
+            method!(T, "into_static"),
         ]
     }
 
-    fn color() -> Vec<Method> {
+    fn color() -> Vec<CallableItem> {
+        const T: &str = "Color";
         vec![
             // Constructors
-            Method::with_args("Rgb", &["u8", "u8", "u8"]).ctor(),
-            Method::with_args("from_u32", &["u32"]).ctor(),
-            Method::with_args("Indexed", &["u8"]).ctor(),
+            ctor!(T, "Rgb", "u8", "u8", "u8"),
+            ctor!(T, "from_u32", "u32"),
+            ctor!(T, "Indexed", "u8"),
         ]
     }
 
-    fn layout() -> Vec<Method> {
+    fn layout() -> Vec<CallableItem> {
+        const T: &str = "Layout";
         vec![
             // Constructors
-            Method::zero_args("default").ctor(),
-            Method::with_args("horizontal", &["Vec<Constraint>"]).ctor(),
-            Method::with_args("vertical", &["Vec<Constraint>"]).ctor(),
-            Method::with_args("new", &["Direction", "Vec<Constraint>"]).ctor(),
+            ctor!(T, "default"),
+            ctor!(T, "horizontal", "Vec<Constraint>"),
+            ctor!(T, "vertical", "Vec<Constraint>"),
+            ctor!(T, "new", "Direction", "Vec<Constraint>"),
             // Methods
-            Method::zero_args("clone"),
-            Method::with_args("direction", &["Direction"]),
-            Method::with_args("flex", &["Flex"]),
-            Method::with_args("constraints", &["Vec<Constraint>"]),
-            Method::with_args("margin", &["u16"]),
-            Method::with_args("horizontal_margin", &["u16"]),
-            Method::with_args("vertical_margin", &["u16"]),
-            Method::with_args("spacing", &["u16"]),
+            method!(T, "clone"),
+            method!(T, "direction", "Direction"),
+            method!(T, "flex", "Flex"),
+            method!(T, "constraints", "Vec<Constraint>"),
+            method!(T, "margin", "u16"),
+            method!(T, "horizontal_margin", "u16"),
+            method!(T, "vertical_margin", "u16"),
+            method!(T, "spacing", "u16"),
         ]
     }
 
-    fn style() -> Vec<Method> {
+    fn style() -> Vec<CallableItem> {
+        const T: &str = "Style";
         vec![
             // Constructors
-            Method::zero_args("new").ctor(),
-            Method::zero_args("default").ctor(),
+            ctor!(T, "new"),
+            ctor!(T, "default"),
             // Methods
-            Method::zero_args("clone"),
-            Method::with_args("fg", &["Color"]),
-            Method::with_args("bg", &["Color"]),
-            Method::with_args("add_modifier", &["Modifier"]),
-            Method::with_args("remove_modifier", &["Modifier"]),
+            method!(T, "clone"),
+            method!(T, "fg", "Color"),
+            method!(T, "bg", "Color"),
+            method!(T, "add_modifier", "Modifier"),
+            method!(T, "remove_modifier", "Modifier"),
         ]
     }
 
-    fn constraint() -> Vec<Method> {
+    fn constraint() -> Vec<CallableItem> {
+        const T: &str = "Constraint";
         vec![
             // Constructors
-            Method::with_args("Min", &["u16"]).ctor(),
-            Method::with_args("Max", &["u16"]).ctor(),
-            Method::with_args("Length", &["u16"]).ctor(),
-            Method::with_args("Percentage", &["u16"]).ctor(),
-            Method::with_args("Fill", &["u16"]).ctor(),
-            Method::with_args("Ratio", &["u32", "u32"]).ctor(),
+            ctor!(T, "Min", "u16"),
+            ctor!(T, "Max", "u16"),
+            ctor!(T, "Length", "u16"),
+            ctor!(T, "Percentage", "u16"),
+            ctor!(T, "Fill", "u16"),
+            ctor!(T, "Ratio", "u32", "u32"),
         ]
     }
 
-    fn duration() -> Vec<Method> {
+    fn duration() -> Vec<CallableItem> {
+        const T: &str = "Duration";
         vec![
             // Constructors
-            Method::with_args("from_millis", &["u64"]).ctor(),
-            Method::with_args("from_secs_f32", &["f32"]).ctor(),
+            ctor!(T, "from_millis", "u64"),
+            ctor!(T, "from_secs_f32", "f32"),
         ]
     }
 
-    fn effect_timer() -> Vec<Method> {
+    fn effect_timer() -> Vec<CallableItem> {
+        const T: &str = "EffectTimer";
         vec![
             // Constructors
-            Method::with_args("from_ms", &["u32", "Interpolation"]).ctor(),
-            Method::with_args("new", &["Duration", "Interpolation"]).ctor(),
+            ctor!(T, "from_ms", "u32", "Interpolation"),
+            ctor!(T, "new", "Duration", "Interpolation"),
         ]
     }
 
-    fn margin() -> Vec<Method> {
+    fn margin() -> Vec<CallableItem> {
+        const T: &str = "Margin";
         vec![
             // Constructors
-            Method::with_args("new", &["u16", "u16"]).ctor(),
+            ctor!(T, "new", "u16", "u16"),
         ]
     }
 
-    fn ref_rect() -> Vec<Method> {
+    fn ref_rect() -> Vec<CallableItem> {
+        const T: &str = "RefRect";
         vec![
             // Constructors
-            Method::with_args("new", &["Rect"]).ctor(),
-            Method::zero_args("default").ctor(),
+            ctor!(T, "new", "Rect"),
+            ctor!(T, "default"),
         ]
     }
 
-    fn size() -> Vec<Method> {
+    fn size() -> Vec<CallableItem> {
+        const T: &str = "Size";
         vec![
             // Constructors
-            Method::with_args("new", &["u16", "u16"]).ctor(),
+            ctor!(T, "new", "u16", "u16"),
         ]
     }
 
-    fn repeat_mode() -> Vec<Method> {
+    fn repeat_mode() -> Vec<CallableItem> {
+        const T: &str = "RepeatMode";
         vec![
             // Constructors
-            Method::with_args("Times", &["u32"]).ctor(),
-            Method::with_args("Duration", &["Duration"]).ctor(),
+            ctor!(T, "Times", "u32"),
+            ctor!(T, "Duration", "Duration"),
         ]
     }
 
-    fn checkerboard_pattern() -> Vec<Method> {
+    fn checkerboard_pattern() -> Vec<CallableItem> {
+        const T: &str = "CheckerboardPattern";
         vec![
             // Constructors
-            Method::zero_args("default").ctor(),
-            Method::with_args("with_cell_size", &["u16"]).ctor(),
+            ctor!(T, "default"),
+            ctor!(T, "with_cell_size", "u16"),
             // Methods
-            Method::zero_args("clone"),
-            Method::with_args("with_transition_width", &["f32"]),
+            method!(T, "clone"),
+            method!(T, "with_transition_width", "f32"),
         ]
     }
 
-    fn coalesce_pattern() -> Vec<Method> {
+    fn coalesce_pattern() -> Vec<CallableItem> {
+        const T: &str = "CoalescePattern";
         vec![
             // Constructors
-            Method::zero_args("new").ctor(),
-            Method::zero_args("default").ctor(),
+            ctor!(T, "new"),
+            ctor!(T, "default"),
             // Methods
-            Method::zero_args("clone"),
+            method!(T, "clone"),
         ]
     }
 
-    fn diagonal_pattern() -> Vec<Method> {
+    fn diagonal_pattern() -> Vec<CallableItem> {
+        const T: &str = "DiagonalPattern";
         vec![
             // Constructors
-            Method::zero_args("top_left_to_bottom_right").ctor(),
-            Method::zero_args("top_right_to_bottom_left").ctor(),
-            Method::zero_args("bottom_left_to_top_right").ctor(),
-            Method::zero_args("bottom_right_to_top_left").ctor(),
+            ctor!(T, "top_left_to_bottom_right"),
+            ctor!(T, "top_right_to_bottom_left"),
+            ctor!(T, "bottom_left_to_top_right"),
+            ctor!(T, "bottom_right_to_top_left"),
             // Methods
-            Method::zero_args("clone"),
-            Method::with_args("with_transition_width", &["f32"]),
+            method!(T, "clone"),
+            method!(T, "with_transition_width", "f32"),
         ]
     }
 
-    fn dissolve_pattern() -> Vec<Method> {
+    fn dissolve_pattern() -> Vec<CallableItem> {
+        const T: &str = "DissolvePattern";
         vec![
             // Constructors
-            Method::zero_args("new").ctor(),
-            Method::zero_args("default").ctor(),
+            ctor!(T, "new"),
+            ctor!(T, "default"),
             // Methods
-            Method::zero_args("clone"),
+            method!(T, "clone"),
         ]
     }
 
-    fn radial_pattern() -> Vec<Method> {
+    fn radial_pattern() -> Vec<CallableItem> {
+        const T: &str = "RadialPattern";
         vec![
             // Constructors
-            Method::zero_args("center").ctor(),
-            Method::with_args("new", &["f32", "f32"]).ctor(),
-            Method::with_args("with_transition", &["(f32, f32)", "f32"]).ctor(),
+            ctor!(T, "center"),
+            ctor!(T, "new", "f32", "f32"),
+            ctor!(T, "with_transition", "(f32, f32)", "f32"),
             // Methods
-            Method::zero_args("clone"),
-            Method::with_args("with_transition_width", &["f32"]),
-            Method::with_args("with_center", &["f32", "f32"]),
+            method!(T, "clone"),
+            method!(T, "with_transition_width", "f32"),
+            method!(T, "with_center", "f32", "f32"),
         ]
     }
 
-    fn sweep_pattern() -> Vec<Method> {
+    fn sweep_pattern() -> Vec<CallableItem> {
+        const T: &str = "SweepPattern";
         vec![
             // Constructors
-            Method::with_args("left_to_right", &["u16"]).ctor(),
-            Method::with_args("right_to_left", &["u16"]).ctor(),
-            Method::with_args("up_to_down", &["u16"]).ctor(),
-            Method::with_args("down_to_up", &["u16"]).ctor(),
+            ctor!(T, "left_to_right", "u16"),
+            ctor!(T, "right_to_left", "u16"),
+            ctor!(T, "up_to_down", "u16"),
+            ctor!(T, "down_to_up", "u16"),
             // Methods
-            Method::zero_args("clone"),
+            method!(T, "clone"),
         ]
     }
 }
@@ -1388,13 +1472,15 @@ mod tests {
         let tokens = sanitize_tokens(tokens);
         let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
-        // After Rect::new(...), we should get Rect methods
-        assert_eq!(completions.len(), 7);
+        // After Rect::new(...), we should get Rect instance methods (not constructors)
+        assert_eq!(completions.len(), 6);
         assert!(completions.iter().any(|c| c.label == "clone"));
         assert!(completions.iter().any(|c| c.label == "inner"));
         assert!(completions
             .iter()
             .any(|c| c.label == "intersection"));
+        // Constructor "new" should NOT appear in instance method context
+        assert!(!completions.iter().any(|c| c.label == "new"));
     }
 
     #[test]
