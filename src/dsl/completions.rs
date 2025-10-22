@@ -183,37 +183,7 @@ pub struct CompletionEngine {
 
 impl CompletionEngine {
     pub fn new() -> Self {
-        let mut methods = HashMap::new();
-
-        // Core types
-        methods.insert("Effect", dsl_fns::effect());
-        methods.insert("Rect", dsl_fns::rect());
-        methods.insert("Color", dsl_fns::color());
-        methods.insert("Layout", dsl_fns::layout());
-        methods.insert("Style", dsl_fns::style());
-
-        // Filter types
-        methods.insert("CellFilter", dsl_fns::cell_filter());
-
-        // Layout types
-        methods.insert("Constraint", dsl_fns::constraint());
-        methods.insert("Margin", dsl_fns::margin());
-        methods.insert("RefRect", dsl_fns::ref_rect());
-        methods.insert("Size", dsl_fns::size());
-
-        // Time types
-        methods.insert("Duration", dsl_fns::duration());
-        methods.insert("EffectTimer", dsl_fns::effect_timer());
-        methods.insert("RepeatMode", dsl_fns::repeat_mode());
-
-        // Pattern types
-        methods.insert("CheckerboardPattern", dsl_fns::checkerboard_pattern());
-        methods.insert("CoalescePattern", dsl_fns::coalesce_pattern());
-        methods.insert("DiagonalPattern", dsl_fns::diagonal_pattern());
-        methods.insert("DissolvePattern", dsl_fns::dissolve_pattern());
-        methods.insert("RadialPattern", dsl_fns::radial_pattern());
-        methods.insert("SweepPattern", dsl_fns::sweep_pattern());
-
+        let methods = dsl_fns::all_methods();
         let effect_types = EffectDsl::new().registered_effects();
 
         let interpolations = vec![
@@ -347,18 +317,15 @@ impl CompletionEngine {
     pub fn complete_source(&self, source: &str, cursor_index: u32) -> Vec<Completion> {
         use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
-        // Tokenize and sanitize
-        let tokens = match tokenize(source) {
-            Ok(tokens) => sanitize_tokens(tokens),
-            Err(_) => return vec![], // Return empty on tokenization error
-        };
-
-        self.complete(&tokens, cursor_index)
+        tokenize(source)
+            .map(sanitize_tokens)
+            .map(|tokens| self.completions(&tokens, cursor_index))
+            .unwrap_or_else(|_| vec![])
     }
 
     /// Low-level completion function that works with pre-tokenized input.
     /// For internal use and testing. External users should use `complete_source` instead.
-    pub(super) fn complete(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
+    pub(super) fn completions(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
         // Extract partial token at cursor for filtering
         let partial = extract_partial_token(tokens, cursor_index);
         let matcher = CompletionMatcher::new(partial);
@@ -774,33 +741,29 @@ fn infer_return_type(tokens: &[Token], paren_idx: usize) -> String {
     String::from("Chained")
 }
 
-fn analyze_last_tokens(tokens: &[Token], cursor_index: u32) -> CompletionContext {
+fn analyze_last_tokens(tokens: &[Token], cursor_idx: u32) -> CompletionContext {
     // Find the token at or before the cursor
-    let cursor_pos = tokens
+    let cursor_token_idx = tokens
         .iter()
-        .position(|t| t.contains_index(cursor_index) || t.span.0 >= cursor_index)
+        .position(|t| t.contains_index(cursor_idx) || t.span.0 >= cursor_idx)
         .unwrap_or(tokens.len());
 
-    let relevant_tokens = &tokens[0..cursor_pos];
-
     // Pattern match on the last few tokens
-    match relevant_tokens {
-        // Pattern: identifier.partial  (e.g., "a.clon")
+    match &tokens[..cursor_token_idx] {
+        // Pattern: identifier.  (e.g., "foo.")
         [.., tok!(Identifier => obj), tok!(Dot)] => {
             CompletionContext::DotAccess { receiver_type: obj.to_string() }
         },
 
-        // Pattern: identifier.identifier  (e.g., "a.clone")
+        // Pattern: identifier.identifier  (e.g., "foo.bar")
         [.., tok!(Identifier => obj), tok!(Dot), tok!(Identifier)] => {
             CompletionContext::DotAccess { receiver_type: obj.to_string() }
         },
 
-        // Pattern: ).identifier  (method chain after function call, e.g.,
-        // "Color::from_u32().method") Infer the return type by looking back at the function
-        // namespace
+        // Pattern: ).identifier  (method chain after function call)
         [.., tok!(RightParen), tok!(Dot)] | [.., tok!(RightParen), tok!(Dot), tok!(Identifier)] => {
             // Find the matching opening paren to infer return type
-            let paren_idx = tokens[..cursor_pos]
+            let paren_idx = tokens[..cursor_token_idx]
                 .iter()
                 .rposition(|t| t.kind == TokenKind::LeftParen)
                 .unwrap_or(0);
@@ -835,12 +798,12 @@ fn analyze_last_tokens(tokens: &[Token], cursor_index: u32) -> CompletionContext
         _tokens_slice => {
             // Check if we're inside a function call by finding the last opening paren
             // We need to search in ALL tokens, not just the slice, to handle complex cases
-            if let Some(paren_idx) = tokens[..cursor_pos]
+            if let Some(paren_idx) = tokens[..cursor_token_idx]
                 .iter()
                 .rposition(|t| t.kind == TokenKind::LeftParen)
             {
                 // Count commas after the paren to determine argument index
-                let comma_count = tokens[paren_idx..cursor_pos]
+                let comma_count = tokens[paren_idx..cursor_token_idx]
                     .iter()
                     .filter(|t| t.kind == TokenKind::Comma)
                     .count();
@@ -857,7 +820,7 @@ fn analyze_last_tokens(tokens: &[Token], cursor_index: u32) -> CompletionContext
             }
 
             // Check if we're inside a struct initialization
-            if let Some(brace_idx) = tokens[..cursor_pos]
+            if let Some(brace_idx) = tokens[..cursor_token_idx]
                 .iter()
                 .rposition(|t| t.kind == TokenKind::LeftBrace)
             {
@@ -865,7 +828,7 @@ fn analyze_last_tokens(tokens: &[Token], cursor_index: u32) -> CompletionContext
                 if brace_idx > 0 {
                     if let Some(tok!(Identifier => struct_name)) = tokens.get(brace_idx - 1) {
                         // Collect already filled fields (identifiers before colons after the brace)
-                        let filled_fields = tokens[brace_idx..cursor_pos]
+                        let filled_fields = tokens[brace_idx..cursor_token_idx]
                             .windows(2)
                             .filter_map(|w| match w {
                                 [tok!(Identifier => field), tok!(Colon)] => Some(field.to_string()),
@@ -887,10 +850,17 @@ fn analyze_last_tokens(tokens: &[Token], cursor_index: u32) -> CompletionContext
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MethodKind {
+    Constructor,
+    Method,
+}
+
 #[derive(Debug, Clone)]
 struct Method {
     name: String,
     argument_types: Vec<String>,
+    kind: MethodKind,
 }
 
 impl Method {
@@ -901,6 +871,7 @@ impl Method {
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
+            kind: MethodKind::Method,
         }
     }
 
@@ -908,17 +879,59 @@ impl Method {
         Self {
             name: name.to_string(),
             argument_types: Default::default(),
+            kind: MethodKind::Method,
         }
+    }
+
+    fn ctor(self) -> Self {
+        Self { kind: MethodKind::Constructor, ..self }
     }
 }
 
 mod dsl_fns {
+    use std::collections::HashMap;
+
     use crate::dsl::completions::Method;
 
-    pub(super) fn rect() -> Vec<Method> {
+    pub(super) fn all_methods() -> HashMap<&'static str, Vec<Method>> {
+        let mut methods = HashMap::new();
+
+        // Core types
+        methods.insert("Effect", effect());
+        methods.insert("Rect", rect());
+        methods.insert("Color", color());
+        methods.insert("Layout", layout());
+        methods.insert("Style", style());
+
+        // Filter types
+        methods.insert("CellFilter", cell_filter());
+
+        // Layout types
+        methods.insert("Constraint", constraint());
+        methods.insert("Margin", margin());
+        methods.insert("RefRect", ref_rect());
+        methods.insert("Size", size());
+
+        // Time types
+        methods.insert("Duration", duration());
+        methods.insert("EffectTimer", effect_timer());
+        methods.insert("RepeatMode", repeat_mode());
+
+        // Pattern types
+        methods.insert("CheckerboardPattern", checkerboard_pattern());
+        methods.insert("CoalescePattern", coalesce_pattern());
+        methods.insert("DiagonalPattern", diagonal_pattern());
+        methods.insert("DissolvePattern", dissolve_pattern());
+        methods.insert("RadialPattern", radial_pattern());
+        methods.insert("SweepPattern", sweep_pattern());
+
+        methods
+    }
+
+    fn rect() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("new", &["u16", "u16", "u16", "u16"]),
+            Method::with_args("new", &["u16", "u16", "u16", "u16"]).ctor(),
             // Methods
             Method::zero_args("clone"),
             Method::with_args("clamp", &["Rect"]),
@@ -929,7 +942,7 @@ mod dsl_fns {
         ]
     }
 
-    pub(super) fn effect() -> Vec<Method> {
+    fn effect() -> Vec<Method> {
         vec![
             // Methods
             Method::zero_args("clone"),
@@ -943,23 +956,23 @@ mod dsl_fns {
         ]
     }
 
-    pub(super) fn cell_filter() -> Vec<Method> {
+    fn cell_filter() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("Area", &["Rect"]),
-            Method::with_args("RefArea", &["RefRect"]),
-            Method::with_args("FgColor", &["Color"]),
-            Method::with_args("BgColor", &["Color"]),
-            Method::with_args("Inner", &["Margin"]),
-            Method::with_args("Outer", &["Margin"]),
-            Method::with_args("AllOf", &["Vec<CellFilter>"]),
-            Method::with_args("AnyOf", &["Vec<CellFilter>"]),
-            Method::with_args("NoneOf", &["Vec<CellFilter>"]),
-            Method::with_args("Not", &["Box<CellFilter>"]),
-            Method::with_args("Static", &["Box<CellFilter>"]),
-            Method::with_args("Layout", &["Layout", "u16"]),
-            Method::with_args("PositionFn", &["var"]),
-            Method::with_args("EvalCell", &["var"]),
+            Method::with_args("Area", &["Rect"]).ctor(),
+            Method::with_args("RefArea", &["RefRect"]).ctor(),
+            Method::with_args("FgColor", &["Color"]).ctor(),
+            Method::with_args("BgColor", &["Color"]).ctor(),
+            Method::with_args("Inner", &["Margin"]).ctor(),
+            Method::with_args("Outer", &["Margin"]).ctor(),
+            Method::with_args("AllOf", &["Vec<CellFilter>"]).ctor(),
+            Method::with_args("AnyOf", &["Vec<CellFilter>"]).ctor(),
+            Method::with_args("NoneOf", &["Vec<CellFilter>"]).ctor(),
+            Method::with_args("Not", &["Box<CellFilter>"]).ctor(),
+            Method::with_args("Static", &["Box<CellFilter>"]).ctor(),
+            Method::with_args("Layout", &["Layout", "u16"]).ctor(),
+            Method::with_args("PositionFn", &["var"]).ctor(),
+            Method::with_args("EvalCell", &["var"]).ctor(),
             // Methods
             Method::zero_args("clone"),
             Method::zero_args("negated"),
@@ -967,22 +980,22 @@ mod dsl_fns {
         ]
     }
 
-    pub(super) fn color() -> Vec<Method> {
+    fn color() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("Rgb", &["u8", "u8", "u8"]),
-            Method::with_args("from_u32", &["u32"]),
-            Method::with_args("Indexed", &["u8"]),
+            Method::with_args("Rgb", &["u8", "u8", "u8"]).ctor(),
+            Method::with_args("from_u32", &["u32"]).ctor(),
+            Method::with_args("Indexed", &["u8"]).ctor(),
         ]
     }
 
-    pub(super) fn layout() -> Vec<Method> {
+    fn layout() -> Vec<Method> {
         vec![
             // Constructors
-            Method::zero_args("default"),
-            Method::with_args("horizontal", &["Vec<Constraint>"]),
-            Method::with_args("vertical", &["Vec<Constraint>"]),
-            Method::with_args("new", &["Direction", "Vec<Constraint>"]),
+            Method::zero_args("default").ctor(),
+            Method::with_args("horizontal", &["Vec<Constraint>"]).ctor(),
+            Method::with_args("vertical", &["Vec<Constraint>"]).ctor(),
+            Method::with_args("new", &["Direction", "Vec<Constraint>"]).ctor(),
             // Methods
             Method::zero_args("clone"),
             Method::with_args("direction", &["Direction"]),
@@ -995,11 +1008,11 @@ mod dsl_fns {
         ]
     }
 
-    pub(super) fn style() -> Vec<Method> {
+    fn style() -> Vec<Method> {
         vec![
             // Constructors
-            Method::zero_args("new"),
-            Method::zero_args("default"),
+            Method::zero_args("new").ctor(),
+            Method::zero_args("default").ctor(),
             // Methods
             Method::zero_args("clone"),
             Method::with_args("fg", &["Color"]),
@@ -1009,114 +1022,114 @@ mod dsl_fns {
         ]
     }
 
-    pub(super) fn constraint() -> Vec<Method> {
+    fn constraint() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("Min", &["u16"]),
-            Method::with_args("Max", &["u16"]),
-            Method::with_args("Length", &["u16"]),
-            Method::with_args("Percentage", &["u16"]),
-            Method::with_args("Fill", &["u16"]),
-            Method::with_args("Ratio", &["u32", "u32"]),
+            Method::with_args("Min", &["u16"]).ctor(),
+            Method::with_args("Max", &["u16"]).ctor(),
+            Method::with_args("Length", &["u16"]).ctor(),
+            Method::with_args("Percentage", &["u16"]).ctor(),
+            Method::with_args("Fill", &["u16"]).ctor(),
+            Method::with_args("Ratio", &["u32", "u32"]).ctor(),
         ]
     }
 
-    pub(super) fn duration() -> Vec<Method> {
+    fn duration() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("from_millis", &["u64"]),
-            Method::with_args("from_secs_f32", &["f32"]),
+            Method::with_args("from_millis", &["u64"]).ctor(),
+            Method::with_args("from_secs_f32", &["f32"]).ctor(),
         ]
     }
 
-    pub(super) fn effect_timer() -> Vec<Method> {
+    fn effect_timer() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("from_ms", &["u32", "Interpolation"]),
-            Method::with_args("new", &["Duration", "Interpolation"]),
+            Method::with_args("from_ms", &["u32", "Interpolation"]).ctor(),
+            Method::with_args("new", &["Duration", "Interpolation"]).ctor(),
         ]
     }
 
-    pub(super) fn margin() -> Vec<Method> {
+    fn margin() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("new", &["u16", "u16"]),
+            Method::with_args("new", &["u16", "u16"]).ctor(),
         ]
     }
 
-    pub(super) fn ref_rect() -> Vec<Method> {
+    fn ref_rect() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("new", &["Rect"]),
-            Method::zero_args("default"),
+            Method::with_args("new", &["Rect"]).ctor(),
+            Method::zero_args("default").ctor(),
         ]
     }
 
-    pub(super) fn size() -> Vec<Method> {
+    fn size() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("new", &["u16", "u16"]),
+            Method::with_args("new", &["u16", "u16"]).ctor(),
         ]
     }
 
-    pub(super) fn repeat_mode() -> Vec<Method> {
+    fn repeat_mode() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("Times", &["u32"]),
-            Method::with_args("Duration", &["Duration"]),
+            Method::with_args("Times", &["u32"]).ctor(),
+            Method::with_args("Duration", &["Duration"]).ctor(),
         ]
     }
 
-    pub(super) fn checkerboard_pattern() -> Vec<Method> {
+    fn checkerboard_pattern() -> Vec<Method> {
         vec![
             // Constructors
-            Method::zero_args("default"),
-            Method::with_args("with_cell_size", &["u16"]),
+            Method::zero_args("default").ctor(),
+            Method::with_args("with_cell_size", &["u16"]).ctor(),
             // Methods
             Method::zero_args("clone"),
             Method::with_args("with_transition_width", &["f32"]),
         ]
     }
 
-    pub(super) fn coalesce_pattern() -> Vec<Method> {
+    fn coalesce_pattern() -> Vec<Method> {
         vec![
             // Constructors
-            Method::zero_args("new"),
-            Method::zero_args("default"),
+            Method::zero_args("new").ctor(),
+            Method::zero_args("default").ctor(),
             // Methods
             Method::zero_args("clone"),
         ]
     }
 
-    pub(super) fn diagonal_pattern() -> Vec<Method> {
+    fn diagonal_pattern() -> Vec<Method> {
         vec![
             // Constructors
-            Method::zero_args("top_left_to_bottom_right"),
-            Method::zero_args("top_right_to_bottom_left"),
-            Method::zero_args("bottom_left_to_top_right"),
-            Method::zero_args("bottom_right_to_top_left"),
+            Method::zero_args("top_left_to_bottom_right").ctor(),
+            Method::zero_args("top_right_to_bottom_left").ctor(),
+            Method::zero_args("bottom_left_to_top_right").ctor(),
+            Method::zero_args("bottom_right_to_top_left").ctor(),
             // Methods
             Method::zero_args("clone"),
             Method::with_args("with_transition_width", &["f32"]),
         ]
     }
 
-    pub(super) fn dissolve_pattern() -> Vec<Method> {
+    fn dissolve_pattern() -> Vec<Method> {
         vec![
             // Constructors
-            Method::zero_args("new"),
-            Method::zero_args("default"),
+            Method::zero_args("new").ctor(),
+            Method::zero_args("default").ctor(),
             // Methods
             Method::zero_args("clone"),
         ]
     }
 
-    pub(super) fn radial_pattern() -> Vec<Method> {
+    fn radial_pattern() -> Vec<Method> {
         vec![
             // Constructors
-            Method::zero_args("center"),
-            Method::with_args("new", &["f32", "f32"]),
-            Method::with_args("with_transition", &["(f32, f32)", "f32"]),
+            Method::zero_args("center").ctor(),
+            Method::with_args("new", &["f32", "f32"]).ctor(),
+            Method::with_args("with_transition", &["(f32, f32)", "f32"]).ctor(),
             // Methods
             Method::zero_args("clone"),
             Method::with_args("with_transition_width", &["f32"]),
@@ -1124,13 +1137,13 @@ mod dsl_fns {
         ]
     }
 
-    pub(super) fn sweep_pattern() -> Vec<Method> {
+    fn sweep_pattern() -> Vec<Method> {
         vec![
             // Constructors
-            Method::with_args("left_to_right", &["u16"]),
-            Method::with_args("right_to_left", &["u16"]),
-            Method::with_args("up_to_down", &["u16"]),
-            Method::with_args("down_to_up", &["u16"]),
+            Method::with_args("left_to_right", &["u16"]).ctor(),
+            Method::with_args("right_to_left", &["u16"]).ctor(),
+            Method::with_args("up_to_down", &["u16"]).ctor(),
+            Method::with_args("down_to_up", &["u16"]).ctor(),
             // Methods
             Method::zero_args("clone"),
         ]
@@ -1284,7 +1297,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, 0);
+        let completions = engine.completions(&tokens, 0);
 
         assert!(completions.iter().any(|c| c.label == "fx::"));
         assert!(completions.iter().any(|c| c.label == "Color::"));
@@ -1296,7 +1309,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("Color::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // Color:: now returns both constants (17) and constructors (3) = 20 total
         assert_eq!(completions.len(), 20);
@@ -1313,7 +1326,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("Interpolation::Quad").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // Should filter to Quad* interpolations based on partial "Quad"
         assert_eq!(completions.len(), 3);
@@ -1327,7 +1340,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("rect.").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // Even though "rect" is unknown, we infer from the pattern
         // The completion should suggest Rect methods since receiver_type is "rect"
@@ -1341,7 +1354,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("Rect::new(0, 0, 10, 10).").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // After Rect::new(...), we should get Rect methods
         assert_eq!(completions.len(), 7);
@@ -1357,7 +1370,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("Rect { x: 0, ").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // Should suggest remaining fields
         assert_eq!(completions.len(), 3);
@@ -1376,7 +1389,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("fx::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // Should return all registered effects
         assert!(
@@ -1418,7 +1431,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("Interpolation::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // Should return all interpolation types
         assert_eq!(completions.len(), 32, "Should have 32 interpolation types");
@@ -1465,7 +1478,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, 0);
+        let completions = engine.completions(&tokens, 0);
 
         assert!(
             completions
@@ -1492,7 +1505,7 @@ mod tests {
         // Test Motion
         let tokens = tokenize("Motion::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
         assert_eq!(completions.len(), 4);
         assert!(completions
             .iter()
@@ -1504,7 +1517,7 @@ mod tests {
         // Test Direction
         let tokens = tokenize("Direction::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
         assert_eq!(completions.len(), 2);
         assert!(completions
             .iter()
@@ -1514,7 +1527,7 @@ mod tests {
         // Test Modifier
         let tokens = tokenize("Modifier::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
         assert_eq!(completions.len(), 9);
         assert!(completions.iter().any(|c| c.label == "BOLD"));
         assert!(completions.iter().any(|c| c.label == "ITALIC"));
@@ -1522,7 +1535,7 @@ mod tests {
         // Test ColorSpace
         let tokens = tokenize("ColorSpace::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
         assert_eq!(completions.len(), 3);
         assert!(completions.iter().any(|c| c.label == "Rgb"));
         assert!(completions.iter().any(|c| c.label == "Hsl"));
@@ -1534,7 +1547,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("Color::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // Color should have both constants and constructors
         assert!(
@@ -1564,7 +1577,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let tokens = tokenize("CellFilter::").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // CellFilter should have both constants and constructors
         assert!(
@@ -1762,7 +1775,7 @@ mod tests {
         // Test "fade" partial in "Interpolation::fade"
         let tokens = tokenize("Interpolation::Quad").unwrap();
         let tokens = sanitize_tokens(tokens);
-        let completions = engine.complete(&tokens, tokens.last().unwrap().span.1);
+        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
 
         // Should filter to Quad* interpolations
         assert_eq!(completions.len(), 3);
@@ -1822,6 +1835,6 @@ mod tests {
         let completions = engine.complete_source(source, source.len() as u32);
 
         // Should return empty on tokenization error
-        assert!(completions.is_empty());
+        assert!(completions.is_empty(), "was: {:?}", completions);
     }
 }
