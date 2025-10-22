@@ -326,11 +326,13 @@ impl CompletionEngine {
     /// Low-level completion function that works with pre-tokenized input.
     /// For internal use and testing. External users should use `complete_source` instead.
     pub(super) fn completions(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
+        let cursor = TokenCursor::from_tokens(tokens, cursor_index);
+
         // Extract partial token at cursor for filtering
-        let partial = extract_partial_token(tokens, cursor_index);
+        let partial = extract_partial_token(tokens, &cursor);
         let matcher = CompletionMatcher::new(partial);
 
-        let context = analyze_last_tokens(tokens, cursor_index);
+        let context = analyze_last_tokens(tokens, &cursor);
 
         let completions = match context {
             CompletionContext::TopLevel => {
@@ -674,24 +676,56 @@ impl Default for CompletionEngine {
 }
 
 /// Extracts the partial token at the cursor position for completion matching.
-fn extract_partial_token(tokens: &[Token], cursor_index: u32) -> String {
-    // Find the token containing or immediately before the cursor
-    for token in tokens {
-        let (start, end) = token.span;
-
-        // Cursor is within this token
-        if cursor_index >= start && cursor_index <= end {
-            // Return the portion of the token before the cursor
-            return if matches!(token.kind, TokenKind::Identifier) {
-                let len = (cursor_index - start) as usize;
-                token.text.chars().take(len).collect()
+fn extract_partial_token(tokens: &[Token], cursor: &TokenCursor) -> String {
+    match cursor {
+        TokenCursor::InToken { token_index, offset } => {
+            let token = tokens[*token_index];
+            if matches!(token.kind, TokenKind::Identifier) {
+                token.text.chars().take(*offset).collect()
             } else {
                 String::new()
-            };
+            }
+        },
+        TokenCursor::BetweenTokens => String::new(),
+    }
+}
+
+enum TokenCursor {
+    /// Cursor is inside a token at the given character offset
+    InToken { token_index: usize, offset: usize },
+    /// Cursor is between tokens
+    BetweenTokens,
+}
+
+impl TokenCursor {
+    fn from_tokens(tokens: &[Token<'_>], cursor_char_idx: u32) -> Self {
+        let mut token_index = tokens
+            .iter()
+            .position(|t| t.contains_index(cursor_char_idx));
+
+        // if not found, check if cursor is exactly at the end of an identifier token
+        // (for completion purposes, being at the end of an identifier means we're still
+        // completing it)
+        if token_index.is_none() {
+            token_index = tokens.iter().position(|t| {
+                t.span.1 == cursor_char_idx && matches!(t.kind, TokenKind::Identifier)
+            });
+        }
+
+        if let Some(idx) = token_index {
+            let offset = cursor_char_idx.saturating_sub(tokens[idx].span.0) as usize;
+            Self::InToken { token_index: idx, offset }
+        } else {
+            Self::BetweenTokens
         }
     }
 
-    String::new()
+    fn token_index(&self) -> Option<usize> {
+        match self {
+            Self::InToken { token_index, .. } => Some(*token_index),
+            Self::BetweenTokens => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -741,12 +775,9 @@ fn infer_return_type(tokens: &[Token], paren_idx: usize) -> String {
     String::from("Chained")
 }
 
-fn analyze_last_tokens(tokens: &[Token], cursor_idx: u32) -> CompletionContext {
+fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> CompletionContext {
     // Find the token at or before the cursor
-    let cursor_token_idx = tokens
-        .iter()
-        .position(|t| t.contains_index(cursor_idx) || t.span.0 >= cursor_idx)
-        .unwrap_or(tokens.len());
+    let cursor_token_idx = cursor.token_index().unwrap_or(tokens.len());
 
     // Pattern match on the last few tokens
     match &tokens[..cursor_token_idx] {
@@ -860,6 +891,7 @@ enum MethodKind {
 struct Method {
     name: String,
     argument_types: Vec<String>,
+    #[allow(dead_code)]
     kind: MethodKind,
 }
 
@@ -1159,8 +1191,8 @@ mod tests {
     fn analyze(input: &str) -> CompletionContext {
         let tokens = tokenize(input).unwrap();
         let tokens = sanitize_tokens(tokens);
-        let cursor = input.len() as u32;
-        analyze_last_tokens(&tokens, cursor)
+        let cursor = TokenCursor::from_tokens(&tokens, input.len() as _);
+        analyze_last_tokens(&tokens, &cursor)
     }
 
     fn assert_context_eq(input: &str, expected: CompletionContext) {
@@ -1796,11 +1828,15 @@ mod tests {
         let tokens = sanitize_tokens(tokens);
 
         // Cursor at end of "Left"
-        let partial = extract_partial_token(&tokens, tokens.last().unwrap().span.1);
+        let cursor_pos = tokens.last().unwrap().span.1;
+        let cursor = TokenCursor::from_tokens(&tokens, cursor_pos);
+        let partial = extract_partial_token(&tokens, &cursor);
         assert_eq!(partial, "Left");
 
         // Cursor in middle of "Left" (after "Le")
-        let partial = extract_partial_token(&tokens, tokens.last().unwrap().span.0 + 2);
+        let cursor_pos = tokens.last().unwrap().span.0 + 2;
+        let cursor = TokenCursor::from_tokens(&tokens, cursor_pos);
+        let partial = extract_partial_token(&tokens, &cursor);
         assert_eq!(partial, "Le");
     }
 
