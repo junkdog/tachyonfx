@@ -7,6 +7,10 @@ use crate::dsl::{
 
 /// Macro for compact token pattern matching
 macro_rules! tok {
+    // Match token kind with exact text: tok!(Keyword == "let")
+    ($kind:ident == $text:literal) => {
+        Token { kind: TokenKind::$kind, text: $text, .. }
+    };
     // Match token kind and bind text: tok!(Identifier => name)
     ($kind:ident => $binding:ident) => {
         Token { kind: TokenKind::$kind, text: $binding, .. }
@@ -333,6 +337,7 @@ impl CompletionEngine {
         let matcher = CompletionMatcher::new(partial);
 
         let context = analyze_last_tokens(tokens, &cursor);
+        let let_bindings = extract_let_bindings(tokens);
 
         let completions = match context {
             CompletionContext::TopLevel => {
@@ -758,6 +763,21 @@ enum CompletionContext {
     StructInit { struct_name: String, filled_fields: Vec<String> },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LetBinding {
+    name: String,
+    binding_type: String,
+}
+
+impl LetBinding {
+    pub fn new(name: &str, binding_type: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            binding_type: binding_type.to_string(),
+        }
+    }
+}
+
 /// Try to infer the return type from a function call by looking at the namespace
 /// e.g., Color::from_u32(...) returns Color, fx::dissolve(...) returns Effect
 fn infer_return_type(tokens: &[Token], paren_idx: usize) -> String {
@@ -883,6 +903,38 @@ fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> CompletionCont
             CompletionContext::TopLevel
         },
     }
+}
+
+// todo: move to engine, so that identifiers can be validated
+fn extract_let_bindings(tokens: &[Token]) -> Vec<LetBinding> {
+    #[cfg_attr(any(), rustfmt::skip)]
+    fn try_map_let_binding(
+        tokens: &[Token]
+    ) -> Option<LetBinding> {
+        // matching `let <name> = fx|<type> ::
+        match tokens {
+            [
+                tok!(Keyword == "let"),
+                tok!(Identifier => name),
+                tok!(Equals),
+                tok!(Identifier == "fx"),
+                tok!(DoubleColon),
+            ] => Some(LetBinding::new(name, "Effect")),
+            [
+                tok!(Keyword == "let"),
+                tok!(Identifier => name),
+                tok!(Equals),
+                tok!(Identifier => binding_type),
+                tok!(DoubleColon),
+            ] => Some(LetBinding::new(name, binding_type)),
+            _ => None,
+        }
+    }
+
+    tokens
+        .windows(5)
+        .filter_map(try_map_let_binding)
+        .collect()
 }
 
 #[derive(Debug, Clone)]
@@ -1958,5 +2010,24 @@ mod tests {
 
         // Should return empty on tokenization error
         assert!(completions.is_empty(), "was: {:?}", completions);
+    }
+
+    #[test]
+    fn test_declared_variables_complex_types() {
+        let source = r#"
+            let rect = Rect::new();
+            let timer = EffectTimer::new();
+            let interpolation = Interpolation::QuadOut;
+            let effect = fx::consume_tick();
+        "#;
+        let tokens = tokenize(source).map(sanitize_tokens).unwrap();
+        let bindings = extract_let_bindings(&tokens);
+
+        assert_eq!(bindings, &[
+            LetBinding::new("rect", "Rect"),
+            LetBinding::new("timer", "EffectTimer"),
+            LetBinding::new("interpolation", "Interpolation"),
+            LetBinding::new("effect", "Effect"),
+        ]);
     }
 }

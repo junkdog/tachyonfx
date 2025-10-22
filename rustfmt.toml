@@ -13,7 +13,7 @@ comment_width = 90
 
 # Arrays and alignment
 indent_style = "Block"
-array_width = 90
+array_width = 80
 fn_call_width = 60
 
 # Match expressions

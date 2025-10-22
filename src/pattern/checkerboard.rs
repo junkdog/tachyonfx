@@ -256,8 +256,12 @@ mod tests {
         // Verify that cells within the same checkerboard cell have similar alphas
         // For cell_size=2, positions (0,0), (0,1), (1,0), (1,1) should be in same checkerboard
         // cell
-        let same_cell_positions =
-            [Position::new(0, 0), Position::new(0, 1), Position::new(1, 0), Position::new(1, 1)];
+        let same_cell_positions = [
+            Position::new(0, 0),
+            Position::new(0, 1),
+            Position::new(1, 0),
+            Position::new(1, 1),
+        ];
 
         let same_cell_alphas: Vec<f32> = same_cell_positions
             .iter()
