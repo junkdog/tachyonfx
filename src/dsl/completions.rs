@@ -337,7 +337,7 @@ impl CompletionEngine {
         let matcher = CompletionMatcher::new(partial);
 
         let context = analyze_last_tokens(tokens, &cursor);
-        let let_bindings = extract_let_bindings(tokens);
+        let let_bindings = self.extract_let_bindings(tokens);
 
         let completions = match context {
             CompletionContext::TopLevel => {
@@ -676,6 +676,92 @@ impl CompletionEngine {
         // Filter and score completions based on partial input
         matcher.filter_and_score(completions)
     }
+
+    #[allow(clippy::needless_return)]
+    fn extract_let_bindings(&self, tokens: &[Token]) -> Vec<LetBinding> {
+        let mut seen = std::collections::HashSet::new();
+
+        tokens
+            .windows(5)
+            .filter_map(|window| {
+                match window {
+                    // `let <name> = fx::`
+                    [
+                        tok!(Keyword == "let"),
+                        tok!(Identifier => name),
+                        tok!(Equals),
+                        tok!(Identifier == "fx"),
+                        tok!(DoubleColon),
+                    ] => Some(LetBinding::new(name, "Effect")),
+
+                    // `let <name> = <type>::`
+                    [
+                        tok!(Keyword == "let"),
+                        tok!(Identifier => name),
+                        tok!(Equals),
+                        tok!(Identifier => binding_type),
+                        tok!(DoubleColon),
+                    ] => Some(LetBinding::new(name, binding_type)),
+
+                    // `let <name> = <fn_call>(`
+                    [
+                        tok!(Keyword == "let"),
+                        tok!(Identifier => name),
+                        tok!(Equals),
+                        tok!(Identifier => binding_type),
+                        tok!(LeftParen),
+                    ] => self.resolve_shortform_fns(binding_type).map(|t| LetBinding::new(name, t)),
+
+                    // `let <name> = (<timer>` - matches (duration, interpolation) tuples
+                    [
+                        tok!(Keyword == "let"),
+                        tok!(Identifier => name),
+                        tok!(Equals),
+                        tok!(LeftParen),
+                        _, // Can be IntLiteral, Identifier, or other expression
+                    ] => Some(LetBinding::new(name, "EffectTimer")),
+
+                    // `let <name> = <identifier>` - bare constant assignment
+                    [
+                        tok!(Keyword == "let"),
+                        tok!(Identifier => name),
+                        tok!(Equals),
+                        tok!(Identifier => binding_type),
+                        ..,
+                    ] => self.resolve_shortform_constants(binding_type).map(|t| LetBinding::new(name, t)),
+
+                    _ => None,
+                }
+            })
+            .filter(|binding| seen.insert(binding.name.clone()))
+            .collect()
+    }
+
+    fn resolve_shortform_fns(&self, identifier: &str) -> Option<&'static str> {
+        Some(match () {
+            _ if self.cell_filter_constants.contains(&identifier) => "CellFilter",
+            _ if self.effect_types.contains(&identifier) => "Effect",
+            _ => None?,
+        })
+    }
+
+    fn resolve_shortform_constants(&self, identifier: &str) -> Option<&'static str> {
+        Some(match () {
+            _ if self.cell_filter_constants.contains(&identifier) => "CellFilter",
+            _ if self.color_constants.contains(&identifier) => "Color",
+            _ if self.color_spaces.contains(&identifier) => "ColorSpace",
+            _ if self.directions.contains(&identifier) => "Direction",
+            _ if self.evolve_symbol_sets.contains(&identifier) => "EvolveSymbolSet",
+            _ if self.expand_directions.contains(&identifier) => "ExpandDirection",
+            _ if self.flexes.contains(&identifier) => "Flex",
+            _ if self.interpolations.contains(&identifier) => "Interpolation",
+            _ if self.modifiers.contains(&identifier) => "Modifier",
+            _ if self.motions.contains(&identifier) => "Motion",
+            _ if self.repeat_modes.contains(&identifier) => "RepeatMode",
+
+            _ => None?,
+        })
+    }
 }
 
 impl Default for CompletionEngine {
@@ -903,38 +989,6 @@ fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> CompletionCont
             CompletionContext::TopLevel
         },
     }
-}
-
-// todo: move to engine, so that identifiers can be validated
-fn extract_let_bindings(tokens: &[Token]) -> Vec<LetBinding> {
-    #[cfg_attr(any(), rustfmt::skip)]
-    fn try_map_let_binding(
-        tokens: &[Token]
-    ) -> Option<LetBinding> {
-        // matching `let <name> = fx|<type> ::
-        match tokens {
-            [
-                tok!(Keyword == "let"),
-                tok!(Identifier => name),
-                tok!(Equals),
-                tok!(Identifier == "fx"),
-                tok!(DoubleColon),
-            ] => Some(LetBinding::new(name, "Effect")),
-            [
-                tok!(Keyword == "let"),
-                tok!(Identifier => name),
-                tok!(Equals),
-                tok!(Identifier => binding_type),
-                tok!(DoubleColon),
-            ] => Some(LetBinding::new(name, binding_type)),
-            _ => None,
-        }
-    }
-
-    tokens
-        .windows(5)
-        .filter_map(try_map_let_binding)
-        .collect()
 }
 
 #[derive(Debug, Clone)]
@@ -2014,20 +2068,168 @@ mod tests {
 
     #[test]
     fn test_declared_variables_complex_types() {
+        let engine = CompletionEngine::new();
+
         let source = r#"
+            let color = Red;
+            let effect = fx::consume_tick();
+            let effect_b = dissolve(500);
+            let interpolation = Interpolation::QuadOut;
+            let motion = LeftToRight;
             let rect = Rect::new();
             let timer = EffectTimer::new();
-            let interpolation = Interpolation::QuadOut;
-            let effect = fx::consume_tick();
+            let timer_b = (1000, Linear);
         "#;
         let tokens = tokenize(source).map(sanitize_tokens).unwrap();
-        let bindings = extract_let_bindings(&tokens);
+        let bindings = engine.extract_let_bindings(&tokens);
 
         assert_eq!(bindings, &[
+            LetBinding::new("color", "Color"),
+            LetBinding::new("effect", "Effect"),
+            LetBinding::new("effect_b", "Effect"),
+            LetBinding::new("interpolation", "Interpolation"),
+            LetBinding::new("motion", "Motion"),
             LetBinding::new("rect", "Rect"),
             LetBinding::new("timer", "EffectTimer"),
-            LetBinding::new("interpolation", "Interpolation"),
-            LetBinding::new("effect", "Effect"),
+            LetBinding::new("timer_b", "EffectTimer"),
         ]);
+    }
+
+    #[test]
+    fn test_resolve_shortforms() {
+        let engine = CompletionEngine::new();
+
+        // Test effect types
+        assert_eq!(engine.resolve_shortform_fns("dissolve"), Some("Effect"));
+        assert_eq!(engine.resolve_shortform_fns("fade_to"), Some("Effect"));
+        assert_eq!(engine.resolve_shortform_fns("sweep_in"), Some("Effect"));
+
+        // Test cell filter constants
+        assert_eq!(engine.resolve_shortform_fns("All"), Some("CellFilter"));
+        assert_eq!(engine.resolve_shortform_fns("Text"), Some("CellFilter"));
+
+        // Test non-matching identifier
+        assert_eq!(engine.resolve_shortform_fns("unknown"), None);
+        assert_eq!(engine.resolve_shortform_fns("Red"), None); // Color constant, not a function
+
+        // Test color constants
+        assert_eq!(engine.resolve_shortform_constants("Red"), Some("Color"));
+        assert_eq!(engine.resolve_shortform_constants("Blue"), Some("Color"));
+        assert_eq!(
+            engine.resolve_shortform_constants("LightGreen"),
+            Some("Color")
+        );
+
+        // Test color spaces
+        assert_eq!(
+            engine.resolve_shortform_constants("Rgb"),
+            Some("ColorSpace")
+        );
+        assert_eq!(
+            engine.resolve_shortform_constants("Hsl"),
+            Some("ColorSpace")
+        );
+        assert_eq!(
+            engine.resolve_shortform_constants("Hsv"),
+            Some("ColorSpace")
+        );
+
+        // Test interpolations
+        assert_eq!(
+            engine.resolve_shortform_constants("Linear"),
+            Some("Interpolation")
+        );
+        assert_eq!(
+            engine.resolve_shortform_constants("QuadOut"),
+            Some("Interpolation")
+        );
+        assert_eq!(
+            engine.resolve_shortform_constants("BounceIn"),
+            Some("Interpolation")
+        );
+
+        // Test motions
+        assert_eq!(
+            engine.resolve_shortform_constants("LeftToRight"),
+            Some("Motion")
+        );
+        assert_eq!(
+            engine.resolve_shortform_constants("UpToDown"),
+            Some("Motion")
+        );
+
+        // Test directions
+        assert_eq!(
+            engine.resolve_shortform_constants("Horizontal"),
+            Some("Direction")
+        );
+        assert_eq!(
+            engine.resolve_shortform_constants("Vertical"),
+            Some("Direction")
+        );
+
+        // Test flexes
+        assert_eq!(engine.resolve_shortform_constants("Center"), Some("Flex"));
+        assert_eq!(
+            engine.resolve_shortform_constants("SpaceBetween"),
+            Some("Flex")
+        );
+
+        // Test modifiers
+        assert_eq!(engine.resolve_shortform_constants("BOLD"), Some("Modifier"));
+        assert_eq!(
+            engine.resolve_shortform_constants("ITALIC"),
+            Some("Modifier")
+        );
+
+        // Test repeat modes
+        assert_eq!(
+            engine.resolve_shortform_constants("Forever"),
+            Some("RepeatMode")
+        );
+
+        // Test evolve symbol sets
+        assert_eq!(
+            engine.resolve_shortform_constants("Circles"),
+            Some("EvolveSymbolSet")
+        );
+        assert_eq!(
+            engine.resolve_shortform_constants("BlocksHorizontal"),
+            Some("EvolveSymbolSet")
+        );
+
+        // Test cell filter constants
+        assert_eq!(
+            engine.resolve_shortform_constants("All"),
+            Some("CellFilter")
+        );
+        assert_eq!(
+            engine.resolve_shortform_constants("Text"),
+            Some("CellFilter")
+        );
+
+        // Test non-matching identifier
+        assert_eq!(engine.resolve_shortform_constants("unknown"), None);
+    }
+
+    #[test]
+    fn test_extract_let_bindings_with_shortform_fns() {
+        let engine = CompletionEngine::new();
+
+        // Test effect function call
+        let source = "let effect = dissolve(500);";
+        let tokens = tokenize(source).map(sanitize_tokens).unwrap();
+        let bindings = engine.extract_let_bindings(&tokens);
+
+        assert_eq!(bindings.len(), 1);
+        assert_eq!(bindings[0], LetBinding::new("effect", "Effect"));
+
+        // Test cell filter function call
+        let source = "let filter = All(rect);";
+        let tokens = tokenize(source).map(sanitize_tokens).unwrap();
+        let bindings = engine.extract_let_bindings(&tokens);
+
+        assert_eq!(bindings.len(), 1);
+        assert_eq!(bindings[0], LetBinding::new("filter", "CellFilter"));
     }
 }
