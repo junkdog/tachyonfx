@@ -18,6 +18,20 @@ pub struct CompletionEngine {
     constants: HashMap<&'static str, &'static [&'static str]>,
 }
 
+impl From<&CallableItem> for Completion {
+    fn from(callable: &CallableItem) -> Self {
+        Completion {
+            label: callable.name().to_string(),
+            kind: if callable.is_static() {
+                CompletionKind::Function
+            } else {
+                CompletionKind::Method
+            },
+            meta: Some(callable.params().join(", ")),
+        }
+    }
+}
+
 impl CompletionEngine {
     pub fn new() -> Self {
         let methods = all_methods();
@@ -28,14 +42,37 @@ impl CompletionEngine {
         Self { methods, constructors, constants, effect_types }
     }
 
-    fn const_completions(&self, constants: &[&'static str], meta_desc: &str) -> Vec<Completion> {
-        constants
+    fn const_completions(&self, identifier: &str) -> Vec<Completion> {
+        self.constants
+            .get(identifier)
+            .cloned()
+            .unwrap_or_default()
             .iter()
             .map(|name| Completion {
                 label: name.to_string(),
                 kind: CompletionKind::Constant,
-                meta: Some(meta_desc.to_string()),
+                meta: Some(identifier.to_string()),
             })
+            .collect()
+    }
+
+    fn constructor_completions(&self, identifier: &str) -> Vec<Completion> {
+        self.constructors
+            .get(identifier)
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .map(Completion::from)
+            .collect()
+    }
+
+    fn method_completions(&self, identifier: &str) -> Vec<Completion> {
+        self.methods
+            .get(identifier)
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .map(Completion::from)
             .collect()
     }
 
@@ -202,7 +239,7 @@ impl CompletionEngine {
                     Completion {
                         label: "Modifier::".to_string(),
                         kind: CompletionKind::Type,
-                        meta: Some("Text style modifiers".to_string()),
+                        meta: Some("Cell style modifiers".to_string()),
                     },
                     Completion {
                         label: "RepeatMode::".to_string(),
@@ -219,28 +256,7 @@ impl CompletionEngine {
 
             CompletionContext::DotAccess { receiver_type } => {
                 // Instance method completions for the receiver type
-                self.methods
-                    .get(receiver_type.as_str())
-                    .map(|items| {
-                        items
-                            .iter()
-                            .filter(|item| item.is_instance())
-                            .map(|item| {
-                                let detail = if item.params().is_empty() {
-                                    format!("{}()", item.name())
-                                } else {
-                                    format!("{}({})", item.name(), item.params().join(", "))
-                                };
-
-                                Completion {
-                                    label: item.name().to_string(),
-                                    kind: CompletionKind::Method,
-                                    meta: Some(detail),
-                                }
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default()
+                self.method_completions(receiver_type.as_str())
             },
 
             CompletionContext::DoubleColon { namespace } => {
@@ -255,160 +271,7 @@ impl CompletionEngine {
                             meta: Some(format!("{}(...)", effect_name)),
                         })
                         .collect(),
-
-                    "Interpolation" => self.const_completions(
-                        self.constants
-                            .get("Interpolation")
-                            .copied()
-                            .unwrap_or(&[]),
-                        "Easing function",
-                    ),
-                    "Motion" => self.const_completions(
-                        self.constants
-                            .get("Motion")
-                            .copied()
-                            .unwrap_or(&[]),
-                        "Movement direction",
-                    ),
-                    "ColorSpace" => self.const_completions(
-                        self.constants
-                            .get("ColorSpace")
-                            .copied()
-                            .unwrap_or(&[]),
-                        "Color space",
-                    ),
-                    "Direction" => self.const_completions(
-                        self.constants
-                            .get("Direction")
-                            .copied()
-                            .unwrap_or(&[]),
-                        "Layout direction",
-                    ),
-                    "Flex" => self.const_completions(
-                        self.constants.get("Flex").copied().unwrap_or(&[]),
-                        "Flex mode",
-                    ),
-                    "ExpandDirection" => self.const_completions(
-                        self.constants
-                            .get("ExpandDirection")
-                            .copied()
-                            .unwrap_or(&[]),
-                        "Expand direction",
-                    ),
-                    "Modifier" => self.const_completions(
-                        self.constants
-                            .get("Modifier")
-                            .copied()
-                            .unwrap_or(&[]),
-                        "Cell modifier",
-                    ),
-                    "RepeatMode" => {
-                        let mut completions = self.const_completions(
-                            self.constants
-                                .get("RepeatMode")
-                                .copied()
-                                .unwrap_or(&[]),
-                            "Repeat mode",
-                        );
-                        // Also add RepeatMode constructors
-                        if let Some(items) = self.constructors.get("RepeatMode") {
-                            completions.extend(items.iter().map(|item| {
-                                let detail = if item.params().is_empty() {
-                                    format!("{}()", item.name())
-                                } else {
-                                    format!("{}({})", item.name(), item.params().join(", "))
-                                };
-                                Completion {
-                                    label: item.name().to_string(),
-                                    kind: CompletionKind::Function,
-                                    meta: Some(detail),
-                                }
-                            }));
-                        }
-                        completions
-                    },
-                    "EvolveSymbolSet" => self.const_completions(
-                        self.constants
-                            .get("EvolveSymbolSet")
-                            .copied()
-                            .unwrap_or(&[]),
-                        "Symbol set",
-                    ),
-                    "CellFilter" => {
-                        let mut completions = self.const_completions(
-                            self.constants
-                                .get("CellFilter")
-                                .copied()
-                                .unwrap_or(&[]),
-                            "Cell filter",
-                        );
-                        // Also add CellFilter constructors
-                        if let Some(items) = self.constructors.get("CellFilter") {
-                            completions.extend(items.iter().map(|item| {
-                                let detail = if item.params().is_empty() {
-                                    format!("{}()", item.name())
-                                } else {
-                                    format!("{}({})", item.name(), item.params().join(", "))
-                                };
-                                Completion {
-                                    label: item.name().to_string(),
-                                    kind: CompletionKind::Function,
-                                    meta: Some(detail),
-                                }
-                            }));
-                        }
-                        completions
-                    },
-                    "Color" => {
-                        let mut completions = self.const_completions(
-                            self.constants
-                                .get("Color")
-                                .copied()
-                                .unwrap_or(&[]),
-                            "Color constant",
-                        );
-                        // Also add Color constructors
-                        if let Some(items) = self.constructors.get("Color") {
-                            completions.extend(items.iter().map(|item| {
-                                let detail = if item.params().is_empty() {
-                                    format!("{}()", item.name())
-                                } else {
-                                    format!("{}({})", item.name(), item.params().join(", "))
-                                };
-                                Completion {
-                                    label: item.name().to_string(),
-                                    kind: CompletionKind::Function,
-                                    meta: Some(detail),
-                                }
-                            }));
-                        }
-                        completions
-                    },
-
-                    // For other types, use the methods list (constructors/static methods only)
-                    _ => self
-                        .methods
-                        .get(namespace.as_str())
-                        .map(|items| {
-                            items
-                                .iter()
-                                .filter(|item| item.is_static())
-                                .map(|item| {
-                                    let detail = if item.params().is_empty() {
-                                        format!("{}()", item.name())
-                                    } else {
-                                        format!("{}({})", item.name(), item.params().join(", "))
-                                    };
-
-                                    Completion {
-                                        label: item.name().to_string(),
-                                        kind: CompletionKind::Function,
-                                        meta: Some(detail),
-                                    }
-                                })
-                                .collect()
-                        })
-                        .unwrap_or_default(),
+                    ns => [self.const_completions(ns), self.constructor_completions(ns)].concat(),
                 }
             },
 

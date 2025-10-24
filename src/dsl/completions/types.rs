@@ -42,6 +42,7 @@ pub struct Completion {
 #[derive(Debug, Clone, PartialEq)]
 pub enum CompletionKind {
     Method,
+    Constructor,
     Function,
     Constant,
     Variable,
