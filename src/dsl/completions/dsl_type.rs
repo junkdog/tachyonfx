@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{ctor, dsl::completions::CallableItem, method, CellFilter};
+use super::types::CallableItem;
+use crate::{ctor, method, CellFilter};
 
 pub(super) trait DslType {
     const TYPE_NAME: &'static str;

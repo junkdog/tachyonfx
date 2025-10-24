@@ -1,30 +1,15 @@
-use core::slice::Iter;
 use std::collections::HashMap;
 
-use crate::{
-    dsl::{
-        completions::dsl_type::all_methods,
-        tokenizer::{Token, TokenKind},
-        EffectDsl,
+use super::{
+    dsl_type::all_methods,
+    types::{
+        tok, CallableItem, Completion, CompletionContext, CompletionKind, LetBinding, TokenCursor,
     },
-    CellFilter,
 };
-
-/// Macro for compact token pattern matching
-macro_rules! tok {
-    // Match token kind with exact text: tok!(Keyword == "let")
-    ($kind:ident == $text:literal) => {
-        Token { kind: TokenKind::$kind, text: $text, .. }
-    };
-    // Match token kind and bind text: tok!(Identifier => name)
-    ($kind:ident => $binding:ident) => {
-        Token { kind: TokenKind::$kind, text: $binding, .. }
-    };
-    // Match token kind only: tok!(Dot)
-    ($kind:ident) => {
-        Token { kind: TokenKind::$kind, .. }
-    };
-}
+use crate::dsl::{
+    tokenizer::{Token, TokenKind},
+    EffectDsl,
+};
 
 /// Handles completion matching and scoring based on partial input.
 ///
@@ -790,85 +775,6 @@ fn extract_partial_token(tokens: &[Token], cursor: &TokenCursor) -> String {
     }
 }
 
-enum TokenCursor {
-    /// Cursor is inside a token at the given character offset
-    InToken { token_index: usize, offset: usize },
-    /// Cursor is between tokens
-    BetweenTokens,
-}
-
-impl TokenCursor {
-    fn from_tokens(tokens: &[Token<'_>], cursor_char_idx: u32) -> Self {
-        let mut token_index = tokens
-            .iter()
-            .position(|t| t.contains_index(cursor_char_idx));
-
-        // if not found, check if cursor is exactly at the end of an identifier token
-        // (for completion purposes, being at the end of an identifier means we're still
-        // completing it)
-        if token_index.is_none() {
-            token_index = tokens.iter().position(|t| {
-                t.span.1 == cursor_char_idx && matches!(t.kind, TokenKind::Identifier)
-            });
-        }
-
-        if let Some(idx) = token_index {
-            let offset = cursor_char_idx.saturating_sub(tokens[idx].span.0) as usize;
-            Self::InToken { token_index: idx, offset }
-        } else {
-            Self::BetweenTokens
-        }
-    }
-
-    fn token_index(&self) -> Option<usize> {
-        match self {
-            Self::InToken { token_index, .. } => Some(*token_index),
-            Self::BetweenTokens => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Completion {
-    pub label: String,
-    pub kind: CompletionKind,
-    pub meta: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum CompletionKind {
-    Method,
-    Function,
-    Constant,
-    Variable,
-    Type,
-    Field,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum CompletionContext {
-    TopLevel,
-    DotAccess { receiver_type: String },
-    FnCall { fn_name: String, arg_index: usize },
-    DoubleColon { namespace: String },
-    StructInit { struct_name: String, filled_fields: Vec<String> },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct LetBinding {
-    name: String,
-    binding_type: String,
-}
-
-impl LetBinding {
-    pub fn new(name: &str, binding_type: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            binding_type: binding_type.to_string(),
-        }
-    }
-}
-
 /// Try to infer the return type from a function call by looking at the namespace
 /// e.g., Color::from_u32(...) returns Color, fx::dissolve(...) returns Effect
 fn infer_return_type(tokens: &[Token], paren_idx: usize) -> String {
@@ -993,88 +899,6 @@ fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> CompletionCont
             // Default to top level context
             CompletionContext::TopLevel
         },
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(super) enum CallableItem {
-    Constructor {
-        name: &'static str,
-        params: &'static [&'static str],
-        #[allow(dead_code)]
-        declaring_type: &'static str,
-    },
-    #[allow(dead_code)]
-    StaticMethod {
-        name: &'static str,
-        params: &'static [&'static str],
-        declaring_type: &'static str,
-    },
-    InstanceMethod {
-        name: &'static str,
-        params: &'static [&'static str],
-        #[allow(dead_code)]
-        declaring_type: &'static str,
-    },
-}
-
-impl CallableItem {
-    pub(super) const fn constructor(
-        declaring_type: &'static str,
-        name: &'static str,
-        params: &'static [&'static str],
-    ) -> Self {
-        Self::Constructor { name, params, declaring_type }
-    }
-
-    #[allow(dead_code)]
-    pub(super) const fn static_method(
-        declaring_type: &'static str,
-        name: &'static str,
-        params: &'static [&'static str],
-    ) -> Self {
-        Self::StaticMethod { name, params, declaring_type }
-    }
-
-    pub(super) const fn instance_method(
-        declaring_type: &'static str,
-        name: &'static str,
-        params: &'static [&'static str],
-    ) -> Self {
-        Self::InstanceMethod { name, params, declaring_type }
-    }
-
-    pub(super) const fn name(&self) -> &str {
-        match self {
-            Self::Constructor { name, .. }
-            | Self::StaticMethod { name, .. }
-            | Self::InstanceMethod { name, .. } => name,
-        }
-    }
-
-    pub(super) const fn params(&self) -> &[&'static str] {
-        match self {
-            Self::Constructor { params, .. }
-            | Self::StaticMethod { params, .. }
-            | Self::InstanceMethod { params, .. } => params,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub(super) const fn declaring_type(&self) -> &str {
-        match self {
-            Self::Constructor { declaring_type, .. }
-            | Self::StaticMethod { declaring_type, .. }
-            | Self::InstanceMethod { declaring_type, .. } => declaring_type,
-        }
-    }
-
-    pub(super) const fn is_static(&self) -> bool {
-        matches!(self, Self::Constructor { .. } | Self::StaticMethod { .. })
-    }
-
-    pub(super) const fn is_instance(&self) -> bool {
-        matches!(self, Self::InstanceMethod { .. })
     }
 }
 
