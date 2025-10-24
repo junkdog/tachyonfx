@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::{
     dsl::{
-        completions::completable::all_methods,
+        completions::dsl_type::all_methods,
         tokenizer::{Token, TokenKind},
         EffectDsl,
     },
