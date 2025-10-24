@@ -1,7 +1,15 @@
 use std::collections::HashMap;
 
+use ratatui::{layout::Flex, prelude::*};
+
 use super::types::CallableItem;
-use crate::{ctor, method, CellFilter};
+use crate::{
+    ctor,
+    fx::{EvolveSymbolSet, ExpandDirection, RepeatMode},
+    method,
+    pattern::*,
+    CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
+};
 
 pub(super) trait DslType {
     const TYPE_NAME: &'static str;
@@ -20,24 +28,55 @@ pub(super) trait DslType {
 }
 
 // Marker types for completion - these represent types available in the DSL
-pub(super) struct Effect;
-pub(super) struct Rect;
-pub(super) struct Color;
-pub(super) struct Layout;
-pub(super) struct Style;
-pub(super) struct Constraint;
-pub(super) struct Margin;
-pub(super) struct RefRect;
-pub(super) struct Size;
-pub(super) struct Duration;
-pub(super) struct EffectTimer;
-pub(super) struct RepeatMode;
-pub(super) struct CheckerboardPattern;
-pub(super) struct CoalescePattern;
-pub(super) struct DiagonalPattern;
-pub(super) struct DissolvePattern;
-pub(super) struct RadialPattern;
-pub(super) struct SweepPattern;
+
+macro_rules! impl_dsl_type_map {
+    ($fn_name:ident, $method:ident, $item_type:ty) => {
+        pub(super) fn $fn_name() -> HashMap<&'static str, &'static [$item_type]> {
+            HashMap::from([
+                // Core types
+                (Effect::TYPE_NAME, Effect::$method()),
+                (Rect::TYPE_NAME, Rect::$method()),
+                (Color::TYPE_NAME, Color::$method()),
+                (Layout::TYPE_NAME, Layout::$method()),
+                (Style::TYPE_NAME, Style::$method()),
+                // Filter types
+                (CellFilter::TYPE_NAME, CellFilter::$method()),
+                // Layout types
+                (Constraint::TYPE_NAME, Constraint::$method()),
+                (Margin::TYPE_NAME, Margin::$method()),
+                (RefRect::TYPE_NAME, RefRect::$method()),
+                (Size::TYPE_NAME, Size::$method()),
+                // Time types
+                (Duration::TYPE_NAME, Duration::$method()),
+                (EffectTimer::TYPE_NAME, EffectTimer::$method()),
+                (RepeatMode::TYPE_NAME, RepeatMode::$method()),
+                // Pattern types
+                (
+                    CheckerboardPattern::TYPE_NAME,
+                    CheckerboardPattern::$method(),
+                ),
+                (CoalescePattern::TYPE_NAME, CoalescePattern::$method()),
+                (DiagonalPattern::TYPE_NAME, DiagonalPattern::$method()),
+                (DissolvePattern::TYPE_NAME, DissolvePattern::$method()),
+                (RadialPattern::TYPE_NAME, RadialPattern::$method()),
+                (SweepPattern::TYPE_NAME, SweepPattern::$method()),
+                // Enum types
+                (Motion::TYPE_NAME, Motion::$method()),
+                (ColorSpace::TYPE_NAME, ColorSpace::$method()),
+                (Direction::TYPE_NAME, Direction::$method()),
+                (Flex::TYPE_NAME, Flex::$method()),
+                (ExpandDirection::TYPE_NAME, ExpandDirection::$method()),
+                (Modifier::TYPE_NAME, Modifier::$method()),
+                (EvolveSymbolSet::TYPE_NAME, EvolveSymbolSet::$method()),
+                (Interpolation::TYPE_NAME, Interpolation::$method()),
+            ])
+        }
+    };
+}
+
+impl_dsl_type_map!(all_methods, methods, CallableItem);
+impl_dsl_type_map!(all_constructors, constructors, CallableItem);
+impl_dsl_type_map!(all_constants, constants, &'static str);
 
 impl DslType for CellFilter {
     const TYPE_NAME: &'static str = "CellFilter";
@@ -143,7 +182,25 @@ impl DslType for Color {
     const TYPE_NAME: &'static str = "Color";
 
     fn constants() -> &'static [&'static str] {
-        &[]
+        &[
+            "Reset",
+            "Black",
+            "Red",
+            "Green",
+            "Yellow",
+            "Blue",
+            "Magenta",
+            "Cyan",
+            "Gray",
+            "DarkGray",
+            "LightRed",
+            "LightGreen",
+            "LightYellow",
+            "LightBlue",
+            "LightMagenta",
+            "LightCyan",
+            "White",
+        ]
     }
 
     fn constructors() -> &'static [CallableItem] {
@@ -366,7 +423,7 @@ impl DslType for RepeatMode {
     const TYPE_NAME: &'static str = "RepeatMode";
 
     fn constants() -> &'static [&'static str] {
-        &[]
+        &["Forever"]
     }
 
     fn constructors() -> &'static [CallableItem] {
@@ -547,34 +604,181 @@ impl DslType for SweepPattern {
     }
 }
 
-pub fn all_methods() -> HashMap<&'static str, Vec<CallableItem>> {
-    HashMap::from([
-        // Core types
-        (Effect::TYPE_NAME, Effect::all_items()),
-        (Rect::TYPE_NAME, Rect::all_items()),
-        (Color::TYPE_NAME, Color::all_items()),
-        (Layout::TYPE_NAME, Layout::all_items()),
-        (Style::TYPE_NAME, Style::all_items()),
-        // Filter types
-        (CellFilter::TYPE_NAME, CellFilter::all_items()),
-        // Layout types
-        (Constraint::TYPE_NAME, Constraint::all_items()),
-        (Margin::TYPE_NAME, Margin::all_items()),
-        (RefRect::TYPE_NAME, RefRect::all_items()),
-        (Size::TYPE_NAME, Size::all_items()),
-        // Time types
-        (Duration::TYPE_NAME, Duration::all_items()),
-        (EffectTimer::TYPE_NAME, EffectTimer::all_items()),
-        (RepeatMode::TYPE_NAME, RepeatMode::all_items()),
-        // Pattern types
-        (
-            CheckerboardPattern::TYPE_NAME,
-            CheckerboardPattern::all_items(),
-        ),
-        (CoalescePattern::TYPE_NAME, CoalescePattern::all_items()),
-        (DiagonalPattern::TYPE_NAME, DiagonalPattern::all_items()),
-        (DissolvePattern::TYPE_NAME, DissolvePattern::all_items()),
-        (RadialPattern::TYPE_NAME, RadialPattern::all_items()),
-        (SweepPattern::TYPE_NAME, SweepPattern::all_items()),
-    ])
+impl DslType for Motion {
+    const TYPE_NAME: &'static str = "Motion";
+
+    fn constants() -> &'static [&'static str] {
+        &["LeftToRight", "RightToLeft", "UpToDown", "DownToUp"]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        &[]
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
+}
+
+impl DslType for ColorSpace {
+    const TYPE_NAME: &'static str = "ColorSpace";
+
+    fn constants() -> &'static [&'static str] {
+        &["Rgb", "Hsl", "Hsv"]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        &[]
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
+}
+
+impl DslType for Direction {
+    const TYPE_NAME: &'static str = "Direction";
+
+    fn constants() -> &'static [&'static str] {
+        &["Horizontal", "Vertical"]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        &[]
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
+}
+
+impl DslType for Flex {
+    const TYPE_NAME: &'static str = "Flex";
+
+    fn constants() -> &'static [&'static str] {
+        &["Legacy", "Start", "End", "Center", "SpaceBetween", "SpaceAround"]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        &[]
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
+}
+
+impl DslType for ExpandDirection {
+    const TYPE_NAME: &'static str = "ExpandDirection";
+
+    fn constants() -> &'static [&'static str] {
+        &["Horizontal", "Vertical"]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        &[]
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
+}
+
+impl DslType for Modifier {
+    const TYPE_NAME: &'static str = "Modifier";
+
+    fn constants() -> &'static [&'static str] {
+        &[
+            "BOLD",
+            "DIM",
+            "ITALIC",
+            "UNDERLINED",
+            "SLOW_BLINK",
+            "RAPID_BLINK",
+            "REVERSED",
+            "HIDDEN",
+            "CROSSED_OUT",
+        ]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        &[]
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
+}
+
+impl DslType for EvolveSymbolSet {
+    const TYPE_NAME: &'static str = "EvolveSymbolSet";
+
+    fn constants() -> &'static [&'static str] {
+        &[
+            "BlocksHorizontal",
+            "BlocksVertical",
+            "CircleFill",
+            "Circles",
+            "Quadrants",
+            "Shaded",
+            "Squares",
+        ]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        &[]
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
+}
+
+impl DslType for Interpolation {
+    const TYPE_NAME: &'static str = "Interpolation";
+
+    fn constants() -> &'static [&'static str] {
+        &[
+            "BackIn",
+            "BackOut",
+            "BackInOut",
+            "BounceIn",
+            "BounceOut",
+            "BounceInOut",
+            "CircIn",
+            "CircOut",
+            "CircInOut",
+            "CubicIn",
+            "CubicOut",
+            "CubicInOut",
+            "ElasticIn",
+            "ElasticOut",
+            "ElasticInOut",
+            "ExpoIn",
+            "ExpoOut",
+            "ExpoInOut",
+            "Linear",
+            "QuadIn",
+            "QuadOut",
+            "QuadInOut",
+            "QuartIn",
+            "QuartOut",
+            "QuartInOut",
+            "QuintIn",
+            "QuintOut",
+            "QuintInOut",
+            "Reverse",
+            "SineIn",
+            "SineOut",
+            "SineInOut",
+        ]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        &[]
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
 }
