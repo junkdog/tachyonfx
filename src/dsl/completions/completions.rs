@@ -1,8 +1,13 @@
+use core::slice::Iter;
 use std::collections::HashMap;
 
-use crate::dsl::{
-    tokenizer::{Token, TokenKind},
-    EffectDsl,
+use crate::{
+    dsl::{
+        completions::completable::all_methods,
+        tokenizer::{Token, TokenKind},
+        EffectDsl,
+    },
+    CellFilter,
 };
 
 /// Macro for compact token pattern matching
@@ -187,7 +192,7 @@ pub struct CompletionEngine {
 
 impl CompletionEngine {
     pub fn new() -> Self {
-        let methods = dsl_fns::all_methods();
+        let methods = all_methods();
         let effect_types = EffectDsl::new().registered_effects();
 
         let interpolations = vec![
@@ -991,55 +996,55 @@ fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> CompletionCont
     }
 }
 
-#[derive(Debug, Clone)]
-enum CallableItem {
+#[derive(Debug, Clone, Copy)]
+pub(super) enum CallableItem {
     Constructor {
-        name: String,
-        params: Vec<String>,
+        name: &'static str,
+        params: &'static [&'static str],
         #[allow(dead_code)]
-        declaring_type: String,
+        declaring_type: &'static str,
     },
     #[allow(dead_code)]
     StaticMethod {
-        name: String,
-        params: Vec<String>,
-        declaring_type: String,
+        name: &'static str,
+        params: &'static [&'static str],
+        declaring_type: &'static str,
     },
     InstanceMethod {
-        name: String,
-        params: Vec<String>,
+        name: &'static str,
+        params: &'static [&'static str],
         #[allow(dead_code)]
-        declaring_type: String,
+        declaring_type: &'static str,
     },
 }
 
 impl CallableItem {
-    fn constructor(declaring_type: &str, name: &str, params: &[&'static str]) -> Self {
-        Self::Constructor {
-            name: name.to_string(),
-            params: params.iter().map(|s| s.to_string()).collect(),
-            declaring_type: declaring_type.to_string(),
-        }
+    pub(super) const fn constructor(
+        declaring_type: &'static str,
+        name: &'static str,
+        params: &'static [&'static str],
+    ) -> Self {
+        Self::Constructor { name, params, declaring_type }
     }
 
     #[allow(dead_code)]
-    fn static_method(declaring_type: &str, name: &str, params: &[&'static str]) -> Self {
-        Self::StaticMethod {
-            name: name.to_string(),
-            params: params.iter().map(|s| s.to_string()).collect(),
-            declaring_type: declaring_type.to_string(),
-        }
+    pub(super) const fn static_method(
+        declaring_type: &'static str,
+        name: &'static str,
+        params: &'static [&'static str],
+    ) -> Self {
+        Self::StaticMethod { name, params, declaring_type }
     }
 
-    fn instance_method(declaring_type: &str, name: &str, params: &[&'static str]) -> Self {
-        Self::InstanceMethod {
-            name: name.to_string(),
-            params: params.iter().map(|s| s.to_string()).collect(),
-            declaring_type: declaring_type.to_string(),
-        }
+    pub(super) const fn instance_method(
+        declaring_type: &'static str,
+        name: &'static str,
+        params: &'static [&'static str],
+    ) -> Self {
+        Self::InstanceMethod { name, params, declaring_type }
     }
 
-    fn name(&self) -> &str {
+    pub(super) const fn name(&self) -> &str {
         match self {
             Self::Constructor { name, .. }
             | Self::StaticMethod { name, .. }
@@ -1047,7 +1052,7 @@ impl CallableItem {
         }
     }
 
-    fn params(&self) -> &[String] {
+    pub(super) const fn params(&self) -> &[&'static str] {
         match self {
             Self::Constructor { params, .. }
             | Self::StaticMethod { params, .. }
@@ -1056,7 +1061,7 @@ impl CallableItem {
     }
 
     #[allow(dead_code)]
-    fn declaring_type(&self) -> &str {
+    pub(super) const fn declaring_type(&self) -> &str {
         match self {
             Self::Constructor { declaring_type, .. }
             | Self::StaticMethod { declaring_type, .. }
@@ -1064,311 +1069,12 @@ impl CallableItem {
         }
     }
 
-    fn is_static(&self) -> bool {
+    pub(super) const fn is_static(&self) -> bool {
         matches!(self, Self::Constructor { .. } | Self::StaticMethod { .. })
     }
 
-    fn is_instance(&self) -> bool {
+    pub(super) const fn is_instance(&self) -> bool {
         matches!(self, Self::InstanceMethod { .. })
-    }
-}
-
-mod dsl_fns {
-    use std::collections::HashMap;
-
-    use crate::dsl::completions::CallableItem;
-
-    macro_rules! ctor {
-        ($type:expr, $name:expr, $($params:expr),*) => {
-            CallableItem::constructor($type, $name, &[$($params),*])
-        };
-        ($type:expr, $name:expr) => {
-            CallableItem::constructor($type, $name, &[])
-        };
-    }
-
-    macro_rules! method {
-        ($type:expr, $name:expr, $($params:expr),*) => {
-            CallableItem::instance_method($type, $name, &[$($params),*])
-        };
-        ($type:expr, $name:expr) => {
-            CallableItem::instance_method($type, $name, &[])
-        };
-    }
-
-    pub(super) fn all_methods() -> HashMap<&'static str, Vec<CallableItem>> {
-        let mut methods = HashMap::new();
-
-        // Core types
-        methods.insert("Effect", effect());
-        methods.insert("Rect", rect());
-        methods.insert("Color", color());
-        methods.insert("Layout", layout());
-        methods.insert("Style", style());
-
-        // Filter types
-        methods.insert("CellFilter", cell_filter());
-
-        // Layout types
-        methods.insert("Constraint", constraint());
-        methods.insert("Margin", margin());
-        methods.insert("RefRect", ref_rect());
-        methods.insert("Size", size());
-
-        // Time types
-        methods.insert("Duration", duration());
-        methods.insert("EffectTimer", effect_timer());
-        methods.insert("RepeatMode", repeat_mode());
-
-        // Pattern types
-        methods.insert("CheckerboardPattern", checkerboard_pattern());
-        methods.insert("CoalescePattern", coalesce_pattern());
-        methods.insert("DiagonalPattern", diagonal_pattern());
-        methods.insert("DissolvePattern", dissolve_pattern());
-        methods.insert("RadialPattern", radial_pattern());
-        methods.insert("SweepPattern", sweep_pattern());
-
-        methods
-    }
-
-    fn rect() -> Vec<CallableItem> {
-        const T: &str = "Rect";
-        vec![
-            // Constructors
-            ctor!(T, "new", "u16", "u16", "u16", "u16"),
-            // Methods
-            method!(T, "clone"),
-            method!(T, "clamp", "Rect"),
-            method!(T, "inner", "Margin"),
-            method!(T, "intersection", "Rect"),
-            method!(T, "union", "Rect"),
-            method!(T, "offset", "Offset"),
-        ]
-    }
-
-    fn effect() -> Vec<CallableItem> {
-        const T: &str = "Effect";
-        vec![
-            // Methods
-            method!(T, "clone"),
-            method!(T, "reversed"),
-            method!(T, "with_area", "Rect"),
-            method!(T, "with_color_space", "ColorSpace"),
-            method!(T, "with_duration", "Duration"),
-            method!(T, "with_filter", "CellFilter"),
-            method!(T, "filter", "CellFilter"),
-            method!(T, "with_pattern", "AnyPattern"),
-        ]
-    }
-
-    fn cell_filter() -> Vec<CallableItem> {
-        const T: &str = "CellFilter";
-        vec![
-            // Constructors
-            ctor!(T, "Area", "Rect"),
-            ctor!(T, "RefArea", "RefRect"),
-            ctor!(T, "FgColor", "Color"),
-            ctor!(T, "BgColor", "Color"),
-            ctor!(T, "Inner", "Margin"),
-            ctor!(T, "Outer", "Margin"),
-            ctor!(T, "AllOf", "Vec<CellFilter>"),
-            ctor!(T, "AnyOf", "Vec<CellFilter>"),
-            ctor!(T, "NoneOf", "Vec<CellFilter>"),
-            ctor!(T, "Not", "Box<CellFilter>"),
-            ctor!(T, "Static", "Box<CellFilter>"),
-            ctor!(T, "Layout", "Layout", "u16"),
-            ctor!(T, "PositionFn", "var"),
-            ctor!(T, "EvalCell", "var"),
-            // Methods
-            method!(T, "clone"),
-            method!(T, "negated"),
-            method!(T, "into_static"),
-        ]
-    }
-
-    fn color() -> Vec<CallableItem> {
-        const T: &str = "Color";
-        vec![
-            // Constructors
-            ctor!(T, "Rgb", "u8", "u8", "u8"),
-            ctor!(T, "from_u32", "u32"),
-            ctor!(T, "Indexed", "u8"),
-        ]
-    }
-
-    fn layout() -> Vec<CallableItem> {
-        const T: &str = "Layout";
-        vec![
-            // Constructors
-            ctor!(T, "default"),
-            ctor!(T, "horizontal", "Vec<Constraint>"),
-            ctor!(T, "vertical", "Vec<Constraint>"),
-            ctor!(T, "new", "Direction", "Vec<Constraint>"),
-            // Methods
-            method!(T, "clone"),
-            method!(T, "direction", "Direction"),
-            method!(T, "flex", "Flex"),
-            method!(T, "constraints", "Vec<Constraint>"),
-            method!(T, "margin", "u16"),
-            method!(T, "horizontal_margin", "u16"),
-            method!(T, "vertical_margin", "u16"),
-            method!(T, "spacing", "u16"),
-        ]
-    }
-
-    fn style() -> Vec<CallableItem> {
-        const T: &str = "Style";
-        vec![
-            // Constructors
-            ctor!(T, "new"),
-            ctor!(T, "default"),
-            // Methods
-            method!(T, "clone"),
-            method!(T, "fg", "Color"),
-            method!(T, "bg", "Color"),
-            method!(T, "add_modifier", "Modifier"),
-            method!(T, "remove_modifier", "Modifier"),
-        ]
-    }
-
-    fn constraint() -> Vec<CallableItem> {
-        const T: &str = "Constraint";
-        vec![
-            // Constructors
-            ctor!(T, "Min", "u16"),
-            ctor!(T, "Max", "u16"),
-            ctor!(T, "Length", "u16"),
-            ctor!(T, "Percentage", "u16"),
-            ctor!(T, "Fill", "u16"),
-            ctor!(T, "Ratio", "u32", "u32"),
-        ]
-    }
-
-    fn duration() -> Vec<CallableItem> {
-        const T: &str = "Duration";
-        vec![
-            // Constructors
-            ctor!(T, "from_millis", "u64"),
-            ctor!(T, "from_secs_f32", "f32"),
-        ]
-    }
-
-    fn effect_timer() -> Vec<CallableItem> {
-        const T: &str = "EffectTimer";
-        vec![
-            // Constructors
-            ctor!(T, "from_ms", "u32", "Interpolation"),
-            ctor!(T, "new", "Duration", "Interpolation"),
-        ]
-    }
-
-    fn margin() -> Vec<CallableItem> {
-        const T: &str = "Margin";
-        vec![
-            // Constructors
-            ctor!(T, "new", "u16", "u16"),
-        ]
-    }
-
-    fn ref_rect() -> Vec<CallableItem> {
-        const T: &str = "RefRect";
-        vec![
-            // Constructors
-            ctor!(T, "new", "Rect"),
-            ctor!(T, "default"),
-        ]
-    }
-
-    fn size() -> Vec<CallableItem> {
-        const T: &str = "Size";
-        vec![
-            // Constructors
-            ctor!(T, "new", "u16", "u16"),
-        ]
-    }
-
-    fn repeat_mode() -> Vec<CallableItem> {
-        const T: &str = "RepeatMode";
-        vec![
-            // Constructors
-            ctor!(T, "Times", "u32"),
-            ctor!(T, "Duration", "Duration"),
-        ]
-    }
-
-    fn checkerboard_pattern() -> Vec<CallableItem> {
-        const T: &str = "CheckerboardPattern";
-        vec![
-            // Constructors
-            ctor!(T, "default"),
-            ctor!(T, "with_cell_size", "u16"),
-            // Methods
-            method!(T, "clone"),
-            method!(T, "with_transition_width", "f32"),
-        ]
-    }
-
-    fn coalesce_pattern() -> Vec<CallableItem> {
-        const T: &str = "CoalescePattern";
-        vec![
-            // Constructors
-            ctor!(T, "new"),
-            ctor!(T, "default"),
-            // Methods
-            method!(T, "clone"),
-        ]
-    }
-
-    fn diagonal_pattern() -> Vec<CallableItem> {
-        const T: &str = "DiagonalPattern";
-        vec![
-            // Constructors
-            ctor!(T, "top_left_to_bottom_right"),
-            ctor!(T, "top_right_to_bottom_left"),
-            ctor!(T, "bottom_left_to_top_right"),
-            ctor!(T, "bottom_right_to_top_left"),
-            // Methods
-            method!(T, "clone"),
-            method!(T, "with_transition_width", "f32"),
-        ]
-    }
-
-    fn dissolve_pattern() -> Vec<CallableItem> {
-        const T: &str = "DissolvePattern";
-        vec![
-            // Constructors
-            ctor!(T, "new"),
-            ctor!(T, "default"),
-            // Methods
-            method!(T, "clone"),
-        ]
-    }
-
-    fn radial_pattern() -> Vec<CallableItem> {
-        const T: &str = "RadialPattern";
-        vec![
-            // Constructors
-            ctor!(T, "center"),
-            ctor!(T, "new", "f32", "f32"),
-            ctor!(T, "with_transition", "(f32, f32)", "f32"),
-            // Methods
-            method!(T, "clone"),
-            method!(T, "with_transition_width", "f32"),
-            method!(T, "with_center", "f32", "f32"),
-        ]
-    }
-
-    fn sweep_pattern() -> Vec<CallableItem> {
-        const T: &str = "SweepPattern";
-        vec![
-            // Constructors
-            ctor!(T, "left_to_right", "u16"),
-            ctor!(T, "right_to_left", "u16"),
-            ctor!(T, "up_to_down", "u16"),
-            ctor!(T, "down_to_up", "u16"),
-            // Methods
-            method!(T, "clone"),
-        ]
     }
 }
 
