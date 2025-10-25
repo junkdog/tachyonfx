@@ -1,18 +1,18 @@
 use std::collections::HashMap;
 
 use super::{
-    context::{analyze_last_tokens, extract_partial_token},
+    context::analyze_last_tokens,
     dsl_type::{all_constants, all_constructors, all_methods},
     matcher::CompletionMatcher,
     types::{
         tok, CallableItem, Completion, CompletionContext, CompletionKind, LetBinding, TokenCursor,
     },
 };
-use crate::dsl::{tokenizer::Token, EffectDsl};
+use crate::dsl::{completions::dsl_type::effect_types, tokenizer::Token};
 
 #[derive(Debug, Clone)]
 pub struct CompletionEngine {
-    effect_types: Vec<&'static str>,
+    effect_types: HashMap<&'static str, CallableItem>,
     constructors: HashMap<&'static str, &'static [CallableItem]>,
     methods: HashMap<&'static str, &'static [CallableItem]>,
     constants: HashMap<&'static str, &'static [&'static str]>,
@@ -27,7 +27,11 @@ impl From<&CallableItem> for Completion {
             } else {
                 CompletionKind::Method
             },
-            meta: Some(callable.params().join(", ")),
+            meta: Some(format!(
+                "{}({})",
+                callable.name(),
+                callable.params().join(", ")
+            )),
         }
     }
 }
@@ -37,43 +41,9 @@ impl CompletionEngine {
         let methods = all_methods();
         let constructors = all_constructors();
         let constants = all_constants();
-        let effect_types = EffectDsl::new().registered_effects();
+        let effect_types = effect_types();
 
         Self { methods, constructors, constants, effect_types }
-    }
-
-    fn const_completions(&self, identifier: &str) -> Vec<Completion> {
-        self.constants
-            .get(identifier)
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .map(|name| Completion {
-                label: name.to_string(),
-                kind: CompletionKind::Constant,
-                meta: Some(identifier.to_string()),
-            })
-            .collect()
-    }
-
-    fn constructor_completions(&self, identifier: &str) -> Vec<Completion> {
-        self.constructors
-            .get(identifier)
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .map(Completion::from)
-            .collect()
-    }
-
-    fn method_completions(&self, identifier: &str) -> Vec<Completion> {
-        self.methods
-            .get(identifier)
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .map(Completion::from)
-            .collect()
     }
 
     /// Provides completions for the given source string at the specified cursor position.
@@ -94,13 +64,17 @@ impl CompletionEngine {
             .unwrap_or_else(|_| vec![])
     }
 
+    pub fn echo_source(&self, source: &str, cursor_index: u32) -> String {
+        source[..cursor_index as usize].to_string()
+    }
+
     /// Low-level completion function that works with pre-tokenized input.
     /// For internal use and testing. External users should use `complete_source` instead.
-    pub(super) fn completions(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
+    fn completions(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
         let cursor = TokenCursor::from_tokens(tokens, cursor_index);
 
         // Extract partial token at cursor for filtering
-        let partial = extract_partial_token(tokens, &cursor);
+        let partial = cursor.extract_partial_token(tokens);
         let matcher = CompletionMatcher::new(partial);
 
         let context = analyze_last_tokens(tokens, &cursor);
@@ -265,10 +239,13 @@ impl CompletionEngine {
                     "fx" => self
                         .effect_types
                         .iter()
-                        .map(|effect_name| Completion {
-                            label: effect_name.to_string(),
-                            kind: CompletionKind::Function,
-                            meta: Some(format!("{}(...)", effect_name)),
+                        .map(|(effect_name, ctor)| {
+                            let meta = format!("{}({})", effect_name, ctor.params().join(", "));
+                            Completion {
+                                label: (*effect_name).to_string(),
+                                kind: CompletionKind::Function,
+                                meta: Some(meta),
+                            }
                         })
                         .collect(),
                     ns => [self.const_completions(ns), self.constructor_completions(ns)].concat(),
@@ -282,7 +259,7 @@ impl CompletionEngine {
                     if let Some(item) = items.iter().find(|i| i.name() == fn_name) {
                         if let Some(arg_type) = item.params().get(arg_index) {
                             return vec![Completion {
-                                label: format!("<{}>", arg_type),
+                                label: format!("{}", arg_type),
                                 kind: CompletionKind::Variable,
                                 meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
                             }];
@@ -316,6 +293,40 @@ impl CompletionEngine {
 
         // Filter and score completions based on partial input
         matcher.filter_and_score(completions)
+    }
+
+    fn const_completions(&self, identifier: &str) -> Vec<Completion> {
+        self.constants
+            .get(identifier)
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .map(|name| Completion {
+                label: name.to_string(),
+                kind: CompletionKind::Constant,
+                meta: Some(identifier.to_string()),
+            })
+            .collect()
+    }
+
+    fn constructor_completions(&self, identifier: &str) -> Vec<Completion> {
+        self.constructors
+            .get(identifier)
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .map(Completion::from)
+            .collect()
+    }
+
+    fn method_completions(&self, identifier: &str) -> Vec<Completion> {
+        self.methods
+            .get(identifier)
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .map(Completion::from)
+            .collect()
     }
 
     #[allow(clippy::needless_return)]
@@ -386,7 +397,7 @@ impl CompletionEngine {
             .unwrap_or(&[]);
         Some(match () {
             _ if cell_filter_constants.contains(&identifier) => "CellFilter",
-            _ if self.effect_types.contains(&identifier) => "Effect",
+            _ if self.effect_types.contains_key(identifier) => "Effect",
             _ => None?,
         })
     }
@@ -408,7 +419,13 @@ impl Default for CompletionEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
+    use crate::{
+        dsl::{
+            completions::dsl_type::DslType,
+            tokenizer::{sanitize_tokens, tokenize},
+        },
+        Effect,
+    };
 
     #[test]
     fn test_completion_engine_top_level() {
@@ -942,5 +959,16 @@ mod tests {
 
         assert_eq!(bindings.len(), 1);
         assert_eq!(bindings[0], LetBinding::new("filter", "CellFilter"));
+    }
+
+    #[test]
+    fn test_complete_dot_access_after_ctor() {
+        let engine = CompletionEngine::new();
+
+        let source = "fx::consume_tick().";
+
+        let completions = engine.complete_source(source, source.len() as u32);
+        println!("{:?}", completions);
+        assert_eq!(completions.len(), Effect::methods().len());
     }
 }

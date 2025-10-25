@@ -1,21 +1,6 @@
 use super::types::{tok, CompletionContext, TokenCursor};
 use crate::dsl::tokenizer::{Token, TokenKind};
 
-/// Extracts the partial token at the cursor position for completion matching.
-pub(super) fn extract_partial_token(tokens: &[Token], cursor: &TokenCursor) -> String {
-    match cursor {
-        TokenCursor::InToken { token_index, offset } => {
-            let token = tokens[*token_index];
-            if matches!(token.kind, TokenKind::Identifier) {
-                token.text.chars().take(*offset).collect()
-            } else {
-                String::new()
-            }
-        },
-        TokenCursor::BetweenTokens => String::new(),
-    }
-}
-
 /// Try to infer the return type from a function call by looking at the namespace
 /// e.g., Color::from_u32(...) returns Color, fx::dissolve(...) returns Effect
 fn infer_return_type(tokens: &[Token], paren_idx: usize) -> String {
@@ -66,12 +51,6 @@ pub(super) fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> Com
             }
         },
 
-        // Pattern: ].identifier  (method chain after array index)
-        [.., tok!(RightBracket), tok!(Dot)]
-        | [.., tok!(RightBracket), tok!(Dot), tok!(Identifier)] => {
-            CompletionContext::DotAccess { receiver_type: String::from("Array") }
-        },
-
         // Pattern: Namespace::  (e.g., "fx::" or "Color::")
         [.., tok!(Identifier => ns), tok!(DoubleColon)] => {
             CompletionContext::DoubleColon { namespace: ns.to_string() }
@@ -89,25 +68,44 @@ pub(super) fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> Com
 
         // Pattern: function_name(arg1, arg2,  (count commas for arg index)
         _tokens_slice => {
-            // Check if we're inside a function call by finding the last opening paren
+            // Check if we're inside a function call by finding the last unclosed opening paren
             // We need to search in ALL tokens, not just the slice, to handle complex cases
             if let Some(paren_idx) = tokens[..cursor_token_idx]
                 .iter()
                 .rposition(|t| t.kind == TokenKind::LeftParen)
             {
-                // Count commas after the paren to determine argument index
-                let comma_count = tokens[paren_idx..cursor_token_idx]
-                    .iter()
-                    .filter(|t| t.kind == TokenKind::Comma)
-                    .count();
+                // Check if this paren is closed - count paren depth from the opening paren
+                let mut depth = 1;
+                for token in &tokens[paren_idx + 1..cursor_token_idx] {
+                    match token.kind {
+                        TokenKind::LeftParen => depth += 1,
+                        TokenKind::RightParen => {
+                            depth -= 1;
+                            if depth == 0 {
+                                // This opening paren is closed, not inside function call
+                                break;
+                            }
+                        },
+                        _ => {},
+                    }
+                }
 
-                // Try to find the function name before the paren
-                if paren_idx > 0 {
-                    if let Some(tok!(Identifier => fn_name)) = tokens.get(paren_idx - 1) {
-                        return CompletionContext::FnCall {
-                            fn_name: fn_name.to_string(),
-                            arg_index: comma_count,
-                        };
+                // Only treat as function call if paren is still open (depth > 0)
+                if depth > 0 {
+                    // Count commas after the paren to determine argument index
+                    let comma_count = tokens[paren_idx..cursor_token_idx]
+                        .iter()
+                        .filter(|t| t.kind == TokenKind::Comma)
+                        .count();
+
+                    // Try to find the function name before the paren
+                    if paren_idx > 0 {
+                        if let Some(tok!(Identifier => fn_name)) = tokens.get(paren_idx - 1) {
+                            return CompletionContext::FnCall {
+                                fn_name: fn_name.to_string(),
+                                arg_index: comma_count,
+                            };
+                        }
                     }
                 }
             }
@@ -117,22 +115,44 @@ pub(super) fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> Com
                 .iter()
                 .rposition(|t| t.kind == TokenKind::LeftBrace)
             {
-                // Look for the struct name before the brace
-                if brace_idx > 0 {
-                    if let Some(tok!(Identifier => struct_name)) = tokens.get(brace_idx - 1) {
-                        // Collect already filled fields (identifiers before colons after the brace)
-                        let filled_fields = tokens[brace_idx..cursor_token_idx]
-                            .windows(2)
-                            .filter_map(|w| match w {
-                                [tok!(Identifier => field), tok!(Colon)] => Some(field.to_string()),
-                                _ => None,
-                            })
-                            .collect();
+                // Check if this brace is closed - count brace depth from the opening brace
+                let mut depth = 1;
+                for token in &tokens[brace_idx + 1..cursor_token_idx] {
+                    match token.kind {
+                        TokenKind::LeftBrace => depth += 1,
+                        TokenKind::RightBrace => {
+                            depth -= 1;
+                            if depth == 0 {
+                                // This opening brace is closed, not inside struct init
+                                break;
+                            }
+                        },
+                        _ => {},
+                    }
+                }
 
-                        return CompletionContext::StructInit {
-                            struct_name: struct_name.to_string(),
-                            filled_fields,
-                        };
+                // Only treat as struct init if brace is still open (depth > 0)
+                if depth > 0 {
+                    // Look for the struct name before the brace
+                    if brace_idx > 0 {
+                        if let Some(tok!(Identifier => struct_name)) = tokens.get(brace_idx - 1) {
+                            // Collect already filled fields (identifiers before colons after the
+                            // brace)
+                            let filled_fields = tokens[brace_idx..cursor_token_idx]
+                                .windows(2)
+                                .filter_map(|w| match w {
+                                    [tok!(Identifier => field), tok!(Colon)] => {
+                                        Some(field.to_string())
+                                    },
+                                    _ => None,
+                                })
+                                .collect();
+
+                            return CompletionContext::StructInit {
+                                struct_name: struct_name.to_string(),
+                                filled_fields,
+                            };
+                        }
                     }
                 }
             }
@@ -145,19 +165,25 @@ pub(super) fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> Com
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
+
     use super::*;
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
-    /// Helper to tokenize input and analyze context at the end
-    fn analyze(input: &str) -> CompletionContext {
-        let tokens = tokenize(input).unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let cursor = TokenCursor::from_tokens(&tokens, input.len() as _);
-        analyze_last_tokens(&tokens, &cursor)
-    }
-
     fn assert_context_eq(input: &str, expected: CompletionContext) {
-        let ctx = analyze(input);
+        fn analyze(input: &str) -> CompletionContext {
+            let tokens = tokenize(input).unwrap();
+            let tokens = sanitize_tokens(tokens);
+            let cursor = TokenCursor::from_tokens(&tokens, input.len() as _);
+            analyze_last_tokens(&tokens, &cursor)
+        }
+
+        let cursor_index = input
+            .char_indices()
+            .position(|(_, c)| c == '^')
+            .unwrap_or(input.len());
+
+        let ctx = analyze(&input[..cursor_index]);
         assert_eq!(ctx, expected, "For input: {}", input);
     }
 
@@ -165,6 +191,12 @@ mod tests {
     fn test_top_level_context() {
         assert_context_eq("", CompletionContext::TopLevel);
         assert_context_eq("fx", CompletionContext::TopLevel);
+
+        // cursor is after semicolon, hence top-level
+        assert_context_eq(
+            "let c = Color::from_u32(0x1d2021);",
+            CompletionContext::TopLevel,
+        );
     }
 
     #[test]
@@ -181,6 +213,18 @@ mod tests {
         assert_context_eq("effect.with_cell", CompletionContext::DotAccess {
             receiver_type: "effect".to_string(),
         });
+
+        assert_context_eq("Color::from_u32(0x1d2021).", CompletionContext::DotAccess {
+            receiver_type: "Color".to_string(),
+        });
+
+        assert_context_eq(
+            indoc! {"
+                fx::fade_from(bg, bg, 1000). ^ // chevron is cursor pos
+                    .with_color_space(ColorSpace::Rgb)
+            "},
+            CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
+        );
     }
 
     #[test]
@@ -192,6 +236,14 @@ mod tests {
         assert_context_eq("Color::", CompletionContext::DoubleColon {
             namespace: "Color".to_string(),
         });
+
+        assert_context_eq(
+            indoc! {"
+                fx::^
+                fx::fade_from(Black, Black, 1000)
+            "},
+            CompletionContext::DoubleColon { namespace: "fx".to_string() },
+        );
     }
 
     #[test]
@@ -293,13 +345,13 @@ mod tests {
         // Cursor at end of "Left"
         let cursor_pos = tokens.last().unwrap().span.1;
         let cursor = TokenCursor::from_tokens(&tokens, cursor_pos);
-        let partial = extract_partial_token(&tokens, &cursor);
+        let partial = cursor.extract_partial_token(&tokens);
         assert_eq!(partial, "Left");
 
         // Cursor in middle of "Left" (after "Le")
         let cursor_pos = tokens.last().unwrap().span.0 + 2;
         let cursor = TokenCursor::from_tokens(&tokens, cursor_pos);
-        let partial = extract_partial_token(&tokens, &cursor);
+        let partial = cursor.extract_partial_token(&tokens);
         assert_eq!(partial, "Le");
     }
 }

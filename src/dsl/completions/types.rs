@@ -104,6 +104,20 @@ impl TokenCursor {
         }
     }
 
+    pub(super) fn extract_partial_token(&self, tokens: &[Token]) -> String {
+        match self {
+            TokenCursor::InToken { token_index, offset } => {
+                let token = tokens[*token_index];
+                if matches!(token.kind, TokenKind::Identifier) {
+                    token.text.chars().take(*offset).collect()
+                } else {
+                    String::new()
+                }
+            },
+            TokenCursor::BetweenTokens => String::new(),
+        }
+    }
+
     pub(super) fn token_index(&self) -> Option<usize> {
         match self {
             Self::InToken { token_index, .. } => Some(*token_index),

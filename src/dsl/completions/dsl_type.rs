@@ -11,6 +11,162 @@ use crate::{
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
 };
 
+pub(super) fn effect_types() -> HashMap<&'static str, CallableItem> {
+    // This maps each effect name to its function signature as a CallableItem
+    // The type "fx" is used as the declaring type for all effects
+    const FX: &str = "fx";
+    const FX_TYPES: [(&str, CallableItem); 39] = [
+        ("term256_colors", ctor!(FX, "term256_colors")),
+        ("coalesce", ctor!(FX, "coalesce", "EffectTimer")),
+        (
+            "coalesce_from",
+            ctor!(FX, "coalesce_from", "Style", "EffectTimer"),
+        ),
+        ("consume_tick", ctor!(FX, "consume_tick")),
+        ("delay", ctor!(FX, "delay", "EffectTimer", "Effect")),
+        ("dissolve", ctor!(FX, "dissolve", "EffectTimer")),
+        (
+            "dissolve_to",
+            ctor!(FX, "dissolve_to", "Style", "EffectTimer"),
+        ),
+        (
+            "evolve",
+            ctor!(FX, "evolve", "EvolveSymbolSet", "EffectTimer"),
+        ),
+        (
+            "evolve_into",
+            ctor!(FX, "evolve_into", "EvolveSymbolSet", "EffectTimer"),
+        ),
+        (
+            "evolve_from",
+            ctor!(FX, "evolve_from", "EvolveSymbolSet", "EffectTimer"),
+        ),
+        (
+            "expand",
+            ctor!(FX, "expand", "ExpandDirection", "Style", "EffectTimer"),
+        ),
+        ("explode", ctor!(FX, "explode", "f32", "f32", "EffectTimer")),
+        (
+            "fade_from",
+            ctor!(FX, "fade_from", "Color", "Color", "EffectTimer"),
+        ),
+        (
+            "fade_from_fg",
+            ctor!(FX, "fade_from_fg", "Color", "EffectTimer"),
+        ),
+        (
+            "fade_to",
+            ctor!(FX, "fade_to", "Color", "Color", "EffectTimer"),
+        ),
+        (
+            "fade_to_fg",
+            ctor!(FX, "fade_to_fg", "Color", "EffectTimer"),
+        ),
+        ("freeze_at", ctor!(FX, "freeze_at", "f32", "bool", "Effect")),
+        (
+            "hsl_shift",
+            ctor!(
+                FX,
+                "hsl_shift",
+                "Option<[f32; 3>",
+                "Option<[f32; 3>",
+                "EffectTimer"
+            ),
+        ),
+        (
+            "hsl_shift_fg",
+            ctor!(FX, "hsl_shift_fg", "[f32; 3", "EffectTimer"),
+        ),
+        ("never_complete", ctor!(FX, "never_complete", "Effect")),
+        ("paint", ctor!(FX, "paint", "Color", "Color", "EffectTimer")),
+        ("paint_bg", ctor!(FX, "paint_bg", "Color", "EffectTimer")),
+        ("paint_fg", ctor!(FX, "paint_fg", "Color", "EffectTimer")),
+        ("ping_pong", ctor!(FX, "ping_pong", "Effect")),
+        (
+            "prolong_end",
+            ctor!(FX, "prolong_end", "EffectTimer", "Effect"),
+        ),
+        (
+            "prolong_start",
+            ctor!(FX, "prolong_start", "EffectTimer", "Effect"),
+        ),
+        (
+            "remap_alpha",
+            ctor!(FX, "remap_alpha", "f32", "f32", "Effect"),
+        ),
+        ("repeat", ctor!(FX, "repeat", "Effect", "RepeatMode")),
+        ("run_once", ctor!(FX, "run_once", "Effect")),
+        ("sleep", ctor!(FX, "sleep", "EffectTimer")),
+        ("repeating", ctor!(FX, "repeating", "Effect")),
+        (
+            "slide_in",
+            ctor!(
+                FX,
+                "slide_in",
+                "Motion",
+                "u16",
+                "u16",
+                "Color",
+                "EffectTimer"
+            ),
+        ),
+        (
+            "slide_out",
+            ctor!(
+                FX,
+                "slide_out",
+                "Motion",
+                "u16",
+                "u16",
+                "Color",
+                "EffectTimer"
+            ),
+        ),
+        (
+            "stretch",
+            ctor!(FX, "stretch", "Motion", "Style", "EffectTimer"),
+        ),
+        (
+            "sweep_in",
+            ctor!(
+                FX,
+                "sweep_in",
+                "Motion",
+                "u16",
+                "u16",
+                "Color",
+                "EffectTimer"
+            ),
+        ),
+        (
+            "sweep_out",
+            ctor!(
+                FX,
+                "sweep_out",
+                "Motion",
+                "u16",
+                "u16",
+                "Color",
+                "EffectTimer"
+            ),
+        ),
+        (
+            "with_duration",
+            ctor!(FX, "with_duration", "Duration", "Effect"),
+        ),
+        (
+            "timed_never_complete",
+            ctor!(FX, "timed_never_complete", "Duration", "Effect"),
+        ),
+        (
+            "translate",
+            ctor!(FX, "translate", "Effect", "Offset", "EffectTimer"),
+        ),
+    ];
+
+    HashMap::from(FX_TYPES)
+}
+
 pub(super) trait DslType {
     const TYPE_NAME: &'static str;
 
