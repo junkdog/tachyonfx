@@ -248,7 +248,7 @@ impl CompletionEngine {
                         .effect_types
                         .iter()
                         .map(|(effect_name, ctor)| {
-                            let meta = format!("{}({})", effect_name, ctor.params().join(", "));
+                            let meta = format!("{effect_name}({})", ctor.params().join(", "));
                             Completion {
                                 label: (*effect_name).to_string(),
                                 kind: CompletionKind::Function,
@@ -268,7 +268,7 @@ impl CompletionEngine {
                 if let Some(effect) = self.effect_types.get(fn_name.as_str()) {
                     if let Some(arg) = effect.params().get(arg_index) {
                         completions.push(Completion {
-                            label: format!("{}", arg),
+                            label: format!("{arg}::"),
                             kind: CompletionKind::Parameter,
                             meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
                         })
@@ -277,11 +277,11 @@ impl CompletionEngine {
                 for methods in self.methods.values() {
                     if let Some(method) = methods.iter().find(|i| i.name() == fn_name) {
                         if let Some(arg_type) = method.params().get(arg_index) {
-                            return vec![Completion {
-                                label: format!("{}", arg_type),
+                            completions.push(Completion {
+                                label: format!("{arg_type}::"),
                                 kind: CompletionKind::Parameter,
                                 meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
-                            }];
+                            });
                         }
                     }
                 }
@@ -321,6 +321,7 @@ impl CompletionEngine {
             })
             .collect();
 
+        // add any matching let bindings to the completions
         let_bindings
             .into_iter()
             .filter(|binding| types.contains(&binding.binding_type))
@@ -330,6 +331,12 @@ impl CompletionEngine {
                 meta: Some(binding.binding_type),
             })
             .for_each(|completion| completions.push(completion));
+
+        // add any matching const completions
+        types
+            .iter()
+            .flat_map(|t| self.const_completions(t))
+            .for_each(|c| completions.push(c));
 
         // Filter and score completions based on partial input
         // Extract partial token at cursor for filtering
@@ -1003,10 +1010,9 @@ mod tests {
 
         let completions = engine.completions(source, source.chars().count() as u32);
 
-        // We should get Style:: namespace since it starts with 's'
-        assert_eq!(completions, vec![
+        assert_eq!(completions[..2], vec![
             Completion {
-                label: "Color".to_string(),
+                label: "Color::".to_string(),
                 kind: CompletionKind::Parameter,
                 meta: Some("Parameter 2 of fade_to".to_string()),
             },
@@ -1016,6 +1022,14 @@ mod tests {
                 meta: Some("Color".to_string()),
             }
         ]);
+
+        // we should also get a bunch of color constants
+        assert!(completions[2..]
+            .iter()
+            .all(|c| c.meta == Some("Color".to_string())));
+        assert!(completions[2..]
+            .iter()
+            .all(|c| c.kind == CompletionKind::Constant));
     }
 
     #[test]

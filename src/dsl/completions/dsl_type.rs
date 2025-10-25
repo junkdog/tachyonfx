@@ -206,7 +206,6 @@ impl DslType for Rect {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "Rect";
-
         const CTORS: &[CallableItem] = &[ctor!(T, "new", "u16", "u16", "u16", "u16")];
 
         CTORS
@@ -214,7 +213,6 @@ impl DslType for Rect {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "Rect";
-
         const METHODS: &[CallableItem] = &[
             method!(T, "clone"),
             method!(T, "clamp", "Rect"),
@@ -255,7 +253,6 @@ impl DslType for Color {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "Color";
-
         const CTORS: &[CallableItem] = &[
             ctor!(T, "Rgb", "u8", "u8", "u8"),
             ctor!(T, "from_u32", "u32"),
@@ -279,7 +276,6 @@ impl DslType for Layout {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "Layout";
-
         const CTORS: &[CallableItem] = &[
             ctor!(T, "default"),
             ctor!(T, "horizontal", "Vec<Constraint>"),
@@ -292,7 +288,6 @@ impl DslType for Layout {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "Layout";
-
         const METHODS: &[CallableItem] = &[
             method!(T, "clone"),
             method!(T, "direction", "Direction"),
@@ -317,7 +312,6 @@ impl DslType for Style {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "Style";
-
         const CTORS: &[CallableItem] = &[ctor!(T, "new"), ctor!(T, "default")];
 
         CTORS
@@ -325,7 +319,6 @@ impl DslType for Style {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "Style";
-
         const METHODS: &[CallableItem] = &[
             method!(T, "clone"),
             method!(T, "fg", "Color"),
@@ -347,7 +340,6 @@ impl DslType for Constraint {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "Constraint";
-
         const CTORS: &[CallableItem] = &[
             ctor!(T, "Min", "u16"),
             ctor!(T, "Max", "u16"),
@@ -374,7 +366,6 @@ impl DslType for Duration {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "Duration";
-
         const CTORS: &[CallableItem] =
             &[ctor!(T, "from_millis", "u64"), ctor!(T, "from_secs_f32", "f32")];
 
@@ -395,7 +386,6 @@ impl DslType for EffectTimer {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "EffectTimer";
-
         const CTORS: &[CallableItem] = &[
             ctor!(T, "from_ms", "u32", "Interpolation"),
             ctor!(T, "new", "Duration", "Interpolation"),
@@ -438,7 +428,6 @@ impl DslType for RefRect {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "RefRect";
-
         const CTORS: &[CallableItem] = &[ctor!(T, "new", "Rect"), ctor!(T, "default")];
 
         CTORS
@@ -458,7 +447,6 @@ impl DslType for Size {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "Size";
-
         const CTORS: &[CallableItem] = &[ctor!(T, "new", "u16", "u16")];
 
         CTORS
@@ -478,7 +466,6 @@ impl DslType for RepeatMode {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "RepeatMode";
-
         const CTORS: &[CallableItem] =
             &[ctor!(T, "Times", "u32"), ctor!(T, "Duration", "Duration")];
 
@@ -499,7 +486,6 @@ impl DslType for CheckerboardPattern {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "CheckerboardPattern";
-
         const CTORS: &[CallableItem] = &[ctor!(T, "default"), ctor!(T, "with_cell_size", "u16")];
 
         CTORS
@@ -507,7 +493,6 @@ impl DslType for CheckerboardPattern {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "CheckerboardPattern";
-
         const METHODS: &[CallableItem] =
             &[method!(T, "clone"), method!(T, "with_transition_width", "f32")];
 
@@ -524,7 +509,6 @@ impl DslType for CoalescePattern {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "CoalescePattern";
-
         const CTORS: &[CallableItem] = &[ctor!(T, "new"), ctor!(T, "default")];
 
         CTORS
@@ -532,7 +516,6 @@ impl DslType for CoalescePattern {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "CoalescePattern";
-
         const METHODS: &[CallableItem] = &[method!(T, "clone")];
 
         METHODS
@@ -548,7 +531,6 @@ impl DslType for DiagonalPattern {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "DiagonalPattern";
-
         const CTORS: &[CallableItem] = &[
             ctor!(T, "top_left_to_bottom_right"),
             ctor!(T, "top_right_to_bottom_left"),
@@ -561,7 +543,6 @@ impl DslType for DiagonalPattern {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "DiagonalPattern";
-
         const METHODS: &[CallableItem] =
             &[method!(T, "clone"), method!(T, "with_transition_width", "f32")];
 
@@ -578,7 +559,6 @@ impl DslType for DissolvePattern {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "DissolvePattern";
-
         const CTORS: &[CallableItem] = &[ctor!(T, "new"), ctor!(T, "default")];
 
         CTORS
@@ -586,7 +566,6 @@ impl DslType for DissolvePattern {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "DissolvePattern";
-
         const METHODS: &[CallableItem] = &[method!(T, "clone")];
 
         METHODS
@@ -602,7 +581,6 @@ impl DslType for RadialPattern {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "RadialPattern";
-
         const CTORS: &[CallableItem] = &[
             ctor!(T, "center"),
             ctor!(T, "new", "f32", "f32"),
@@ -614,7 +592,6 @@ impl DslType for RadialPattern {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "RadialPattern";
-
         const METHODS: &[CallableItem] = &[
             method!(T, "clone"),
             method!(T, "with_transition_width", "f32"),
@@ -634,7 +611,6 @@ impl DslType for SweepPattern {
 
     fn constructors() -> &'static [CallableItem] {
         const T: &str = "SweepPattern";
-
         const CTORS: &[CallableItem] = &[
             ctor!(T, "left_to_right", "u16"),
             ctor!(T, "right_to_left", "u16"),
@@ -647,7 +623,6 @@ impl DslType for SweepPattern {
 
     fn methods() -> &'static [CallableItem] {
         const T: &str = "SweepPattern";
-
         const METHODS: &[CallableItem] = &[method!(T, "clone")];
 
         METHODS
