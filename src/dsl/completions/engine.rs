@@ -262,7 +262,7 @@ impl CompletionEngine {
                 let mut completions = vec![];
 
                 // Argument type hints based on function signature
-                // Look up the function in methods and return type hint for the specific argument
+                // Look up the function in effect types, constructors, and methods
                 if let Some(effect) = self.effect_types.get(fn_name.as_str()) {
                     if let Some(arg) = effect.params().get(arg_index) {
                         completions.push(Completion {
@@ -272,6 +272,17 @@ impl CompletionEngine {
                         })
                     }
                 };
+                for ctors in self.constructors.values() {
+                    if let Some(ctor) = ctors.iter().find(|i| i.name() == fn_name) {
+                        if let Some(arg_type) = ctor.params().get(arg_index) {
+                            completions.push(Completion {
+                                label: format!("{arg_type}::"),
+                                kind: CompletionKind::Parameter,
+                                meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
+                            });
+                        }
+                    }
+                }
                 for methods in self.methods.values() {
                     if let Some(method) = methods.iter().find(|i| i.name() == fn_name) {
                         if let Some(arg_type) = method.params().get(arg_index) {
@@ -515,19 +526,6 @@ mod tests {
     }
 
     #[test]
-    fn test_completion_engine_dot_access() {
-        let engine = CompletionEngine::new();
-        let source = "rect.";
-        let completions = engine.completions(source, source.len() as u32);
-
-        // Even though "rect" is unknown, we infer from the pattern
-        // The completion should suggest Rect methods since receiver_type is "rect"
-        // But our HashMap uses "Rect" not "rect", so this test shows the limitation
-        // In practice, you'd need type inference or the user to use qualified names
-        assert!(completions.is_empty() || completions.iter().any(|c| c.label == "clone"));
-    }
-
-    #[test]
     fn test_completion_engine_method_chain() {
         let engine = CompletionEngine::new();
         let source = "Rect::new(0, 0, 10, 10).";
@@ -653,6 +651,39 @@ mod tests {
             completions.iter().all(|c| c.meta.is_some()),
             "All completions should have meta information"
         );
+    }
+
+    #[test]
+    fn test_completing_parameters() {
+        let engine = CompletionEngine::new();
+
+        // Test EffectTimer::from_ms(u32, Interpolation) - second parameter
+        let src = "EffectTimer::from_ms(1000, ";
+        let completions = engine.completions(src, src.len() as u32);
+
+        assert!(
+            !completions.is_empty(),
+            "Should have completions for Interpolation parameter"
+        );
+        assert_eq!(completions[0], Completion {
+            label: "Interpolation::".to_string(),
+            kind: CompletionKind::Parameter,
+            meta: Some("Parameter 2 of from_ms".to_string()),
+        });
+
+        // Test CellFilter::Inner(Margin) - first parameter
+        let src = "CellFilter::Inner(";
+        let completions = engine.completions(src, src.len() as u32);
+
+        assert!(
+            !completions.is_empty(),
+            "Should have completions for Margin parameter"
+        );
+        assert_eq!(completions[0], Completion {
+            label: "Margin::".to_string(),
+            kind: CompletionKind::Parameter,
+            meta: Some("Parameter 1 of Inner".to_string()),
+        });
     }
 
     #[test]
