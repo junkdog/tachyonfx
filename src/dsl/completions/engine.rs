@@ -1,4 +1,5 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use alloc::collections::BTreeMap;
+use std::collections::HashMap;
 
 use super::{
     context::analyze_last_tokens,
@@ -8,10 +9,7 @@ use super::{
         tok, CallableItem, Completion, CompletionContext, CompletionKind, LetBinding, TokenCursor,
     },
 };
-use crate::dsl::{
-    completions::dsl_type::effect_types,
-    tokenizer::{Token, TokenKind},
-};
+use crate::dsl::{completions::dsl_type::effect_types, tokenizer::Token};
 
 #[derive(Debug, Clone)]
 pub struct CompletionEngine {

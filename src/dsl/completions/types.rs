@@ -203,8 +203,4 @@ impl CallableItem {
     pub(super) const fn is_static(&self) -> bool {
         matches!(self, Self::Constructor { .. } | Self::StaticMethod { .. })
     }
-
-    pub(super) const fn is_instance(&self) -> bool {
-        matches!(self, Self::InstanceMethod { .. })
-    }
 }

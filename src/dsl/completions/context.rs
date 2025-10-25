@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use alloc::collections::BTreeMap;
 
 use super::types::{tok, CompletionContext, TokenCursor};
 use crate::dsl::tokenizer::{Token, TokenKind};
