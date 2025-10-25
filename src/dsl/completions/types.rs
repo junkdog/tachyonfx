@@ -45,7 +45,7 @@ pub enum CompletionKind {
     Constructor,
     Function,
     Constant,
-    Variable,
+    Parameter,
     Type,
     Field,
 }

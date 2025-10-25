@@ -1,28 +1,13 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use super::types::{tok, CompletionContext, TokenCursor};
 use crate::dsl::tokenizer::{Token, TokenKind};
 
-/// Try to infer the return type from a function call by looking at the namespace
-/// e.g., Color::from_u32(...) returns Color, fx::dissolve(...) returns Effect
-fn infer_return_type(tokens: &[Token], paren_idx: usize) -> String {
-    // Look backwards from the opening paren to find Namespace::function pattern
-    if paren_idx >= 3 {
-        if let [.., tok!(Identifier => namespace), tok!(DoubleColon), tok!(Identifier)] =
-            &tokens[paren_idx.saturating_sub(3)..paren_idx]
-        {
-            // Map common namespaces to their types
-            return match *namespace {
-                "fx" => "Effect",
-                other => other, // Color, Layout, Style, etc. use their namespace as type
-            }
-            .to_string();
-        }
-    }
-
-    // Default to generic chained type
-    String::from("Chained")
-}
-
-pub(super) fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> CompletionContext {
+pub(super) fn analyze_last_tokens(
+    tokens: &[Token],
+    cursor: &TokenCursor,
+    effect_fns: &BTreeMap<&str, &str>,
+) -> CompletionContext {
     // Find the token at or before the cursor
     let cursor_token_idx = cursor.token_index().unwrap_or(tokens.len());
 
@@ -38,16 +23,25 @@ pub(super) fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> Com
             CompletionContext::DotAccess { receiver_type: obj.to_string() }
         },
 
-        // Pattern: ).identifier  (method chain after function call)
-        [.., tok!(RightParen), tok!(Dot)] | [.., tok!(RightParen), tok!(Dot), tok!(Identifier)] => {
-            // Find the matching opening paren to infer return type
-            let paren_idx = tokens[..cursor_token_idx]
-                .iter()
-                .rposition(|t| t.kind == TokenKind::LeftParen)
-                .unwrap_or(0);
+        // Pattern: ).  (method chain after function call, cursor after dot)
+        [.., tok!(RightParen), tok!(Dot)] => {
+            // The closing paren is at cursor_token_idx - 2 (before the dot)
+            let closing_paren_idx = cursor_token_idx - 2;
+            let paren_idx = find_matching_opening_paren(tokens, closing_paren_idx).unwrap_or(0);
 
             CompletionContext::DotAccess {
-                receiver_type: infer_return_type(tokens, paren_idx),
+                receiver_type: infer_return_type(tokens, paren_idx, effect_fns),
+            }
+        },
+
+        // Pattern: ).identifier  (method chain after function call, cursor in identifier)
+        [.., tok!(RightParen), tok!(Dot), tok!(Identifier)] => {
+            // The closing paren is at cursor_token_idx - 3 (before the dot and identifier)
+            let closing_paren_idx = cursor_token_idx - 3;
+            let paren_idx = find_matching_opening_paren(tokens, closing_paren_idx).unwrap_or(0);
+
+            CompletionContext::DotAccess {
+                receiver_type: infer_return_type(tokens, paren_idx, effect_fns),
             }
         },
 
@@ -163,6 +157,83 @@ pub(super) fn analyze_last_tokens(tokens: &[Token], cursor: &TokenCursor) -> Com
     }
 }
 
+/// Find the matching opening paren for a closing paren at the given index.
+/// Scans backwards from closing_paren_idx tracking paren depth.
+fn find_matching_opening_paren(tokens: &[Token], closing_paren_idx: usize) -> Option<usize> {
+    let mut depth = 1;
+
+    for (idx, token) in tokens[..closing_paren_idx]
+        .iter()
+        .enumerate()
+        .rev()
+    {
+        match token.kind {
+            TokenKind::RightParen => depth += 1,
+            TokenKind::LeftParen => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(idx);
+                }
+            },
+            _ => {},
+        }
+    }
+
+    None
+}
+
+/// Try to infer the return type from a function call by looking at the namespace
+/// e.g., Color::from_u32(...) returns Color, fx::dissolve(...) returns Effect
+fn infer_return_type(
+    tokens: &[Token],
+    paren_idx: usize,
+    effect_fns: &BTreeMap<&str, &str>,
+) -> String {
+    // Check the 3 tokens immediately before the opening paren for Namespace::function pattern
+    if paren_idx >= 3 {
+        if let [tok!(Identifier => namespace), tok!(DoubleColon), tok!(Identifier)] =
+            &tokens[paren_idx - 3..paren_idx]
+        {
+            // Map common namespaces to their types
+            return match *namespace {
+                "fx" => "Effect",
+                other => other, // Color, Layout, Style, etc. use their namespace as type
+            }
+            .to_string();
+        }
+    }
+
+    // If not a qualified call, check if it's a method chain (pattern: ).method()
+    // Walk backwards through the method chain to find the original qualified call
+    if paren_idx >= 2 {
+        if let [tok!(Dot), tok!(Identifier)] = &tokens[paren_idx - 2..paren_idx] {
+            // This is a method call - find the closing paren before the dot
+            if paren_idx >= 3 {
+                if let tok!(RightParen) = tokens[paren_idx - 3] {
+                    // Find the matching opening paren and recurse
+                    if let Some(matching_paren) = find_matching_opening_paren(tokens, paren_idx - 3)
+                    {
+                        return infer_return_type(tokens, matching_paren, effect_fns);
+                    }
+                }
+            }
+        }
+    }
+
+    // Check for unqualified function call (pattern: function_name()
+    if paren_idx >= 1 {
+        if let tok!(Identifier => fn_name) = &tokens[paren_idx - 1] {
+            return effect_fns
+                .get(fn_name)
+                .copied()
+                .unwrap_or("<Unknown>")
+                .to_string();
+        }
+    }
+
+    "<Unknown>".to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
@@ -172,10 +243,26 @@ mod tests {
 
     fn assert_context_eq(input: &str, expected: CompletionContext) {
         fn analyze(input: &str) -> CompletionContext {
-            let tokens = tokenize(input).unwrap();
-            let tokens = sanitize_tokens(tokens);
+            let tokens = tokenize(input).map(sanitize_tokens).unwrap();
             let cursor = TokenCursor::from_tokens(&tokens, input.len() as _);
-            analyze_last_tokens(&tokens, &cursor)
+
+            // Common effect functions for testing
+            let effect_fns: BTreeMap<&str, &str> = BTreeMap::from([
+                ("fade_from_fg", "Effect"),
+                ("fade_to", "Effect"),
+                ("dissolve", "Effect"),
+                ("sweep_in", "Effect"),
+                ("sweep_out", "Effect"),
+                ("slide_in", "Effect"),
+                ("slide_out", "Effect"),
+                ("coalesce", "Effect"),
+                ("paint", "Effect"),
+                ("hsl_shift", "Effect"),
+            ])
+            .into_iter()
+            .collect();
+
+            analyze_last_tokens(&tokens, &cursor, &effect_fns)
         }
 
         let cursor_index = input
@@ -325,7 +412,31 @@ mod tests {
 
         // Non-qualified function calls default to "Chained"
         assert_context_eq("some_function().", CompletionContext::DotAccess {
-            receiver_type: "Chained".to_string(),
+            receiver_type: "<Unknown>".to_string(),
+        });
+
+        let src = indoc! {"
+            fx::fade_from_fg(Black, 1000)
+                .with_filter(CellFilter::All)
+                .with_pattern(DissolvePattern::default())
+                .with_color_space(ColorSpace::Rgb)
+                .re
+        "};
+
+        assert_context_eq(src, CompletionContext::DotAccess {
+            receiver_type: "Effect".to_string(),
+        });
+
+        let src = indoc! {"
+            fade_from_fg(Black, 1000)
+                .with_filter(CellFilter::All)
+                .with_pattern(DissolvePattern::default())
+                .with_color_space(ColorSpace::Rgb)
+                .re
+        "};
+
+        assert_context_eq(src, CompletionContext::DotAccess {
+            receiver_type: "Effect".to_string(),
         });
     }
 
@@ -335,6 +446,21 @@ mod tests {
             fn_name: "from_u32".to_string(),
             arg_index: 0,
         });
+    }
+
+    #[test]
+    fn test_nested_function_calls_infer_type() {
+        // Nested function calls - should infer from the outer call, not the inner
+        assert_context_eq(
+            "fx::sequence(&[fx::dissolve(500)]).",
+            CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
+        );
+
+        // Multiple levels of nesting
+        assert_context_eq(
+            "fx::parallel(&[fx::sequence(&[fx::dissolve(500)])]).",
+            CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
+        );
     }
 
     #[test]

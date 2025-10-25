@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use super::{
     context::analyze_last_tokens,
@@ -10,7 +10,7 @@ use super::{
 };
 use crate::dsl::{
     completions::dsl_type::effect_types,
-    tokenizer::{sanitize_tokens, tokenize, Token},
+    tokenizer::{Token, TokenKind},
 };
 
 #[derive(Debug, Clone)]
@@ -80,8 +80,17 @@ impl CompletionEngine {
         let partial = cursor.extract_partial_token(tokens);
         let matcher = CompletionMatcher::new(partial);
 
-        let context = analyze_last_tokens(tokens, &cursor);
-        let _let_bindings = self.extract_let_bindings(tokens);
+        let mut context_lookup: BTreeMap<&str, &str> = self
+            .effect_types
+            .keys()
+            .map(|e| (*e, "Effect"))
+            .collect();
+        let let_bindings = self.extract_let_bindings(tokens);
+        for b in &let_bindings {
+            context_lookup.insert(&b.name, &b.binding_type);
+        }
+
+        let context = analyze_last_tokens(tokens, &cursor, &context_lookup);
 
         let completions = match context {
             CompletionContext::TopLevel => {
@@ -263,7 +272,7 @@ impl CompletionEngine {
                         if let Some(arg_type) = item.params().get(arg_index) {
                             return vec![Completion {
                                 label: format!("{}", arg_type),
-                                kind: CompletionKind::Variable,
+                                kind: CompletionKind::Parameter,
                                 meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
                             }];
                         }
@@ -332,7 +341,6 @@ impl CompletionEngine {
             .collect()
     }
 
-    #[allow(clippy::needless_return)]
     fn extract_let_bindings(&self, tokens: &[Token]) -> Vec<LetBinding> {
         let mut seen = std::collections::HashSet::new();
 
