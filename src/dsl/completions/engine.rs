@@ -76,10 +76,6 @@ impl CompletionEngine {
     fn completions_from_tokens(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
         let cursor = TokenCursor::from_tokens(tokens, cursor_index);
 
-        // Extract partial token at cursor for filtering
-        let partial = cursor.extract_partial_token(tokens);
-        let matcher = CompletionMatcher::new(partial);
-
         let mut context_lookup: BTreeMap<&str, &str> = self
             .effect_types
             .keys()
@@ -265,11 +261,22 @@ impl CompletionEngine {
             },
 
             CompletionContext::FnCall { fn_name, arg_index } => {
+                let mut completions = vec![];
+
                 // Argument type hints based on function signature
                 // Look up the function in methods and return type hint for the specific argument
-                for items in self.methods.values() {
-                    if let Some(item) = items.iter().find(|i| i.name() == fn_name) {
-                        if let Some(arg_type) = item.params().get(arg_index) {
+                if let Some(effect) = self.effect_types.get(fn_name.as_str()) {
+                    if let Some(arg) = effect.params().get(arg_index) {
+                        completions.push(Completion {
+                            label: format!("{}", arg),
+                            kind: CompletionKind::Parameter,
+                            meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
+                        })
+                    }
+                };
+                for methods in self.methods.values() {
+                    if let Some(method) = methods.iter().find(|i| i.name() == fn_name) {
+                        if let Some(arg_type) = method.params().get(arg_index) {
                             return vec![Completion {
                                 label: format!("{}", arg_type),
                                 kind: CompletionKind::Parameter,
@@ -278,7 +285,8 @@ impl CompletionEngine {
                         }
                     }
                 }
-                vec![]
+
+                completions
             },
 
             CompletionContext::StructInit { struct_name, filled_fields } => {
@@ -303,8 +311,30 @@ impl CompletionEngine {
             },
         };
 
+        let mut completions = completions;
+        let types: Vec<String> = completions
+            .iter()
+            .map(|c| c.label.clone())
+            .map(|c| match () {
+                _ if c.ends_with("::") => c[0..c.len() - 2].to_string(),
+                _ => c.to_string(),
+            })
+            .collect();
+
+        let_bindings
+            .into_iter()
+            .filter(|binding| types.contains(&binding.binding_type))
+            .map(|binding| Completion {
+                label: binding.name,
+                kind: CompletionKind::Variable,
+                meta: Some(binding.binding_type),
+            })
+            .for_each(|completion| completions.push(completion));
+
         // Filter and score completions based on partial input
-        matcher.filter_and_score(completions)
+        // Extract partial token at cursor for filtering
+        let partial = cursor.extract_partial_token(tokens);
+        CompletionMatcher::new(partial).filter_and_score(completions)
     }
 
     fn const_completions(&self, identifier: &str) -> Vec<Completion> {
@@ -429,6 +459,8 @@ impl Default for CompletionEngine {
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
+
     use super::*;
     use crate::{
         dsl::{
@@ -958,6 +990,32 @@ mod tests {
 
         assert_eq!(bindings.len(), 1);
         assert_eq!(bindings[0], LetBinding::new("filter", "CellFilter"));
+    }
+
+    #[test]
+    fn test_complete_let_bindings() {
+        let engine = CompletionEngine::new();
+        let source = indoc! {r#"
+            let screen_bg = Color::Red;
+            let screen_bg = Color::from_u32(0x1d2021);
+            fx::fade_to(screen_bg, s
+        "#};
+
+        let completions = engine.completions(source, source.chars().count() as u32);
+
+        // We should get Style:: namespace since it starts with 's'
+        assert_eq!(completions, vec![
+            Completion {
+                label: "Color".to_string(),
+                kind: CompletionKind::Parameter,
+                meta: Some("Parameter 2 of fade_to".to_string()),
+            },
+            Completion {
+                label: "screen_bg".to_string(),
+                kind: CompletionKind::Variable,
+                meta: Some("Color".to_string()),
+            }
+        ]);
     }
 
     #[test]

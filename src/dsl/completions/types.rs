@@ -32,20 +32,21 @@ macro_rules! tok {
 
 pub(super) use tok;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Completion {
     pub label: String,
     pub kind: CompletionKind,
     pub meta: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompletionKind {
     Method,
     Constructor,
     Function,
     Constant,
     Parameter,
+    Variable,
     Type,
     Field,
 }
