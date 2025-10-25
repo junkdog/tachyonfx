@@ -8,7 +8,10 @@ use super::{
         tok, CallableItem, Completion, CompletionContext, CompletionKind, LetBinding, TokenCursor,
     },
 };
-use crate::dsl::{completions::dsl_type::effect_types, tokenizer::Token};
+use crate::dsl::{
+    completions::dsl_type::effect_types,
+    tokenizer::{sanitize_tokens, tokenize, Token},
+};
 
 #[derive(Debug, Clone)]
 pub struct CompletionEngine {
@@ -55,12 +58,12 @@ impl CompletionEngine {
     ///
     /// # Returns
     /// A vector of completions sorted by relevance
-    pub fn complete_source(&self, source: &str, cursor_index: u32) -> Vec<Completion> {
+    pub fn completions(&self, source: &str, cursor_index: u32) -> Vec<Completion> {
         use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
-        tokenize(source)
+        tokenize(&source[..cursor_index as usize])
             .map(sanitize_tokens)
-            .map(|tokens| self.completions(&tokens, cursor_index))
+            .map(|tokens| self.completions_from_tokens(&tokens, cursor_index))
             .unwrap_or_else(|_| vec![])
     }
 
@@ -70,7 +73,7 @@ impl CompletionEngine {
 
     /// Low-level completion function that works with pre-tokenized input.
     /// For internal use and testing. External users should use `complete_source` instead.
-    fn completions(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
+    fn completions_from_tokens(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
         let cursor = TokenCursor::from_tokens(tokens, cursor_index);
 
         // Extract partial token at cursor for filtering
@@ -430,9 +433,7 @@ mod tests {
     #[test]
     fn test_completion_engine_top_level() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, 0);
+        let completions = engine.completions("", 0);
 
         assert!(completions.iter().any(|c| c.label == "fx::"));
         assert!(completions.iter().any(|c| c.label == "Color::"));
@@ -442,9 +443,8 @@ mod tests {
     #[test]
     fn test_completion_engine_double_colon() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("Color::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Color::";
+        let completions = engine.completions(source, source.len() as u32);
 
         // Color:: now returns both constants (17) and constructors (3) = 20 total
         assert_eq!(completions.len(), 20);
@@ -459,9 +459,8 @@ mod tests {
     #[test]
     fn test_completion_engine_double_colon_2() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("Interpolation::Quad").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Interpolation::Quad";
+        let completions = engine.completions(source, source.len() as u32);
 
         // Should filter to Quad* interpolations based on partial "Quad"
         assert_eq!(completions.len(), 3);
@@ -473,9 +472,8 @@ mod tests {
     #[test]
     fn test_completion_engine_dot_access() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("rect.").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "rect.";
+        let completions = engine.completions(source, source.len() as u32);
 
         // Even though "rect" is unknown, we infer from the pattern
         // The completion should suggest Rect methods since receiver_type is "rect"
@@ -487,9 +485,8 @@ mod tests {
     #[test]
     fn test_completion_engine_method_chain() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("Rect::new(0, 0, 10, 10).").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Rect::new(0, 0, 10, 10).";
+        let completions = engine.completions(source, source.len() as u32);
 
         // After Rect::new(...), we should get Rect instance methods (not constructors)
         assert_eq!(completions.len(), 6);
@@ -505,9 +502,8 @@ mod tests {
     #[test]
     fn test_completion_engine_struct_init() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("Rect { x: 0, ").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Rect { x: 0, ";
+        let completions = engine.completions(source, source.len() as u32);
 
         // Should suggest remaining fields
         assert_eq!(completions.len(), 3);
@@ -524,28 +520,14 @@ mod tests {
     #[test]
     fn test_completion_engine_fx_effects() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("fx::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "fx::";
+        let completions = engine.completions(source, source.len() as u32);
 
-        // Should return all registered effects
-        assert!(
-            !completions.is_empty(),
-            "Should have at least some effect completions"
-        );
-
-        // Check for some common effects that we know exist
-        assert!(
-            completions.iter().any(|c| c.label == "dissolve"),
-            "dissolve effect should be available"
-        );
-        assert!(
-            completions.iter().any(|c| c.label == "fade_to"),
-            "fade_to effect should be available"
-        );
-        assert!(
-            completions.iter().any(|c| c.label == "sweep_in"),
-            "sweep_in effect should be available"
+        // Should return exactly 39 effect completions (all registered effects)
+        assert_eq!(
+            completions.len(),
+            39,
+            "Should have exactly 39 fx effect completions"
         );
 
         // All completions should be functions
@@ -556,19 +538,37 @@ mod tests {
             "All fx:: completions should be functions"
         );
 
-        // Verify meta is present
+        // All completions should have meta information
         assert!(
             completions.iter().all(|c| c.meta.is_some()),
             "All completions should have meta information"
+        );
+
+        // Verify all completion labels are from the effect_types registry
+        let effect_names: Vec<&str> = engine.effect_types.keys().copied().collect();
+        for completion in &completions {
+            assert!(
+                effect_names.contains(&completion.label.as_str()),
+                "Completion '{}' should be in effect_types registry",
+                completion.label
+            );
+        }
+
+        // Verify no duplicates
+        let labels: Vec<_> = completions.iter().map(|c| &c.label).collect();
+        let unique_labels: std::collections::HashSet<_> = labels.iter().collect();
+        assert_eq!(
+            labels.len(),
+            unique_labels.len(),
+            "Should have no duplicate completions"
         );
     }
 
     #[test]
     fn test_completion_engine_interpolations() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("Interpolation::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Interpolation::";
+        let completions = engine.completions(source, source.len() as u32);
 
         // Should return all interpolation types
         assert_eq!(completions.len(), 32, "Should have 32 interpolation types");
@@ -613,9 +613,7 @@ mod tests {
     #[test]
     fn test_completion_engine_top_level_includes_interpolation() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, 0);
+        let completions = engine.completions("", 0);
 
         assert!(
             completions
@@ -640,9 +638,8 @@ mod tests {
         let engine = CompletionEngine::new();
 
         // Test Motion
-        let tokens = tokenize("Motion::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Motion::";
+        let completions = engine.completions(source, source.len() as u32);
         assert_eq!(completions.len(), 4);
         assert!(completions
             .iter()
@@ -652,9 +649,8 @@ mod tests {
             .all(|c| c.kind == CompletionKind::Constant));
 
         // Test Direction
-        let tokens = tokenize("Direction::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Direction::";
+        let completions = engine.completions(source, source.len() as u32);
         assert_eq!(completions.len(), 2);
         assert!(completions
             .iter()
@@ -662,17 +658,15 @@ mod tests {
         assert!(completions.iter().any(|c| c.label == "Vertical"));
 
         // Test Modifier
-        let tokens = tokenize("Modifier::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Modifier::";
+        let completions = engine.completions(source, source.len() as u32);
         assert_eq!(completions.len(), 9);
         assert!(completions.iter().any(|c| c.label == "BOLD"));
         assert!(completions.iter().any(|c| c.label == "ITALIC"));
 
         // Test ColorSpace
-        let tokens = tokenize("ColorSpace::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "ColorSpace::";
+        let completions = engine.completions(source, source.len() as u32);
         assert_eq!(completions.len(), 3);
         assert!(completions.iter().any(|c| c.label == "Rgb"));
         assert!(completions.iter().any(|c| c.label == "Hsl"));
@@ -682,9 +676,8 @@ mod tests {
     #[test]
     fn test_completion_engine_color_mixed() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("Color::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "Color::";
+        let completions = engine.completions(source, source.len() as u32);
 
         // Color should have both constants and constructors
         assert!(
@@ -712,9 +705,8 @@ mod tests {
     #[test]
     fn test_completion_engine_cell_filter_mixed() {
         let engine = CompletionEngine::new();
-        let tokens = tokenize("CellFilter::").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        let source = "CellFilter::";
+        let completions = engine.completions(source, source.len() as u32);
 
         // CellFilter should have both constants and constructors
         assert!(
@@ -743,10 +735,9 @@ mod tests {
     fn test_completion_with_partial_input() {
         let engine = CompletionEngine::new();
 
-        // Test "fade" partial in "Interpolation::fade"
-        let tokens = tokenize("Interpolation::Quad").unwrap();
-        let tokens = sanitize_tokens(tokens);
-        let completions = engine.completions(&tokens, tokens.last().unwrap().span.1);
+        // Test "Quad" partial in "Interpolation::Quad"
+        let source = "Interpolation::Quad";
+        let completions = engine.completions(source, source.len() as u32);
 
         // Should filter to Quad* interpolations
         assert_eq!(completions.len(), 3);
@@ -767,7 +758,7 @@ mod tests {
 
         // Test basic completion from source string
         let source = "fx::";
-        let completions = engine.complete_source(source, source.len() as u32);
+        let completions = engine.completions(source, source.len() as u32);
 
         // Should get fx:: effect completions
         assert!(!completions.is_empty());
@@ -775,7 +766,7 @@ mod tests {
 
         // Test completion with partial input
         let source = "Color::Re";
-        let completions = engine.complete_source(source, source.len() as u32);
+        let completions = engine.completions(source, source.len() as u32);
 
         // Should filter to colors starting with "Re"
         assert!(completions.iter().any(|c| c.label == "Red"));
@@ -789,7 +780,7 @@ mod tests {
 
         // Test with invalid source that would cause tokenization error
         let source = "fx:: \"unterminated string";
-        let completions = engine.complete_source(source, source.len() as u32);
+        let completions = engine.completions(source, source.len() as u32);
 
         // Should return empty on tokenization error
         assert!(completions.is_empty(), "was: {:?}", completions);
@@ -967,7 +958,7 @@ mod tests {
 
         let source = "fx::consume_tick().";
 
-        let completions = engine.complete_source(source, source.len() as u32);
+        let completions = engine.completions(source, source.len() as u32);
         println!("{:?}", completions);
         assert_eq!(completions.len(), Effect::methods().len());
     }
