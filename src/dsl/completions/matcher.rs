@@ -1,4 +1,4 @@
-use super::types::Completion;
+use super::types::CompletionItem;
 
 /// Handles completion matching and scoring based on partial input.
 ///
@@ -18,12 +18,12 @@ impl CompletionMatcher {
 
     /// Filters and scores completions based on the partial input.
     /// Returns completions sorted by score (highest first).
-    pub(super) fn filter_and_score(&self, completions: Vec<Completion>) -> Vec<Completion> {
+    pub(super) fn filter_and_score(&self, completions: Vec<CompletionItem>) -> Vec<CompletionItem> {
         if self.partial.is_empty() {
             return completions;
         }
 
-        let mut scored: Vec<(Completion, u32)> = completions
+        let mut scored: Vec<(CompletionItem, u32)> = completions
             .into_iter()
             .filter_map(|completion| {
                 self.score(&completion.label)
@@ -157,20 +157,20 @@ mod tests {
         let matcher = CompletionMatcher::new("fade");
 
         let completions = vec![
-            Completion {
+            CompletionItem {
                 label: "fade_to".to_string(),
                 kind: CompletionKind::Function,
-                meta: None,
+                detail: String::new(),
             },
-            Completion {
+            CompletionItem {
                 label: "fade_from".to_string(),
                 kind: CompletionKind::Function,
-                meta: None,
+                detail: String::new(),
             },
-            Completion {
+            CompletionItem {
                 label: "dissolve".to_string(),
                 kind: CompletionKind::Function,
-                meta: None,
+                detail: String::new(),
             },
         ];
 
@@ -271,20 +271,20 @@ mod tests {
         let matcher = CompletionMatcher::new("");
 
         let completions = vec![
-            Completion {
+            CompletionItem {
                 label: "a".to_string(),
                 kind: CompletionKind::Function,
-                meta: None,
+                detail: String::new(),
             },
-            Completion {
+            CompletionItem {
                 label: "b".to_string(),
                 kind: CompletionKind::Function,
-                meta: None,
+                detail: String::new(),
             },
-            Completion {
+            CompletionItem {
                 label: "c".to_string(),
                 kind: CompletionKind::Function,
-                meta: None,
+                detail: String::new(),
             },
         ];
 
@@ -299,15 +299,15 @@ mod tests {
         let matcher = CompletionMatcher::new("xyz");
 
         let completions = vec![
-            Completion {
+            CompletionItem {
                 label: "fade_to".to_string(),
                 kind: CompletionKind::Function,
-                meta: None,
+                detail: String::new(),
             },
-            Completion {
+            CompletionItem {
                 label: "dissolve".to_string(),
                 kind: CompletionKind::Function,
-                meta: None,
+                detail: String::new(),
             },
         ];
 

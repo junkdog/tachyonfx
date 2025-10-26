@@ -32,22 +32,72 @@ macro_rules! tok {
 
 pub(super) use tok;
 
+/// A completion suggestion for DSL code.
+///
+/// Represents a single item that can be inserted at the cursor position in DSL source
+/// code. Following LSP (Language Server Protocol) conventions, each item has a label for
+/// display, a kind indicating what type of completion it is, and detail text providing
+/// additional information.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::dsl::{CompletionItem, CompletionKind};
+///
+/// let item = CompletionItem {
+///     label: "fade_to".to_string(),
+///     kind: CompletionKind::Function,
+///     detail: "fade_to_fg(Color, EffectTimer)".to_string(),
+/// };
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Completion {
+pub struct CompletionItem {
+    /// The text to be inserted when this completion is selected.
+    ///
+    /// This is the primary display text shown to the user and the text that will be
+    /// inserted into the source code.
     pub label: String,
+
+    /// The category of this completion item.
+    ///
+    /// Indicates whether this is a method, function, type, constant, etc. Used for
+    /// visual distinction and filtering in completion UIs.
     pub kind: CompletionKind,
-    pub meta: Option<String>,
+
+    /// Additional information about this completion.
+    ///
+    /// Provides context about the completion such as function signatures, parameter
+    /// descriptions, or type information. Always contains a value (never empty for
+    /// valid completions from the engine).
+    pub detail: String,
 }
 
+/// The category of a completion item.
+///
+/// Follows LSP conventions for completion item kinds. Used to provide visual hints
+/// and enable filtering in completion UIs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompletionKind {
+    /// An instance method that operates on an object (e.g., `rect.inner()`).
     Method,
-    Constructor,
+
+    /// A standalone function, static method, or constructor (e.g., `fx::dissolve()`,
+    /// `Rect::new()`).
     Function,
+
+    /// A constant value (e.g., `Color::Red`, `Interpolation::Linear`).
     Constant,
+
+    /// A function parameter hint showing expected type.
     Parameter,
+
+    /// A variable defined with `let` binding in the DSL.
     Variable,
+
+    /// A type or namespace (e.g., `Color::`, `fx::`).
     Type,
+
+    /// A struct field in initialization syntax (e.g., `x:`, `width:`).
     Field,
 }
 
@@ -60,38 +110,34 @@ pub(super) enum CompletionContext {
     StructInit { struct_name: String, filled_fields: Vec<String> },
 }
 
-impl Completion {
-    pub(super) fn new_type(label: &str, meta: &str) -> Self {
+impl CompletionItem {
+    pub(super) fn new_type(label: &str, detail: &str) -> Self {
         Self {
             label: label.to_string(),
             kind: CompletionKind::Type,
-            meta: Some(meta.into()),
+            detail: detail.into(),
         }
     }
 
     pub(super) fn new_param(param_type: &str, arg_index: usize, arg_count: usize) -> Self {
-        Completion {
+        CompletionItem {
             label: format!("{param_type}::"),
             kind: CompletionKind::Parameter,
-            meta: Some(format!("Parameter {} of {arg_count}", arg_index + 1)),
+            detail: format!("Parameter {} of {arg_count}", arg_index + 1),
         }
     }
 }
 
-impl From<&CallableItem> for Completion {
+impl From<&CallableItem> for CompletionItem {
     fn from(callable: &CallableItem) -> Self {
-        Completion {
+        CompletionItem {
             label: callable.name().to_string(),
             kind: if callable.is_static() {
                 CompletionKind::Function
             } else {
                 CompletionKind::Method
             },
-            meta: Some(format!(
-                "{}({})",
-                callable.name(),
-                callable.params().join(", ")
-            )),
+            detail: format!("{}({})", callable.name(), callable.params().join(", ")),
         }
     }
 }

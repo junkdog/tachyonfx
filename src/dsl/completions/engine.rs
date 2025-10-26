@@ -6,11 +6,46 @@ use super::{
     dsl_type::{all_constants, all_constructors, all_methods},
     matcher::CompletionMatcher,
     types::{
-        tok, CallableItem, Completion, CompletionContext, CompletionKind, LetBinding, TokenCursor,
+        tok, CallableItem, CompletionContext, CompletionItem, CompletionKind, LetBinding,
+        TokenCursor,
     },
 };
 use crate::dsl::{completions::dsl_type::effect_types, tokenizer::Token};
 
+/// Provides intelligent code completion for the tachyonfx DSL.
+///
+/// The completion engine analyzes DSL source code and cursor position to suggest
+/// context-appropriate completions. It understands:
+///
+/// - Type and Effect constructors and their parameters
+/// - Method chaining on typed objects
+/// - Struct field initialization
+/// - Let bindings and variable references
+/// - Constant values and enum variants
+///
+/// The engine uses fuzzy matching to filter completions as the user types.
+///
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// use tachyonfx::dsl::CompletionEngine;
+///
+/// let engine = CompletionEngine::new();
+///
+/// // Complete at top level
+/// let completions = engine.completions("fx::", 4);
+/// // Returns all effect constructors: dissolve, fade_to, sweep_in, etc.
+///
+/// // Complete method chains
+/// let completions = engine.completions("Rect::new(0, 0, 10, 10).", 24);
+/// // Returns Rect instance methods: inner, intersection, union, etc.
+///
+/// // Complete with partial input
+/// let completions = engine.completions("Color::R", 8);
+/// // Returns: Red, Rgb, Reset (fuzzy matched)
+/// ```
 #[derive(Debug, Clone)]
 pub struct CompletionEngine {
     effect_types: HashMap<&'static str, CallableItem>,
@@ -20,6 +55,23 @@ pub struct CompletionEngine {
 }
 
 impl CompletionEngine {
+    /// Creates a new completion engine with all DSL types registered.
+    ///
+    /// The engine is pre-populated with:
+    /// - tachyonfx effects (41 effects)
+    /// - Ratatui types (Color, Layout, Rect, Style, etc.)
+    /// - Enum constants (Interpolation, Motion, Direction, etc.)
+    /// - Constructor and instance methods
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tachyonfx::dsl::CompletionEngine;
+    ///
+    /// let engine = CompletionEngine::new();
+    /// let completions = engine.completions("", 0);
+    /// assert!(!completions.is_empty());
+    /// ```
     pub fn new() -> Self {
         let methods = all_methods();
         let constructors = all_constructors();
@@ -29,16 +81,22 @@ impl CompletionEngine {
         Self { methods, constructors, constants, effect_types }
     }
 
-    /// Provides completions for the given source string at the specified cursor position.
-    /// Handles tokenization and sanitization internally.
+    /// Provides context-aware completions for DSL source code.
+    ///
+    /// Analyzes the source string up to the cursor position, determines the completion
+    /// context (top-level, method chain, function call, etc.), and returns appropriate
+    /// suggestions. Completions are filtered using fuzzy matching if the cursor is within
+    /// or at the end of an identifier.
     ///
     /// # Arguments
-    /// * `source` - The source code string
-    /// * `cursor_index` - Byte offset of the cursor in the source string
+    ///
+    /// * `source` - The DSL source code string
+    /// * `cursor_index` - Character offset of the cursor in the source string
     ///
     /// # Returns
-    /// A vector of completions sorted by relevance
-    pub fn completions(&self, source: &str, cursor_index: u32) -> Vec<Completion> {
+    ///
+    /// A vector of [`CompletionItem`]s sorted by relevance (best matches first).
+    pub fn completions(&self, source: &str, cursor_index: u32) -> Vec<CompletionItem> {
         use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
         if let Ok(tokens) = tokenize(&source[..cursor_index as usize]) {
@@ -75,7 +133,7 @@ impl CompletionEngine {
 
     /// Low-level completion function that works with pre-tokenized input.
     /// For internal use and testing. External users should use `complete_source` instead.
-    fn completions_from_tokens(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
+    fn completions_from_tokens(&self, tokens: &[Token], cursor_index: u32) -> Vec<CompletionItem> {
         let mut context_lookup: BTreeMap<&str, &str> = self
             .effect_types
             .keys()
@@ -93,35 +151,35 @@ impl CompletionEngine {
             CompletionContext::TopLevel => {
                 // Top-level completions: namespaces and types
                 vec![
-                    Completion::new_type("fx::", "Effects"),
-                    Completion::new_type("Color::", "Color constructors"),
-                    Completion::new_type("Layout::", "Layout constructors"),
-                    Completion::new_type("Style::", "Style constructors"),
-                    Completion::new_type("CellFilter::", "Filter within area"),
-                    Completion::new_type("Rect::", "Rect constructors"),
-                    Completion::new_type("Duration::", "Duration constructors"),
-                    Completion::new_type("EffectTimer::", "Timer constructors"),
-                    Completion::new_type("Margin::", "Margin constructors"),
-                    Completion::new_type("Constraint::", "Constraint constructors"),
-                    Completion::new_type("RepeatMode::", "Repeat mode constructors"),
-                    Completion::new_type("RefRect::", "RefRect constructors"),
-                    Completion::new_type("Size::", "Size constructors"),
+                    CompletionItem::new_type("fx::", "Effects"),
+                    CompletionItem::new_type("Color::", "Color constructors"),
+                    CompletionItem::new_type("Layout::", "Layout constructors"),
+                    CompletionItem::new_type("Style::", "Style constructors"),
+                    CompletionItem::new_type("CellFilter::", "Filter within area"),
+                    CompletionItem::new_type("Rect::", "Rect constructors"),
+                    CompletionItem::new_type("Duration::", "Duration constructors"),
+                    CompletionItem::new_type("EffectTimer::", "Timer constructors"),
+                    CompletionItem::new_type("Margin::", "Margin constructors"),
+                    CompletionItem::new_type("Constraint::", "Constraint constructors"),
+                    CompletionItem::new_type("RepeatMode::", "Repeat mode constructors"),
+                    CompletionItem::new_type("RefRect::", "RefRect constructors"),
+                    CompletionItem::new_type("Size::", "Size constructors"),
                     // Pattern types
-                    Completion::new_type("CheckerboardPattern::", "Effect progression"),
-                    Completion::new_type("CoalescePattern::", "Effect progression"),
-                    Completion::new_type("DiagonalPattern::", "Effect progression"),
-                    Completion::new_type("DissolvePattern::", "Effect progression"),
-                    Completion::new_type("RadialPattern::", "Effect progression"),
-                    Completion::new_type("SweepPattern::", "Effect progression"),
-                    Completion::new_type("Interpolation::", "Easing functions"),
-                    Completion::new_type("Motion::", "Movement directions"),
-                    Completion::new_type("ColorSpace::", "Color interpolation spaces"),
-                    Completion::new_type("Direction::", "Layout directions"),
-                    Completion::new_type("Flex::", "Flex layout modes"),
-                    Completion::new_type("ExpandDirection::", "Expansion directions"),
-                    Completion::new_type("Modifier::", "Cell style modifiers"),
-                    Completion::new_type("RepeatMode::", "Effect repeat modes"),
-                    Completion::new_type("EvolveSymbolSet::", "Symbol sets for evolve effects"),
+                    CompletionItem::new_type("CheckerboardPattern::", "Effect progression"),
+                    CompletionItem::new_type("CoalescePattern::", "Effect progression"),
+                    CompletionItem::new_type("DiagonalPattern::", "Effect progression"),
+                    CompletionItem::new_type("DissolvePattern::", "Effect progression"),
+                    CompletionItem::new_type("RadialPattern::", "Effect progression"),
+                    CompletionItem::new_type("SweepPattern::", "Effect progression"),
+                    CompletionItem::new_type("Interpolation::", "Easing functions"),
+                    CompletionItem::new_type("Motion::", "Movement directions"),
+                    CompletionItem::new_type("ColorSpace::", "Color interpolation spaces"),
+                    CompletionItem::new_type("Direction::", "Layout directions"),
+                    CompletionItem::new_type("Flex::", "Flex layout modes"),
+                    CompletionItem::new_type("ExpandDirection::", "Expansion directions"),
+                    CompletionItem::new_type("Modifier::", "Cell style modifiers"),
+                    CompletionItem::new_type("RepeatMode::", "Effect repeat modes"),
+                    CompletionItem::new_type("EvolveSymbolSet::", "Symbol sets for evolve effects"),
                 ]
             },
 
@@ -138,10 +196,10 @@ impl CompletionEngine {
                         .iter()
                         .map(|(effect_name, ctor)| {
                             let meta = format!("{effect_name}({})", ctor.params().join(", "));
-                            Completion {
+                            CompletionItem {
                                 label: (*effect_name).to_string(),
                                 kind: CompletionKind::Function,
-                                meta: Some(meta),
+                                detail: meta,
                             }
                         })
                         .collect(),
@@ -167,15 +225,15 @@ impl CompletionEngine {
                         .unwrap_or_default();
                     if arg_type == "&[Effect]" {
                         for (effect_name, ctor) in &self.effect_types {
-                            completions.push(Completion {
+                            completions.push(CompletionItem {
                                 label: effect_name.to_string(),
                                 kind: CompletionKind::Function,
-                                meta: Some(format!("{effect_name}({})", ctor.params().join(", "))),
+                                detail: format!("{effect_name}({})", ctor.params().join(", ")),
                             });
                         }
                     } else {
                         let arg_count = completable.params().len();
-                        completions.push(Completion::new_param(arg_type, arg_index, arg_count));
+                        completions.push(CompletionItem::new_param(arg_type, arg_index, arg_count));
                     }
                 }
 
@@ -195,10 +253,10 @@ impl CompletionEngine {
                 all_fields
                     .into_iter()
                     .filter(|(field, _)| !filled_fields.iter().any(|f| f == field))
-                    .map(|(field, field_type)| Completion {
+                    .map(|(field, field_type)| CompletionItem {
                         label: format!("{}: ", field),
                         kind: CompletionKind::Field,
-                        meta: Some(field_type.to_string()),
+                        detail: field_type.to_string(),
                     })
                     .collect()
             },
@@ -218,10 +276,10 @@ impl CompletionEngine {
         let_bindings
             .into_iter()
             .filter(|binding| types.contains(&binding.binding_type))
-            .map(|binding| Completion {
+            .map(|binding| CompletionItem {
                 label: binding.name,
                 kind: CompletionKind::Variable,
-                meta: Some(binding.binding_type),
+                detail: binding.binding_type,
             })
             .for_each(|completion| completions.push(completion));
 
@@ -237,37 +295,37 @@ impl CompletionEngine {
         CompletionMatcher::new(partial).filter_and_score(completions)
     }
 
-    fn const_completions(&self, identifier: &str) -> Vec<Completion> {
+    fn const_completions(&self, identifier: &str) -> Vec<CompletionItem> {
         self.constants
             .get(identifier)
             .cloned()
             .unwrap_or_default()
             .iter()
-            .map(|name| Completion {
+            .map(|name| CompletionItem {
                 label: name.to_string(),
                 kind: CompletionKind::Constant,
-                meta: Some(identifier.to_string()),
+                detail: identifier.to_string(),
             })
             .collect()
     }
 
-    fn constructor_completions(&self, identifier: &str) -> Vec<Completion> {
+    fn constructor_completions(&self, identifier: &str) -> Vec<CompletionItem> {
         self.constructors
             .get(identifier)
             .cloned()
             .unwrap_or_default()
             .iter()
-            .map(Completion::from)
+            .map(CompletionItem::from)
             .collect()
     }
 
-    fn method_completions(&self, identifier: &str) -> Vec<Completion> {
+    fn method_completions(&self, identifier: &str) -> Vec<CompletionItem> {
         self.methods
             .get(identifier)
             .cloned()
             .unwrap_or_default()
             .iter()
-            .map(Completion::from)
+            .map(CompletionItem::from)
             .collect()
     }
 
@@ -371,30 +429,30 @@ impl CompletionEngine {
     }
 }
 
-fn specialize_completions(completions: Vec<Completion>) -> Vec<Completion> {
+fn specialize_completions(completions: Vec<CompletionItem>) -> Vec<CompletionItem> {
     completions
         .into_iter()
         .flat_map(|c| match () {
             _ if c.label == "AnyPattern::" => vec![
-                Completion::new_type("CheckerboardPattern::", "Effect progression"),
-                Completion::new_type("CoalescePattern::", "Effect progression"),
-                Completion::new_type("DiagonalPattern::", "Effect progression"),
-                Completion::new_type("DissolvePattern::", "Effect progression"),
-                Completion::new_type("RadialPattern::", "Effect progression"),
-                Completion::new_type("SweepPattern::", "Effect progression"),
+                CompletionItem::new_type("CheckerboardPattern::", "Effect progression"),
+                CompletionItem::new_type("CoalescePattern::", "Effect progression"),
+                CompletionItem::new_type("DiagonalPattern::", "Effect progression"),
+                CompletionItem::new_type("DissolvePattern::", "Effect progression"),
+                CompletionItem::new_type("RadialPattern::", "Effect progression"),
+                CompletionItem::new_type("SweepPattern::", "Effect progression"),
             ],
             _ if c.label.starts_with("bool") => vec![
-                Completion::new_type("true", c.meta.as_ref().unwrap()),
-                Completion::new_type("false", c.meta.as_ref().unwrap()),
+                CompletionItem::new_type("true", &c.detail),
+                CompletionItem::new_type("false", &c.detail),
             ],
             _ if c.label.starts_with("u16") => {
-                vec![Completion::new_type("<u16>", c.meta.as_ref().unwrap())]
+                vec![CompletionItem::new_type("<u16>", &c.detail)]
             },
             _ if c.label.starts_with("u32") => {
-                vec![Completion::new_type("<u32>", c.meta.as_ref().unwrap())]
+                vec![CompletionItem::new_type("<u32>", &c.detail)]
             },
             _ if c.label.starts_with("f32") => {
-                vec![Completion::new_type("<f32>", c.meta.as_ref().unwrap())]
+                vec![CompletionItem::new_type("<f32>", &c.detail)]
             },
             _ => vec![c],
         })
@@ -517,10 +575,10 @@ mod tests {
             "All fx:: completions should be functions"
         );
 
-        // All completions should have meta information
+        // All completions should have detail information
         assert!(
-            completions.iter().all(|c| c.meta.is_some()),
-            "All completions should have meta information"
+            completions.iter().all(|c| !c.detail.is_empty()),
+            "All completions should have detail information"
         );
 
         // Verify all completion labels are from the effect_types registry
@@ -582,10 +640,10 @@ mod tests {
             "All Interpolation:: completions should be constants"
         );
 
-        // Verify meta is present
+        // Verify detail is present
         assert!(
-            completions.iter().all(|c| c.meta.is_some()),
-            "All completions should have meta information"
+            completions.iter().all(|c| !c.detail.is_empty()),
+            "All completions should have detail information"
         );
     }
 
@@ -601,10 +659,10 @@ mod tests {
             !completions.is_empty(),
             "Should have completions for Interpolation parameter"
         );
-        assert_eq!(completions[0], Completion {
+        assert_eq!(completions[0], CompletionItem {
             label: "Interpolation::".to_string(),
             kind: CompletionKind::Parameter,
-            meta: Some("Parameter 2 of 2".to_string()),
+            detail: "Parameter 2 of 2".to_string(),
         });
 
         // Test CellFilter::Inner(Margin) - first parameter
@@ -615,10 +673,10 @@ mod tests {
             !completions.is_empty(),
             "Should have completions for Margin parameter"
         );
-        assert_eq!(completions[0], Completion {
+        assert_eq!(completions[0], CompletionItem {
             label: "Margin::".to_string(),
             kind: CompletionKind::Parameter,
-            meta: Some("Parameter 1 of 1".to_string()),
+            detail: "Parameter 1 of 1".to_string(),
         });
     }
 
@@ -976,22 +1034,22 @@ mod tests {
         let completions = engine.completions(source, source.chars().count() as u32);
 
         assert_eq!(completions[..2], vec![
-            Completion {
+            CompletionItem {
                 label: "Color::".to_string(),
                 kind: CompletionKind::Parameter,
-                meta: Some("Parameter 2 of 3".to_string()),
+                detail: "Parameter 2 of 3".to_string(),
             },
-            Completion {
+            CompletionItem {
                 label: "screen_bg".to_string(),
                 kind: CompletionKind::Variable,
-                meta: Some("Color".to_string()),
+                detail: "Color".to_string(),
             }
         ]);
 
         // we should also get a bunch of color constants
         assert!(completions[2..]
             .iter()
-            .all(|c| c.meta == Some("Color".to_string())));
+            .all(|c| c.detail == "Color"));
         assert!(completions[2..]
             .iter()
             .all(|c| c.kind == CompletionKind::Constant));
