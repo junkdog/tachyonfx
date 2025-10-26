@@ -161,16 +161,19 @@ mod tests {
                 label: "fade_to".to_string(),
                 kind: CompletionKind::Function,
                 detail: String::new(),
+                insert_text: Some("fade_to($0)".to_string()),
             },
             CompletionItem {
                 label: "fade_from".to_string(),
                 kind: CompletionKind::Function,
                 detail: String::new(),
+                insert_text: Some("fade_from($0)".to_string()),
             },
             CompletionItem {
                 label: "dissolve".to_string(),
                 kind: CompletionKind::Function,
                 detail: String::new(),
+                insert_text: Some("dissolve($0)".to_string()),
             },
         ];
 
@@ -275,16 +278,19 @@ mod tests {
                 label: "a".to_string(),
                 kind: CompletionKind::Function,
                 detail: String::new(),
+                insert_text: Some("a($0)".to_string()),
             },
             CompletionItem {
                 label: "b".to_string(),
                 kind: CompletionKind::Function,
                 detail: String::new(),
+                insert_text: Some("b($0)".to_string()),
             },
             CompletionItem {
                 label: "c".to_string(),
                 kind: CompletionKind::Function,
                 detail: String::new(),
+                insert_text: Some("c($0)".to_string()),
             },
         ];
 
@@ -303,11 +309,13 @@ mod tests {
                 label: "fade_to".to_string(),
                 kind: CompletionKind::Function,
                 detail: String::new(),
+                insert_text: Some("fade_to($0)".to_string()),
             },
             CompletionItem {
                 label: "dissolve".to_string(),
                 kind: CompletionKind::Function,
                 detail: String::new(),
+                insert_text: Some("dissolve($0)".to_string()),
             },
         ];
 

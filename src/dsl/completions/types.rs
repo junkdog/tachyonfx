@@ -39,15 +39,31 @@ pub(super) use tok;
 /// display, a kind indicating what type of completion it is, and detail text providing
 /// additional information.
 ///
+/// # Snippet Support
+///
+/// Functions and methods include snippet-style `insert_text` with `$0` marking the final
+/// cursor position. For example, `dissolve` has insert text `"dissolve($0)"` to place the
+/// cursor inside the parentheses.
+///
 /// # Examples
 ///
 /// ```
 /// use tachyonfx::dsl::{CompletionItem, CompletionKind};
 ///
+/// // Function with snippet insertion
 /// let item = CompletionItem {
 ///     label: "fade_to".to_string(),
 ///     kind: CompletionKind::Function,
 ///     detail: "fade_to_fg(Color, EffectTimer)".to_string(),
+///     insert_text: Some("fade_to($0)".to_string()),
+/// };
+///
+/// // Constant with plain insertion
+/// let item = CompletionItem {
+///     label: "Linear".to_string(),
+///     kind: CompletionKind::Constant,
+///     detail: "Interpolation".to_string(),
+///     insert_text: None,
 /// };
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,7 +71,7 @@ pub struct CompletionItem {
     /// The text to be inserted when this completion is selected.
     ///
     /// This is the primary display text shown to the user and the text that will be
-    /// inserted into the source code.
+    /// inserted into the source code if `insert_text` is `None`.
     pub label: String,
 
     /// The category of this completion item.
@@ -70,6 +86,15 @@ pub struct CompletionItem {
     /// descriptions, or type information. Always contains a value (never empty for
     /// valid completions from the engine).
     pub detail: String,
+
+    /// Optional snippet-style insertion text with cursor placeholders.
+    ///
+    /// When present, this text should be inserted instead of `label`. Uses LSP snippet
+    /// syntax with `$0` marking the final cursor position. Functions and methods include
+    /// parentheses with the cursor positioned inside: `"function_name($0)"`.
+    ///
+    /// When `None`, the `label` should be inserted as-is.
+    pub insert_text: Option<String>,
 }
 
 /// The category of a completion item.
@@ -116,6 +141,7 @@ impl CompletionItem {
             label: label.to_string(),
             kind: CompletionKind::Type,
             detail: detail.into(),
+            insert_text: None,
         }
     }
 
@@ -124,20 +150,23 @@ impl CompletionItem {
             label: format!("{param_type}::"),
             kind: CompletionKind::Parameter,
             detail: format!("Parameter {} of {arg_count}", arg_index + 1),
+            insert_text: None,
         }
     }
 }
 
 impl From<&CallableItem> for CompletionItem {
     fn from(callable: &CallableItem) -> Self {
+        let name = callable.name();
         CompletionItem {
-            label: callable.name().to_string(),
+            label: name.to_string(),
             kind: if callable.is_static() {
                 CompletionKind::Function
             } else {
                 CompletionKind::Method
             },
-            detail: format!("{}({})", callable.name(), callable.params().join(", ")),
+            detail: format!("{}({})", name, callable.params().join(", ")),
+            insert_text: Some(format!("{name}($0)")),
         }
     }
 }

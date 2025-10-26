@@ -200,6 +200,7 @@ impl CompletionEngine {
                                 label: (*effect_name).to_string(),
                                 kind: CompletionKind::Function,
                                 detail: meta,
+                                insert_text: Some(format!("{effect_name}($0)")),
                             }
                         })
                         .collect(),
@@ -229,6 +230,7 @@ impl CompletionEngine {
                                 label: effect_name.to_string(),
                                 kind: CompletionKind::Function,
                                 detail: format!("{effect_name}({})", ctor.params().join(", ")),
+                                insert_text: Some(format!("{effect_name}(&[$0])")),
                             });
                         }
                     } else {
@@ -257,6 +259,7 @@ impl CompletionEngine {
                         label: format!("{}: ", field),
                         kind: CompletionKind::Field,
                         detail: field_type.to_string(),
+                        insert_text: None,
                     })
                     .collect()
             },
@@ -280,6 +283,7 @@ impl CompletionEngine {
                 label: binding.name,
                 kind: CompletionKind::Variable,
                 detail: binding.binding_type,
+                insert_text: None,
             })
             .for_each(|completion| completions.push(completion));
 
@@ -305,6 +309,7 @@ impl CompletionEngine {
                 label: name.to_string(),
                 kind: CompletionKind::Constant,
                 detail: identifier.to_string(),
+                insert_text: None,
             })
             .collect()
     }
@@ -663,6 +668,7 @@ mod tests {
             label: "Interpolation::".to_string(),
             kind: CompletionKind::Parameter,
             detail: "Parameter 2 of 2".to_string(),
+            insert_text: None,
         });
 
         // Test CellFilter::Inner(Margin) - first parameter
@@ -677,6 +683,7 @@ mod tests {
             label: "Margin::".to_string(),
             kind: CompletionKind::Parameter,
             detail: "Parameter 1 of 1".to_string(),
+            insert_text: None,
         });
     }
 
@@ -1038,11 +1045,13 @@ mod tests {
                 label: "Color::".to_string(),
                 kind: CompletionKind::Parameter,
                 detail: "Parameter 2 of 3".to_string(),
+                insert_text: None,
             },
             CompletionItem {
                 label: "screen_bg".to_string(),
                 kind: CompletionKind::Variable,
                 detail: "Color".to_string(),
+                insert_text: None,
             }
         ]);
 
@@ -1094,6 +1103,80 @@ mod tests {
         actual_patterns.sort();
 
         assert_eq!(expected_patterns, actual_patterns);
+    }
+
+    #[test]
+    fn test_insert_text_for_functions_and_methods() {
+        let engine = CompletionEngine::new();
+
+        // Functions should have insert_text with $0
+        let completions = engine.completions("fx::", 4);
+        let dissolve = completions
+            .iter()
+            .find(|c| c.label == "dissolve")
+            .unwrap();
+        assert_eq!(
+            dissolve.insert_text,
+            Some("dissolve($0)".to_string()),
+            "Functions should have insert_text with cursor placeholder"
+        );
+
+        // Methods should have insert_text with $0
+        let completions = engine.completions("fx::dissolve(500).", 18);
+        let with_duration = completions
+            .iter()
+            .find(|c| c.label == "with_duration")
+            .unwrap();
+        assert_eq!(
+            with_duration.insert_text,
+            Some("with_duration($0)".to_string()),
+            "Methods should have insert_text with cursor placeholder"
+        );
+
+        // Constructors (treated as Function kind) should have insert_text
+        let completions = engine.completions("Color::", 7);
+        let rgb = completions
+            .iter()
+            .find(|c| c.label == "Rgb")
+            .unwrap();
+        assert_eq!(
+            rgb.insert_text,
+            Some("Rgb($0)".to_string()),
+            "Constructors should have insert_text with cursor placeholder"
+        );
+
+        // Constants should NOT have insert_text
+        let red = completions
+            .iter()
+            .find(|c| c.label == "Red")
+            .unwrap();
+        assert_eq!(
+            red.insert_text, None,
+            "Constants should not have insert_text"
+        );
+
+        // Types/namespaces should NOT have insert_text
+        let completions = engine.completions("", 0);
+        let fx_namespace = completions
+            .iter()
+            .find(|c| c.label == "fx::")
+            .unwrap();
+        assert_eq!(
+            fx_namespace.insert_text, None,
+            "Type/namespace completions should not have insert_text"
+        );
+
+        // Variables should NOT have insert_text
+        let source = "let my_color = Color::Red; fx::fade_to(my";
+        let completions = engine.completions(source, source.len() as u32);
+        let my_color = completions
+            .iter()
+            .find(|c| c.label == "my_color")
+            .unwrap();
+        assert_eq!(
+            my_color.insert_text, None,
+            "Variable completions should not have insert_text"
+        );
     }
 
     #[test]
