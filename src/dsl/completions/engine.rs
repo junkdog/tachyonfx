@@ -41,10 +41,32 @@ impl CompletionEngine {
     pub fn completions(&self, source: &str, cursor_index: u32) -> Vec<Completion> {
         use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
-        tokenize(&source[..cursor_index as usize])
-            .map(sanitize_tokens)
-            .map(|tokens| self.completions_from_tokens(&tokens, cursor_index))
-            .unwrap_or_else(|_| vec![])
+        if let Ok(tokens) = tokenize(&source[..cursor_index as usize]) {
+            // note: it would be nice to handle more cases around strings
+            // and comments, but it requires passing more context after
+            // the current cursor position. maybe in the future.
+
+            if matches!(&tokens.last(), Some(tok!(LineComment))) {
+                // no completions: cursor inside line comment
+                return vec![];
+            }
+
+            // removing whitespace and comments
+            let tokens = sanitize_tokens(tokens);
+
+            // no completions: cursor right after `let ` or `let <identifier>`
+            if tokens.len() >= 2
+                && tokens[tokens.len() - 2..]
+                    .iter()
+                    .any(|t| matches!(t, tok!(Keyword == "let")))
+            {
+                return vec![];
+            }
+
+            return self.completions_from_tokens(&tokens, cursor_index);
+        }
+
+        vec![]
     }
 
     pub fn echo_source(&self, source: &str, cursor_index: u32) -> String {
@@ -582,7 +604,7 @@ mod tests {
         assert_eq!(completions[0], Completion {
             label: "Interpolation::".to_string(),
             kind: CompletionKind::Parameter,
-            meta: Some("Parameter 2 (Interpolation)".to_string()),
+            meta: Some("Parameter 2 of 2".to_string()),
         });
 
         // Test CellFilter::Inner(Margin) - first parameter
@@ -596,7 +618,7 @@ mod tests {
         assert_eq!(completions[0], Completion {
             label: "Margin::".to_string(),
             kind: CompletionKind::Parameter,
-            meta: Some("Parameter 1 (Margin)".to_string()),
+            meta: Some("Parameter 1 of 1".to_string()),
         });
     }
 
@@ -957,7 +979,7 @@ mod tests {
             Completion {
                 label: "Color::".to_string(),
                 kind: CompletionKind::Parameter,
-                meta: Some("Parameter 2 (Color)".to_string()),
+                meta: Some("Parameter 2 of 3".to_string()),
             },
             Completion {
                 label: "screen_bg".to_string(),
