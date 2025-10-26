@@ -4,6 +4,11 @@
 
 ### Added
 - **DSL Completion Engine**: Context-aware autocompletion for DSL expressions with intelligent matching.
+  - **Context-aware suggestions**: Understands namespaces, method chains, function  calls, and struct initialization.
+  - **Fuzzy matching**: Filters completions using prefix, acronym, and subsequence matching.
+  - **Type tracking**: Tracks `let` bindings and suggests variables where type-appropriate.
+  - **Parameter hints**: Shows expected parameter types in function calls.
+
 
 ## tachyonfx 0.20.1 - 2025-10-19
 
