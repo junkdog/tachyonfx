@@ -196,11 +196,18 @@ impl CompletionEngine {
                         .iter()
                         .map(|(effect_name, ctor)| {
                             let meta = format!("{effect_name}({})", ctor.params().join(", "));
+                            let insert_text =
+                                if *effect_name == "sequence" || *effect_name == "parallel" {
+                                    format!("{effect_name}(&[$0])")
+                                } else {
+                                    format!("{effect_name}($0)")
+                                };
+
                             CompletionItem {
                                 label: (*effect_name).to_string(),
                                 kind: CompletionKind::Function,
                                 detail: meta,
-                                insert_text: Some(format!("{effect_name}($0)")),
+                                insert_text: Some(insert_text),
                             }
                         })
                         .collect(),
@@ -226,11 +233,12 @@ impl CompletionEngine {
                         .unwrap_or_default();
                     if arg_type == "&[Effect]" {
                         for (effect_name, ctor) in &self.effect_types {
+                            // todo: use existing ctor
                             completions.push(CompletionItem {
                                 label: effect_name.to_string(),
                                 kind: CompletionKind::Function,
                                 detail: format!("{effect_name}({})", ctor.params().join(", ")),
-                                insert_text: Some(format!("{effect_name}(&[$0])")),
+                                insert_text: Some(format!("{effect_name}()")),
                             });
                         }
                     } else {
@@ -1196,6 +1204,23 @@ mod tests {
             .collect();
 
         assert_eq!(completions, expected);
+    }
+
+    #[test]
+    fn test_sequence_and_parallel_cursor_pos() {
+        let engine = CompletionEngine::new();
+
+        [("fx::sequen", "sequence(&[$0])"), ("fx::parall", "parallel(&[$0])")]
+            .iter()
+            .for_each(|(src, expected)| {
+                let completions: Vec<Option<String>> = engine
+                    .completions(src, src.len() as u32)
+                    .into_iter()
+                    .map(|c| c.insert_text)
+                    .collect();
+
+                assert_eq!(vec![Some(expected.to_string())], completions)
+            })
     }
 
     #[test]
