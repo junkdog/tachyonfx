@@ -128,19 +128,53 @@ impl CompletionEngine {
             },
 
             CompletionContext::FnCall { fn_name, arg_index } => {
-                let mut completions = vec![];
-                let mut param_completions = |f: Option<&CallableItem>| {
-                    if let Some(arg_type) = f.and_then(|f| f.params().get(arg_index)) {
-                        completions.push(Completion::new_param(arg_type, arg_index));
-                    }
-                };
-                param_completions(self.effect_types.get(fn_name.as_str()));
-                for ctors in self.constructors.values() {
-                    param_completions(ctors.iter().find(|i| i.name() == fn_name));
+                // First, find the parameter type from all possible sources
+                let mut param_type: Option<&str> = None;
+
+                // Check effect types
+                if let Some(effect) = self.effect_types.get(fn_name.as_str()) {
+                    param_type = effect.params().get(arg_index).copied();
                 }
 
-                for methods in self.methods.values() {
-                    param_completions(methods.iter().find(|i| i.name() == fn_name));
+                // Check constructors if not found
+                if param_type.is_none() {
+                    for ctors in self.constructors.values() {
+                        if let Some(ctor) = ctors.iter().find(|i| i.name() == fn_name) {
+                            param_type = ctor.params().get(arg_index).copied();
+                            if param_type.is_some() {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Check methods if still not found
+                if param_type.is_none() {
+                    for methods in self.methods.values() {
+                        if let Some(method) = methods.iter().find(|i| i.name() == fn_name) {
+                            param_type = method.params().get(arg_index).copied();
+                            if param_type.is_some() {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Now generate completions based on the parameter type
+                let mut completions = vec![];
+                if let Some(arg_type) = param_type {
+                    // Handle &[Effect] - suggest effect constructors directly
+                    if arg_type == "&[Effect]" {
+                        for (effect_name, ctor) in &self.effect_types {
+                            completions.push(Completion {
+                                label: effect_name.to_string(),
+                                kind: CompletionKind::Function,
+                                meta: Some(format!("{effect_name}({})", ctor.params().join(", "))),
+                            });
+                        }
+                    } else {
+                        completions.push(Completion::new_param(arg_type, arg_index));
+                    }
                 }
 
                 completions
@@ -343,6 +377,8 @@ impl Default for CompletionEngine {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
+
     use indoc::indoc;
 
     use super::*;
@@ -434,11 +470,11 @@ mod tests {
         let source = "fx::";
         let completions = engine.completions(source, source.len() as u32);
 
-        // Should return exactly 39 effect completions (all registered effects)
+        // Should return exactly 41 effect completions (all registered effects)
         assert_eq!(
             completions.len(),
-            39,
-            "Should have exactly 39 fx effect completions"
+            41,
+            "Should have exactly 41 fx effect completions"
         );
 
         // All completions should be functions
@@ -968,5 +1004,24 @@ mod tests {
         actual_patterns.sort();
 
         assert_eq!(expected_patterns, actual_patterns);
+    }
+
+    #[test]
+    fn test_completing_sequence_and_parallel() {
+        let engine = CompletionEngine::new();
+        let src = "fx::sequence(&[";
+        let completions: BTreeSet<String> = engine
+            .completions(src, src.len() as u32)
+            .into_iter()
+            .map(|c| c.label)
+            .collect();
+
+        let expected: BTreeSet<String> = engine
+            .effect_types
+            .iter()
+            .map(|(k, _)| k.to_string())
+            .collect();
+
+        assert_eq!(completions, expected);
     }
 }

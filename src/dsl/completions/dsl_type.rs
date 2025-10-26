@@ -19,7 +19,9 @@ pub(super) fn effect_types() -> HashMap<&'static str, CallableItem> {
 
     // This maps each effect name to its function signature as a CallableItem
     // The type "fx" is used as the declaring type for all effects
-    const FX_TYPES: [(&str, CallableItem); 39] = [
+    const FX_TYPES: [(&str, CallableItem); 41] = [
+        effect!("sequence", "&[Effect]"),
+        effect!("parallel", "&[Effect]"),
         effect!("term256_colors"),
         effect!("coalesce", "EffectTimer"),
         effect!("coalesce_from", "Style", "EffectTimer"),

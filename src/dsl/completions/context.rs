@@ -62,44 +62,51 @@ pub(super) fn analyze_last_tokens(
 
         // Pattern: function_name(arg1, arg2,  (count commas for arg index)
         _tokens_slice => {
-            // Check if we're inside a function call by finding the last unclosed opening paren
-            // We need to search in ALL tokens, not just the slice, to handle complex cases
-            if let Some(paren_idx) = tokens[..cursor_token_idx]
+            // Find the last unclosed opening paren by walking backwards and tracking depth
+            let mut paren_idx: Option<usize> = None;
+            let mut depth = 0;
+
+            for (idx, token) in tokens[..cursor_token_idx]
                 .iter()
-                .rposition(|t| t.kind == TokenKind::LeftParen)
+                .enumerate()
+                .rev()
             {
-                // Check if this paren is closed - count paren depth from the opening paren
+                match token.kind {
+                    TokenKind::RightParen => depth += 1,
+                    TokenKind::LeftParen => {
+                        if depth == 0 {
+                            // Found an unclosed opening paren
+                            paren_idx = Some(idx);
+                            break;
+                        }
+                        depth -= 1;
+                    },
+                    _ => {},
+                }
+            }
+
+            // If we found an unclosed paren, treat it as a function call
+            if let Some(paren_idx) = paren_idx {
+                // Count commas after the paren to determine argument index
+                // Only count commas at depth 1 (direct arguments, not nested in brackets/parens)
+                let mut comma_count = 0;
                 let mut depth = 1;
                 for token in &tokens[paren_idx + 1..cursor_token_idx] {
                     match token.kind {
-                        TokenKind::LeftParen => depth += 1,
-                        TokenKind::RightParen => {
-                            depth -= 1;
-                            if depth == 0 {
-                                // This opening paren is closed, not inside function call
-                                break;
-                            }
-                        },
+                        TokenKind::LeftParen | TokenKind::LeftBracket => depth += 1,
+                        TokenKind::RightParen | TokenKind::RightBracket => depth -= 1,
+                        TokenKind::Comma if depth == 1 => comma_count += 1,
                         _ => {},
                     }
                 }
 
-                // Only treat as function call if paren is still open (depth > 0)
-                if depth > 0 {
-                    // Count commas after the paren to determine argument index
-                    let comma_count = tokens[paren_idx..cursor_token_idx]
-                        .iter()
-                        .filter(|t| t.kind == TokenKind::Comma)
-                        .count();
-
-                    // Try to find the function name before the paren
-                    if paren_idx > 0 {
-                        if let Some(tok!(Identifier => fn_name)) = tokens.get(paren_idx - 1) {
-                            return CompletionContext::FnCall {
-                                fn_name: fn_name.to_string(),
-                                arg_index: comma_count,
-                            };
-                        }
+                // Try to find the function name before the paren
+                if paren_idx > 0 {
+                    if let Some(tok!(Identifier => fn_name)) = tokens.get(paren_idx - 1) {
+                        return CompletionContext::FnCall {
+                            fn_name: fn_name.to_string(),
+                            arg_index: comma_count,
+                        };
                     }
                 }
             }
@@ -459,6 +466,29 @@ mod tests {
         // Multiple levels of nesting
         assert_context_eq(
             "fx::parallel(&[fx::sequence(&[fx::dissolve(500)])]).",
+            CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
+        );
+    }
+
+    #[test]
+    fn test_nested_effects_inside_slice() {
+        assert_context_eq("fx::sequence(&[", CompletionContext::FnCall {
+            fn_name: "sequence".to_string(),
+            arg_index: 0,
+        });
+
+        assert_context_eq(
+            "fx::sequence(&[fx::dissolve(500), ",
+            CompletionContext::FnCall { fn_name: "sequence".to_string(), arg_index: 0 },
+        );
+
+        assert_context_eq(
+            "fx::sequence(&[fx::dissolve(500), fx::",
+            CompletionContext::DoubleColon { namespace: "fx".to_string() },
+        );
+
+        assert_context_eq(
+            "fx::sequence(&[fx::dissolve(500), fx::consume_tick()]).",
             CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
         );
     }
