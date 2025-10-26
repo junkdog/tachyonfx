@@ -19,24 +19,6 @@ pub struct CompletionEngine {
     constants: HashMap<&'static str, &'static [&'static str]>,
 }
 
-impl From<&CallableItem> for Completion {
-    fn from(callable: &CallableItem) -> Self {
-        Completion {
-            label: callable.name().to_string(),
-            kind: if callable.is_static() {
-                CompletionKind::Function
-            } else {
-                CompletionKind::Method
-            },
-            meta: Some(format!(
-                "{}({})",
-                callable.name(),
-                callable.params().join(", ")
-            )),
-        }
-    }
-}
-
 impl CompletionEngine {
     pub fn new() -> Self {
         let methods = all_methods();
@@ -90,147 +72,35 @@ impl CompletionEngine {
             CompletionContext::TopLevel => {
                 // Top-level completions: namespaces and types
                 vec![
-                    Completion {
-                        label: "fx::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Effect constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Color::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Color constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Layout::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Layout constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Style::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Style constructors".to_string()),
-                    },
-                    Completion {
-                        label: "CellFilter::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Cell filter constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Rect::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Rect constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Duration::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Duration constructors".to_string()),
-                    },
-                    Completion {
-                        label: "EffectTimer::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Timer constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Margin::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Margin constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Constraint::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Constraint constructors".to_string()),
-                    },
-                    Completion {
-                        label: "RepeatMode::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Repeat mode constructors".to_string()),
-                    },
-                    Completion {
-                        label: "RefRect::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("RefRect constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Size::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Size constructors".to_string()),
-                    },
+                    Completion::new_type("fx::", "Effects"),
+                    Completion::new_type("Color::", "Color constructors"),
+                    Completion::new_type("Layout::", "Layout constructors"),
+                    Completion::new_type("Style::", "Style constructors"),
+                    Completion::new_type("CellFilter::", "Filter within area"),
+                    Completion::new_type("Rect::", "Rect constructors"),
+                    Completion::new_type("Duration::", "Duration constructors"),
+                    Completion::new_type("EffectTimer::", "Timer constructors"),
+                    Completion::new_type("Margin::", "Margin constructors"),
+                    Completion::new_type("Constraint::", "Constraint constructors"),
+                    Completion::new_type("RepeatMode::", "Repeat mode constructors"),
+                    Completion::new_type("RefRect::", "RefRect constructors"),
+                    Completion::new_type("Size::", "Size constructors"),
                     // Pattern types
-                    Completion {
-                        label: "CheckerboardPattern::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Checkerboard pattern constructors".to_string()),
-                    },
-                    Completion {
-                        label: "CoalescePattern::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Coalesce pattern constructors".to_string()),
-                    },
-                    Completion {
-                        label: "DiagonalPattern::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Diagonal pattern constructors".to_string()),
-                    },
-                    Completion {
-                        label: "DissolvePattern::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Dissolve pattern constructors".to_string()),
-                    },
-                    Completion {
-                        label: "RadialPattern::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Radial pattern constructors".to_string()),
-                    },
-                    Completion {
-                        label: "SweepPattern::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Sweep pattern constructors".to_string()),
-                    },
-                    Completion {
-                        label: "Interpolation::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Animation easing functions".to_string()),
-                    },
-                    Completion {
-                        label: "Motion::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Movement directions".to_string()),
-                    },
-                    Completion {
-                        label: "ColorSpace::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Color interpolation spaces".to_string()),
-                    },
-                    Completion {
-                        label: "Direction::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Layout directions".to_string()),
-                    },
-                    Completion {
-                        label: "Flex::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Flex layout modes".to_string()),
-                    },
-                    Completion {
-                        label: "ExpandDirection::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Expansion directions".to_string()),
-                    },
-                    Completion {
-                        label: "Modifier::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Cell style modifiers".to_string()),
-                    },
-                    Completion {
-                        label: "RepeatMode::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Effect repeat modes".to_string()),
-                    },
-                    Completion {
-                        label: "EvolveSymbolSet::".to_string(),
-                        kind: CompletionKind::Type,
-                        meta: Some("Symbol sets for evolve effect".to_string()),
-                    },
+                    Completion::new_type("CheckerboardPattern::", "Effect progression"),
+                    Completion::new_type("CoalescePattern::", "Effect progression"),
+                    Completion::new_type("DiagonalPattern::", "Effect progression"),
+                    Completion::new_type("DissolvePattern::", "Effect progression"),
+                    Completion::new_type("RadialPattern::", "Effect progression"),
+                    Completion::new_type("SweepPattern::", "Effect progression"),
+                    Completion::new_type("Interpolation::", "Easing functions"),
+                    Completion::new_type("Motion::", "Movement directions"),
+                    Completion::new_type("ColorSpace::", "Color interpolation spaces"),
+                    Completion::new_type("Direction::", "Layout directions"),
+                    Completion::new_type("Flex::", "Flex layout modes"),
+                    Completion::new_type("ExpandDirection::", "Expansion directions"),
+                    Completion::new_type("Modifier::", "Cell style modifiers"),
+                    Completion::new_type("RepeatMode::", "Effect repeat modes"),
+                    Completion::new_type("EvolveSymbolSet::", "Symbol sets for evolve effects"),
                 ]
             },
 
@@ -260,39 +130,18 @@ impl CompletionEngine {
 
             CompletionContext::FnCall { fn_name, arg_index } => {
                 let mut completions = vec![];
-
-                // Argument type hints based on function signature
-                // Look up the function in effect types, constructors, and methods
-                if let Some(effect) = self.effect_types.get(fn_name.as_str()) {
-                    if let Some(arg) = effect.params().get(arg_index) {
-                        completions.push(Completion {
-                            label: format!("{arg}::"),
-                            kind: CompletionKind::Parameter,
-                            meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
-                        })
+                let mut param_completions = |f: Option<&CallableItem>| {
+                    if let Some(arg_type) = f.and_then(|f| f.params().get(arg_index)) {
+                        completions.push(Completion::new_param(arg_type, arg_index));
                     }
                 };
+                param_completions(self.effect_types.get(fn_name.as_str()));
                 for ctors in self.constructors.values() {
-                    if let Some(ctor) = ctors.iter().find(|i| i.name() == fn_name) {
-                        if let Some(arg_type) = ctor.params().get(arg_index) {
-                            completions.push(Completion {
-                                label: format!("{arg_type}::"),
-                                kind: CompletionKind::Parameter,
-                                meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
-                            });
-                        }
-                    }
+                    param_completions(ctors.iter().find(|i| i.name() == fn_name));
                 }
+
                 for methods in self.methods.values() {
-                    if let Some(method) = methods.iter().find(|i| i.name() == fn_name) {
-                        if let Some(arg_type) = method.params().get(arg_index) {
-                            completions.push(Completion {
-                                label: format!("{arg_type}::"),
-                                kind: CompletionKind::Parameter,
-                                meta: Some(format!("Parameter {} of {}", arg_index + 1, fn_name)),
-                            });
-                        }
-                    }
+                    param_completions(methods.iter().find(|i| i.name() == fn_name));
                 }
 
                 completions
@@ -668,7 +517,7 @@ mod tests {
         assert_eq!(completions[0], Completion {
             label: "Interpolation::".to_string(),
             kind: CompletionKind::Parameter,
-            meta: Some("Parameter 2 of from_ms".to_string()),
+            meta: Some("Parameter 2 (Interpolation)".to_string()),
         });
 
         // Test CellFilter::Inner(Margin) - first parameter
@@ -682,7 +531,7 @@ mod tests {
         assert_eq!(completions[0], Completion {
             label: "Margin::".to_string(),
             kind: CompletionKind::Parameter,
-            meta: Some("Parameter 1 of Inner".to_string()),
+            meta: Some("Parameter 1 (Margin)".to_string()),
         });
     }
 
@@ -1043,7 +892,7 @@ mod tests {
             Completion {
                 label: "Color::".to_string(),
                 kind: CompletionKind::Parameter,
-                meta: Some("Parameter 2 of fade_to".to_string()),
+                meta: Some("Parameter 2 (Color)".to_string()),
             },
             Completion {
                 label: "screen_bg".to_string(),

@@ -60,6 +60,58 @@ pub(super) enum CompletionContext {
     StructInit { struct_name: String, filled_fields: Vec<String> },
 }
 
+impl Completion {
+    pub(super) fn new_type(label: &str, meta: &str) -> Self {
+        Self {
+            label: label.to_string(),
+            kind: CompletionKind::Type,
+            meta: Some(meta.into()),
+        }
+    }
+
+    pub(super) fn new_param(param_type: &str, arg_index: usize) -> Self {
+        Completion {
+            label: format!("{param_type}::"),
+            kind: CompletionKind::Parameter,
+            meta: Some(format!("Parameter {} ({param_type})", arg_index + 1)),
+        }
+    }
+
+    fn from(callable: &CallableItem) -> Self {
+        Completion {
+            label: callable.name().to_string(),
+            kind: if callable.is_static() {
+                CompletionKind::Function
+            } else {
+                CompletionKind::Method
+            },
+            meta: Some(format!(
+                "{}({})",
+                callable.name(),
+                callable.params().join(", ")
+            )),
+        }
+    }
+}
+
+impl From<&CallableItem> for Completion {
+    fn from(callable: &CallableItem) -> Self {
+        Completion {
+            label: callable.name().to_string(),
+            kind: if callable.is_static() {
+                CompletionKind::Function
+            } else {
+                CompletionKind::Method
+            },
+            meta: Some(format!(
+                "{}({})",
+                callable.name(),
+                callable.params().join(", ")
+            )),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct LetBinding {
     pub(super) name: String,
