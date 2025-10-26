@@ -128,42 +128,21 @@ impl CompletionEngine {
             },
 
             CompletionContext::FnCall { fn_name, arg_index } => {
-                // First, find the parameter type from all possible sources
-                let mut param_type: Option<&str> = None;
-
-                // Check effect types
-                if let Some(effect) = self.effect_types.get(fn_name.as_str()) {
-                    param_type = effect.params().get(arg_index).copied();
-                }
-
-                // Check constructors if not found
-                if param_type.is_none() {
-                    for ctors in self.constructors.values() {
-                        if let Some(ctor) = ctors.iter().find(|i| i.name() == fn_name) {
-                            param_type = ctor.params().get(arg_index).copied();
-                            if param_type.is_some() {
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // Check methods if still not found
-                if param_type.is_none() {
-                    for methods in self.methods.values() {
-                        if let Some(method) = methods.iter().find(|i| i.name() == fn_name) {
-                            param_type = method.params().get(arg_index).copied();
-                            if param_type.is_some() {
-                                break;
-                            }
-                        }
-                    }
-                }
+                let fn_name = fn_name.as_str();
+                let completable = self
+                    .effect_by_name(fn_name)
+                    .or_else(|| self.constructor_by_name(fn_name))
+                    .or_else(|| self.method_by_name(fn_name));
 
                 // Now generate completions based on the parameter type
                 let mut completions = vec![];
-                if let Some(arg_type) = param_type {
+                if let Some(completable) = completable {
                     // Handle &[Effect] - suggest effect constructors directly
+                    let arg_type = completable
+                        .params()
+                        .get(arg_index)
+                        .copied()
+                        .unwrap_or_default();
                     if arg_type == "&[Effect]" {
                         for (effect_name, ctor) in &self.effect_types {
                             completions.push(Completion {
@@ -173,7 +152,8 @@ impl CompletionEngine {
                             });
                         }
                     } else {
-                        completions.push(Completion::new_param(arg_type, arg_index));
+                        let arg_count = completable.params().len();
+                        completions.push(Completion::new_param(arg_type, arg_index, arg_count));
                     }
                 }
 
@@ -267,6 +247,26 @@ impl CompletionEngine {
             .iter()
             .map(Completion::from)
             .collect()
+    }
+
+    fn method_by_name(&self, fn_name: &str) -> Option<CallableItem> {
+        self.methods
+            .values()
+            .flat_map(|ctors| ctors.iter())
+            .find(|ctor| ctor.name() == fn_name)
+            .cloned()
+    }
+
+    fn constructor_by_name(&self, fn_name: &str) -> Option<CallableItem> {
+        self.constructors
+            .values()
+            .flat_map(|fns| fns.iter())
+            .find(|f| f.name() == fn_name)
+            .cloned()
+    }
+
+    fn effect_by_name(&self, fn_name: &str) -> Option<CallableItem> {
+        self.effect_types.get(fn_name).cloned()
     }
 
     fn extract_let_bindings(&self, tokens: &[Token]) -> Vec<LetBinding> {
@@ -377,7 +377,7 @@ impl Default for CompletionEngine {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
+    use alloc::collections::BTreeSet;
 
     use indoc::indoc;
 
@@ -1018,8 +1018,8 @@ mod tests {
 
         let expected: BTreeSet<String> = engine
             .effect_types
-            .iter()
-            .map(|(k, _)| k.to_string())
+            .keys()
+            .map(|k| k.to_string())
             .collect();
 
         assert_eq!(completions, expected);

@@ -69,11 +69,11 @@ impl Completion {
         }
     }
 
-    pub(super) fn new_param(param_type: &str, arg_index: usize) -> Self {
+    pub(super) fn new_param(param_type: &str, arg_index: usize, arg_count: usize) -> Self {
         Completion {
             label: format!("{param_type}::"),
             kind: CompletionKind::Parameter,
-            meta: Some(format!("Parameter {} ({param_type})", arg_index + 1)),
+            meta: Some(format!("Parameter {} of {arg_count}", arg_index + 1)),
         }
     }
 }
