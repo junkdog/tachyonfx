@@ -182,7 +182,7 @@ impl CompletionEngine {
             },
         };
 
-        let mut completions = concretize_completions(completions);
+        let mut completions = specialize_completions(completions);
         let types: Vec<String> = completions
             .iter()
             .map(|c| c.label.clone())
@@ -349,22 +349,32 @@ impl CompletionEngine {
     }
 }
 
-fn concretize_completions(completions: Vec<Completion>) -> Vec<Completion> {
+fn specialize_completions(completions: Vec<Completion>) -> Vec<Completion> {
     completions
         .into_iter()
-        .flat_map(|c| {
-            if c.label == "AnyPattern::" {
-                vec![
-                    Completion::new_type("CheckerboardPattern::", "Effect progression"),
-                    Completion::new_type("CoalescePattern::", "Effect progression"),
-                    Completion::new_type("DiagonalPattern::", "Effect progression"),
-                    Completion::new_type("DissolvePattern::", "Effect progression"),
-                    Completion::new_type("RadialPattern::", "Effect progression"),
-                    Completion::new_type("SweepPattern::", "Effect progression"),
-                ]
-            } else {
-                vec![c]
-            }
+        .flat_map(|c| match () {
+            _ if c.label == "AnyPattern::" => vec![
+                Completion::new_type("CheckerboardPattern::", "Effect progression"),
+                Completion::new_type("CoalescePattern::", "Effect progression"),
+                Completion::new_type("DiagonalPattern::", "Effect progression"),
+                Completion::new_type("DissolvePattern::", "Effect progression"),
+                Completion::new_type("RadialPattern::", "Effect progression"),
+                Completion::new_type("SweepPattern::", "Effect progression"),
+            ],
+            _ if c.label.starts_with("bool") => vec![
+                Completion::new_type("true", c.meta.as_ref().unwrap()),
+                Completion::new_type("false", c.meta.as_ref().unwrap()),
+            ],
+            _ if c.label.starts_with("u16") => {
+                vec![Completion::new_type("<u16>", c.meta.as_ref().unwrap())]
+            },
+            _ if c.label.starts_with("u32") => {
+                vec![Completion::new_type("<u32>", c.meta.as_ref().unwrap())]
+            },
+            _ if c.label.starts_with("f32") => {
+                vec![Completion::new_type("<f32>", c.meta.as_ref().unwrap())]
+            },
+            _ => vec![c],
         })
         .collect()
 }
@@ -1023,5 +1033,17 @@ mod tests {
             .collect();
 
         assert_eq!(completions, expected);
+    }
+
+    #[test]
+    fn test_bool_completions() {
+        let engine = CompletionEngine::new();
+        let source = "fx::freeze_at(0.5, ";
+        let completions = engine.completions(source, source.len() as u32);
+
+        // Should suggest true and false
+        assert_eq!(completions.len(), 2);
+        assert!(completions.iter().any(|c| c.label == "true"));
+        assert!(completions.iter().any(|c| c.label == "false"));
     }
 }
