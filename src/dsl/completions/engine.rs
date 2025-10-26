@@ -54,8 +54,6 @@ impl CompletionEngine {
     /// Low-level completion function that works with pre-tokenized input.
     /// For internal use and testing. External users should use `complete_source` instead.
     fn completions_from_tokens(&self, tokens: &[Token], cursor_index: u32) -> Vec<Completion> {
-        let cursor = TokenCursor::from_tokens(tokens, cursor_index);
-
         let mut context_lookup: BTreeMap<&str, &str> = self
             .effect_types
             .keys()
@@ -66,6 +64,7 @@ impl CompletionEngine {
             context_lookup.insert(&b.name, &b.binding_type);
         }
 
+        let cursor = TokenCursor::from_tokens(tokens, cursor_index);
         let context = analyze_last_tokens(tokens, &cursor, &context_lookup);
 
         let completions = match context {
@@ -169,7 +168,7 @@ impl CompletionEngine {
             },
         };
 
-        let mut completions = completions;
+        let mut completions = concretize_completions(completions);
         let types: Vec<String> = completions
             .iter()
             .map(|c| c.label.clone())
@@ -314,6 +313,26 @@ impl CompletionEngine {
             .find(|(_, &v)| v.contains(&identifier))
             .map(|(&k, _)| k)
     }
+}
+
+fn concretize_completions(completions: Vec<Completion>) -> Vec<Completion> {
+    completions
+        .into_iter()
+        .flat_map(|c| {
+            if c.label == "AnyPattern::" {
+                vec![
+                    Completion::new_type("CheckerboardPattern::", "Effect progression"),
+                    Completion::new_type("CoalescePattern::", "Effect progression"),
+                    Completion::new_type("DiagonalPattern::", "Effect progression"),
+                    Completion::new_type("DissolvePattern::", "Effect progression"),
+                    Completion::new_type("RadialPattern::", "Effect progression"),
+                    Completion::new_type("SweepPattern::", "Effect progression"),
+                ]
+            } else {
+                vec![c]
+            }
+        })
+        .collect()
 }
 
 impl Default for CompletionEngine {
@@ -919,5 +938,35 @@ mod tests {
         let completions = engine.completions(source, source.len() as u32);
         println!("{:?}", completions);
         assert_eq!(completions.len(), Effect::methods().len());
+    }
+
+    #[test]
+    fn test_effect_with_pattern_completion() {
+        let engine = CompletionEngine::new();
+        let source = indoc! {r#"
+            fx::consume_tick().with_pattern(
+        "#};
+
+        let completions = engine.completions(source, source.len() as u32);
+
+        // Expected pattern types (all concrete pattern types)
+        let expected_patterns = vec![
+            "CheckerboardPattern::",
+            "CoalescePattern::",
+            "DiagonalPattern::",
+            "DissolvePattern::",
+            "RadialPattern::",
+            "SweepPattern::",
+        ];
+
+        let mut actual_patterns = completions
+            .iter()
+            .filter(|c| c.label.contains("Pattern"))
+            .map(|c| c.label.as_str())
+            .collect::<Vec<_>>();
+
+        actual_patterns.sort();
+
+        assert_eq!(expected_patterns, actual_patterns);
     }
 }

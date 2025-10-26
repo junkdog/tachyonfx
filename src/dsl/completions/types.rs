@@ -76,22 +76,6 @@ impl Completion {
             meta: Some(format!("Parameter {} ({param_type})", arg_index + 1)),
         }
     }
-
-    fn from(callable: &CallableItem) -> Self {
-        Completion {
-            label: callable.name().to_string(),
-            kind: if callable.is_static() {
-                CompletionKind::Function
-            } else {
-                CompletionKind::Method
-            },
-            meta: Some(format!(
-                "{}({})",
-                callable.name(),
-                callable.params().join(", ")
-            )),
-        }
-    }
 }
 
 impl From<&CallableItem> for Completion {
