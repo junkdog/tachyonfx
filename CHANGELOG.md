@@ -9,6 +9,9 @@
   - **Type tracking**: Tracks `let` bindings and suggests variables where type-appropriate.
   - **Parameter hints**: Shows expected parameter types in function calls.
 
+### DSL
+- `SimpleRng` constructors (`SimpleRng::new`, `SimpleRng::default`) are now available in DSL expressions.
+
 
 ## tachyonfx 0.20.1 - 2025-10-19
 

@@ -24,6 +24,7 @@ use crate::{
     fx::{EvolveSymbolSet, ExpandDirection, RepeatMode},
     pattern::AnyPattern,
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
+    SimpleRng,
 };
 
 /// A helper struct for parsing arguments when implementing custom effect compilers.
@@ -512,6 +513,24 @@ impl<'dsl> Arguments<'dsl> {
             Expr::Literal(Value::RepeatMode(m), _) => Ok(m),
             Expr::Var { name, span, .. } => self.bound_var(name, span),
             e => self.expected_type_expr("repeat_mode", e),
+        }
+    }
+
+    /// Consumes the next argument and returns a [`SimpleRng`].
+    pub fn simple_rng(&mut self) -> Result<SimpleRng, DslError> {
+        match self.next("simple_rng")? {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
+                "SimpleRng::new" => {
+                    SimpleRng::new(self.extract_nested(args, Arguments::read_u32, span)?)
+                },
+                "SimpleRng::default" => {
+                    self.verify_no_nested_args(args, span)?;
+                    SimpleRng::default()
+                },
+                _ => self.expected_type("simple_rng", name, span)?,
+            }),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("simple_rng", e),
         }
     }
 
@@ -1157,6 +1176,9 @@ impl_from_args!(crate::fx::ExpandDirection, expand_direction);
 impl_from_args!(RepeatMode, repeat_mode);
 impl_from_args!(CellFilter, cell_filter);
 impl_from_args!(ColorSpace, color_space);
+
+// Random types
+impl_from_args!(SimpleRng, simple_rng);
 
 // Pattern types
 impl_from_args!(AnyPattern, pattern);

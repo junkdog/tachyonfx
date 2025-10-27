@@ -164,6 +164,7 @@ impl CompletionEngine {
                     CompletionItem::new_type("RepeatMode::", "Repeat mode constructors"),
                     CompletionItem::new_type("RefRect::", "RefRect constructors"),
                     CompletionItem::new_type("Size::", "Size constructors"),
+                    CompletionItem::new_type("SimpleRng::", "Random number generator"),
                     // Pattern types
                     CompletionItem::new_type("CheckerboardPattern::", "Effect progression"),
                     CompletionItem::new_type("CoalescePattern::", "Effect progression"),

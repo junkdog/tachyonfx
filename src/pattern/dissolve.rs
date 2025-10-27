@@ -64,12 +64,6 @@ impl InstancedPattern for PreparedPattern<(f32, SimpleRng), DissolvePattern> {
     }
 }
 
-impl From<SimpleRng> for DissolvePattern {
-    fn from(rng: SimpleRng) -> Self {
-        Self { rng }
-    }
-}
-
 #[cfg(feature = "dsl")]
 impl DslFormat for DissolvePattern {
     fn dsl_format(&self) -> CompactString {

@@ -62,12 +62,6 @@ impl InstancedPattern for PreparedPattern<(f32, SimpleRng), CoalescePattern> {
     }
 }
 
-impl From<SimpleRng> for CoalescePattern {
-    fn from(rng: SimpleRng) -> Self {
-        Self { rng }
-    }
-}
-
 #[cfg(feature = "dsl")]
 impl DslFormat for CoalescePattern {
     fn dsl_format(&self) -> CompactString {

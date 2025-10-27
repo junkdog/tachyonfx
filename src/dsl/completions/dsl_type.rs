@@ -8,6 +8,7 @@ use crate::{
     fx::{EvolveSymbolSet, ExpandDirection, RepeatMode},
     pattern::*,
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
+    SimpleRng,
 };
 
 pub(super) fn effect_types() -> HashMap<&'static str, CallableItem> {
@@ -102,6 +103,8 @@ macro_rules! impl_dsl_type_map {
                 (Duration::TYPE_NAME, Duration::$method()),
                 (EffectTimer::TYPE_NAME, EffectTimer::$method()),
                 (RepeatMode::TYPE_NAME, RepeatMode::$method()),
+                // Random types
+                (SimpleRng::TYPE_NAME, SimpleRng::$method()),
                 // Pattern types
                 (
                     CheckerboardPattern::TYPE_NAME,
@@ -470,6 +473,25 @@ impl DslType for RepeatMode {
         const T: &str = "RepeatMode";
         const CTORS: &[CallableItem] =
             &[ctor!(T, "Times", "u32"), ctor!(T, "Duration", "Duration")];
+
+        CTORS
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        &[]
+    }
+}
+
+impl DslType for SimpleRng {
+    const TYPE_NAME: &'static str = "SimpleRng";
+
+    fn constants() -> &'static [&'static str] {
+        &[]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        const T: &str = "SimpleRng";
+        const CTORS: &[CallableItem] = &[ctor!(T, "new", "u32"), ctor!(T, "default")];
 
         CTORS
     }
