@@ -5,7 +5,7 @@ use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
     pattern::AnyPattern, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
-    EffectTimer,
+    EffectTimer, SimpleRng,
 };
 
 /// Represents an effect that can be applied to terminal cells.
@@ -120,6 +120,45 @@ impl Effect {
     /// ```
     pub fn with_color_space(mut self, color_space: ColorSpace) -> Self {
         self.set_color_space(color_space);
+        self
+    }
+
+    /// Sets the random number generator for the effect, enabling reproducible animations.
+    ///
+    /// This method allows you to control the randomness in effects that use random
+    /// number generation, making it possible to create deterministic, reproducible
+    /// animations by seeding the RNG with a fixed value.
+    ///
+    /// # Supported Effects
+    ///
+    /// The following effects support `with_rng()`:
+    /// - [`fx::glitch`](crate::fx::glitch) - Controls random cell selection and glitch
+    ///   types
+    /// - [`fx::dissolve`](crate::fx::dissolve),
+    ///   [`fx::dissolve_to`](crate::fx::dissolve_to),
+    ///   [`fx::coalesce`](crate::fx::coalesce),
+    ///   [`fx::coalesce_from`](crate::fx::coalesce_from) - Controls random cell
+    ///   thresholds
+    /// - [`fx::explode`](crate::fx::explode) - Controls explosion forces and trajectories
+    /// - [`fx::slide_in`](crate::fx::slide_in), [`fx::slide_out`](crate::fx::slide_out) -
+    ///   Controls random positional variance
+    /// - [`fx::sweep_in`](crate::fx::sweep_in), [`fx::sweep_out`](crate::fx::sweep_out) -
+    ///   Controls random positional variance
+    ///
+    /// For effects that don't use randomness, this is a no-op.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tachyonfx::{fx, SimpleRng, Effect};
+    ///
+    /// // Create two effects with the same seed for reproducible behavior
+    /// let effect1 = fx::dissolve(1000).with_rng(SimpleRng::new(42));
+    /// let effect2 = fx::dissolve(1000).with_rng(SimpleRng::new(42));
+    /// // effect1 and effect2 will dissolve cells in the exact same pattern
+    /// ```
+    pub fn with_rng(mut self, rng: SimpleRng) -> Self {
+        self.shader.set_rng(rng);
         self
     }
 

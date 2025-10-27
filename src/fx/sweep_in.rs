@@ -23,6 +23,7 @@ pub(super) struct SweepIn {
     area: Option<Rect>,
     cell_filter: Option<FilterProcessor>,
     color_space: ColorSpace,
+    rng: crate::SimpleRng,
 }
 
 impl SweepIn {
@@ -42,6 +43,7 @@ impl SweepIn {
             area: None,
             cell_filter: None,
             color_space: ColorSpace::default(),
+            rng: crate::SimpleRng::new(0),
         }
     }
 }
@@ -68,7 +70,8 @@ impl Shader for SweepIn {
             .gradient_len(self.gradient_length + self.randomness_extent)
             .build();
 
-        let mut axis_jitter = DirectionalVariance::from(area, direction, self.randomness_extent);
+        let mut axis_jitter =
+            DirectionalVariance::with_rng(self.rng, direction, self.randomness_extent);
 
         let mut color_cache: ColorCache<u8, 8> = ColorCache::new();
 
@@ -149,6 +152,10 @@ impl Shader for SweepIn {
                 }
             }
         }
+    }
+
+    fn set_rng(&mut self, rng: crate::SimpleRng) {
+        self.rng = rng;
     }
 
     #[cfg(feature = "dsl")]

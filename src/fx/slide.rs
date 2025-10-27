@@ -32,6 +32,9 @@ pub(super) struct SlideCell {
     area: Option<Rect>,
     /// The cell selection strategy used to filter cells.
     cell_filter: Option<FilterProcessor>,
+    /// Random number generator for variance.
+    #[builder(default)]
+    rng: crate::SimpleRng,
 }
 
 impl SlideCell {
@@ -68,7 +71,8 @@ impl Shader for SlideCell {
             .gradient_len(self.gradient_length + self.randomness_extent)
             .build();
 
-        let mut axis_jitter = DirectionalVariance::from(area, direction, self.randomness_extent);
+        let mut axis_jitter =
+            DirectionalVariance::with_rng(self.rng, direction, self.randomness_extent);
 
         let update_cell = |cell: &mut Cell, pos: Position| match window_alpha.alpha(pos) {
             0.0 => {},
@@ -126,6 +130,10 @@ impl Shader for SlideCell {
                 }
             }
         }
+    }
+
+    fn set_rng(&mut self, rng: crate::SimpleRng) {
+        self.rng = rng;
     }
 
     #[cfg(feature = "dsl")]

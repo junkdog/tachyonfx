@@ -75,12 +75,28 @@ impl DirectionalVariance {
     /// # Returns
     ///
     /// A new `DirectionalVariance` instance.
+    #[allow(dead_code)]
     pub(super) fn from(area: Rect, direction: Motion, max: u16) -> Self {
         Self {
             rng: SimpleRng::new(((area.width as u32) << 16) | area.height as u32),
             direction,
             max: max as i16,
         }
+    }
+
+    /// Creates a new `DirectionalVariance` instance with a provided RNG.
+    ///
+    /// # Arguments
+    ///
+    /// * `rng` - The `SimpleRng` to use for generating variances.
+    /// * `direction` - The `Direction` of the sliding effect.
+    /// * `max` - The maximum variance that can be generated.
+    ///
+    /// # Returns
+    ///
+    /// A new `DirectionalVariance` instance.
+    pub(super) fn with_rng(rng: SimpleRng, direction: Motion, max: u16) -> Self {
+        Self { rng, direction, max: max as i16 }
     }
 
     /// Generates the next variance value.

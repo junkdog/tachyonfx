@@ -5,7 +5,7 @@ use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{
     cell_filter::FilterProcessor, cell_iter::CellIterator, pattern::AnyPattern, widget::EffectSpan,
-    CellFilter, ColorSpace, Duration, EffectTimer, ThreadSafetyMarker,
+    CellFilter, ColorSpace, Duration, EffectTimer, SimpleRng, ThreadSafetyMarker,
 };
 
 /// A trait representing a shader-like object that can be processed for a duration.
@@ -233,6 +233,12 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     fn set_pattern(&mut self, pattern: AnyPattern) {
         // Default no-op implementation for non-pattern-compatible shaders
     }
+
+    /// Sets the random number generator for stochastic effects. This is a no-op for
+    /// effects that don't use randomness. Randomness-compatible effects should override
+    /// this method.
+    #[allow(unused_variables)]
+    fn set_rng(&mut self, rng: SimpleRng) {}
 
     /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and
     /// [fx::repeat](fx/fn.repeat.html) to reset the hosted shader effect to its initial

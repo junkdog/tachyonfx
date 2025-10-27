@@ -203,6 +203,10 @@ impl Shader for Glitch {
         self.glitch_cells.clear();
     }
 
+    fn set_rng(&mut self, rng: SimpleRng) {
+        self.rng = rng;
+    }
+
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::DslError;

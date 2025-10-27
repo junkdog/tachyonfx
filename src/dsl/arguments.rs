@@ -552,6 +552,10 @@ impl<'dsl> Arguments<'dsl> {
                         self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(CoalescePattern::default())
                     },
+                    "CoalescePattern::from" => {
+                        let rng = self.extract_nested(args, Arguments::simple_rng, span)?;
+                        AnyPattern::from(CoalescePattern::from(rng))
+                    },
 
                     "DiagonalPattern::top_left_to_bottom_right" => {
                         self.verify_no_nested_args(args, span)?;
@@ -573,6 +577,11 @@ impl<'dsl> Arguments<'dsl> {
                     "DissolvePattern::new" | "DissolvePattern::default" => {
                         self.verify_no_nested_args(args, span)?;
                         AnyPattern::from(DissolvePattern::default())
+                    },
+
+                    "DissolvePattern::from" => {
+                        let rng = self.extract_nested(args, Arguments::simple_rng, span)?;
+                        AnyPattern::from(DissolvePattern::from(rng))
                     },
 
                     "RadialPattern::center" => {
@@ -1204,7 +1213,7 @@ mod tests {
             tokenizer::{sanitize_tokens, tokenize},
             DslError,
         },
-        CellFilter, Motion, RefRect,
+        CellFilter, Motion, RefRect, SimpleRng,
     };
 
     fn parse_expr(input: &str) -> Expr {
@@ -1240,6 +1249,13 @@ mod tests {
         let result = f(&mut args).expect("value from arguments");
 
         assert_eq!(format!("{result:#?}"), format!("{expected:#?}"));
+    }
+
+    #[test]
+    fn test_simple_rng() {
+        assert_result(r#"SimpleRng::new(12345)"#, SimpleRng::new(12345), |args| {
+            args.simple_rng()
+        });
     }
 
     #[test]
@@ -1744,7 +1760,7 @@ mod tests {
         let result = {
             let dsl = Box::leak(Box::new(EffectDsl::new()));
             let env = Box::leak(Box::new(DslEnv::new()));
-            let args = parse_expr("CoalescePattern::new().clone()");
+            let args = parse_expr("CoalescePattern::from(SimpleRng::default()).clone()");
             let mut args = Arguments::new([args].into(), dsl, env, ExprSpan::default());
             args.pattern()
                 .expect("CoalescePattern with clone should work")
@@ -1756,7 +1772,7 @@ mod tests {
         let result = {
             let dsl = Box::leak(Box::new(EffectDsl::new()));
             let env = Box::leak(Box::new(DslEnv::new()));
-            let args = parse_expr("DissolvePattern::new().clone()");
+            let args = parse_expr("DissolvePattern::from(SimpleRng::default()).clone()");
             let mut args = Arguments::new([args].into(), dsl, env, ExprSpan::default());
             args.pattern()
                 .expect("DissolvePattern with clone should work")

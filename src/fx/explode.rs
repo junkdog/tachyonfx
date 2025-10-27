@@ -165,6 +165,10 @@ impl Shader for Explode {
         self.pattern = pattern;
     }
 
+    fn set_rng(&mut self, rng: SimpleRng) {
+        self.lcg = rng;
+    }
+
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};

@@ -8,6 +8,12 @@
   - **Fuzzy matching**: Filters completions using prefix, acronym, and subsequence matching.
   - **Type tracking**: Tracks `let` bindings and suggests variables where type-appropriate.
   - **Parameter hints**: Shows expected parameter types in function calls.
+- `Effect::with_rng()` now properly supported by randomized effects for reproducible animations:
+  - `fx::glitch`: Controls random cell selection and glitch types
+  - `fx::dissolve`, `fx::dissolve_to`, `fx::coalesce`, `fx::coalesce_from`: Controls random cell thresholds
+  - `fx::explode`: Controls explosion forces and trajectories
+  - `fx::slide_in`, `fx::slide_out`: Controls random positional variance
+  - `fx::sweep_in`, `fx::sweep_out`: Controls random positional variance
 
 ### DSL
 - `SimpleRng` constructors (`SimpleRng::new`, `SimpleRng::default`) are now available in DSL expressions.

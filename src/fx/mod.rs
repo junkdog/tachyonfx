@@ -1428,6 +1428,12 @@ pub fn parallel(effects: &[Effect]) -> Effect {
 /// `cycle_len` parameter specifies the number of cell states are tracked before
 /// it cycles and repeats.
 ///
+/// # Randomization
+///
+/// This effect uses randomness to determine which cells dissolve at different times,
+/// creating an organic scattered appearance. Use [`Effect::with_rng()`] to control
+/// the random pattern for reproducible animations.
+///
 /// # Examples
 ///
 /// Interactive examples:
@@ -1443,6 +1449,13 @@ pub fn parallel(effects: &[Effect]) -> Effect {
 /// use tachyonfx::fx;
 ///
 /// fx::dissolve(1000);
+/// ```
+///
+/// With reproducible randomness:
+/// ```no_run
+/// use tachyonfx::{fx, SimpleRng};
+///
+/// fx::dissolve(1000).with_rng(SimpleRng::new(42));
 /// ```
 pub fn dissolve<T: Into<EffectTimer>>(timer: T) -> Effect {
     Dissolve::new(timer.into()).into_effect()
