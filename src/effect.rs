@@ -102,15 +102,36 @@ impl Effect {
         self.shader.set_color_space(color_space);
     }
 
-    /// Creates a new `Effect` with the specified color space.
+    /// Sets the color space for color interpolation in the effect.
     ///
-    /// # Arguments
-    /// * `color_space` - The color space to use for color interpolation.
+    /// This method controls how colors are blended during transitions, which can
+    /// significantly affect the visual appearance of the animation. Different color
+    /// spaces produce different intermediate colors during transitions.
     ///
-    /// # Returns
-    /// * A new `Effect` instance with the specified color space.
+    /// # Color Spaces
     ///
-    /// # Example
+    /// - [`ColorSpace::Rgb`](crate::ColorSpace::Rgb) - Linear RGB interpolation (fastest,
+    ///   but can produce muddy colors)
+    /// - [`ColorSpace::Hsl`](crate::ColorSpace::Hsl) - HSL interpolation (default, smooth
+    ///   hue transitions)
+    /// - [`ColorSpace::Hsv`](crate::ColorSpace::Hsv) - HSV interpolation (vibrant,
+    ///   perceptually uniform)
+    ///
+    /// # Supported Effects
+    ///
+    /// The following effects support `with_color_space()`:
+    /// - [`fx::fade_to`](crate::fx::fade_to), [`fx::fade_from`](crate::fx::fade_from) -
+    ///   Controls foreground and background color transitions
+    /// - [`fx::fade_to_fg`](crate::fx::fade_to_fg),
+    ///   [`fx::fade_from_fg`](crate::fx::fade_from_fg) - Controls foreground color
+    ///   transitions
+    /// - [`fx::sweep_in`](crate::fx::sweep_in), [`fx::sweep_out`](crate::fx::sweep_out) -
+    ///   Controls color fading during sweep
+    ///
+    /// For effects that don't use color interpolation, this is a no-op.
+    ///
+    /// # Examples
+    ///
     /// ```no_run
     /// use ratatui::style::Color;
     /// use tachyonfx::{ColorSpace, fx, Interpolation};
