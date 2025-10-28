@@ -297,6 +297,7 @@ impl DslFormat for Flex {
             Flex::Center => "Flex::Center",
             Flex::SpaceBetween => "Flex::SpaceBetween",
             Flex::SpaceAround => "Flex::SpaceAround",
+            Flex::SpaceEvenly => "Flex::SpaceEvenly",
         }
         .to_compact_string()
     }
