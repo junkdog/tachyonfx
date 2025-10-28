@@ -109,6 +109,7 @@ fn flex(text: &str) -> Option<Value> {
         "Center" => Flex::Center,
         "SpaceBetween" => Flex::SpaceBetween,
         "SpaceAround" => Flex::SpaceAround,
+        "SpaceEvenly" => Flex::SpaceEvenly,
         _ => None?,
     }))
 }

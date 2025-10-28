@@ -705,7 +705,7 @@ impl DslType for Flex {
     const TYPE_NAME: &'static str = "Flex";
 
     fn constants() -> &'static [&'static str] {
-        &["Legacy", "Start", "End", "Center", "SpaceBetween", "SpaceAround"]
+        &["Legacy", "Start", "End", "Center", "SpaceBetween", "SpaceAround", "SpaceEvenly"]
     }
 
     fn constructors() -> &'static [CallableItem] {
