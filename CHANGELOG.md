@@ -18,6 +18,9 @@
 ### DSL
 - `SimpleRng` constructors (`SimpleRng::new`, `SimpleRng::default`) are now available in DSL expressions.
 
+### Changed
+- Replaced custom math approximations with `micromath` library for no_std builds.
+
 
 ## tachyonfx 0.20.1 - 2025-10-19
 

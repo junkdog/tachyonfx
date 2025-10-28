@@ -636,6 +636,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 
 [[package]]
+name = "micromath"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
+
+[[package]]
 name = "minimal"
 version = "0.1.0"
 dependencies = [
@@ -1052,6 +1058,7 @@ dependencies = [
  "criterion",
  "crossterm 0.29.0",
  "indoc",
+ "micromath",
  "ratatui",
  "regex",
  "thiserror 2.0.17",
