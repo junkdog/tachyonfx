@@ -47,7 +47,7 @@ impl CheckerboardPattern {
     fn is_white_cell(&self, x: u16, y: u16) -> bool {
         let cell_x = x / self.cell_size;
         let cell_y = y / self.cell_size;
-        (cell_x + cell_y).is_multiple_of(2)
+        ((cell_x + cell_y) % 2) == 0
     }
 }
 
