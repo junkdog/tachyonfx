@@ -119,7 +119,7 @@ impl FilterProcessor {
     ///
     /// # Returns
     /// A reference to the underlying [`CellFilter`]
-    pub(crate) fn filter_ref(&self) -> &CellFilter {
+    pub fn filter_ref(&self) -> &CellFilter {
         match self {
             FilterProcessor::Static(processor) => &processor.filter,
             FilterProcessor::Dynamic(filter, _) => filter,
