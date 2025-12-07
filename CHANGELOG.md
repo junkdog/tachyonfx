@@ -21,6 +21,9 @@
 ### Changed
 - Replaced custom math approximations with `micromath` library for no_std builds.
 
+### Fixed
+- `CellIterator` now correctly iterates over buffers larger than 65535 cells. 
+
 
 ## tachyonfx 0.20.1 - 2025-10-19
 

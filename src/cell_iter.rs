@@ -160,8 +160,9 @@ impl<'a> CellIterator<'a> {
     }
 
     fn cell_mut(&mut self) -> Option<(Position, &mut Cell)> {
-        let x = self.current as u16 % self.area.width;
-        let y = self.current as u16 / self.area.width;
+        // calculate x/y using u32 arithmetic to avoid truncation when current > u16::MAX
+        let x = (self.current % self.area.width as u32) as u16;
+        let y = (self.current / self.area.width as u32) as u16;
 
         let pos = Position::new(self.area.x + x, self.area.y + y);
         let cell = self.buf.cell_mut(pos)?;
