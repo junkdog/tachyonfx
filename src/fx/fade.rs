@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use bon::{builder, Builder};
+use bon::Builder;
 use ratatui::{buffer::Buffer, layout::Rect, prelude::Color};
 
 use crate::{

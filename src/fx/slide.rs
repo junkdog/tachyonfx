@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 
-use bon::{builder, Builder};
+use bon::Builder;
 use ratatui::{
     buffer::{Buffer, Cell},
     layout::{Position, Rect},

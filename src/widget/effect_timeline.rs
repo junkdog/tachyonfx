@@ -346,8 +346,8 @@ impl EffectTimeline {
                         }
 
                         // cloning area of original bar
-                        let mut child_row = bar_area;
-                        child_row.y += offset as u16;
+                        let mut _child_row = bar_area;
+                        _child_row.y += offset as u16;
 
                         if bg_bar.width() < row.width as usize {
                             // bg_bar.clone().render(child_row, buf);

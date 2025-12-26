@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use core::{fmt, fmt::Debug};
 
-use bon::{bon, builder, Builder};
+use bon::{bon, Builder};
 #[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
 use ratatui::{buffer::Buffer, layout::Rect};
