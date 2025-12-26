@@ -1,6 +1,12 @@
 # Changelog
 
-## tachyonfx 0.21.0 - 2025-12-97
+## tachyonfx 0.22.0 - 2025-12-25
+
+### Changed
+- Ratatui dependency updated to 0.30.0
+
+
+## tachyonfx 0.21.0 - 2025-12-07
 
 ### Added
 - **DSL Completion Engine**: Context-aware autocompletion for DSL expressions with intelligent matching.
