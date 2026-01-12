@@ -15,7 +15,7 @@ ratatui = { version = "0.30.0", default-features = false }
 compact_str = { version = "0.9.0", default-features = false }
 crossterm = "0.29.0"
 tachyonfx = { path = "." }
-bon = { version = "3.8.1", default-features = false }
+bon = { version = "3.8.2", default-features = false }
 
 [package]
 name = "tachyonfx"
