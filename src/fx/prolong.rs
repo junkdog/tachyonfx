@@ -1,11 +1,8 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use ratatui_core::{buffer::Buffer, layout::Rect};
 
-use crate::{
-    widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, EffectTimer,
-    Interpolation::Linear, Shader,
-};
+use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation::Linear, Shader};
 
 /// Specifies the position where the additional duration should be applied in a `Prolong`
 /// effect.
@@ -101,14 +98,6 @@ impl Shader for Prolong {
 
     fn cell_filter(&self) -> Option<&CellFilter> {
         self.inner.cell_filter()
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        let inner_offset = match self.position {
-            ProlongPosition::Start => offset + self.timer.duration(),
-            ProlongPosition::End => offset,
-        };
-        EffectSpan::new(self, offset, vec![self.inner.as_effect_span(inner_offset)])
     }
 
     fn reset(&mut self) {

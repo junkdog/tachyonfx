@@ -271,6 +271,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
         Err(DslError::EffectExpressionNotSupported { name: self.name() })
     }
 
+    #[deprecated(since = "0.23.0", note = "EffectSpan is being removed")]
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         EffectSpan::new(self, offset, Vec::default())
     }

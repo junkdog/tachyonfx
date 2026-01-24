@@ -402,6 +402,8 @@ impl Effect {
     ///
     /// # Returns
     /// * An `EffectSpan` that can be used in timeline widgets
+    #[deprecated(since = "0.23.0", note = "EffectSpan is being removed")]
+    #[allow(deprecated)]
     pub fn as_effect_span(&self, offset: Duration) -> EffectSpan
     where
         Self: Sized + Clone,

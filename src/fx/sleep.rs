@@ -1,11 +1,8 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 
 use ratatui_core::layout::Rect;
 
-use crate::{
-    default_shader_impl, effect_timer::EffectTimer, shader::Shader, widget::EffectSpan, CellFilter,
-    Duration,
-};
+use crate::{default_shader_impl, effect_timer::EffectTimer, shader::Shader, CellFilter};
 
 #[derive(Clone, Debug)]
 pub(super) struct Sleep {
@@ -30,10 +27,6 @@ impl Shader for Sleep {
     }
     fn set_area(&mut self, _area: Rect) {}
     fn filter(&mut self, _strategy: CellFilter) {}
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, Vec::default())
-    }
 
     fn cell_filter(&self) -> Option<&CellFilter> {
         None

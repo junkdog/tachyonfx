@@ -1,10 +1,10 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 #[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
 use ratatui_core::{buffer::Buffer, layout::Rect};
 
-use crate::{widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, RefCount, Shader};
+use crate::{CellFilter, ColorSpace, Duration, Effect, RefCount, Shader};
 
 #[derive(Clone, Debug)]
 pub(super) struct OffscreenBuffer {
@@ -73,10 +73,6 @@ impl Shader for OffscreenBuffer {
 
     fn cell_filter(&self) -> Option<&CellFilter> {
         self.fx.cell_filter()
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
     #[cfg(feature = "dsl")]

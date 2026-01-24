@@ -3,8 +3,8 @@ use alloc::{boxed::Box, vec::Vec};
 use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
-    effect::Effect, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
-    EffectTimer, Interpolation::Linear,
+    effect::Effect, shader::Shader, CellFilter, ColorSpace, Duration, EffectTimer,
+    Interpolation::Linear,
 };
 
 #[derive(Default, Clone, Debug)]
@@ -101,16 +101,6 @@ impl Shader for ParallelEffect {
         self.effects.iter_mut().for_each(Effect::reset)
     }
 
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        let children = self
-            .effects
-            .iter()
-            .map(|e| e.as_effect_span(offset))
-            .collect();
-
-        EffectSpan::new(self, offset, children)
-    }
-
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         to_dsl(self.name(), &self.effects)
@@ -204,24 +194,6 @@ impl Shader for SequentialEffect {
         self.effects
             .iter_mut()
             .for_each(|e| e.set_color_space(color_space));
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        let mut acc = Duration::ZERO;
-        let children = self
-            .effects
-            .iter()
-            .map(|e| {
-                let span = e.as_effect_span(offset + acc);
-                acc += e
-                    .timer()
-                    .map(|t| t.duration())
-                    .unwrap_or_default();
-                span
-            })
-            .collect();
-
-        EffectSpan::new(self, offset, children)
     }
 
     #[cfg(feature = "dsl")]

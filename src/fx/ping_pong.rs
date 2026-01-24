@@ -1,8 +1,8 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use ratatui_core::{buffer::Buffer, layout::Rect};
 
-use crate::{widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, EffectTimer, Shader};
+use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, Shader};
 
 #[derive(Clone, Debug)]
 pub(super) struct PingPong {
@@ -69,10 +69,6 @@ impl Shader for PingPong {
 
     fn timer(&self) -> Option<EffectTimer> {
         self.fx.timer().as_ref().map(|t| *t * 2)
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
     fn cell_filter(&self) -> Option<&CellFilter> {

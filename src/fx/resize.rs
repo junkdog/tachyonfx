@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::boxed::Box;
 
 #[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
@@ -9,7 +9,7 @@ use ratatui_core::{
 
 use crate::{
     effect::Effect, effect_timer::EffectTimer, interpolation::Interpolatable,
-    rect_ext::CenteredShrink, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
+    rect_ext::CenteredShrink, shader::Shader, CellFilter, ColorSpace, Duration,
 };
 
 #[derive(Clone, Debug)]
@@ -125,13 +125,6 @@ impl Shader for ResizeArea {
 
     fn timer(&self) -> Option<EffectTimer> {
         Some(self.timer)
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        match &self.fx {
-            Some(fx) => EffectSpan::new(self, offset, vec![fx.as_effect_span(offset)]),
-            None => EffectSpan::new(self, offset, Vec::default()),
-        }
     }
 
     fn cell_filter(&self) -> Option<&CellFilter> {
