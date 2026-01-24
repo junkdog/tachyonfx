@@ -39,7 +39,7 @@ use crate::lru_cache::LruCache;
 ///
 /// ```rust
 /// use tachyonfx::{ColorCache, ColorSpace};
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 ///
 /// // Example 1: Target-dependent transformation (fading to specific colors)
 /// let mut fade_cache = ColorCache::<Color, 8>::new();

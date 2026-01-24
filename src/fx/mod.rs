@@ -717,7 +717,7 @@ pub fn repeating(effect: Effect) -> Effect {
 ///                )"></div>
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::{fx, Interpolation, Motion};
 ///
 /// fx::sweep_out(Motion::LeftToRight, 10, 0, Color::Black, (1200, Interpolation::QuadOut));
@@ -780,7 +780,7 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
 /// Interpolation::QuadOut))"> </div>
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::*;
 /// let c = Color::from_u32(0x1d2021);
 /// let timer = (1000, Interpolation::Linear);
@@ -866,7 +866,7 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::*;
 ///
 /// let c = Color::from_u32(0xffaf00);
@@ -919,7 +919,7 @@ pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::{fx, Interpolation, Motion};
 ///
 /// let c = Color::from_u32(0xffaf00);
@@ -1323,7 +1323,7 @@ pub fn resize_area<T: Into<EffectTimer>>(
 /// ```no_run
 /// use std::cell::RefCell;
 /// use std::rc::Rc;
-/// use ratatui_core::prelude::{Buffer, Color, Rect};
+/// use ratatui::prelude::{Buffer, Color, Rect};
 /// use tachyonfx::{fx, ref_count, Duration, Effect, EffectTimer, Interpolation, Shader};
 ///
 /// let duration = Duration::from_millis(16);
@@ -1371,7 +1371,7 @@ pub fn offscreen_buffer(fx: Effect, render_target: RefCount<Buffer>) -> Effect {
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::{Color, Style};
+/// use ratatui::prelude::{Color, Style};
 /// use tachyonfx::{fx, pattern::SweepPattern};
 ///
 /// let style = Style::default()
@@ -1529,7 +1529,7 @@ pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::{Color, Style};
+/// use ratatui::prelude::{Color, Style};
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x1d2021);
@@ -1560,7 +1560,7 @@ pub fn coalesce_from<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x504945);
@@ -1586,7 +1586,7 @@ pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effe
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x504945);
@@ -1615,7 +1615,7 @@ pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Ef
 ///      data-dsl="fx::paint(Color::Cyan, Color::DarkGray, 1000)"></div>
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::fx;
 ///
 /// fx::paint(Color::Cyan, Color::DarkGray, 1000);
@@ -1641,7 +1641,7 @@ pub fn paint<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Ef
 ///      data-dsl="fx::paint_fg(Color::Red, 100)"></div>
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::fx;
 ///
 /// fx::paint_fg(Color::Red, 100);
@@ -1669,7 +1669,7 @@ pub fn paint_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect
 ///      data-dsl="fx::paint_bg(Color::Blue, 100)"></div>
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::fx;
 ///
 /// fx::paint_bg(Color::Blue, 100);
@@ -1693,7 +1693,7 @@ pub fn paint_bg<T: Into<EffectTimer>, C: Into<Color>>(bg: C, timer: T) -> Effect
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x1d2021);
@@ -1718,7 +1718,7 @@ pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> 
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x1d2021);
@@ -1819,7 +1819,7 @@ pub fn delay<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect {
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x504945);
@@ -1857,7 +1857,7 @@ pub fn prolong_start<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effec
 ///
 ///
 /// ```no_run
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let c = Color::from_u32(0x504945);

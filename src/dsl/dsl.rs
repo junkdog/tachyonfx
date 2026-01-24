@@ -39,7 +39,7 @@ use crate::{
 /// The DSL supports binding variable to effects:
 ///
 /// ```
-/// use ratatui_core::prelude::Color;
+/// use ratatui::prelude::Color;
 /// use tachyonfx::dsl::EffectDsl;
 /// use tachyonfx::Motion;
 ///
