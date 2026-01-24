@@ -7,6 +7,7 @@
 
 ### Removed
 - `EffectTimeline` widget.
+- Example: `fx-chart`: removed along with `EffectTimeline`.
 
 ### Deprecated
 - `EffectSpan`: scheduled for removal along with `EffectTimeline`.
