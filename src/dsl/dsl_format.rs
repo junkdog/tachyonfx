@@ -1,5 +1,5 @@
 use compact_str::{format_compact, CompactString, CompactStringExt, ToCompactString};
-use ratatui::{
+use ratatui_core::{
     layout::{Constraint, Direction, Flex, Margin, Offset, Rect},
     style::{Color, Modifier, Style},
 };
@@ -68,7 +68,7 @@ impl DslFormat for Rect {
     }
 }
 
-impl DslFormat for ratatui::layout::Size {
+impl DslFormat for ratatui_core::layout::Size {
     fn dsl_format(&self) -> CompactString {
         format_compact!("Size::new({}, {})", self.width, self.height)
     }
@@ -358,7 +358,7 @@ impl DslFormat for CellFilter {
 
 #[cfg(test)]
 mod tests {
-    use ratatui::style::{Color, Modifier, Style};
+    use ratatui_core::style::{Color, Modifier, Style};
 
     use crate::{dsl::DslFormat, fx::RepeatMode, Duration, EffectTimer, Interpolation, Motion};
 
@@ -696,7 +696,7 @@ mod tests {
 
     #[test]
     fn test_constraint_dsl_format() {
-        use ratatui::layout::Constraint;
+        use ratatui_core::layout::Constraint;
 
         // Test all constraint types
         assert_eq!(
@@ -718,7 +718,7 @@ mod tests {
 
     #[test]
     fn test_direction_dsl_format() {
-        use ratatui::layout::Direction;
+        use ratatui_core::layout::Direction;
 
         assert_eq!(Direction::Horizontal.dsl_format(), "Direction::Horizontal");
         assert_eq!(Direction::Vertical.dsl_format(), "Direction::Vertical");

@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 
 #[cfg(feature = "dsl")]
 use compact_str;
-use ratatui::{buffer::Buffer, layout::Rect, prelude::Style};
+use ratatui_core::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
     default_shader_impl,

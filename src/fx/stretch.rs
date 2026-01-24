@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 
 use bon::Builder;
-use ratatui::{buffer::Buffer, layout::Rect, style::Style};
+use ratatui_core::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
     cell_filter::FilterProcessor, default_shader_impl, math, CellFilter, CellIterator, Duration,
@@ -242,7 +242,7 @@ struct Regions {
 
 #[cfg(test)]
 mod tests {
-    use ratatui::{
+    use ratatui_core::{
         buffer::Buffer,
         layout::Rect,
         style::{Color, Style},

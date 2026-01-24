@@ -5,7 +5,11 @@ use alloc::{
 };
 use core::fmt;
 
-use ratatui::{layout::Rect, prelude::Line, style::Style, text::Span};
+use ratatui_core::{
+    layout::Rect,
+    style::Style,
+    text::{Line, Span},
+};
 
 use crate::{widget::ColorResolver, CellFilter, Duration, Shader};
 

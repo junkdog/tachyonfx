@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 
 use bon::Builder;
-use ratatui::{buffer::Buffer, layout::Rect, prelude::Color};
+use ratatui_core::{buffer::Buffer, layout::Rect, style::Color};
 
 use crate::{
     cell_filter::FilterProcessor,
@@ -97,7 +97,7 @@ impl Shader for FadeColors {
 
 #[cfg(test)]
 mod plain_test {
-    use ratatui::{buffer::Buffer, layout::Rect, style::Color};
+    use ratatui_core::{buffer::Buffer, layout::Rect, style::Color};
 
     use crate::{fx, pattern::SweepPattern, ColorSpace, Duration, ToRgbComponents};
 
@@ -244,7 +244,7 @@ mod plain_test {
 
     #[test]
     fn test_fade_over_buffer_reset_cells() {
-        use ratatui::{buffer::Buffer, layout::Rect, style::Color};
+        use ratatui_core::{buffer::Buffer, layout::Rect, style::Color};
 
         use crate::{fx, Duration};
 
@@ -269,7 +269,7 @@ mod plain_test {
 #[cfg(feature = "dsl")]
 mod dsl_tests {
     use indoc::indoc;
-    use ratatui::style::Color;
+    use ratatui_core::style::Color;
 
     use crate::{effect_timer::EffectTimer, fx, Interpolation::QuadOut};
 

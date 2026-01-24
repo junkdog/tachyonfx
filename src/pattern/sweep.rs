@@ -1,6 +1,6 @@
 #[cfg(feature = "dsl")]
 use compact_str::{format_compact, CompactString};
-use ratatui::layout::{Position, Rect};
+use ratatui_core::layout::{Position, Rect};
 
 #[cfg(feature = "dsl")]
 use crate::dsl::DslFormat;

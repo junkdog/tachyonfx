@@ -2,7 +2,7 @@ use alloc::{boxed::Box, vec};
 
 #[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect, RefCount, Shader};
 

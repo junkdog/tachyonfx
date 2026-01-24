@@ -1,4 +1,4 @@
-use ratatui::layout::Rect;
+use ratatui_core::layout::Rect;
 
 /// A trait that provides a method to calculate a centered, shrunk rectangle
 /// within the bounds of the original rectangle.
@@ -16,7 +16,7 @@ pub trait CenteredShrink {
     ///
     /// # Example
     /// ```
-    /// use ratatui::layout::Rect;
+    /// use ratatui_core::layout::Rect;
     /// use tachyonfx::CenteredShrink;
     ///
     /// let original_rect = Rect::new(0, 0, 100, 100);

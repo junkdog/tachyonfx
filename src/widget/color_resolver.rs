@@ -6,7 +6,7 @@ use alloc::{
 use core::ops::Range;
 
 use bon::builder;
-use ratatui::prelude::Color;
+use ratatui_core::style::Color;
 
 use crate::{color_space::color_from_hsl, widget::EffectSpan, RangeSampler, SimpleRng};
 

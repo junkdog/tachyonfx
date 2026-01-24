@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::ops::{BitAnd, BitOr, Not};
 
-use ratatui::{
+use ratatui_core::{
     buffer::{Buffer, Cell},
     layout::{Position, Rect},
 };

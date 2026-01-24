@@ -6,6 +6,6 @@ publish = false
 
 [dependencies]
 tachyonfx = { workspace = true }
-ratatui = { workspace = true, features = ["crossterm"] }
+ratatui = { workspace = true }
 crossterm = { workspace = true }
 common = { path = "../common" }

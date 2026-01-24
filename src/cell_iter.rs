@@ -1,6 +1,6 @@
 use core::mem;
 
-use ratatui::{
+use ratatui_core::{
     buffer::{Buffer, Cell},
     layout::{Position, Rect},
 };
@@ -30,7 +30,7 @@ use crate::{
 ///
 /// ### Preferred: Using `for_each_cell` (fastest)
 /// ```rust
-/// use ratatui::{buffer::Buffer, layout::Rect};
+/// use ratatui_core::{buffer::Buffer, layout::Rect};
 /// use tachyonfx::CellIterator;
 ///
 /// let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 5));
@@ -44,7 +44,7 @@ use crate::{
 ///
 /// ### Using iterator when combinators are needed
 /// ```rust
-/// use ratatui::{buffer::Buffer, layout::{Position, Rect}};
+/// use ratatui_core::{buffer::Buffer, layout::{Position, Rect}};
 /// use tachyonfx::CellIterator;
 ///
 /// let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 5));
@@ -79,7 +79,7 @@ impl<'a> CellIterator<'a> {
     /// # Examples
     ///
     /// ```rust
-    /// use ratatui::{buffer::Buffer, layout::Rect};
+    /// use ratatui_core::{buffer::Buffer, layout::Rect};
     /// use tachyonfx::CellIterator;
     ///
     /// let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 5));
@@ -124,7 +124,7 @@ impl<'a> CellIterator<'a> {
     /// # Examples
     ///
     /// ```rust
-    /// use ratatui::{buffer::Buffer, layout::Rect, style::Color};
+    /// use ratatui_core::{buffer::Buffer, layout::Rect, style::Color};
     /// use tachyonfx::CellIterator;
     ///
     /// let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 5));
@@ -199,7 +199,7 @@ mod tests {
     #[cfg(not(feature = "std"))]
     use alloc::{vec, vec::Vec};
 
-    use ratatui::{buffer::Buffer, layout::Rect, style::Color};
+    use ratatui_core::{buffer::Buffer, layout::Rect, style::Color};
 
     use super::*;
 

@@ -1,6 +1,9 @@
 use alloc::boxed::Box;
 
-use ratatui::{buffer::Buffer, layout::Offset, prelude::Rect};
+use ratatui_core::{
+    buffer::Buffer,
+    layout::{Offset, Rect},
+};
 
 use crate::{
     bounding_box::BoundingBox, effect::Effect, effect_timer::EffectTimer,

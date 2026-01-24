@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::fmt::Debug;
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
     cell_filter::FilterProcessor, cell_iter::CellIterator, pattern::AnyPattern, widget::EffectSpan,
@@ -39,8 +39,8 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// # Example
     /// ```no_compile
     /// use tachyonfx::Duration;
-    /// use ratatui::buffer::Buffer;
-    /// use ratatui::layout::Rect;
+    /// use ratatui_core::buffer::Buffer;
+    /// use ratatui_core::layout::Rect;
     ///
     /// let mut shader = MyShader::new();
     /// let area = Rect::new(0, 0, 10, 10);
@@ -126,7 +126,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///
     /// # Example
     /// ```no_compile
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     /// use tachyonfx::{CellFilter, fx, Interpolation};
     ///
     /// let mut shader = MyShader::new();

@@ -39,7 +39,7 @@ use crate::{
 /// The DSL supports binding variable to effects:
 ///
 /// ```
-/// use ratatui::prelude::Color;
+/// use ratatui_core::prelude::Color;
 /// use tachyonfx::dsl::EffectDsl;
 /// use tachyonfx::Motion;
 ///
@@ -139,7 +139,7 @@ impl EffectDsl {
     ///
     /// ```
     /// use tachyonfx::dsl::EffectDsl;
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     ///
     /// let dsl = EffectDsl::new();
     /// let compiler = dsl.compiler()
@@ -615,7 +615,7 @@ mod tests {
     use std::collections::VecDeque;
 
     use compact_str::ToCompactString;
-    use ratatui::{
+    use ratatui_core::{
         layout::{Constraint::Percentage, Flex, Layout, Margin, Rect},
         style::{Color, Modifier, Style},
     };
@@ -666,7 +666,7 @@ mod tests {
     #[test]
     #[allow(deprecated)]
     fn test_compiler_dsl_roundtrips() {
-        use ratatui::layout::Offset;
+        use ratatui_core::layout::Offset;
         let color = Color::from_u32(0);
 
         [
@@ -1311,7 +1311,7 @@ mod tests {
 
     #[test]
     fn test_translate_effect() {
-        use ratatui::layout::Offset;
+        use ratatui_core::layout::Offset;
         let expected = fx::translate(
             fx::dissolve((500, Linear)),
             Offset { x: 10, y: -5 },

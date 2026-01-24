@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec};
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
     effect::Effect, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
@@ -106,8 +106,9 @@ mod tests {
     #[test]
     fn test_run_once_execution() {
         let mut effect = fx::run_once(fx::consume_tick());
-        let mut buf = ratatui::buffer::Buffer::empty(ratatui::layout::Rect::new(0, 0, 10, 10));
-        let area = ratatui::layout::Rect::new(0, 0, 10, 10);
+        let mut buf =
+            ratatui_core::buffer::Buffer::empty(ratatui_core::layout::Rect::new(0, 0, 10, 10));
+        let area = ratatui_core::layout::Rect::new(0, 0, 10, 10);
 
         // Should not be done initially
         assert!(!effect.done());
@@ -124,8 +125,9 @@ mod tests {
     #[test]
     fn test_run_once_reset() {
         let mut effect = fx::run_once(fx::consume_tick());
-        let mut buf = ratatui::buffer::Buffer::empty(ratatui::layout::Rect::new(0, 0, 10, 10));
-        let area = ratatui::layout::Rect::new(0, 0, 10, 10);
+        let mut buf =
+            ratatui_core::buffer::Buffer::empty(ratatui_core::layout::Rect::new(0, 0, 10, 10));
+        let area = ratatui_core::layout::Rect::new(0, 0, 10, 10);
 
         // Run once
         effect.process(crate::Duration::from_millis(16), &mut buf, area);

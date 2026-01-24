@@ -1,4 +1,4 @@
-use ratatui::layout::Rect;
+use ratatui_core::layout::Rect;
 
 use crate::math;
 

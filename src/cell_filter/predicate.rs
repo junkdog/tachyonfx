@@ -1,4 +1,4 @@
-use ratatui::{
+use ratatui_core::{
     buffer::Cell,
     layout::{Position, Rect},
 };

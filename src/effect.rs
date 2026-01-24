@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use core::fmt::Debug;
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
     pattern::AnyPattern, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
@@ -43,7 +43,7 @@ impl Effect {
     /// # Example
     /// ```
     /// use tachyonfx::{Effect, EffectTimer, fx, Interpolation};
-    /// use ratatui::layout::Rect;
+    /// use ratatui_core::layout::Rect;
     ///
     /// fx::dissolve(EffectTimer::from_ms(120, Interpolation::CircInOut))
     ///     .with_area(Rect::new(0, 0, 10, 10));
@@ -67,7 +67,7 @@ impl Effect {
     ///
     /// # Example
     /// ```
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     /// use tachyonfx::{Effect, CellFilter, fx, Interpolation};
     /// use tachyonfx::color_from_hsl;
     ///
@@ -133,7 +133,7 @@ impl Effect {
     /// # Examples
     ///
     /// ```no_run
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     /// use tachyonfx::{ColorSpace, fx, Interpolation};
     ///
     /// let effect = fx::fade_to_fg(Color::Red, (300, Interpolation::SineIn))
@@ -225,8 +225,8 @@ impl Effect {
     ///
     /// # Example
     /// ```no_run
-    /// use ratatui::buffer::Buffer;
-    /// use ratatui::layout::Rect;
+    /// use ratatui_core::buffer::Buffer;
+    /// use ratatui_core::layout::Rect;
     /// use tachyonfx::{Effect, fx, Interpolation, Duration};
     ///
     /// let mut effect = fx::dissolve((100, Interpolation::Linear));

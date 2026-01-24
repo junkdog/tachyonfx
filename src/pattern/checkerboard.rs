@@ -1,6 +1,6 @@
 #[cfg(feature = "dsl")]
 use compact_str::{format_compact, CompactString, ToCompactString};
-use ratatui::layout::{Position, Rect};
+use ratatui_core::layout::{Position, Rect};
 
 #[cfg(feature = "dsl")]
 use crate::dsl::DslFormat;
@@ -109,7 +109,7 @@ impl DslFormat for CheckerboardPattern {
 mod tests {
     use alloc::vec::Vec;
 
-    use ratatui::layout::{Position, Rect};
+    use ratatui_core::layout::{Position, Rect};
 
     use super::*;
 

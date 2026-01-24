@@ -1,4 +1,4 @@
-use ratatui::style::Color;
+use ratatui_core::style::Color;
 
 use crate::{color_ext::ToRgbComponents, math};
 

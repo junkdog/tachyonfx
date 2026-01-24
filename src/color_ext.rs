@@ -1,4 +1,4 @@
-use ratatui::style::Color;
+use ratatui_core::style::Color;
 
 pub trait ToRgbComponents {
     fn to_rgb(&self) -> (u8, u8, u8);

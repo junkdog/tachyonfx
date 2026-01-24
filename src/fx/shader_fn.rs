@@ -4,7 +4,7 @@ use core::{fmt, fmt::Debug};
 use bon::{bon, Builder};
 #[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
     cell_filter::FilterProcessor, default_shader_impl, fx::invoke_fn, ref_count, CellFilter,
@@ -204,7 +204,7 @@ mod tests {
         string::{String, ToString},
     };
 
-    use ratatui::{buffer::Buffer, layout::Rect};
+    use ratatui_core::{buffer::Buffer, layout::Rect};
 
     use super::*;
     use crate::{EffectTimer, Interpolation::Linear};

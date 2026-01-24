@@ -5,7 +5,7 @@ use alloc::{
 };
 use core::cell::RefCell;
 
-use ratatui::{
+use ratatui_core::{
     buffer::Buffer,
     layout::{Offset, Position, Positions, Rect},
     style::{Color, Modifier, Style},
@@ -376,7 +376,7 @@ impl ClipRegion {
 
 #[cfg(test)]
 mod tests {
-    use ratatui::buffer::Buffer;
+    use ratatui_core::buffer::Buffer;
 
     use super::*;
     use crate::ref_count;

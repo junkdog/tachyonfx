@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
     effect::Effect, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
@@ -249,7 +249,7 @@ fn to_dsl(
 mod tests {
     use alloc::vec;
 
-    use ratatui::{layout::Margin, style::Color};
+    use ratatui_core::{layout::Margin, style::Color};
 
     use super::*;
     use crate::{fx::fade_to_fg, ShaderExt};

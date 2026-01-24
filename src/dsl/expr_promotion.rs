@@ -1,7 +1,6 @@
-use ratatui::{
+use ratatui_core::{
     layout::{Direction, Flex},
-    prelude::Modifier,
-    style::Color,
+    style::{Color, Modifier},
 };
 
 use crate::{

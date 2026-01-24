@@ -1,4 +1,4 @@
-use ratatui::layout::{Position, Rect};
+use ratatui_core::layout::{Position, Rect};
 
 use crate::{
     fx::sliding_window_alpha::SlidingWindowAlpha,

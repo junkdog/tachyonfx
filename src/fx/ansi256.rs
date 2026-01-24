@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use ratatui::{
+use ratatui_core::{
     buffer::Buffer,
     layout::{Position, Rect},
 };

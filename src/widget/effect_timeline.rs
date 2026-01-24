@@ -9,12 +9,12 @@ use core::ops::Range;
 use std::{fs::File, io::Write};
 
 use bon::bon;
-use ratatui::{
+use ratatui_core::{
     buffer::Buffer,
     layout::{Constraint, Layout, Position, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Widget},
+    widgets::Widget,
 };
 
 use crate::{
@@ -476,9 +476,9 @@ impl Widget for EffectTimeline {
         self.render_areas_column(areas, layout.areas, buf);
 
         // chart
-        Block::new()
-            .style(self.chart_style)
-            .render(layout.chart, buf);
+        // Block::new()
+        //     .style(self.chart_style)
+        //     .render(layout.chart, buf);
 
         self.render_chart(layout.chart, buf);
         self.render_timeline_intervals(&self.span, layout.time_intervals(), buf);
@@ -549,7 +549,7 @@ fn span_as_bar_line(span: &EffectSpan, scale_time_to_cell: f32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use ratatui::style::Color::Black;
+    use ratatui_core::style::Color::Black;
 
     use super::*;
     use crate::{
@@ -563,7 +563,7 @@ mod tests {
     #[cfg(feature = "std")]
     fn example_complex_fx() -> Effect {
         use fx::*;
-        use ratatui::layout::Margin;
+        use ratatui_core::layout::Margin;
         use CellFilter::*;
 
         use crate::Interpolation::*;

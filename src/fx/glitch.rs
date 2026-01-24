@@ -4,7 +4,7 @@ use core::{fmt::Debug, ops::Range};
 use bon::Builder;
 #[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
-use ratatui::{
+use ratatui_core::{
     buffer::Buffer,
     layout::{Position, Rect},
 };
