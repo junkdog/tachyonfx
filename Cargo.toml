@@ -23,8 +23,8 @@ version = "0.22.0"
 edition = "2021"
 license = "MIT"
 description = "A ratatui library for creating shader-like effects in TUIs."
-repository = "https://github.com/junkdog/tachyonfx"
-homepage = "https://github.com/junkdog/tachyonfx"
+repository = "https://github.com/ratatui/tachyonfx"
+homepage = "https://github.com/ratatui/tachyonfx"
 documentation = "https://docs.rs/tachyonfx"
 readme = "README.md"
 keywords = ["ratatui", "terminal", "effects", "UI", "TUI"]
@@ -60,8 +60,6 @@ std-duration = ["std"]
 wasm = ["dep:web-time"]
 web-time = ["wasm"]  # deprecated: use `wasm` instead
 
-
-
 # DISABLED: color_interpolation benchmark has compilation issues due to ratatui version conflict
 # ansi-to-tui depends on ratatui 0.29.0 while main project uses ratatui 0.30.0-alpha.5
 # [[bench]]
@@ -95,6 +93,4 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(not_disabled_due_to_versio
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--html-in-header", "docs-assets/doc-header.html"]
-# Ensure WASM files are available during docs.rs build
-# (files are committed to repo in docs-assets/)
 

@@ -105,7 +105,7 @@ _The [documentation][tfx-fx-docs] for most effects now contain links to interact
 - `fx::translate` effect now available in DSL expressions with full roundtrip support.
 - [Documentation][dsl-docs] revised for conciseness and to reflect current DSL capabilities and limitations.
 
-  [dsl-docs]: https://github.com/junkdog/tachyonfx/blob/development/docs/dsl.md
+  [dsl-docs]: https://github.com/ratatui/tachyonfx/blob/development/docs/dsl.md
 
 ### Changed
 - `FilterProcessor::validator()`: Changed visibility from `pub(crate)` to `pub`.

@@ -2,9 +2,9 @@
 
 [![Crates.io](https://img.shields.io/crates/v/tachyonfx.svg)](https://crates.io/crates/tachyonfx)
 [![Documentation](https://docs.rs/tachyonfx/badge.svg)](https://docs.rs/tachyonfx)
-[![License](https://img.shields.io/crates/l/tachyonfx.svg)](https://github.com/junkdog/tachyonfx/blob/main/LICENSE)
+[![License](https://img.shields.io/crates/l/tachyonfx.svg)](https://github.com/ratatui/tachyonfx/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/crates/d/tachyonfx.svg)](https://crates.io/crates/tachyonfx)
-[![Deps.rs](https://deps.rs/repo/github/junkdog/tachyonfx/status.svg)](https://deps.rs/repo/github/junkdog/tachyonfx)
+[![Deps.rs](https://deps.rs/repo/github/ratatui/tachyonfx/status.svg)](https://deps.rs/repo/github/ratatui/tachyonfx)
 
 An effects and animation library for [Ratatui][ratatui] applications. Build complex animations by composing and
 layering simple effects, bringing smooth transitions and visual polish to the terminal.
@@ -104,12 +104,12 @@ cargo run -p tweens
 
 ### Try it in your browser
 
-![TachyonFX FTL](https://raw.githubusercontent.com/junkdog/tachyonfx/development/images/tfx-ftl.png)
+![TachyonFX FTL](https://raw.githubusercontent.com/ratatui/tachyonfx/development/images/tfx-ftl.png)
 
 [TachyonFX FTL][tfx-ftl] is a browser-based editor for creating and tweaking effects in real-time, using
 the [Effect DSL][dsl-md] (don't worry, it mimics rust syntax).
 
- [dsl-md]: https://github.com/junkdog/tachyonfx/blob/development/docs/dsl.md
+ [dsl-md]: https://github.com/ratatui/tachyonfx/blob/development/docs/dsl.md
 
 ### Basic Concepts
 

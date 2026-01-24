@@ -92,8 +92,8 @@
 //! |---------------------|---------|----------|
 //! | [`dispatch_event()`]    | Dispatches events when effects start | N/A |
 //! | [`dynamic_area()`]      | Wraps effects for responsive layouts | N/A |
-//! | [`effect_fn()`]         | Custom effects with cell iterator | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn.gif) |
-//! | [`effect_fn_buf()`]     | Custom effects with buffer        | ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn_buf.gif) |
+//! | [`effect_fn()`]         | Custom effects with cell iterator | ![animation](https://raw.githubusercontent.com/ratatui/tachyonfx/development/docs/assets/effect_fn.gif) |
+//! | [`effect_fn_buf()`]     | Custom effects with buffer        | ![animation](https://raw.githubusercontent.com/ratatui/tachyonfx/development/docs/assets/effect_fn_buf.gif) |
 //! | [`offscreen_buffer()`]  | Renders to separate buffer        | N/A |
 //!
 //! ## Interpolation & Timing
@@ -304,7 +304,7 @@ pub(crate) mod unique;
 ///
 /// Example from `examples/effect-showcase.rs`
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn.gif)
+/// ![animation](https://raw.githubusercontent.com/ratatui/tachyonfx/development/docs/assets/effect_fn.gif)
 ///
 /// ```no_run
 /// use std::time::Instant;
@@ -368,7 +368,7 @@ where
 ///
 /// Example from `examples/effect-showcase.rs`
 ///
-/// ![animation](https://raw.githubusercontent.com/junkdog/tachyonfx/development/docs/assets/effect_fn_buf.gif)
+/// ![animation](https://raw.githubusercontent.com/ratatui/tachyonfx/development/docs/assets/effect_fn_buf.gif)
 ///
 /// ```no_run
 /// use ratatui::style::Color;
