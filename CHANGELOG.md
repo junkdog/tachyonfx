@@ -5,6 +5,13 @@
 ### Changed
 - Replaced `ratatui` dependency with `ratatui-core`.
 
+### Removed
+- `EffectTimeline` widget.
+
+### Deprecated
+- `EffectSpan`: scheduled for removal along with `EffectTimeline`.
+- `Shader::as_effect_span()` and `Effect::as_effect_span()`: deprecated as part of `EffectSpan` removal.
+
 
 ## tachyonfx 0.22.0 - 2025-12-25
 
