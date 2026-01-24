@@ -1,5 +1,11 @@
 # Changelog
 
+## tachyonfx 0.23.0 - unreleased
+
+### Changed
+- Replaced `ratatui` dependency with `ratatui-core`.
+
+
 ## tachyonfx 0.22.0 - 2025-12-25
 
 ### Changed
