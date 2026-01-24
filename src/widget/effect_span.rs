@@ -1,88 +1,21 @@
 use alloc::{
     string::{String, ToString},
-    vec,
     vec::Vec,
 };
 use core::fmt;
 
-use ratatui_core::{
-    layout::Rect,
-    style::Style,
-    text::{Line, Span},
-};
+use ratatui_core::layout::Rect;
 
-use crate::{widget::ColorResolver, CellFilter, Duration, Shader};
-
-pub(crate) fn effect_span_tree<'a>(colorizer: &ColorResolver, span: &EffectSpan) -> Vec<Line<'a>> {
-    build_effect_span_tree(colorizer, span, Vec::new(), 0, span.is_leaf)
-}
-
-fn build_effect_span_tree<'a>(
-    colorizer: &ColorResolver,
-    span: &EffectSpan,
-    indent_spans: Vec<Style>,
-    indent: u128,
-    is_last: bool,
-) -> Vec<Line<'a>> {
-    let mut result = Vec::new();
-    let mut indent_styles: Vec<Style> = indent_spans;
-    indent_styles.push(Style::default().fg(colorizer.color_of(&span.label)));
-
-    let depth = indent_styles.len();
-    let mut spans = Vec::new();
-
-    // tree structure
-    spans.extend((0..depth).skip(1).map(|i| {
-        let indent = if i == depth - 1 {
-            if is_last {
-                "└ "
-            } else {
-                "├ "
-            }
-        } else if indent & (1 << i) != 0 {
-            "│ "
-        } else {
-            "  "
-        };
-        Span::styled(indent, indent_styles[i - 1])
-    }));
-
-    // label
-    spans.push(Span::styled(span.label.clone(), indent_styles[depth - 1]));
-    result.push(Line::from(spans));
-
-    let child_count = span.children.len();
-
-    for (index, child) in span.children.iter().enumerate() {
-        let new_indent = if index != child_count - 1 { indent | (1 << depth) } else { indent };
-        let is_last = index == child_count - 1;
-        result.extend(build_effect_span_tree(
-            colorizer,
-            child,
-            indent_styles.clone(),
-            new_indent,
-            is_last,
-        ));
-    }
-
-    result
-}
+use crate::{CellFilter, Duration, Shader};
 
 /// Represents a span of time for an effect in the effect hierarchy.
 ///
-/// `EffectSpan` is used to describe the structure and timing of effects within a
-/// tachyonfx effect chain. It contains information about the effect's label, duration,
-/// cell filter, and any child effects. This struct is primarily used for visualization
-/// and analysis purposes, such as in the `EffectTimeline` widget.
+/// # Deprecation
 ///
-/// # Notes
-///
-/// - The `EffectSpan` structure is typically created automatically when calling
-///   `as_effect_span()` on an `Effect` or `Shader` implementation.
-/// - For composite effects (like parallel or sequential effects), the `children` field
-///   will contain `EffectSpan`s for each child effect.
-/// - The `start` and `end` times are relative to the parent effect's start time.
+/// This type was used by the now-removed `EffectTimeline` widget and no longer
+/// serves any purpose. It is deprecated and scheduled for removal in a future release.
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct EffectSpan {
     pub(crate) label: String,
     pub(crate) cell_filter: CellFilter,
@@ -135,40 +68,10 @@ impl EffectSpan {
         span.is_leaf = true;
         span
     }
-
-    pub(crate) fn iter(&self) -> EffectSpanIterator<'_> {
-        EffectSpanIterator::new(self)
-    }
 }
 
 impl fmt::Display for EffectSpan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.label)
-    }
-}
-
-pub struct EffectSpanIterator<'a> {
-    stack: Vec<&'a EffectSpan>,
-}
-
-impl<'a> EffectSpanIterator<'a> {
-    pub fn new(root: &'a EffectSpan) -> Self {
-        EffectSpanIterator { stack: vec![root] }
-    }
-}
-
-impl<'a> Iterator for EffectSpanIterator<'a> {
-    type Item = &'a EffectSpan;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(node) = self.stack.pop() {
-            if !node.children.is_empty() {
-                let child_nodes: Vec<&'a EffectSpan> = node.children.iter().rev().collect();
-                self.stack.extend(child_nodes);
-            }
-            Some(node)
-        } else {
-            None
-        }
     }
 }

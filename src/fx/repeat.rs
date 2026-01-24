@@ -1,11 +1,8 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use ratatui_core::{buffer::Buffer, layout::Rect};
 
-use crate::{
-    effect::Effect, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
-    EffectTimer,
-};
+use crate::{effect::Effect, shader::Shader, CellFilter, ColorSpace, Duration, EffectTimer};
 
 #[derive(Clone, Debug)]
 pub(super) struct Repeat {
@@ -122,10 +119,6 @@ impl Shader for Repeat {
             RepeatMode::Times(n) => self.fx.timer().map(|t| t * n),
             RepeatMode::Duration(d) => Some(EffectTimer::from(d)),
         }
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
     fn cell_filter(&self) -> Option<&CellFilter> {

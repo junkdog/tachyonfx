@@ -84,9 +84,6 @@ Explore the examples to see effects in action:
 # Basic effects showcase
 cargo run -p basic-effects
 
-# Effect timeline visualization
-cargo run -p fx-chart
-
 # Minimal setup example
 cargo run -p minimal
 

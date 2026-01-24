@@ -1,11 +1,8 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use ratatui_core::{buffer::Buffer, layout::Rect};
 
-use crate::{
-    effect::Effect, shader::Shader, widget::EffectSpan, CellFilter, ColorSpace, Duration,
-    EffectTimer,
-};
+use crate::{effect::Effect, shader::Shader, CellFilter, ColorSpace, Duration, EffectTimer};
 
 #[derive(Clone, Debug)]
 pub(super) struct NeverComplete {
@@ -59,10 +56,6 @@ impl Shader for NeverComplete {
 
     fn reset(&mut self) {
         self.effect.reset();
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)])
     }
 
     fn color_space(&self) -> ColorSpace {

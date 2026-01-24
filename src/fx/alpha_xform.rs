@@ -1,12 +1,12 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 use core::ops::Range;
 
 use ratatui_core::{buffer::Buffer, layout::Rect};
 use Interpolation::Linear;
 
 use crate::{
-    default_shader_impl, math, widget::EffectSpan, CellFilter, ColorSpace, Duration, Effect,
-    EffectTimer, Interpolation, Shader,
+    default_shader_impl, math, CellFilter, ColorSpace, Duration, Effect, EffectTimer,
+    Interpolation, Shader,
 };
 
 #[derive(Debug, Clone)]
@@ -106,10 +106,6 @@ impl Shader for FreezeAt {
         ))
     }
 
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
-    }
-
     fn reset(&mut self) {
         self.fx.reset();
     }
@@ -204,10 +200,6 @@ impl Shader for RemapAlpha {
             self.raw_alpha_range.end,
             self.fx.to_dsl()?
         ))
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, vec![self.fx.as_effect_span(offset)])
     }
 
     fn reset(&mut self) {

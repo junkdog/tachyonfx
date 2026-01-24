@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use ratatui_core::{buffer::Buffer, layout::Rect};
 
@@ -7,7 +7,6 @@ use crate::{
     effect_timer::EffectTimer,
     interpolation::Interpolation::Linear,
     shader::Shader,
-    widget::EffectSpan,
     CellFilter, ColorSpace, Duration,
 };
 
@@ -61,10 +60,6 @@ impl Shader for TemporaryEffect {
 
     fn timer(&self) -> Option<EffectTimer> {
         Some(self.timer)
-    }
-
-    fn as_effect_span(&self, offset: Duration) -> EffectSpan {
-        EffectSpan::new(self, offset, vec![self.effect.as_effect_span(offset)])
     }
 
     fn cell_filter(&self) -> Option<&CellFilter> {

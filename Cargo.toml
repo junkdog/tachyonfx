@@ -6,7 +6,6 @@ members = [
     "examples/basic-effects",
     "examples/effect-showcase",
     "examples/tweens",
-    "examples/fx-chart",
     "examples/effect-registry",
 ]
 

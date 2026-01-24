@@ -165,9 +165,8 @@ pub trait Shader: ThreadSafetyMarker + Debug {
 
     /// Returns the timer associated with this shader effect.
     ///
-    /// This method is primarily used for visualization purposes, such as in the
-    /// `EffectTimeline` widget. It provides information about the duration and timing
-    /// of the effect.
+    /// This method provides information about the duration and timing of the effect,
+    /// useful for effect composition and synchronization.
     ///
     /// # Returns
     /// An `Option<EffectTimer>`:
@@ -271,6 +270,14 @@ pub trait Shader: ThreadSafetyMarker + Debug {
         Err(DslError::EffectExpressionNotSupported { name: self.name() })
     }
 
+    /// Creates an `EffectSpan` representation of this shader.
+    ///
+    /// # Deprecation
+    ///
+    /// This method was used by the now-removed `EffectTimeline` widget and no longer
+    /// serves any purpose. It is deprecated and scheduled for removal in a future
+    /// release.
+    #[deprecated(since = "0.23.0", note = "EffectSpan is being removed")]
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         EffectSpan::new(self, offset, Vec::default())
     }
