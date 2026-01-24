@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use ratatui::{layout::Flex, prelude::*};
+use ratatui_core::{
+    layout::{Constraint, Direction, Flex, Layout, Margin, Rect, Size},
+    style::{Color, Modifier, Style},
+};
 
 use super::types::CallableItem;
 use crate::{

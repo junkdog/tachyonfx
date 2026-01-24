@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec};
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
     effect::{Effect, IntoEffect},

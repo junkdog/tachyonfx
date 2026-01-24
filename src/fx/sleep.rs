@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 
-use ratatui::layout::Rect;
+use ratatui_core::layout::Rect;
 
 use crate::{
     default_shader_impl, effect_timer::EffectTimer, shader::Shader, widget::EffectSpan, CellFilter,

@@ -1,6 +1,6 @@
 use core::fmt::Debug;
 
-use ratatui::prelude::Color;
+use ratatui_core::style::Color;
 
 use crate::lru_cache::LruCache;
 

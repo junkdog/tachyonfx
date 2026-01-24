@@ -1,4 +1,4 @@
-use ratatui::style::Color;
+use ratatui_core::style::Color;
 
 /// A utility struct for mapping and transforming colors based on
 /// a given alpha value. The `ColorMapper` caches the original color
@@ -27,7 +27,7 @@ impl ColorMapper {
     ///
     /// # Example
     /// ```
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     /// use tachyonfx::{ColorMapper, Interpolatable};
     ///
     /// let start = Color::Green;

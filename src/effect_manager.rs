@@ -1,7 +1,7 @@
 use alloc::{collections::BTreeMap, vec::Vec};
 use core::fmt::Debug;
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
     features::acquire_mut,
@@ -144,7 +144,7 @@ mod tests {
     };
     use core::fmt::Debug;
 
-    use ratatui::{buffer::Buffer, layout::Rect};
+    use ratatui_core::{buffer::Buffer, layout::Rect};
 
     use super::*;
     use crate::{CellFilter, Shader};

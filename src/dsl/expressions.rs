@@ -1,9 +1,9 @@
 use core::fmt;
 
 use compact_str::{format_compact, CompactString, ToCompactString};
-use ratatui::{
+use ratatui_core::{
     layout::{Direction, Flex},
-    prelude::{Color, Modifier},
+    style::{Color, Modifier},
 };
 
 use crate::{dsl::DslFormat, fx::RepeatMode, CellFilter, ColorSpace, Interpolation, Motion};

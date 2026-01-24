@@ -121,7 +121,7 @@
 //!
 //! ```rust
 //! use tachyonfx::{fx, EffectTimer, Interpolation, Duration};
-//! use ratatui::style::Color;
+//! use ratatui_core::style::Color;
 //!
 //! fx::fade_to_fg(Color::Red, 1000);  // 1 second, linear (shorthand)
 //! fx::fade_to_fg(Color::Red, (1000, Interpolation::BounceOut));  // 1 second, bouncy
@@ -159,7 +159,7 @@
 //! Basic filtering example:
 //! ```rust
 //! use tachyonfx::{fx, CellFilter};
-//! use ratatui::style::Color;
+//! use ratatui_core::style::Color;
 //!
 //! // Apply fade effect only to text cells (non-whitespace)
 //! fx::fade_to_fg(Color::Yellow, 1000)
@@ -169,7 +169,7 @@
 //! Complex filtering with logical operators:
 //! ```rust
 //! use tachyonfx::{fx, CellFilter, EffectTimer, Interpolation};
-//! use ratatui::{style::Color, layout::Margin};
+//! use ratatui_core::{style::Color, layout::Margin};
 //!
 //! let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
 //! // Apply effect to inner area, excluding borders and black text
@@ -189,7 +189,7 @@ pub use expand::ExpandDirection;
 pub use glitch::Glitch;
 use ping_pong::PingPong;
 use prolong::{Prolong, ProlongPosition};
-use ratatui::{
+use ratatui_core::{
     buffer::{Buffer, Cell},
     layout::{Offset, Size},
     style::{Color, Style},
@@ -280,7 +280,7 @@ pub(crate) mod unique;
 /// # Examples
 ///
 /// ```no_run
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 /// use tachyonfx::*;
 ///
 /// let timer = EffectTimer::from_ms(1000, Interpolation::CubicInOut);
@@ -308,7 +308,7 @@ pub(crate) mod unique;
 ///
 /// ```no_run
 /// use std::time::Instant;
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 /// use tachyonfx::{color_from_hsl, fx};
 ///
 /// fx::effect_fn(Instant::now(), 1000, |state, _ctx, cell_iter| {
@@ -371,7 +371,7 @@ where
 /// ![animation](https://raw.githubusercontent.com/ratatui/tachyonfx/development/docs/assets/effect_fn_buf.gif)
 ///
 /// ```no_run
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 /// use tachyonfx::*;
 ///
 /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
@@ -523,8 +523,8 @@ pub fn term256_colors() -> Effect {
 ///
 /// ```no_run
 /// use tachyonfx::{fx, Interpolation::Linear};
-/// use ratatui::layout::Rect;
-/// use ratatui::style::Color;
+/// use ratatui_core::layout::Rect;
+/// use ratatui_core::style::Color;
 ///
 /// let timer = (1000, Linear);
 ///
@@ -604,7 +604,7 @@ pub fn freeze_at(alpha: f32, set_raw_alpha: bool, effect: Effect) -> Effect {
 ///
 /// ```no_run
 /// use tachyonfx::{fx, ColorSpace};
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 ///
 /// let fade_effect = fx::fade_to_fg(Color::Cyan, 3000)
 ///     .with_color_space(ColorSpace::Rgb);
@@ -637,7 +637,7 @@ pub fn remap_alpha(alpha_start: f32, alpha_end: f32, effect: Effect) -> Effect {
 ///
 /// ```no_run
 /// use tachyonfx::{fx, fx::RepeatMode, Duration, EffectTimer, Interpolation};
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 ///
 /// // Repeat a fade effect 3 times
 /// let fade = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::CubicOut));
@@ -693,7 +693,7 @@ pub fn ping_pong(effect: Effect) -> Effect {
 ///                fx::repeating(fade)"></div>
 ///
 /// ```no_run
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));
@@ -792,7 +792,7 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
 /// Basic usage:
 /// ```
 /// use tachyonfx::{fx, EffectTimer, Interpolation, Motion};
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 ///
 /// let sweep_effect = fx::sweep_in(
 ///     Motion::LeftToRight,
@@ -806,7 +806,7 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
 /// With randomness:
 /// ```
 /// use tachyonfx::{fx, EffectTimer, Interpolation, Motion};
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 ///
 /// let sweep_effect = fx::sweep_in(
 ///     Motion::UpToDown,
@@ -980,7 +980,7 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
 ///                )"></div>
 ///
 /// ```no_run
-/// use ratatui::style::{Color, Style};
+/// use ratatui_core::style::{Color, Style};
 /// use tachyonfx::{fx, Interpolation, Motion};
 ///
 /// fx::stretch(
@@ -1154,7 +1154,7 @@ where
 ///                )"></div>
 ///
 /// ```no_run
-/// use ratatui::style::{Color, Style};
+/// use ratatui_core::style::{Color, Style};
 /// use tachyonfx::{fx, fx::ExpandDirection, Interpolation};
 ///
 /// fx::expand(
@@ -1206,8 +1206,8 @@ pub fn expand<T: Into<EffectTimer>>(direction: ExpandDirection, style: Style, ti
 ///                fx::translate(inner, Offset { x: 0, y: -8 }, timer)"></div>
 ///
 /// ```no_run
-/// use ratatui::layout::{Offset, Rect};
-/// use ratatui::style::{Color, Style};
+/// use ratatui_core::layout::{Offset, Rect};
+/// use ratatui_core::style::{Color, Style};
 /// use tachyonfx::{fx, fx::EvolveSymbolSet, Interpolation};
 /// use tachyonfx::pattern::DissolvePattern;
 ///
@@ -1281,8 +1281,8 @@ pub fn translate_buf<T: Into<EffectTimer>>(
 /// # Examples
 ///
 /// ```no_run
-/// use ratatui::layout::Size;
-/// use ratatui::style::Color;
+/// use ratatui_core::layout::Size;
+/// use ratatui_core::style::Color;
 /// use tachyonfx::*;
 ///
 /// let timer = EffectTimer::from_ms(2, Interpolation::CubicInOut);
@@ -1477,7 +1477,7 @@ pub fn dissolve<T: Into<EffectTimer>>(timer: T) -> Effect {
 /// * `style` - The target style to dissolve to
 ///
 /// ```no_run
-/// use ratatui::style::Style;
+/// use ratatui_core::style::Style;
 /// use tachyonfx::fx;
 ///
 /// fx::dissolve_to(Style::default(), 1000);
@@ -1914,7 +1914,7 @@ pub fn consume_tick() -> Effect {
 ///      data-dsl="fx::run_once(fx::dissolve(1000))"></div>
 ///
 /// ```no_run
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 /// use tachyonfx::fx;
 ///
 /// fx::sequence(&[
@@ -1953,7 +1953,7 @@ pub fn run_once(effect: Effect) -> Effect {
 ///                fx::never_complete(fade)"></div>
 ///
 /// ```no_run
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 /// use tachyonfx::{fx, Interpolation};
 ///
 /// let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));
@@ -2018,9 +2018,9 @@ pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
 /// # Examples
 ///
 /// ```no_run
-/// use ratatui::layout::Rect;
+/// use ratatui_core::layout::Rect;
 /// use tachyonfx::{fx, RefRect, EffectTimer, Interpolation};
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 ///
 /// // Create a shared area reference
 /// let area_ref = RefRect::new(Rect::new(0, 0, 20, 5));
@@ -2076,7 +2076,7 @@ pub fn dynamic_area(area: RefRect, effect: Effect) -> Effect {
 /// // Combine with other effects in a sequence
 /// let sequence = fx::sequence(&[
 ///     notify_effect,
-///     fx::fade_to_fg(ratatui::style::Color::Red, 1000),
+///     fx::fade_to_fg(ratatui_core::style::Color::Red, 1000),
 ///     fx::dispatch_event(tx, AppEvent::EffectCompleted),
 /// ]);
 /// ```
@@ -2139,7 +2139,7 @@ use crate::fx::{
 
 #[cfg(test)]
 mod tests {
-    use ratatui::prelude::Color;
+    use ratatui_core::style::Color;
 
     use super::*;
 

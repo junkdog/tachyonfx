@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec};
 use core::ops::Range;
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 use Interpolation::Linear;
 
 use crate::{
@@ -25,7 +25,7 @@ pub(super) struct FreezeAt {
 ///
 /// ```
 /// use tachyonfx::{fx, EffectTimer, Interpolation};
-/// use ratatui::style::Color;
+/// use ratatui_core::style::Color;
 ///
 /// // Create a fade effect that stops at 70% of its transition
 /// let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));

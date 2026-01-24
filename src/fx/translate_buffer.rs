@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 
 #[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
-use ratatui::{
+use ratatui_core::{
     buffer::Buffer,
     layout::{Offset, Rect},
 };

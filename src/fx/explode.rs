@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec::Vec};
 use core::cmp::Ordering;
 
-use ratatui::{
+use ratatui_core::{
     buffer::{Buffer, Cell},
     layout::{Position, Rect},
 };

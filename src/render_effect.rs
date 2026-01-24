@@ -1,4 +1,4 @@
-use ratatui::{buffer::Buffer, layout::Rect, Frame};
+use ratatui_core::{buffer::Buffer, layout::Rect, terminal::Frame};
 
 use crate::{Duration, Effect};
 

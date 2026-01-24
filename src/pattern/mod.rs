@@ -7,7 +7,7 @@ mod instanced_pattern;
 mod radial;
 mod sweep;
 
-use ratatui::layout::Rect;
+use ratatui_core::layout::Rect;
 
 pub(crate) use self::instanced_pattern::InstancedPattern;
 pub use self::{

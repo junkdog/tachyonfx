@@ -6,11 +6,11 @@ use alloc::{
 };
 use core::fmt;
 
-use ratatui::{
+use ratatui_core::{
     buffer::Cell,
     layout,
     layout::{Margin, Position, Rect},
-    prelude::Color,
+    style::Color,
 };
 
 use crate::{
@@ -54,8 +54,8 @@ type PositionFnType = RefCount<dyn Fn(Position) -> bool + Send>;
 ///
 /// ```rust
 /// use tachyonfx::{fx, CellFilter};
-/// use ratatui::style::Color;
-/// use ratatui::layout::Margin;
+/// use ratatui_core::style::Color;
+/// use ratatui_core::layout::Margin;
 ///
 /// // Apply fade effect only to red text
 /// let effect = fx::fade_to_fg(Color::Blue, (1000, tachyonfx::Interpolation::Linear))
@@ -98,7 +98,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::layout::Rect;
+    /// use ratatui_core::layout::Rect;
     ///
     /// let filter = CellFilter::Area(Rect::new(5, 10, 20, 15));
     /// // Selects cells in a 20x15 rectangle starting at position (5, 10)
@@ -114,7 +114,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::{CellFilter, RefRect};
-    /// use ratatui::layout::Rect;
+    /// use ratatui_core::layout::Rect;
     ///
     /// let ref_rect = RefRect::new(Rect::new(0, 0, 10, 10));
     /// let filter = CellFilter::RefArea(ref_rect.clone());
@@ -132,7 +132,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     ///
     /// let filter = CellFilter::FgColor(Color::Red);
     /// // Selects only cells with red foreground color
@@ -148,7 +148,7 @@ pub enum CellFilter {
     /// # Example  
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     ///
     /// let filter = CellFilter::BgColor(Color::Blue);
     /// // Selects only cells with blue background color
@@ -163,7 +163,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::layout::Margin;
+    /// use ratatui_core::layout::Margin;
     ///
     /// let filter = CellFilter::Inner(Margin::new(2, 1));
     /// // Selects cells 2 columns and 1 row inward from the edges
@@ -179,7 +179,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::layout::Margin;
+    /// use ratatui_core::layout::Margin;
     ///
     /// let filter = CellFilter::Outer(Margin::new(1, 1));
     /// // Selects cells in the outer 1-cell border around the area
@@ -211,8 +211,8 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::style::Color;
-    /// use ratatui::layout::Margin;
+    /// use ratatui_core::style::Color;
+    /// use ratatui_core::layout::Margin;
     ///
     /// let filter = CellFilter::AllOf(vec![
     ///     CellFilter::Text,
@@ -231,7 +231,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     ///
     /// let filter = CellFilter::AnyOf(vec![
     ///     CellFilter::FgColor(Color::Red),
@@ -249,7 +249,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::style::Color;
+    /// use ratatui_core::style::Color;
     ///
     /// let filter = CellFilter::NoneOf(vec![
     ///     CellFilter::FgColor(Color::Red),
@@ -267,7 +267,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::layout::Margin;
+    /// use ratatui_core::layout::Margin;
     ///
     /// let filter = CellFilter::Not(Box::new(
     ///     CellFilter::Inner(Margin::new(2, 2))
@@ -278,14 +278,14 @@ pub enum CellFilter {
 
     /// Selects cells within a specific section of a layout.
     ///
-    /// Uses ratatui's [`Layout`](ratatui::layout::Layout) system to split the area
+    /// Uses ratatui's [`Layout`](ratatui_core::layout::Layout) system to split the area
     /// and selects cells within the section specified by the index. This filter
     /// is **static** and can be pre-computed.
     ///
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::layout::{Layout, Constraint, Direction};
+    /// use ratatui_core::layout::{Layout, Constraint, Direction};
     ///
     /// let layout = Layout::default()
     ///     .direction(Direction::Horizontal)
@@ -305,7 +305,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::{CellFilter, ref_count};
-    /// use ratatui::layout::Position;
+    /// use ratatui_core::layout::Position;
     ///
     /// let filter = CellFilter::PositionFn(ref_count(|pos: Position| {
     ///     (pos.x + pos.y) % 2 == 0  // Checkerboard pattern
@@ -322,7 +322,7 @@ pub enum CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::{CellFilter, ref_count};
-    /// use ratatui::buffer::Cell;
+    /// use ratatui_core::buffer::Cell;
     ///
     /// let filter = CellFilter::eval_cell(|cell: &Cell| {
     ///     cell.symbol().len() > 1  // Multi-character symbols
@@ -447,8 +447,8 @@ impl CellFilter {
     /// # Example
     /// ```rust
     /// use tachyonfx::CellFilter;
-    /// use ratatui::layout::{Rect, Position};
-    /// use ratatui::buffer::Cell;
+    /// use ratatui_core::layout::{Rect, Position};
+    /// use ratatui_core::buffer::Cell;
     ///
     /// let filter = CellFilter::Text;
     /// let area = Rect::new(0, 0, 10, 10);
@@ -535,7 +535,7 @@ mod tests {
     use alloc::vec;
 
     use layout::Layout;
-    use ratatui::{buffer::Buffer, style::Style, text::Span};
+    use ratatui_core::{buffer::Buffer, style::Style, text::Span};
 
     use super::*;
     use crate::{fx::effect_fn, Duration, EffectRenderer};
@@ -578,8 +578,10 @@ mod tests {
         let filter = CellFilter::Not(Box::new(CellFilter::FgColor(Color::Red)));
         assert_eq!(filter.to_string(), "!fg(#800000)");
 
-        let filter =
-            CellFilter::Layout(Layout::horizontal(&[] as &[ratatui::layout::Constraint]), 0);
+        let filter = CellFilter::Layout(
+            Layout::horizontal(&[] as &[ratatui_core::layout::Constraint]),
+            0,
+        );
         assert_eq!(filter.to_string(), "layout(0)");
 
         let filter = CellFilter::PositionFn(ref_count(|_| true));
@@ -763,19 +765,19 @@ mod tests {
 
     #[test]
     fn test_static_vs_dynamic_filters() {
-        use ratatui::style::{Color, Style};
+        use ratatui_core::style::{Color, Style};
 
         let mut buf = Buffer::filled(Rect::new(0, 0, 6, 4), Cell::new("."));
         buf.set_span(
             0,
             1,
-            &ratatui::text::Span::from("......").style(Style::default().fg(Color::Red)),
+            &ratatui_core::text::Span::from("......").style(Style::default().fg(Color::Red)),
             6,
         );
         buf.set_span(
             0,
             2,
-            &ratatui::text::Span::from("......").style(Style::default().bg(Color::Blue)),
+            &ratatui_core::text::Span::from("......").style(Style::default().bg(Color::Blue)),
             6,
         );
 
@@ -833,9 +835,9 @@ mod tests {
 
         // Test text filter
         let mut text_buf = Buffer::filled(Rect::new(0, 0, 8, 3), Cell::new(" "));
-        text_buf.set_span(0, 0, &ratatui::text::Span::from("Hello123"), 8);
-        text_buf.set_span(0, 1, &ratatui::text::Span::from("────────"), 8);
-        text_buf.set_span(0, 2, &ratatui::text::Span::from("Test!()"), 7);
+        text_buf.set_span(0, 0, &ratatui_core::text::Span::from("Hello123"), 8);
+        text_buf.set_span(0, 1, &ratatui_core::text::Span::from("────────"), 8);
+        text_buf.set_span(0, 2, &ratatui_core::text::Span::from("Test!()"), 7);
 
         let text_fx = effect_fn((), 1, |_, _, cells| {
             for (_, c) in cells {

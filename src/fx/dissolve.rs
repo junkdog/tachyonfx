@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use ratatui::{buffer::Buffer, layout::Rect, style::Style};
+use ratatui_core::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
     cell_filter::FilterProcessor,
@@ -107,7 +107,7 @@ impl Shader for Dissolve {
 #[cfg(feature = "dsl")]
 mod tests {
     use indoc::indoc;
-    use ratatui::style::Style;
+    use ratatui_core::style::Style;
 
     use crate::{fx, EffectTimer, Interpolation::SineOut};
 

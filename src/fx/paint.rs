@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use ratatui::{buffer::Buffer, layout::Rect, style::Color};
+use ratatui_core::{buffer::Buffer, layout::Rect, style::Color};
 
 use crate::{
     cell_filter::FilterProcessor,

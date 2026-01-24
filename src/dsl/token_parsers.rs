@@ -408,7 +408,7 @@ fn sanitize_syntax(args: Vec<Expr>) -> Vec<Expr> {
 mod tests {
     use anpa::core::parse;
     use compact_str::ToCompactString;
-    use ratatui::prelude::Color;
+    use ratatui_core::style::Color;
 
     use super::*;
     use crate::{

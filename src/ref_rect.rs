@@ -1,4 +1,4 @@
-use ratatui::layout::{Position, Rect};
+use ratatui_core::layout::{Position, Rect};
 
 use crate::{ref_count, RefCount};
 
@@ -12,7 +12,7 @@ use crate::{ref_count, RefCount};
 ///
 /// ```rust
 /// use tachyonfx::RefRect;
-/// use ratatui::layout::Rect;
+/// use ratatui_core::layout::Rect;
 ///
 /// let ref_rect = RefRect::new(Rect::new(0, 0, 10, 5));
 ///
@@ -175,7 +175,7 @@ impl Default for RefRect {
 
 #[cfg(test)]
 mod tests {
-    use ratatui::layout::{Position, Rect};
+    use ratatui_core::layout::{Position, Rect};
 
     use super::*;
 

@@ -1,9 +1,9 @@
 use alloc::{boxed::Box, vec::Vec};
 
-use ratatui::{
+use ratatui_core::{
     buffer::{Buffer, Cell},
     layout::{Position, Rect},
-    prelude::Color,
+    style::Color,
 };
 use Interpolation::CircOut;
 
@@ -191,7 +191,7 @@ fn offset(p: Position, translate: (i16, i16)) -> Position {
 #[cfg(feature = "dsl")]
 mod tests {
     use indoc::indoc;
-    use ratatui::prelude::Color;
+    use ratatui_core::style::Color;
 
     use crate::{fx, Motion};
 

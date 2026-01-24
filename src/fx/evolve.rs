@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use core::fmt::Debug;
 
-use ratatui::{buffer::Buffer, layout::Rect, style::Style};
+use ratatui_core::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::{
     default_shader_impl,

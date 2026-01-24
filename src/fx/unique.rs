@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use core::fmt::Debug;
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui_core::{buffer::Buffer, layout::Rect};
 
 use crate::{
     features::acquire_ref, CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefCount, Shader,

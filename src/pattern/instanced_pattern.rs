@@ -1,4 +1,4 @@
-use ratatui::layout::Position;
+use ratatui_core::layout::Position;
 
 /// Trait for patterns that can compute per-cell alpha values based on position.
 ///

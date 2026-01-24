@@ -1,4 +1,4 @@
-use ratatui::{
+use ratatui_core::{
     layout::Offset,
     style::{Color, Style},
 };

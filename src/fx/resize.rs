@@ -2,11 +2,9 @@ use alloc::{boxed::Box, vec, vec::Vec};
 
 #[cfg(feature = "dsl")]
 use compact_str::ToCompactString;
-use ratatui::{
+use ratatui_core::{
     buffer::Buffer,
-    layout::Size,
-    prelude::Rect,
-    widgets::{Clear, Widget},
+    layout::{Rect, Size},
 };
 
 use crate::{
@@ -60,7 +58,14 @@ impl Shader for ResizeArea {
             .lerp(&target_area.height, a);
 
         let resized_area = target_area.inner_centered(w, h);
-        Clear.render(resized_area, buf);
+        for y in resized_area.top()..resized_area.bottom() {
+            for x in resized_area.left()..resized_area.right() {
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.reset();
+                }
+            }
+        }
+
         self.set_area(resized_area);
 
         if let Some(fx) = &mut self.fx {

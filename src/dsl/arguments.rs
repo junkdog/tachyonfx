@@ -7,10 +7,9 @@ use std::{
 };
 
 use compact_str::{CompactString, ToCompactString};
-use ratatui::{
+use ratatui_core::{
     layout::{Constraint, Direction, Layout, Margin, Offset, Rect, Size},
-    prelude::{Color, Style},
-    style::Modifier,
+    style::{Color, Modifier, Style},
 };
 
 use crate::{
@@ -226,7 +225,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Flex`].
-    pub fn flex(&mut self) -> Result<ratatui::layout::Flex, DslError> {
+    pub fn flex(&mut self) -> Result<ratatui_core::layout::Flex, DslError> {
         match self.next("flex")? {
             Expr::Literal(Value::Flex(f), _) => Ok(f),
             Expr::Var { name, span, .. } => self.bound_var(name, span),
@@ -1166,7 +1165,7 @@ impl_from_args!(Modifier, modifier);
 
 // Layout related
 impl_from_args!(Direction, direction);
-impl_from_args!(ratatui::layout::Flex, flex);
+impl_from_args!(ratatui_core::layout::Flex, flex);
 impl_from_args!(Layout, layout);
 impl_from_args!(Constraint, constraint);
 impl_from_args!(Margin, margin);
@@ -1197,9 +1196,9 @@ mod tests {
     use std::{collections::VecDeque, fmt::Debug};
 
     use compact_str::ToCompactString;
-    use ratatui::{
+    use ratatui_core::{
         layout::{Margin, Offset, Rect, Size},
-        prelude::Color,
+        style::Color,
     };
 
     use crate::{
