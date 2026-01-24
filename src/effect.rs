@@ -307,9 +307,8 @@ impl Effect {
 
     /// Returns the timer associated with this effect.
     ///
-    /// This method is primarily used for visualization purposes, such as in the
-    /// `EffectTimeline` widget. It provides information about the duration and timing
-    /// of the effect.
+    /// This method provides information about the duration and timing of the effect,
+    /// useful for effect composition and synchronization.
     ///
     /// # Returns
     /// An `Option<EffectTimer>`:
@@ -395,13 +394,13 @@ impl Effect {
         self
     }
 
-    /// Creates an `EffectSpan` representation of this effect for timeline visualization.
+    /// Creates an `EffectSpan` representation of this effect.
     ///
-    /// # Arguments
-    /// * `offset` - The time offset when this effect should start in the timeline
+    /// # Deprecation
     ///
-    /// # Returns
-    /// * An `EffectSpan` that can be used in timeline widgets
+    /// This method was used by the now-removed `EffectTimeline` widget and no longer
+    /// serves any purpose. It is deprecated and scheduled for removal in a future
+    /// release.
     #[deprecated(since = "0.23.0", note = "EffectSpan is being removed")]
     #[allow(deprecated)]
     pub fn as_effect_span(&self, offset: Duration) -> EffectSpan

@@ -10,18 +10,10 @@ use crate::{CellFilter, Duration, Shader};
 
 /// Represents a span of time for an effect in the effect hierarchy.
 ///
-/// `EffectSpan` is used to describe the structure and timing of effects within a
-/// tachyonfx effect chain. It contains information about the effect's label, duration,
-/// cell filter, and any child effects. This struct is primarily used for visualization
-/// and analysis purposes, such as in the `EffectTimeline` widget.
+/// # Deprecation
 ///
-/// # Notes
-///
-/// - The `EffectSpan` structure is typically created automatically when calling
-///   `as_effect_span()` on an `Effect` or `Shader` implementation.
-/// - For composite effects (like parallel or sequential effects), the `children` field
-///   will contain `EffectSpan`s for each child effect.
-/// - The `start` and `end` times are relative to the parent effect's start time.
+/// This type was used by the now-removed `EffectTimeline` widget and no longer
+/// serves any purpose. It is deprecated and scheduled for removal in a future release.
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct EffectSpan {
