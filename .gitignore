@@ -17,6 +17,5 @@ target/
 /gitlab.http
 todo.md
 
-*.gif
 *.mp4
 *.llc
