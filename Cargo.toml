@@ -9,6 +9,21 @@ members = [
     "examples/effect-registry",
 ]
 
+[package]
+name = "tachyonfx"
+version = "0.23.0"
+edition = "2021"
+license = "MIT"
+description = "A ratatui library for creating shader-like effects in TUIs."
+repository = "https://github.com/ratatui/tachyonfx"
+homepage = "https://github.com/ratatui/tachyonfx"
+documentation = "https://docs.rs/tachyonfx"
+readme = "README.md"
+keywords = ["ratatui", "terminal", "effects", "UI", "TUI"]
+categories = ["command-line-interface"]
+authors = ["Adrian Papari <junkdog@angelhill.net>"]
+exclude = ["images/*.gif", "docs/assets/*.gif", ".*", "scripts/*"]
+
 [workspace.dependencies]
 ratatui-core = { version = "0.1.0", default-features = false }
 compact_str = { version = "0.9.0", default-features = false }
@@ -21,21 +36,6 @@ bon = { version = "3.8.2", default-features = false }
 version = "0.30.0"
 default-features = false
 features = ["crossterm", "layout-cache", "std"]
-
-[package]
-name = "tachyonfx"
-version = "0.22.0"
-edition = "2021"
-license = "MIT"
-description = "A ratatui library for creating shader-like effects in TUIs."
-repository = "https://github.com/ratatui/tachyonfx"
-homepage = "https://github.com/ratatui/tachyonfx"
-documentation = "https://docs.rs/tachyonfx"
-readme = "README.md"
-keywords = ["ratatui", "terminal", "effects", "UI", "TUI"]
-categories = ["command-line-interface"]
-authors = ["Adrian Papari <junkdog@angelhill.net>"]
-exclude = ["images/*.gif", "docs/assets/*.gif", ".*", "scripts/*"]
 
 [dependencies]
 anpa = { version = "0.10.0", optional = true }
