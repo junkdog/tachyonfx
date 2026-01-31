@@ -5,11 +5,11 @@ use std::time::SystemTime;
 #[cfg(feature = "wasm")]
 use web_time::SystemTime;
 
-/// A simple pseudo-random number generator using the Linear Congruential Generator
-/// algorithm.
+/// A simple pseudo-random number generator using the SplitMix32 algorithm.
 ///
-/// This RNG is fast and uses minimal memory, and is definitely not suitable for
-/// cryptographic purposes or high-quality randomness.
+/// SplitMix32 is a fast, high-quality PRNG with good statistical properties.
+/// It passes most statistical tests including matrix rank and has low
+/// serial correlation. Not suitable for cryptographic purposes.
 ///
 /// # Examples
 ///
@@ -27,26 +27,24 @@ pub struct SimpleRng {
 }
 
 impl SimpleRng {
-    const A: u32 = 1664525;
-    const C: u32 = 1013904223;
-
     pub fn new(seed: u32) -> Self {
         SimpleRng { state: seed }
     }
 
-    /// Generates the next pseudo-random u32 value.
+    /// Generates the next pseudo-random u32 value using SplitMix32.
     ///
-    /// This method updates the internal state and returns the new value.
+    /// This method updates the internal state and returns a well-mixed value.
     ///
     /// # Returns
     ///
     /// A pseudo-random u32 value.
+    #[inline]
     pub fn gen(&mut self) -> u32 {
-        self.state = self
-            .state
-            .wrapping_mul(Self::A)
-            .wrapping_add(Self::C);
-        self.state
+        self.state = self.state.wrapping_add(0x9E3779B9);
+        let mut z = self.state;
+        z = (z ^ (z >> 15)).wrapping_mul(0x85EBCA6B);
+        z = (z ^ (z >> 13)).wrapping_mul(0xC2B2AE35);
+        z ^ (z >> 16)
     }
 
     /// Generates a pseudo-random f32 value in the range [0, 1).
@@ -192,51 +190,51 @@ mod tests {
     }
 
     #[test]
-    fn test_lcg_reproducibility() {
-        let mut lcg1 = SimpleRng::new(12345);
-        let mut lcg2 = SimpleRng::new(12345);
+    fn test_reproducibility() {
+        let mut rng1 = SimpleRng::new(12345);
+        let mut rng2 = SimpleRng::new(12345);
 
         for _ in 0..100 {
-            assert_eq!(lcg1.gen(), lcg2.gen());
+            assert_eq!(rng1.gen(), rng2.gen());
         }
     }
 
     #[test]
-    fn test_lcg_different_seeds() {
-        let mut lcg1 = SimpleRng::new(12345);
-        let mut lcg2 = SimpleRng::new(54321);
+    fn test_different_seeds() {
+        let mut rng1 = SimpleRng::new(12345);
+        let mut rng2 = SimpleRng::new(54321);
 
-        assert_ne!(lcg1.gen(), lcg2.gen());
+        assert_ne!(rng1.gen(), rng2.gen());
     }
 
     #[test]
     fn test_gen_f32_range() {
-        let mut lcg = SimpleRng::new(12345);
+        let mut rng = SimpleRng::new(12345);
 
         for _ in 0..1000 {
-            let value = lcg.gen_f32();
+            let value = rng.gen_f32();
             assert!((0.0..1.0).contains(&value));
         }
     }
 
     #[test]
     fn test_gen_range_u32() {
-        let mut lcg = SimpleRng::new(12345);
+        let mut rng = SimpleRng::new(12345);
         let range = 10..20;
 
         for _ in 0..1000 {
-            let value = lcg.gen_range(range.clone());
+            let value = rng.gen_range(range.clone());
             assert!((10..20).contains(&value));
         }
     }
 
     #[test]
     fn test_gen_range_f32() {
-        let mut lcg = SimpleRng::new(12345);
+        let mut rng = SimpleRng::new(12345);
         let range = 0.0..1.0;
 
         for _ in 0..1000 {
-            let value = lcg.gen_range(range.clone());
+            let value = rng.gen_range(range.clone());
             assert!((0.0..1.0).contains(&value));
         }
     }
@@ -244,29 +242,29 @@ mod tests {
     #[test]
     #[should_panic(expected = "range.end must be greater than range.start")]
     fn test_gen_range_invalid() {
-        let mut lcg = SimpleRng::new(12345);
+        let mut rng = SimpleRng::new(12345);
         #[allow(clippy::reversed_empty_ranges)]
-        lcg.gen_range(20..10);
+        rng.gen_range(20..10);
     }
 
     #[test]
-    fn test_lcg_overflow_handling() {
-        let mut lcg = SimpleRng::new(u32::MAX);
+    fn test_overflow_handling() {
+        let mut rng = SimpleRng::new(u32::MAX);
 
         // This should not panic
-        lcg.gen();
+        rng.gen();
     }
 
     #[test]
     #[allow(clippy::unnecessary_cast)] // misidentified by clippy
     fn test_uniform_distribution_u32() {
         run_test(|| {
-            let mut lcg = SimpleRng::new(12345);
+            let mut rng = SimpleRng::new(12345);
             let mut counts = [0; 10];
             let num_samples = 100000;
 
             for _ in 0..num_samples {
-                let value = lcg.gen_range(0..10);
+                let value = rng.gen_range(0..10);
                 counts[value as usize] += 1;
             }
 
@@ -284,12 +282,12 @@ mod tests {
     #[allow(clippy::unnecessary_cast)] // misidentified by clippy
     fn test_uniform_distribution_f32() {
         run_test(|| {
-            let mut lcg = SimpleRng::new(12345);
+            let mut rng = SimpleRng::new(12345);
             let mut counts = [0; 10];
             let num_samples = 100000;
 
             for _ in 0..num_samples {
-                let value = lcg.gen_range(0.0..1.0);
+                let value = rng.gen_range(0.0..1.0);
                 let bucket = (value * 10.0) as usize;
                 counts[bucket.min(9)] += 1;
             }
@@ -307,8 +305,8 @@ mod tests {
     #[test]
     #[cfg(any(feature = "std", feature = "wasm"))] // Only run when we have SystemTime
     #[allow(clippy::std_instead_of_core)]
-    fn test_default_lcg() {
-        let lcg1 = SimpleRng::default();
+    fn test_default_rng() {
+        let rng1 = SimpleRng::default();
         #[cfg(feature = "std")]
         {
             let duration = std::time::Duration::from_millis(10);
@@ -319,28 +317,28 @@ mod tests {
             // In web environments, we can't sleep, but we can just create another RNG
             // The timestamp should be different enough to produce different seeds
         }
-        let lcg2 = SimpleRng::default();
+        let rng2 = SimpleRng::default();
 
         assert_ne!(
-            lcg1.state, lcg2.state,
-            "Default LCGs should have different seeds"
+            rng1.state, rng2.state,
+            "Default RNGs should have different seeds"
         );
     }
 
     #[test]
     fn test_gen_usize() {
-        let mut lcg = SimpleRng::new(12345);
-        let value = lcg.gen_usize();
+        let mut rng = SimpleRng::new(12345);
+        let value = rng.gen_usize();
         assert!(value > 0, "gen_usize should generate non-zero values");
     }
 
     #[test]
     fn test_gen_range_i32() {
-        let mut lcg = SimpleRng::new(12345);
+        let mut rng = SimpleRng::new(12345);
         let range = -10..10;
 
         for _ in 0..1000 {
-            let value = lcg.gen_range(range.clone());
+            let value = rng.gen_range(range.clone());
             assert!(range.contains(&value));
         }
     }

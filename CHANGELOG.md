@@ -1,5 +1,9 @@
 # Changelog
 
+## unreleased
+### Changed
+- `SimpleRng`: replace LCG with SplitMix32 for improved randomness quality
+
 ## tachyonfx 0.23.0 - 2026-01-28
 
 ### Changed
