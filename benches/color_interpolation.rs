@@ -1,18 +1,10 @@
-// DISABLED: This benchmark has compilation issues due to ratatui version conflict.
-// ansi-to-tui depends on ratatui 0.29.0 while main project uses ratatui 0.30.0-alpha.5
-// This causes Color type conflicts between the two versions.
-#![allow(dead_code)]
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use ratatui::style::Color;
+use tachyonfx::{ColorCache, ColorSpace};
 
-#[cfg(not_disabled_due_to_version_conflict)]
-mod disabled_benchmark {
-    use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-    use ratatui::style::Color;
-    use tachyonfx::{ColorCache, ColorSpace};
+const INTERPOLATION_ALPHA: f32 = 0.5;
 
-    // Constants for benchmark parameters
-    const INTERPOLATION_ALPHA: f32 = 0.5;
-
-    const SCREEN_BUFFER: &str = r#"
+const SCREEN_BUFFER: &str = r#"
 [0m[38;2;102;92;84m[48;2;29;32;33m┌[0m[38;2;102;92;84m[48;2;29;32;33m[1m gitlab pipelines [0m[38;2;102;92;84m[48;2;29;32;33m──────────────────────────────────────────────────────────────────────────────────────┐[0m
 [0m[38;2;102;92;84m[48;2;29;32;33m│ Thu, 21 Aug      [0m[38;2;102;92;84m[48;2;29;32;33m[1mimpedimenta                             [0m[38;2;102;92;84m[48;2;29;32;33m Thu, 21 Aug 23:25:47 🟢 main                 │[0m
 [0m[38;2;102;92;84m[48;2;29;32;33m│ 23:18:34         magnetar/vitalstatistix/                 Thu, 21 Aug 23:22:46 🟢 renovate/all-minor-d │[0m
@@ -47,88 +39,80 @@ mod disabled_benchmark {
 [0m[38;2;102;92;84m[48;2;29;32;33m└[0m[38;2;102;92;84m[48;2;29;32;33m[1muit  open web  config  last notification  f/ filter  refresh  pipeline refresh  ↑↓ selection  ↵ details [0m[38;2;102;92;84m[48;2;29;32;33m┘[0m
 "#;
 
-    /// Run animation loop with the provided interpolation function
-    fn run_animation_loop<F>(theme_colors: &[Color], mut interpolate_fn: F)
-    where
-        F: FnMut(Color, Color),
-    {
-        const TARGET_COLOR: Color = Color::Rgb(40, 61, 80);
-        for &c in theme_colors {
-            interpolate_fn(c, TARGET_COLOR);
-        }
+/// Run animation loop with the provided interpolation function
+fn run_animation_loop<F>(theme_colors: &[Color], mut interpolate_fn: F)
+where
+    F: FnMut(Color, Color),
+{
+    const TARGET_COLOR: Color = Color::Rgb(40, 61, 80);
+    for &c in theme_colors {
+        interpolate_fn(c, TARGET_COLOR);
     }
+}
 
-    pub fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
-        let mut group = c.benchmark_group("color-lerp");
+fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("color-lerp");
 
-        let theme_colors = fg_colors_from_ansi(SCREEN_BUFFER);
+    let theme_colors = fg_colors_from_ansi(SCREEN_BUFFER);
 
-        // Direct interpolation benchmark
-        group.bench_with_input(BenchmarkId::new("direct", "hsl"), &(), |b, _| {
-            b.iter(|| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(ColorSpace::Hsl.lerp(
-                        &theme_color,
-                        &target,
-                        INTERPOLATION_ALPHA,
-                    ));
-                });
+    // Direct interpolation benchmark
+    group.bench_with_input(BenchmarkId::new("direct", "hsl"), &(), |b, _| {
+        b.iter(|| {
+            run_animation_loop(&theme_colors, |theme_color, target| {
+                core::hint::black_box(ColorSpace::Hsl.lerp(
+                    &theme_color,
+                    &target,
+                    INTERPOLATION_ALPHA,
+                ));
             });
         });
+    });
 
-        group.bench_with_input(BenchmarkId::new("color-cache", "hsl/4"), &(), |b, _| {
-            b.iter_with_setup(ColorCache::<Color, 4>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
-                        ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
-                    }));
-                });
-            })
-        });
+    group.bench_with_input(BenchmarkId::new("color-cache", "hsl/4"), &(), |b, _| {
+        b.iter_with_setup(ColorCache::<Color, 4>::new, |mut cache| {
+            run_animation_loop(&theme_colors, |theme_color, target| {
+                core::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
+                    ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
+                }));
+            });
+        })
+    });
 
-        group.bench_with_input(BenchmarkId::new("color-cache", "hsl/8"), &(), |b, _| {
-            b.iter_with_setup(ColorCache::<Color, 8>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
-                        ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
-                    }));
-                });
-            })
-        });
+    group.bench_with_input(BenchmarkId::new("color-cache", "hsl/8"), &(), |b, _| {
+        b.iter_with_setup(ColorCache::<Color, 8>::new, |mut cache| {
+            run_animation_loop(&theme_colors, |theme_color, target| {
+                core::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
+                    ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
+                }));
+            });
+        })
+    });
 
-        group.bench_with_input(BenchmarkId::new("color-cache", "hsl/16"), &(), |b, _| {
-            b.iter_with_setup(ColorCache::<Color, 16>::new, |mut cache| {
-                run_animation_loop(&theme_colors, |theme_color, target| {
-                    std::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
-                        ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
-                    }));
-                });
-            })
-        });
+    group.bench_with_input(BenchmarkId::new("color-cache", "hsl/16"), &(), |b, _| {
+        b.iter_with_setup(ColorCache::<Color, 16>::new, |mut cache| {
+            run_animation_loop(&theme_colors, |theme_color, target| {
+                core::hint::black_box(cache.memoize_fg(theme_color, target, |c| {
+                    ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
+                }));
+            });
+        })
+    });
 
-        group.finish();
-    }
-
-    fn fg_colors_from_ansi(ansi: &'static str) -> Vec<Color> {
-        use ansi_to_tui::IntoText as _;
-        let buffer_text = ansi
-            .to_text()
-            .expect("buffer should convert to text");
-
-        buffer_text
-            .iter()
-            .flat_map(|line| &line.spans)
-            .flat_map(|span| span.style.fg)
-            .collect()
-    }
-
-    // Register both benchmarks with Criterion
-    criterion_group!(benches, ui_like_color_pattern_benchmark);
-    criterion_main!(benches);
-} // End of disabled_benchmark module
-
-// Provide an empty main function when benchmark is disabled
-#[cfg(not(not_disabled_due_to_version_conflict))]
-fn main() {
-    println!("color_interpolation benchmark is disabled due to ratatui version conflicts");
+    group.finish();
 }
+
+fn fg_colors_from_ansi(ansi: &'static str) -> Vec<Color> {
+    use ansi_to_tui::IntoText as _;
+    let buffer_text = ansi
+        .to_text()
+        .expect("buffer should convert to text");
+
+    buffer_text
+        .iter()
+        .flat_map(|line| &line.spans)
+        .flat_map(|span| span.style.fg)
+        .collect()
+}
+
+criterion_group!(benches, ui_like_color_pattern_benchmark);
+criterion_main!(benches);

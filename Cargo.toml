@@ -67,11 +67,9 @@ std-duration = ["std"]
 wasm = ["dep:web-time"]
 web-time = ["wasm"]  # deprecated: use `wasm` instead
 
-# DISABLED: color_interpolation benchmark has compilation issues due to ratatui version conflict
-# ansi-to-tui depends on ratatui 0.29.0 while main project uses ratatui 0.30.0-alpha.5
-# [[bench]]
-# name = "color_interpolation"
-# harness = false
+[[bench]]
+name = "color_interpolation"
+harness = false
 
 [[bench]]
 name = "color_conversion"
