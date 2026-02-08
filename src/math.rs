@@ -1,9 +1,8 @@
 //! Math utilities with no_std compatibility
 //!
 //! This module provides math functions that work in both std and no_std environments.
-//! In std environments, it uses the standard library implementations for performance.
-//! In no_std environments, it uses custom approximation functions optimized for embedded
-//! systems.
+//! Functions where micromath outperforms std (sqrt, round, floor, ceil) always use
+//! micromath. Functions where std is faster (powf) use cfg-gated implementations.
 
 use core::f32::consts::TAU;
 
@@ -34,19 +33,10 @@ pub fn wave_sin(t: f32) -> f32 {
     4.0 * phase * (1.0 - phase.abs())
 }
 
-/// Square root function that works in both std and no_std environments
-#[cfg(feature = "std")]
+/// Square root function using micromath (faster than std)
 #[inline]
 pub(crate) fn sqrt(x: f32) -> f32 {
-    x.sqrt()
-}
-
-/// Square root function that works in both std and no_std environments
-#[cfg(not(feature = "std"))]
-#[inline]
-pub(crate) fn sqrt(x: f32) -> f32 {
-    use micromath::F32Ext;
-    x.sqrt()
+    micromath::F32Ext::sqrt(x)
 }
 
 /// Sine function that works in both std and no_std environments
@@ -91,47 +81,20 @@ pub(crate) fn powi(base: f32, exp: i32) -> f32 {
     base.powi(exp)
 }
 
-/// Round function that works in both std and no_std environments
-#[cfg(feature = "std")]
+/// Round function using micromath (faster than std)
 #[inline]
 pub(crate) fn round(x: f32) -> f32 {
-    x.round()
+    micromath::F32Ext::round(x)
 }
 
-/// Round function that works in both std and no_std environments
-#[cfg(not(feature = "std"))]
-#[inline]
-pub(crate) fn round(x: f32) -> f32 {
-    use micromath::F32Ext;
-    x.round()
-}
-
-/// Floor function that works in both std and no_std environments
-#[cfg(feature = "std")]
+/// Floor function using micromath (faster than std)
 #[inline]
 pub(crate) fn floor(x: f32) -> f32 {
-    x.floor()
+    micromath::F32Ext::floor(x)
 }
 
-/// Floor function that works in both std and no_std environments
-#[cfg(not(feature = "std"))]
-#[inline]
-pub(crate) fn floor(x: f32) -> f32 {
-    use micromath::F32Ext;
-    x.floor()
-}
-
-/// Ceiling function that works in both std and no_std environments
-#[cfg(feature = "std")]
+/// Ceiling function using micromath (faster than std)
 #[inline]
 pub(crate) fn ceil(x: f32) -> f32 {
-    x.ceil()
-}
-
-/// Ceiling function that works in both std and no_std environments
-#[cfg(not(feature = "std"))]
-#[inline]
-pub(crate) fn ceil(x: f32) -> f32 {
-    use micromath::F32Ext;
-    x.ceil()
+    micromath::F32Ext::ceil(x)
 }

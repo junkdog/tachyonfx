@@ -9,6 +9,7 @@
 ### Changed
 - `SimpleRng`: replace LCG with SplitMix32 for improved randomness quality
 - Internal `sin()`/`cos()` now use `parabolic_sin`/`parabolic_cos` across both std and no_std builds.
+- Internal `sqrt`, `round`, `floor`, `ceil` now always use micromath (faster than std in benchmarks).
 
 ## tachyonfx 0.23.0 - 2026-01-28
 

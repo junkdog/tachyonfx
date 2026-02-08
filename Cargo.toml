@@ -87,6 +87,10 @@ harness = false
 name = "parabolic_sin"
 harness = false
 
+[[bench]]
+name = "math_functions"
+harness = false
+
 [lints.clippy]
 std_instead_of_core = "warn"
 std_instead_of_alloc = "warn"
