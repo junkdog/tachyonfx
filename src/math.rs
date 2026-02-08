@@ -5,8 +5,34 @@
 //! In no_std environments, it uses custom approximation functions optimized for embedded
 //! systems.
 
-#[cfg(not(feature = "std"))]
-use core::f32::consts::{PI, TAU};
+use core::f32::consts::TAU;
+
+/// Parabolic sine approximation. Input is in radians.
+#[inline(always)]
+pub fn parabolic_sin(t: f32) -> f32 {
+    wave_sin(t * (1.0 / TAU))
+}
+
+/// Parabolic cosine approximation. Input is in radians.
+#[inline(always)]
+pub fn parabolic_cos(t: f32) -> f32 {
+    wave_sin(t * (1.0 / TAU) + 0.25)
+}
+
+/// Fast, branchless sine approximation using parabolic segments.
+///
+/// Input `t` is in normalized cycles where `1.0` equals one full period.
+/// Values beyond `1.0` wrap naturally, so `t` can increase continuously
+/// to produce repeating oscillations (e.g., `2.5` is equivalent to `0.5`).
+///
+/// Output ranges from `-1.0` to `1.0`. The shape closely follows a true
+/// sine wave but with slightly flattened peaks.
+#[inline(always)]
+pub fn wave_sin(t: f32) -> f32 {
+    let x = t.fract();
+    let phase = 1.0 - 2.0 * x;
+    4.0 * phase * (1.0 - phase.abs())
+}
 
 /// Square root function that works in both std and no_std environments
 #[cfg(feature = "std")]
@@ -24,33 +50,15 @@ pub(crate) fn sqrt(x: f32) -> f32 {
 }
 
 /// Sine function that works in both std and no_std environments
-#[cfg(feature = "std")]
 #[inline]
 pub(crate) fn sin(x: f32) -> f32 {
-    x.sin()
-}
-
-/// Sine function that works in both std and no_std environments
-#[cfg(not(feature = "std"))]
-#[inline]
-pub(crate) fn sin(x: f32) -> f32 {
-    use micromath::F32Ext;
-    x.sin()
+    parabolic_sin(x)
 }
 
 /// Cosine function that works in both std and no_std environments
-#[cfg(feature = "std")]
 #[inline]
 pub(crate) fn cos(x: f32) -> f32 {
-    x.cos()
-}
-
-/// Cosine function that works in both std and no_std environments
-#[cfg(not(feature = "std"))]
-#[inline]
-pub(crate) fn cos(x: f32) -> f32 {
-    use micromath::F32Ext;
-    x.cos()
+    parabolic_cos(x)
 }
 
 /// Power function that works in both std and no_std environments

@@ -1,8 +1,14 @@
 # Changelog
 
 ## unreleased
+### Added
+- `wave_sin(t)`: fast, branchless parabolic sine approximation using normalized cycles (`1.0` = one period).
+- `parabolic_sin(t)`: parabolic sine approximation accepting radians.
+- `parabolic_cos(t)`: parabolic cosine approximation accepting radians.
+
 ### Changed
 - `SimpleRng`: replace LCG with SplitMix32 for improved randomness quality
+- Internal `sin()`/`cos()` now use `parabolic_sin`/`parabolic_cos` across both std and no_std builds.
 
 ## tachyonfx 0.23.0 - 2026-01-28
 

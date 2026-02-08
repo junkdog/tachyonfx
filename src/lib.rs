@@ -72,6 +72,7 @@ pub use effect_timer::EffectTimer;
 pub use features::{ref_count, RefCount, ThreadSafetyMarker};
 pub use interpolation::*;
 pub use lru_cache::LruCache;
+pub use math::{parabolic_cos, parabolic_sin, wave_sin};
 pub use motion::*;
 pub use rect_ext::CenteredShrink;
 pub use ref_rect::RefRect;
