@@ -33,6 +33,15 @@ pub fn wave_sin(t: f32) -> f32 {
     4.0 * phase * (1.0 - micromath::F32Ext::abs(phase))
 }
 
+/// Fast, branchless cosine approximation using parabolic segments.
+///
+/// Input `t` is in normalized cycles where `1.0` equals one full period.
+/// Values beyond `1.0` wrap naturally. Output ranges from `-1.0` to `1.0`.
+#[inline(always)]
+pub fn wave_cos(t: f32) -> f32 {
+    wave_sin(t + 0.25)
+}
+
 /// Square root function using micromath (faster than std)
 #[inline]
 pub(crate) fn sqrt(x: f32) -> f32 {
