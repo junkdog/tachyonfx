@@ -28,9 +28,9 @@ pub fn parabolic_cos(t: f32) -> f32 {
 /// sine wave but with slightly flattened peaks.
 #[inline(always)]
 pub fn wave_sin(t: f32) -> f32 {
-    let x = t.fract();
-    let phase = 1.0 - 2.0 * x;
-    4.0 * phase * (1.0 - phase.abs())
+    let x = micromath::F32Ext::fract(t);
+    let phase: f32 = 1.0 - 2.0 * x;
+    4.0 * phase * (1.0 - micromath::F32Ext::abs(phase))
 }
 
 /// Square root function using micromath (faster than std)
