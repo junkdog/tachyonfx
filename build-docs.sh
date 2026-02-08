@@ -20,7 +20,7 @@ else
     trap "rm -rf $TEMP_DIR" EXIT
 
     cd "$TEMP_DIR"
-    npm pack tachyonfx-renderer@0.2.1 >/dev/null 2>&1
+    npm pack tachyonfx-renderer@0.3.0 >/dev/null 2>&1
     tar -xzf tachyonfx-renderer-*.tgz
 
     # Copy WASM and JS files to docs assets (using absolute path)
