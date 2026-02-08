@@ -171,6 +171,9 @@ impl DslFormat for crate::pattern::AnyPattern {
             crate::pattern::AnyPattern::Dissolve(p) => {
                 format_compact!("AnyPattern::Dissolve({})", p.dsl_format())
             },
+            crate::pattern::AnyPattern::Wave(_) => {
+                "AnyPattern::Wave(WavePattern)".to_compact_string()
+            },
         }
     }
 }

@@ -54,7 +54,7 @@ pub enum ModTarget {
 }
 
 /// Modulation source that affects either the phase or amplitude of its parent oscillator.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Modulator {
     func: WaveFn,
     kx: f32,
@@ -143,7 +143,7 @@ impl Modulator {
 }
 
 /// A single trig oscillator with optional modulation.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Oscillator {
     func: WaveFn,
     kx: f32,
@@ -237,7 +237,7 @@ pub enum PostTransform {
 }
 
 /// One layer in the wave interference pattern.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WaveLayer {
     a: Oscillator,
     b: Option<(Combinator, Oscillator)>,

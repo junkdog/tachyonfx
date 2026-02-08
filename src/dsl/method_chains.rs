@@ -8,7 +8,7 @@ use crate::{
     fx::IntoTemporaryEffect,
     pattern::{
         AnyPattern, CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern,
-        RadialPattern, SweepPattern,
+        RadialPattern, SweepPattern, WavePattern,
     },
     wave::{Modulator, Oscillator, WaveLayer},
     CellFilter, Effect,
@@ -187,6 +187,17 @@ impl ChainableMethods for DissolvePattern {
     }
 }
 
+impl ChainableMethods for WavePattern {
+    fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => pattern,
+            "with_layer" => pattern.with_layer(args.wave_layer()?),
+            "with_contrast" => pattern.with_contrast(args.read_i32()?),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
 impl ChainableMethods for Modulator {
     fn apply_fn(modulator: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match name {
@@ -251,6 +262,7 @@ impl ChainableMethods for AnyPattern {
             AnyPattern::Dissolve(inner) => {
                 AnyPattern::Dissolve(DissolvePattern::apply_fn(inner, name, args)?)
             },
+            AnyPattern::Wave(inner) => AnyPattern::Wave(WavePattern::apply_fn(inner, name, args)?),
         })
     }
 }

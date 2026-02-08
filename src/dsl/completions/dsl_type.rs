@@ -136,6 +136,7 @@ macro_rules! impl_dsl_type_map {
                 (Modulator::TYPE_NAME, Modulator::$method()),
                 (Oscillator::TYPE_NAME, Oscillator::$method()),
                 (WaveLayer::TYPE_NAME, WaveLayer::$method()),
+                (WavePattern::TYPE_NAME, WavePattern::$method()),
             ])
         }
     };
@@ -993,6 +994,30 @@ impl DslType for WaveLayer {
             method!(T, "amplitude", "f32"),
             method!(T, "power", "i32"),
             method!(T, "abs"),
+        ];
+        METHODS
+    }
+}
+
+impl DslType for WavePattern {
+    const TYPE_NAME: &'static str = "WavePattern";
+
+    fn constants() -> &'static [&'static str] {
+        &[]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        const T: &str = "WavePattern";
+        const CTORS: &[CallableItem] = &[ctor!(T, "new", "WaveLayer")];
+        CTORS
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        const T: &str = "WavePattern";
+        const METHODS: &[CallableItem] = &[
+            method!(T, "clone"),
+            method!(T, "with_layer", "WaveLayer"),
+            method!(T, "with_contrast", "i32"),
         ];
         METHODS
     }

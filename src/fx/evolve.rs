@@ -71,7 +71,7 @@ impl Shader for Evolve {
         let style = self.style;
         let mode = self.mode;
 
-        let mut pattern = self.pattern.for_frame(alpha, area);
+        let mut pattern = self.pattern.clone().for_frame(alpha, area);
         self.cell_iter(buf, area)
             .for_each_cell(|pos, cell| {
                 let cell_alpha = pattern.map_alpha(pos);

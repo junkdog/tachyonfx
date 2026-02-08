@@ -50,7 +50,7 @@ impl Shader for HslShift {
         let hsl_mod_fg = self.hsl_mod_fg;
         let hsl_mod_bg = self.hsl_mod_bg;
 
-        let mut pattern = self.pattern.for_frame(global_alpha, area);
+        let mut pattern = self.pattern.clone().for_frame(global_alpha, area);
 
         let cell_iter = self.cell_iter(buf, area);
         let mut color_cache: ColorCache<u32, 8> = ColorCache::new();

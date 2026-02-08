@@ -77,7 +77,10 @@ impl Shader for Explode {
         let area = self.area().unwrap_or(area);
         let safe_area = area.intersection(buf.area);
 
-        let mut pattern_frame = self.pattern.for_frame(global_alpha, safe_area);
+        let mut pattern_frame = self
+            .pattern
+            .clone()
+            .for_frame(global_alpha, safe_area);
 
         let cells = self.sorted_cells.memoize_ref(&safe_area, |area| {
             let center_x = area.x as f32 + area.width as f32 / 2.0;
@@ -203,7 +206,7 @@ impl Clone for Explode {
             sorted_cells: LruCache::new(),
             replacement_cell: self.replacement_cell.clone(),
             lcg: self.lcg,
-            pattern: self.pattern,
+            pattern: self.pattern.clone(),
         }
     }
 }

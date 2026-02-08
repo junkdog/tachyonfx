@@ -622,6 +622,11 @@ impl<'dsl> Arguments<'dsl> {
                         AnyPattern::from(SweepPattern::down_to_up(width))
                     },
 
+                    "WavePattern::new" => {
+                        let layer = self.extract_nested(args, Arguments::wave_layer, span)?;
+                        AnyPattern::from(WavePattern::new(layer))
+                    },
+
                     _ => self.expected_type("pattern", name, span)?,
                 };
 

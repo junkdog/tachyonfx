@@ -56,7 +56,7 @@ impl Shader for Paint {
         let bg = self.bg;
 
         let is_identity_pattern = matches!(self.pattern, AnyPattern::Identity);
-        let mut pattern = self.pattern.for_frame(global_alpha, area);
+        let mut pattern = self.pattern.clone().for_frame(global_alpha, area);
         let cell_iter = self.cell_iter(buf, area);
 
         cell_iter.for_each_cell(move |pos, cell| {

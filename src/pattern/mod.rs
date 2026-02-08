@@ -6,6 +6,7 @@ mod dissolve;
 mod instanced_pattern;
 mod radial;
 mod sweep;
+mod wave;
 
 use ratatui_core::layout::Rect;
 
@@ -18,6 +19,7 @@ pub use self::{
     dissolve::DissolvePattern,
     radial::RadialPattern,
     sweep::SweepPattern,
+    wave::WavePattern,
 };
 
 /// Trait for patterns that can be prepared for per-frame rendering.

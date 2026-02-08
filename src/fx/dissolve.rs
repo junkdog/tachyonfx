@@ -55,7 +55,7 @@ impl Shader for Dissolve {
 
         // Use pattern-based alpha mapping for all cases (Identity pattern = no change for
         // original behavior)
-        let mut pattern_frame = self.pattern.for_frame(global_alpha, area);
+        let mut pattern_frame = self.pattern.clone().for_frame(global_alpha, area);
 
         self.cell_iter(buf, area)
             .for_each_cell(|pos, cell| {

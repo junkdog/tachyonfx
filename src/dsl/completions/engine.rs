@@ -172,6 +172,15 @@ impl CompletionEngine {
                     CompletionItem::new_type("DissolvePattern::", "Effect progression"),
                     CompletionItem::new_type("RadialPattern::", "Effect progression"),
                     CompletionItem::new_type("SweepPattern::", "Effect progression"),
+                    CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
+                    // Wave types
+                    CompletionItem::new_type("WaveLayer::", "Wave interference layer"),
+                    CompletionItem::new_type("Oscillator::", "Trig oscillator"),
+                    CompletionItem::new_type("Modulator::", "Oscillator modulation source"),
+                    CompletionItem::new_type("WaveFn::", "Waveform functions"),
+                    CompletionItem::new_type("ModTarget::", "Modulation targets"),
+                    CompletionItem::new_type("Combinator::", "Oscillator combinators"),
+                    CompletionItem::new_type("PostTransform::", "Post-processing transforms"),
                     CompletionItem::new_type("Interpolation::", "Easing functions"),
                     CompletionItem::new_type("Motion::", "Movement directions"),
                     CompletionItem::new_type("ColorSpace::", "Color interpolation spaces"),
@@ -454,6 +463,7 @@ fn specialize_completions(completions: Vec<CompletionItem>) -> Vec<CompletionIte
                 CompletionItem::new_type("DissolvePattern::", "Effect progression"),
                 CompletionItem::new_type("RadialPattern::", "Effect progression"),
                 CompletionItem::new_type("SweepPattern::", "Effect progression"),
+                CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
             ],
             _ if c.label.starts_with("bool") => vec![
                 CompletionItem::new_type("true", &c.detail),
@@ -1101,6 +1111,7 @@ mod tests {
             "DissolvePattern::",
             "RadialPattern::",
             "SweepPattern::",
+            "WavePattern::",
         ];
 
         let mut actual_patterns = completions
