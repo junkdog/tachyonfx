@@ -6,6 +6,7 @@ use ratatui_core::{
 
 use crate::{
     fx::{EvolveSymbolSet, RepeatMode},
+    pattern::WavePattern,
     wave::{Combinator, ModTarget, Modulator, Oscillator, PostTransform, WaveFn, WaveLayer},
     CellFilter, ColorSpace, Duration, EffectTimer, Interpolation, Motion,
 };
@@ -171,8 +172,8 @@ impl DslFormat for crate::pattern::AnyPattern {
             crate::pattern::AnyPattern::Dissolve(p) => {
                 format_compact!("AnyPattern::Dissolve({})", p.dsl_format())
             },
-            crate::pattern::AnyPattern::Wave(_) => {
-                "AnyPattern::Wave(WavePattern)".to_compact_string()
+            crate::pattern::AnyPattern::Wave(p) => {
+                format_compact!("AnyPattern::Wave({})", p.dsl_format())
             },
         }
     }
@@ -454,6 +455,23 @@ impl DslFormat for Oscillator {
         }
         if let Some(m) = self.modulator() {
             s.push_str(&format_compact!(".modulated_by({})", m.dsl_format()));
+        }
+        s
+    }
+}
+
+impl DslFormat for WavePattern {
+    fn dsl_format(&self) -> CompactString {
+        let mut layers = self.layers().iter();
+        let first = layers
+            .next()
+            .expect("WavePattern must have at least one layer");
+        let mut s = format_compact!("WavePattern::new({})", first.dsl_format());
+        for layer in layers {
+            s.push_str(&format_compact!(".with_layer({})", layer.dsl_format()));
+        }
+        if self.contrast() != 1 {
+            s.push_str(&format_compact!(".with_contrast({})", self.contrast()));
         }
         s
     }

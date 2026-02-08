@@ -52,6 +52,14 @@ impl WavePattern {
         self
     }
 
+    pub(crate) fn layers(&self) -> &[WaveLayer] {
+        &self.layers
+    }
+
+    pub(crate) fn contrast(&self) -> i32 {
+        self.contrast
+    }
+
     /// Evaluates all layers and returns the combined signal in 0..1.
     fn sample(&self, x: f32, y: f32, t: f32) -> f32 {
         let mut sum = 0.0f32;

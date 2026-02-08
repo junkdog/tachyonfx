@@ -243,7 +243,8 @@ fn evolve_symbol_set(text: &str) -> Option<Value> {
 }
 
 fn wave_fn(text: &str) -> Option<Value> {
-    Some(Value::WaveFn(match text.trim_start_matches("WaveFn::") {
+    let variant = text.strip_prefix("WaveFn::")?;
+    Some(Value::WaveFn(match variant {
         "Sin" => WaveFn::Sin,
         "Cos" => WaveFn::Cos,
         "Triangle" => WaveFn::Triangle,
@@ -253,24 +254,22 @@ fn wave_fn(text: &str) -> Option<Value> {
 }
 
 fn mod_target(text: &str) -> Option<Value> {
-    Some(Value::ModTarget(
-        match text.trim_start_matches("ModTarget::") {
-            "Phase" => ModTarget::Phase,
-            "Amplitude" => ModTarget::Amplitude,
-            _ => None?,
-        },
-    ))
+    let variant = text.strip_prefix("ModTarget::")?;
+    Some(Value::ModTarget(match variant {
+        "Phase" => ModTarget::Phase,
+        "Amplitude" => ModTarget::Amplitude,
+        _ => None?,
+    }))
 }
 
 fn combinator(text: &str) -> Option<Value> {
-    Some(Value::Combinator(
-        match text.trim_start_matches("Combinator::") {
-            "Multiply" => Combinator::Multiply,
-            "Average" => Combinator::Average,
-            "Max" => Combinator::Max,
-            _ => None?,
-        },
-    ))
+    let variant = text.strip_prefix("Combinator::")?;
+    Some(Value::Combinator(match variant {
+        "Multiply" => Combinator::Multiply,
+        "Average" => Combinator::Average,
+        "Max" => Combinator::Max,
+        _ => None?,
+    }))
 }
 
 fn post_transform(text: &str) -> Option<Value> {
