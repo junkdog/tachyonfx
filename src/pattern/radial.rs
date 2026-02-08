@@ -3,7 +3,7 @@ use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui_core::layout::{Position, Rect};
 
 #[cfg(feature = "dsl")]
-use crate::dsl::DslFormat;
+use crate::dsl::{dsl_format::fmt_f32, DslFormat};
 use crate::{
     math,
     pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress},
@@ -134,13 +134,17 @@ impl DslFormat for RadialPattern {
         {
             "RadialPattern::center()".to_compact_string()
         } else if (self.transition_width - 2.0).abs() < f32::EPSILON {
-            format_compact!("RadialPattern::new({}, {})", self.center_x, self.center_y)
+            format_compact!(
+                "RadialPattern::new({}, {})",
+                fmt_f32(self.center_x),
+                fmt_f32(self.center_y)
+            )
         } else {
             format_compact!(
                 "RadialPattern::with_transition(({}, {}), {})",
-                self.center_x,
-                self.center_y,
-                self.transition_width
+                fmt_f32(self.center_x),
+                fmt_f32(self.center_y),
+                fmt_f32(self.transition_width)
             )
         }
     }

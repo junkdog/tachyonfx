@@ -6,8 +6,20 @@ use ratatui_core::{
 
 use crate::{
     fx::{EvolveSymbolSet, RepeatMode},
+    wave::{Combinator, ModTarget, Modulator, Oscillator, PostTransform, WaveFn, WaveLayer},
     CellFilter, ColorSpace, Duration, EffectTimer, Interpolation, Motion,
 };
+
+/// Formats an `f32` value so it always contains a decimal point, ensuring the
+/// DSL parser tokenizes it as a float rather than an integer.
+pub(crate) fn fmt_f32(v: f32) -> CompactString {
+    let s = format_compact!("{v}");
+    if s.contains('.') {
+        s
+    } else {
+        format_compact!("{s}.0")
+    }
+}
 
 /// A trait for converting types into their DSL (Domain Specific Language) string
 /// representation.
@@ -353,6 +365,120 @@ impl DslFormat for CellFilter {
                 format_compact!("CellFilter::Static(Box::new({}))", filter.dsl_format())
             },
         }
+    }
+}
+
+impl DslFormat for WaveFn {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            WaveFn::Sin => "WaveFn::Sin",
+            WaveFn::Cos => "WaveFn::Cos",
+            WaveFn::Triangle => "WaveFn::Triangle",
+            WaveFn::Sawtooth => "WaveFn::Sawtooth",
+        }
+        .to_compact_string()
+    }
+}
+
+impl DslFormat for ModTarget {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            ModTarget::Phase => "ModTarget::Phase",
+            ModTarget::Amplitude => "ModTarget::Amplitude",
+        }
+        .to_compact_string()
+    }
+}
+
+impl DslFormat for Combinator {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            Combinator::Multiply => "Combinator::Multiply",
+            Combinator::Average => "Combinator::Average",
+            Combinator::Max => "Combinator::Max",
+        }
+        .to_compact_string()
+    }
+}
+
+impl DslFormat for PostTransform {
+    fn dsl_format(&self) -> CompactString {
+        match self {
+            PostTransform::None => "PostTransform::None".to_compact_string(),
+            PostTransform::Power(n) => format_compact!("PostTransform::Power({n})"),
+            PostTransform::Abs => "PostTransform::Abs".to_compact_string(),
+        }
+    }
+}
+
+impl DslFormat for Modulator {
+    fn dsl_format(&self) -> CompactString {
+        let mut s = format_compact!(
+            "Modulator::{}({}, {}, {})",
+            self.func_name(),
+            fmt_f32(self.kx()),
+            fmt_f32(self.ky()),
+            fmt_f32(self.kt()),
+        );
+        if self.phase_offset() != 0.0 {
+            s.push_str(&format_compact!(".phase({})", fmt_f32(self.phase_offset())));
+        }
+        if self.intensity_value() != 1.0 {
+            s.push_str(&format_compact!(
+                ".intensity({})",
+                fmt_f32(self.intensity_value())
+            ));
+        }
+        match self.target() {
+            ModTarget::Phase => {},
+            ModTarget::Amplitude => s.push_str(".on_amplitude()"),
+        }
+        s
+    }
+}
+
+impl DslFormat for Oscillator {
+    fn dsl_format(&self) -> CompactString {
+        let mut s = format_compact!(
+            "Oscillator::{}({}, {}, {})",
+            self.func_name(),
+            fmt_f32(self.kx()),
+            fmt_f32(self.ky()),
+            fmt_f32(self.kt()),
+        );
+        if self.phase_offset() != 0.0 {
+            s.push_str(&format_compact!(".phase({})", fmt_f32(self.phase_offset())));
+        }
+        if let Some(m) = self.modulator() {
+            s.push_str(&format_compact!(".modulated_by({})", m.dsl_format()));
+        }
+        s
+    }
+}
+
+impl DslFormat for WaveLayer {
+    fn dsl_format(&self) -> CompactString {
+        let mut s = format_compact!("WaveLayer::new({})", self.oscillator_a().dsl_format());
+        if let Some((combinator, osc_b)) = self.oscillator_b() {
+            let method = match combinator {
+                Combinator::Multiply => "multiply",
+                Combinator::Average => "average",
+                Combinator::Max => "max",
+            };
+            s.push_str(&format_compact!(".{}({})", method, osc_b.dsl_format()));
+        }
+        if self.amplitude_value() != 1.0 {
+            s.push_str(&format_compact!(
+                ".amplitude({})",
+                fmt_f32(self.amplitude_value())
+            ));
+        }
+        match self.post_transform() {
+            PostTransform::None => {},
+            PostTransform::Power(n) => s.push_str(&format_compact!(".power({n})")),
+            PostTransform::Abs => s.push_str(".abs()"),
+        }
+        s
     }
 }
 
@@ -752,7 +878,7 @@ mod tests {
             DiagonalPattern::top_left_to_bottom_right()
                 .with_transition_width(4.0)
                 .dsl_format(),
-            "DiagonalPattern::top_left_to_bottom_right().with_transition_width(4)"
+            "DiagonalPattern::top_left_to_bottom_right().with_transition_width(4.0)"
         );
 
         // Test CheckerboardPattern

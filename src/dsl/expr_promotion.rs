@@ -6,6 +6,7 @@ use ratatui_core::{
 use crate::{
     dsl::expressions::{Expr, ExprSpan, FnCallInfo, Value},
     fx::RepeatMode,
+    wave::{Combinator, ModTarget, PostTransform, WaveFn},
     CellFilter, ColorSpace, Interpolation, Motion,
 };
 
@@ -55,6 +56,10 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
         .or_else(|| color(text))
         .or_else(|| repeat_mode(text))
         .or_else(|| evolve_symbol_set(text))
+        .or_else(|| wave_fn(text))
+        .or_else(|| mod_target(text))
+        .or_else(|| combinator(text))
+        .or_else(|| post_transform(text))
         .or_else(|| none(text))
         .map(|v| Expr::Literal(v, *span))
 }
@@ -235,6 +240,46 @@ fn evolve_symbol_set(text: &str) -> Option<Value> {
             _ => None?,
         },
     ))
+}
+
+fn wave_fn(text: &str) -> Option<Value> {
+    Some(Value::WaveFn(match text.trim_start_matches("WaveFn::") {
+        "Sin" => WaveFn::Sin,
+        "Cos" => WaveFn::Cos,
+        "Triangle" => WaveFn::Triangle,
+        "Sawtooth" => WaveFn::Sawtooth,
+        _ => None?,
+    }))
+}
+
+fn mod_target(text: &str) -> Option<Value> {
+    Some(Value::ModTarget(
+        match text.trim_start_matches("ModTarget::") {
+            "Phase" => ModTarget::Phase,
+            "Amplitude" => ModTarget::Amplitude,
+            _ => None?,
+        },
+    ))
+}
+
+fn combinator(text: &str) -> Option<Value> {
+    Some(Value::Combinator(
+        match text.trim_start_matches("Combinator::") {
+            "Multiply" => Combinator::Multiply,
+            "Average" => Combinator::Average,
+            "Max" => Combinator::Max,
+            _ => None?,
+        },
+    ))
+}
+
+fn post_transform(text: &str) -> Option<Value> {
+    let variant = text.strip_prefix("PostTransform::")?;
+    Some(Value::PostTransform(match variant {
+        "None" => PostTransform::None,
+        "Abs" => PostTransform::Abs,
+        _ => None?,
+    }))
 }
 
 fn none(text: &str) -> Option<Value> {

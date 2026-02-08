@@ -5,7 +5,7 @@ use crate::math::{self, wave_cos, wave_sin};
 const INV_TAU: f32 = 1.0 / TAU;
 
 /// Waveform function selector.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum WaveFn {
     Sin,
     Cos,
@@ -16,6 +16,15 @@ pub enum WaveFn {
 }
 
 impl WaveFn {
+    pub fn name(self) -> &'static str {
+        match self {
+            WaveFn::Sin => "sin",
+            WaveFn::Cos => "cos",
+            WaveFn::Triangle => "triangle",
+            WaveFn::Sawtooth => "sawtooth",
+        }
+    }
+
     fn eval(self, v: f32) -> f32 {
         let t = v * INV_TAU; // radians to normalized cycles
         match self {
@@ -36,7 +45,7 @@ impl WaveFn {
 }
 
 /// Whether a modulator affects the phase or amplitude of its parent oscillator.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ModTarget {
     /// Offsets the phase input of the oscillator (FM synthesis).
     Phase,
@@ -102,6 +111,29 @@ impl Modulator {
         Self { target: ModTarget::Amplitude, ..self }
     }
 
+    pub fn func_name(&self) -> &'static str {
+        self.func.name()
+    }
+
+    pub fn kx(&self) -> f32 {
+        self.kx
+    }
+    pub fn ky(&self) -> f32 {
+        self.ky
+    }
+    pub fn kt(&self) -> f32 {
+        self.kt
+    }
+    pub fn phase_offset(&self) -> f32 {
+        self.phase
+    }
+    pub fn intensity_value(&self) -> f32 {
+        self.intensity
+    }
+    pub fn target(&self) -> ModTarget {
+        self.target
+    }
+
     fn signal(self, x: f32, y: f32, t: f32) -> f32 {
         self.intensity
             * self
@@ -151,6 +183,26 @@ impl Oscillator {
         Self { modulator: Some(modulator), ..self }
     }
 
+    pub fn func_name(&self) -> &'static str {
+        self.func.name()
+    }
+
+    pub fn kx(&self) -> f32 {
+        self.kx
+    }
+    pub fn ky(&self) -> f32 {
+        self.ky
+    }
+    pub fn kt(&self) -> f32 {
+        self.kt
+    }
+    pub fn phase_offset(&self) -> f32 {
+        self.phase
+    }
+    pub fn modulator(&self) -> Option<&Modulator> {
+        self.modulator.as_ref()
+    }
+
     fn eval(self, x: f32, y: f32, t: f32) -> f32 {
         let (phase_mod, amp_mod) = self.modulator.map_or((0.0, 1.0), |m| {
             let s = m.signal(x, y, t);
@@ -167,7 +219,7 @@ impl Oscillator {
 }
 
 /// How two oscillators are combined.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Combinator {
     Multiply,
     Average,
@@ -175,7 +227,7 @@ pub enum Combinator {
 }
 
 /// Optional post-processing of the combined signal.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[allow(dead_code)]
 pub enum PostTransform {
     None,
@@ -230,6 +282,18 @@ impl WaveLayer {
 
     pub fn amplitude_value(&self) -> f32 {
         self.amplitude
+    }
+
+    pub fn oscillator_a(&self) -> &Oscillator {
+        &self.a
+    }
+
+    pub fn oscillator_b(&self) -> Option<(&Combinator, &Oscillator)> {
+        self.b.as_ref().map(|(c, o)| (c, o))
+    }
+
+    pub fn post_transform(&self) -> PostTransform {
+        self.post_transform
     }
 
     pub fn evaluate(&self, x: f32, y: f32, t: f32) -> f32 {

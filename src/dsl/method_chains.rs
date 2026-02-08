@@ -10,6 +10,7 @@ use crate::{
         AnyPattern, CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern,
         RadialPattern, SweepPattern,
     },
+    wave::{Modulator, Oscillator, WaveLayer},
     CellFilter, Effect,
 };
 
@@ -181,6 +182,45 @@ impl ChainableMethods for DissolvePattern {
     fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match name {
             "clone" => pattern,
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for Modulator {
+    fn apply_fn(modulator: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => modulator,
+            "phase" => modulator.phase(args.read_f32()?),
+            "intensity" => modulator.intensity(args.read_f32()?),
+            "on_phase" => modulator.on_phase(),
+            "on_amplitude" => modulator.on_amplitude(),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for Oscillator {
+    fn apply_fn(osc: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => osc,
+            "phase" => osc.phase(args.read_f32()?),
+            "modulated_by" => osc.modulated_by(args.modulator()?),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for WaveLayer {
+    fn apply_fn(layer: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => layer,
+            "multiply" => layer.multiply(args.oscillator()?),
+            "average" => layer.average(args.oscillator()?),
+            "max" => layer.max(args.oscillator()?),
+            "amplitude" => layer.amplitude(args.read_f32()?),
+            "power" => layer.power(args.read_i32()?),
+            "abs" => layer.abs(),
             _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
         })
     }

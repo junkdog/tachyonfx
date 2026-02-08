@@ -22,6 +22,7 @@ use crate::{
     },
     fx::{EvolveSymbolSet, ExpandDirection, RepeatMode},
     pattern::AnyPattern,
+    wave::{Combinator, ModTarget, Modulator, Oscillator, PostTransform, WaveFn, WaveLayer},
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
     SimpleRng,
 };
@@ -635,6 +636,140 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns a [`WaveFn`].
+    pub fn wave_fn(&mut self) -> Result<WaveFn, DslError> {
+        match self.next("wave_fn")? {
+            Expr::Literal(Value::WaveFn(w), _) => Ok(w),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("wave_fn", e),
+        }
+    }
+
+    /// Consumes the next argument and returns a [`ModTarget`].
+    pub fn mod_target(&mut self) -> Result<ModTarget, DslError> {
+        match self.next("mod_target")? {
+            Expr::Literal(Value::ModTarget(m), _) => Ok(m),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("mod_target", e),
+        }
+    }
+
+    /// Consumes the next argument and returns a [`Combinator`].
+    pub fn combinator(&mut self) -> Result<Combinator, DslError> {
+        match self.next("combinator")? {
+            Expr::Literal(Value::Combinator(c), _) => Ok(c),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("combinator", e),
+        }
+    }
+
+    /// Consumes the next argument and returns a [`PostTransform`].
+    pub fn post_transform(&mut self) -> Result<PostTransform, DslError> {
+        match self.next("post_transform")? {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
+                "PostTransform::Power" => {
+                    PostTransform::Power(self.extract_nested(args, Arguments::read_i32, span)?)
+                },
+                _ => self.expected_type("post_transform", name, span)?,
+            }),
+            Expr::Literal(Value::PostTransform(p), _) => Ok(p),
+            Expr::Var { name, span, .. } => self.bound_var(name, span),
+            e => self.expected_type_expr("post_transform", e),
+        }
+    }
+
+    /// Consumes the next argument and returns a [`Modulator`].
+    pub fn modulator(&mut self) -> Result<Modulator, DslError> {
+        match self.next("modulator")? {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
+                let base = match name.as_str() {
+                    "Modulator::sin" => {
+                        let mut inner = self.nested_args(args, 3, span)?;
+                        Modulator::sin(inner.read_f32()?, inner.read_f32()?, inner.read_f32()?)
+                    },
+                    "Modulator::cos" => {
+                        let mut inner = self.nested_args(args, 3, span)?;
+                        Modulator::cos(inner.read_f32()?, inner.read_f32()?, inner.read_f32()?)
+                    },
+                    "Modulator::triangle" => {
+                        let mut inner = self.nested_args(args, 3, span)?;
+                        Modulator::triangle(inner.read_f32()?, inner.read_f32()?, inner.read_f32()?)
+                    },
+                    "Modulator::sawtooth" => {
+                        let mut inner = self.nested_args(args, 3, span)?;
+                        Modulator::sawtooth(inner.read_f32()?, inner.read_f32()?, inner.read_f32()?)
+                    },
+                    _ => self.expected_type("modulator", name, span)?,
+                };
+                base.fold_fns(self_fns, self.context, self.vars)
+            },
+            Expr::Var { name, self_fns, span } => self
+                .bound_var::<Modulator>(name, span)?
+                .fold_fns(self_fns, self.context, self.vars),
+            e => self.expected_type_expr("modulator", e),
+        }
+    }
+
+    /// Consumes the next argument and returns an [`Oscillator`].
+    pub fn oscillator(&mut self) -> Result<Oscillator, DslError> {
+        match self.next("oscillator")? {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
+                let base = match name.as_str() {
+                    "Oscillator::sin" => {
+                        let mut inner = self.nested_args(args, 3, span)?;
+                        Oscillator::sin(inner.read_f32()?, inner.read_f32()?, inner.read_f32()?)
+                    },
+                    "Oscillator::cos" => {
+                        let mut inner = self.nested_args(args, 3, span)?;
+                        Oscillator::cos(inner.read_f32()?, inner.read_f32()?, inner.read_f32()?)
+                    },
+                    "Oscillator::triangle" => {
+                        let mut inner = self.nested_args(args, 3, span)?;
+                        Oscillator::triangle(
+                            inner.read_f32()?,
+                            inner.read_f32()?,
+                            inner.read_f32()?,
+                        )
+                    },
+                    "Oscillator::sawtooth" => {
+                        let mut inner = self.nested_args(args, 3, span)?;
+                        Oscillator::sawtooth(
+                            inner.read_f32()?,
+                            inner.read_f32()?,
+                            inner.read_f32()?,
+                        )
+                    },
+                    _ => self.expected_type("oscillator", name, span)?,
+                };
+                base.fold_fns(self_fns, self.context, self.vars)
+            },
+            Expr::Var { name, self_fns, span } => self
+                .bound_var::<Oscillator>(name, span)?
+                .fold_fns(self_fns, self.context, self.vars),
+            e => self.expected_type_expr("oscillator", e),
+        }
+    }
+
+    /// Consumes the next argument and returns a [`WaveLayer`].
+    pub fn wave_layer(&mut self) -> Result<WaveLayer, DslError> {
+        match self.next("wave_layer")? {
+            Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
+                let base = match name.as_str() {
+                    "WaveLayer::new" => {
+                        let mut inner = self.nested_args(args, 1, span)?;
+                        WaveLayer::new(inner.oscillator()?)
+                    },
+                    _ => self.expected_type("wave_layer", name, span)?,
+                };
+                base.fold_fns(self_fns, self.context, self.vars)
+            },
+            Expr::Var { name, self_fns, span } => self
+                .bound_var::<WaveLayer>(name, span)?
+                .fold_fns(self_fns, self.context, self.vars),
+            e => self.expected_type_expr("wave_layer", e),
+        }
+    }
+
     /// Consumes the next argument and returns a [`Margin`].
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
@@ -1190,6 +1325,15 @@ impl_from_args!(SimpleRng, simple_rng);
 
 // Pattern types
 impl_from_args!(AnyPattern, pattern);
+
+// Wave types
+impl_from_args!(WaveFn, wave_fn);
+impl_from_args!(ModTarget, mod_target);
+impl_from_args!(Combinator, combinator);
+impl_from_args!(PostTransform, post_transform);
+impl_from_args!(Modulator, modulator);
+impl_from_args!(Oscillator, oscillator);
+impl_from_args!(WaveLayer, wave_layer);
 
 #[cfg(test)]
 mod tests {
@@ -1785,5 +1929,195 @@ mod tests {
             expected,
             Arguments::pattern,
         );
+    }
+
+    // ── Wave type DSL parsing tests ──────────────────────────────────
+
+    #[test]
+    fn test_wave_fn_parsing() {
+        use crate::wave::WaveFn;
+
+        let span = ExprSpan::new(0, 0);
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::WaveFn(WaveFn::Sin), span),
+            Expr::Literal(Value::WaveFn(WaveFn::Cos), span),
+            Expr::Literal(Value::WaveFn(WaveFn::Triangle), span),
+            Expr::Literal(Value::WaveFn(WaveFn::Sawtooth), span),
+        ]);
+
+        assert_eq!(args.wave_fn(), Ok(WaveFn::Sin));
+        assert_eq!(args.wave_fn(), Ok(WaveFn::Cos));
+        assert_eq!(args.wave_fn(), Ok(WaveFn::Triangle));
+        assert_eq!(args.wave_fn(), Ok(WaveFn::Sawtooth));
+    }
+
+    #[test]
+    fn test_mod_target_parsing() {
+        use crate::wave::ModTarget;
+
+        let span = ExprSpan::new(0, 0);
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::ModTarget(ModTarget::Phase), span),
+            Expr::Literal(Value::ModTarget(ModTarget::Amplitude), span),
+        ]);
+
+        assert_eq!(args.mod_target(), Ok(ModTarget::Phase));
+        assert_eq!(args.mod_target(), Ok(ModTarget::Amplitude));
+    }
+
+    #[test]
+    fn test_combinator_parsing() {
+        use crate::wave::Combinator;
+
+        let span = ExprSpan::new(0, 0);
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::Combinator(Combinator::Multiply), span),
+            Expr::Literal(Value::Combinator(Combinator::Average), span),
+            Expr::Literal(Value::Combinator(Combinator::Max), span),
+        ]);
+
+        assert_eq!(args.combinator(), Ok(Combinator::Multiply));
+        assert_eq!(args.combinator(), Ok(Combinator::Average));
+        assert_eq!(args.combinator(), Ok(Combinator::Max));
+    }
+
+    #[test]
+    fn test_post_transform_parsing() {
+        use crate::wave::PostTransform;
+
+        let span = ExprSpan::new(0, 0);
+        let mut args = prepare_test(vec![
+            Expr::Literal(Value::PostTransform(PostTransform::None), span),
+            Expr::Literal(Value::PostTransform(PostTransform::Abs), span),
+        ]);
+
+        assert_eq!(args.post_transform(), Ok(PostTransform::None));
+        assert_eq!(args.post_transform(), Ok(PostTransform::Abs));
+
+        // PostTransform::Power requires constructor form (function call)
+        assert_result(
+            "PostTransform::Power(3)",
+            PostTransform::Power(3),
+            Arguments::post_transform,
+        );
+    }
+
+    #[test]
+    fn test_modulator_parsing() {
+        use crate::wave::Modulator;
+
+        // Simple constructor
+        assert_result(
+            "Modulator::sin(1.0, 0.0, 0.5)",
+            Modulator::sin(1.0, 0.0, 0.5),
+            Arguments::modulator,
+        );
+
+        // Constructor with method chain
+        assert_result(
+            "Modulator::cos(0.5, 1.0, 0.0).phase(1.5).intensity(0.8).on_amplitude()",
+            Modulator::cos(0.5, 1.0, 0.0)
+                .phase(1.5)
+                .intensity(0.8)
+                .on_amplitude(),
+            Arguments::modulator,
+        );
+    }
+
+    #[test]
+    fn test_oscillator_parsing() {
+        use crate::wave::{Modulator, Oscillator};
+
+        // Simple constructor
+        assert_result(
+            "Oscillator::sin(1.0, 0.0, 0.0)",
+            Oscillator::sin(1.0, 0.0, 0.0),
+            Arguments::oscillator,
+        );
+
+        // Constructor with method chain and nested modulator
+        assert_result(
+            "Oscillator::cos(0.5, 1.0, 0.0).phase(0.5).modulated_by(Modulator::sin(1.0, 0.0, 0.5))",
+            Oscillator::cos(0.5, 1.0, 0.0)
+                .phase(0.5)
+                .modulated_by(Modulator::sin(1.0, 0.0, 0.5)),
+            Arguments::oscillator,
+        );
+    }
+
+    #[test]
+    fn test_wave_layer_parsing() {
+        use crate::wave::{Oscillator, WaveLayer};
+
+        // Simple constructor
+        assert_result(
+            "WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0))",
+            WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0)),
+            Arguments::wave_layer,
+        );
+
+        // Constructor with combinator, amplitude, and abs
+        assert_result(
+            "WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0)).multiply(Oscillator::cos(0.5, 1.0, 0.0)).amplitude(0.5).abs()",
+            WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0))
+                .multiply(Oscillator::cos(0.5, 1.0, 0.0))
+                .amplitude(0.5)
+                .abs(),
+            Arguments::wave_layer,
+        );
+
+        // Constructor with power post-transform
+        assert_result(
+            "WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0)).power(2)",
+            WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0)).power(2),
+            Arguments::wave_layer,
+        );
+    }
+
+    #[test]
+    fn test_modulator_dsl_roundtrip() {
+        use crate::{dsl::DslFormat, wave::Modulator};
+
+        let modulator = Modulator::sin(1.0, 0.0, 0.5)
+            .phase(0.3)
+            .intensity(0.7)
+            .on_amplitude();
+        let dsl_str = modulator.dsl_format();
+        assert_result(&dsl_str, modulator, Arguments::modulator);
+    }
+
+    #[test]
+    fn test_oscillator_dsl_roundtrip() {
+        use crate::{
+            dsl::DslFormat,
+            wave::{Modulator, Oscillator},
+        };
+
+        let oscillator = Oscillator::triangle(2.0, 1.0, 0.5)
+            .phase(0.25)
+            .modulated_by(Modulator::cos(1.0, 0.0, 0.0).intensity(0.5));
+        let dsl_str = oscillator.dsl_format();
+        assert_result(&dsl_str, oscillator, Arguments::oscillator);
+    }
+
+    #[test]
+    fn test_wave_layer_dsl_roundtrip() {
+        use crate::{
+            dsl::DslFormat,
+            wave::{Oscillator, WaveLayer},
+        };
+
+        // Layer with combinator, amplitude, and post-transform
+        let layer = WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0))
+            .average(Oscillator::cos(0.5, 1.0, 0.0))
+            .amplitude(0.75)
+            .power(3);
+        let dsl_str = layer.dsl_format();
+        assert_result(&dsl_str, layer, Arguments::wave_layer);
+
+        // Layer with abs
+        let layer = WaveLayer::new(Oscillator::sawtooth(1.0, 0.0, 0.0)).abs();
+        let dsl_str = layer.dsl_format();
+        assert_result(&dsl_str, layer, Arguments::wave_layer);
     }
 }
