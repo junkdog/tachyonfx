@@ -28,7 +28,8 @@ pub fn parabolic_cos(t: f32) -> f32 {
 /// sine wave but with slightly flattened peaks.
 #[inline(always)]
 pub fn wave_sin(t: f32) -> f32 {
-    let x = micromath::F32Ext::fract(t);
+    let f = micromath::F32Ext::fract(t);
+    let x = if f < 0.0 { f + 1.0 } else { f };
     let phase: f32 = 1.0 - 2.0 * x;
     4.0 * phase * (1.0 - micromath::F32Ext::abs(phase))
 }

@@ -4,6 +4,17 @@ use crate::math::{self, wave_cos, wave_sin};
 
 const INV_TAU: f32 = 1.0 / TAU;
 
+/// Fractional part of `v`, wrapped to `[0, 1)` for negative values.
+#[inline(always)]
+fn fract_positive(v: f32) -> f32 {
+    let f = micromath::F32Ext::fract(v);
+    if f < 0.0 {
+        f + 1.0
+    } else {
+        f
+    }
+}
+
 /// Waveform function selector.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum WaveFn {
@@ -32,14 +43,14 @@ impl WaveFn {
             WaveFn::Cos => wave_cos(t),
             WaveFn::Triangle => {
                 // arithmetic triangle wave: linear ramp via modular arithmetic
-                let t = micromath::F32Ext::fract(t) * 2.0; // [0, 2)
+                let t = fract_positive(t) * 2.0; // [0, 2)
                 if t < 1.0 {
                     2.0 * t - 1.0
                 } else {
                     3.0 - 2.0 * t
                 }
             },
-            WaveFn::Sawtooth => micromath::F32Ext::fract(t) * 2.0 - 1.0,
+            WaveFn::Sawtooth => fract_positive(t) * 2.0 - 1.0,
         }
     }
 }
@@ -54,6 +65,10 @@ pub enum ModTarget {
 }
 
 /// Modulation source that affects either the phase or amplitude of its parent oscillator.
+///
+/// The signal is evaluated as `func(kx*x + ky*y + kt*t + phase) * intensity`,
+/// where `x`/`y` are cell coordinates relative to the effect area and `t` is the
+/// effect's animation progress (0.0 to 1.0).
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Modulator {
     func: WaveFn,
@@ -79,18 +94,26 @@ impl Modulator {
         }
     }
 
+    /// Creates a sine modulator.
+    ///
+    /// - `kx`: spatial frequency along x (columns); higher = more oscillations per column
+    /// - `ky`: spatial frequency along y (rows); higher = more oscillations per row
+    /// - `kt`: temporal frequency; higher = faster animation over the effect's lifetime
     pub fn sin(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Sin, kx, ky, kt)
     }
 
+    /// Creates a cosine modulator. See [`Modulator::sin`] for parameter docs.
     pub fn cos(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Cos, kx, ky, kt)
     }
 
+    /// Creates a triangle-wave modulator. See [`Modulator::sin`] for parameter docs.
     pub fn triangle(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Triangle, kx, ky, kt)
     }
 
+    /// Creates a sawtooth-wave modulator. See [`Modulator::sin`] for parameter docs.
     pub fn sawtooth(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Sawtooth, kx, ky, kt)
     }
@@ -143,6 +166,10 @@ impl Modulator {
 }
 
 /// A single trig oscillator with optional modulation.
+///
+/// The signal is evaluated as `func(kx*x + ky*y + kt*t + phase)`,
+/// where `x`/`y` are cell coordinates relative to the effect area and `t` is the
+/// effect's animation progress (0.0 to 1.0).
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Oscillator {
     func: WaveFn,
@@ -159,18 +186,26 @@ impl Oscillator {
         Self { func, kx, ky, kt, phase: 0.0, modulator: None }
     }
 
+    /// Creates a sine oscillator.
+    ///
+    /// - `kx`: spatial frequency along x (columns); higher = more oscillations per column
+    /// - `ky`: spatial frequency along y (rows); higher = more oscillations per row
+    /// - `kt`: temporal frequency; higher = faster animation over the effect's lifetime
     pub fn sin(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Sin, kx, ky, kt)
     }
 
+    /// Creates a cosine oscillator. See [`Oscillator::sin`] for parameter docs.
     pub fn cos(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Cos, kx, ky, kt)
     }
 
+    /// Creates a triangle-wave oscillator. See [`Oscillator::sin`] for parameter docs.
     pub fn triangle(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Triangle, kx, ky, kt)
     }
 
+    /// Creates a sawtooth-wave oscillator. See [`Oscillator::sin`] for parameter docs.
     pub fn sawtooth(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Sawtooth, kx, ky, kt)
     }
@@ -360,6 +395,41 @@ mod tests {
         assert!(approx(WaveFn::Sawtooth.eval(PI), 0.0));
         // just before TAU wraps back to -1
         assert!(WaveFn::Sawtooth.eval(TAU - 0.01) > 0.9);
+    }
+
+    #[test]
+    fn wavefn_negative_inputs_in_range() {
+        let inputs = [-FRAC_PI_2, -PI, -3.0 * FRAC_PI_2, -TAU, -7.5];
+        for wf in [WaveFn::Sin, WaveFn::Cos, WaveFn::Triangle, WaveFn::Sawtooth] {
+            for &v in &inputs {
+                let result = wf.eval(v);
+                assert!(
+                    (-1.0..=1.0).contains(&result),
+                    "{:?}.eval({v}) = {result}, out of [-1, 1]",
+                    wf
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn wavefn_negative_matches_positive_period() {
+        // f(-v) should equal f(TAU - v) for periodic functions
+        for wf in [WaveFn::Sin, WaveFn::Cos, WaveFn::Triangle, WaveFn::Sawtooth] {
+            for &v in &[0.5, 1.0, 2.0, FRAC_PI_2, PI] {
+                let neg = wf.eval(-v);
+                let wrapped = wf.eval(TAU - v);
+                assert!(
+                    approx(neg, wrapped),
+                    "{:?}: eval({}) = {} but eval(TAU - {}) = {}",
+                    wf,
+                    -v,
+                    neg,
+                    v,
+                    wrapped
+                );
+            }
+        }
     }
 
     #[test]
