@@ -193,6 +193,7 @@ impl ChainableMethods for WavePattern {
             "clone" => pattern,
             "with_layer" => pattern.with_layer(args.wave_layer()?),
             "with_contrast" => pattern.with_contrast(args.read_i32()?),
+            "with_transition_width" => pattern.with_transition_width(args.read_f32()?),
             _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
         })
     }

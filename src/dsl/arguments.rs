@@ -2010,4 +2010,35 @@ mod tests {
         let dsl_str = layer.dsl_format();
         assert_result(&dsl_str, layer, Arguments::wave_layer);
     }
+
+    #[test]
+    fn test_wave_pattern_dsl_roundtrip() {
+        use crate::{
+            dsl::DslFormat,
+            pattern::{AnyPattern, WavePattern},
+            wave::{Oscillator, WaveLayer},
+        };
+
+        // Pattern with custom transition width
+        let pattern = AnyPattern::Wave(
+            WavePattern::new(WaveLayer::new(Oscillator::sin(1.0, 0.5, 0.0)))
+                .with_contrast(2)
+                .with_transition_width(0.3),
+        );
+        let dsl_str = pattern.dsl_format();
+        assert_result(
+            dsl_str
+                .strip_prefix("AnyPattern::Wave(")
+                .unwrap()
+                .strip_suffix(')')
+                .unwrap(),
+            pattern,
+            Arguments::pattern,
+        );
+
+        // Pattern with default transition width (should not emit .with_transition_width)
+        let pattern_default = WavePattern::new(WaveLayer::new(Oscillator::cos(0.5, 1.0, 0.0)));
+        let dsl_str = pattern_default.dsl_format();
+        assert!(!dsl_str.contains("with_transition_width"));
+    }
 }

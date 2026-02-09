@@ -430,6 +430,12 @@ impl DslFormat for WavePattern {
         if self.contrast() != 1 {
             s.push_str(&format_compact!(".with_contrast({})", self.contrast()));
         }
+        if (self.transition_width() - 0.15).abs() > f32::EPSILON {
+            s.push_str(&format_compact!(
+                ".with_transition_width({})",
+                fmt_f32(self.transition_width())
+            ));
+        }
         s
     }
 }

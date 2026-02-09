@@ -20,11 +20,16 @@ pub struct WavePattern {
     layers: Shared<[WaveLayer]>,
     /// Exponent applied after normalisation; >1 increases contrast.
     contrast: i32,
+    /// Width of the soft transition between active/inactive cells (0..1 normalised
+    /// space).
+    transition_width: f32,
 }
 
 impl PartialEq for WavePattern {
     fn eq(&self, other: &Self) -> bool {
-        self.contrast == other.contrast && *self.layers == *other.layers
+        self.contrast == other.contrast
+            && self.transition_width == other.transition_width
+            && *self.layers == *other.layers
     }
 }
 
@@ -32,7 +37,11 @@ impl PartialEq for WavePattern {
 impl WavePattern {
     /// Creates a wave pattern from a single layer.
     pub fn new(layer: WaveLayer) -> Self {
-        Self { layers: Shared::from(vec![layer]), contrast: 1 }
+        Self {
+            layers: Shared::from(vec![layer]),
+            contrast: 1,
+            transition_width: 0.15,
+        }
     }
 
     /// Adds a layer to the pattern.
@@ -42,6 +51,7 @@ impl WavePattern {
         Self {
             layers: Shared::from(layers),
             contrast: self.contrast,
+            transition_width: self.transition_width,
         }
     }
 
@@ -58,6 +68,17 @@ impl WavePattern {
 
     pub(crate) fn contrast(&self) -> i32 {
         self.contrast
+    }
+
+    /// Sets the transition width for the soft edge between active/inactive cells.
+    /// The value is in normalised [0,1] space (default 0.15). Clamped to >= 0.01.
+    pub fn with_transition_width(mut self, width: f32) -> Self {
+        self.transition_width = width.max(0.01);
+        self
+    }
+
+    pub(crate) fn transition_width(&self) -> f32 {
+        self.transition_width
     }
 }
 
@@ -123,8 +144,8 @@ impl InstancedPattern for PreparedPattern<WavePatternContext, WavePattern> {
         if wave_alpha >= threshold {
             1.0
         } else {
-            // soft transition: linearly ramp over the last 0.15 of threshold distance
-            let transition = 0.15f32;
+            // soft transition: linearly ramp over the configured transition width
+            let transition = self.pattern.transition_width;
             let distance_below = threshold - wave_alpha;
             if distance_below < transition {
                 1.0 - (distance_below / transition)
@@ -188,6 +209,43 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn custom_transition_width_affects_alpha() {
+        let base_layer = WaveLayer::new(Oscillator::sin(1.0, 1.0, 0.0));
+
+        let narrow = WavePattern::new(base_layer).with_transition_width(0.01);
+        let wide = WavePattern::new(base_layer).with_transition_width(0.5);
+
+        // At mid-progress, a wider transition produces more partially-active
+        // cells (alpha between 0 and 1) than a narrow one.
+        let alpha = 0.5;
+        let mut partial_narrow = 0u32;
+        let mut partial_wide = 0u32;
+
+        let mut prepared_narrow = narrow.for_frame(alpha, AREA);
+        let mut prepared_wide = wide.for_frame(alpha, AREA);
+
+        for y in 0..AREA.height {
+            for x in 0..AREA.width {
+                let pos = Position::new(x, y);
+                let a_narrow = prepared_narrow.map_alpha(pos);
+                let a_wide = prepared_wide.map_alpha(pos);
+
+                if a_narrow > 0.0 && a_narrow < 1.0 {
+                    partial_narrow += 1;
+                }
+                if a_wide > 0.0 && a_wide < 1.0 {
+                    partial_wide += 1;
+                }
+            }
+        }
+
+        assert!(
+            partial_wide >= partial_narrow,
+            "wider transition should produce at least as many partial cells: wide={partial_wide}, narrow={partial_narrow}"
+        );
     }
 
     #[test]

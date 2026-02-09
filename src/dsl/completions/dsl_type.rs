@@ -948,6 +948,7 @@ impl DslType for WavePattern {
             method!(T, "clone"),
             method!(T, "with_layer", "WaveLayer"),
             method!(T, "with_contrast", "i32"),
+            method!(T, "with_transition_width", "f32"),
         ];
         METHODS
     }

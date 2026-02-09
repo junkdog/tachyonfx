@@ -1378,7 +1378,7 @@ mod tests {
         let source = "WavePattern::new(WaveLayer::new(Oscillator::sin(0.1, 0.2, 0.3))).";
         let completions = engine.completions(source, source.len() as u32);
 
-        assert_eq!(completions.len(), 3);
+        assert_eq!(completions.len(), 4);
         assert!(completions
             .iter()
             .all(|c| c.kind == CompletionKind::Method));
@@ -1389,6 +1389,9 @@ mod tests {
         assert!(completions
             .iter()
             .any(|c| c.label == "with_contrast"));
+        assert!(completions
+            .iter()
+            .any(|c| c.label == "with_transition_width"));
     }
 
     #[test]
