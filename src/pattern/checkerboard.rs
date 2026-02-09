@@ -3,7 +3,7 @@ use compact_str::{format_compact, CompactString, ToCompactString};
 use ratatui_core::layout::{Position, Rect};
 
 #[cfg(feature = "dsl")]
-use crate::dsl::DslFormat;
+use crate::dsl::{dsl_format::fmt_f32, DslFormat};
 use crate::pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
@@ -99,7 +99,7 @@ impl DslFormat for CheckerboardPattern {
             format_compact!(
                 "CheckerboardPattern::new({}, {})",
                 self.cell_size,
-                self.transition_width
+                fmt_f32(self.transition_width)
             )
         }
     }

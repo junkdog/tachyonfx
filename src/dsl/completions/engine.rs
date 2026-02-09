@@ -172,6 +172,11 @@ impl CompletionEngine {
                     CompletionItem::new_type("DissolvePattern::", "Effect progression"),
                     CompletionItem::new_type("RadialPattern::", "Effect progression"),
                     CompletionItem::new_type("SweepPattern::", "Effect progression"),
+                    CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
+                    // Wave types
+                    CompletionItem::new_type("WaveLayer::", "Wave interference layer"),
+                    CompletionItem::new_type("Oscillator::", "Trig oscillator"),
+                    CompletionItem::new_type("Modulator::", "Oscillator modulation source"),
                     CompletionItem::new_type("Interpolation::", "Easing functions"),
                     CompletionItem::new_type("Motion::", "Movement directions"),
                     CompletionItem::new_type("ColorSpace::", "Color interpolation spaces"),
@@ -216,12 +221,17 @@ impl CompletionEngine {
                 }
             },
 
-            CompletionContext::FnCall { fn_name, arg_index } => {
+            CompletionContext::FnCall { fn_name, namespace, arg_index } => {
                 let fn_name = fn_name.as_str();
-                let completable = self
-                    .effect_by_name(fn_name)
-                    .or_else(|| self.constructor_by_name(fn_name))
-                    .or_else(|| self.method_by_name(fn_name));
+                let completable = if let Some(ns) = &namespace {
+                    self.constructor_by_type_and_name(ns, fn_name)
+                        .or_else(|| self.effect_by_name(fn_name))
+                        .or_else(|| self.method_by_name(fn_name))
+                } else {
+                    self.effect_by_name(fn_name)
+                        .or_else(|| self.constructor_by_name(fn_name))
+                        .or_else(|| self.method_by_name(fn_name))
+                };
 
                 // Now generate completions based on the parameter type
                 let mut completions = vec![];
@@ -351,6 +361,15 @@ impl CompletionEngine {
             .cloned()
     }
 
+    fn constructor_by_type_and_name(&self, type_name: &str, fn_name: &str) -> Option<CallableItem> {
+        self.constructors
+            .get(type_name)
+            .into_iter()
+            .flat_map(|fns| fns.iter())
+            .find(|f| f.name() == fn_name)
+            .cloned()
+    }
+
     fn constructor_by_name(&self, fn_name: &str) -> Option<CallableItem> {
         self.constructors
             .values()
@@ -454,6 +473,7 @@ fn specialize_completions(completions: Vec<CompletionItem>) -> Vec<CompletionIte
                 CompletionItem::new_type("DissolvePattern::", "Effect progression"),
                 CompletionItem::new_type("RadialPattern::", "Effect progression"),
                 CompletionItem::new_type("SweepPattern::", "Effect progression"),
+                CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
             ],
             _ if c.label.starts_with("bool") => vec![
                 CompletionItem::new_type("true", &c.detail),
@@ -1101,6 +1121,7 @@ mod tests {
             "DissolvePattern::",
             "RadialPattern::",
             "SweepPattern::",
+            "WavePattern::",
         ];
 
         let mut actual_patterns = completions
@@ -1234,5 +1255,296 @@ mod tests {
         assert_eq!(completions.len(), 2);
         assert!(completions.iter().any(|c| c.label == "true"));
         assert!(completions.iter().any(|c| c.label == "false"));
+    }
+
+    // --- Wave type completion tests ---
+
+    #[test]
+    fn test_oscillator_namespace_completions() {
+        let engine = CompletionEngine::new();
+        let source = "Oscillator::";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 4);
+        assert!(completions
+            .iter()
+            .all(|c| c.kind == CompletionKind::Function));
+        assert!(completions.iter().any(|c| c.label == "sin"));
+        assert!(completions.iter().any(|c| c.label == "cos"));
+        assert!(completions.iter().any(|c| c.label == "triangle"));
+        assert!(completions.iter().any(|c| c.label == "sawtooth"));
+    }
+
+    #[test]
+    fn test_modulator_namespace_completions() {
+        let engine = CompletionEngine::new();
+        let source = "Modulator::";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 4);
+        assert!(completions
+            .iter()
+            .all(|c| c.kind == CompletionKind::Function));
+        assert!(completions.iter().any(|c| c.label == "sin"));
+        assert!(completions.iter().any(|c| c.label == "cos"));
+        assert!(completions.iter().any(|c| c.label == "triangle"));
+        assert!(completions.iter().any(|c| c.label == "sawtooth"));
+    }
+
+    #[test]
+    fn test_wave_layer_namespace_completions() {
+        let engine = CompletionEngine::new();
+        let source = "WaveLayer::";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 1);
+        assert_eq!(completions[0].label, "new");
+        assert_eq!(completions[0].kind, CompletionKind::Function);
+    }
+
+    #[test]
+    fn test_wave_pattern_namespace_completions() {
+        let engine = CompletionEngine::new();
+        let source = "WavePattern::";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 1);
+        assert_eq!(completions[0].label, "new");
+        assert_eq!(completions[0].kind, CompletionKind::Function);
+    }
+
+    #[test]
+    fn test_oscillator_method_chain() {
+        let engine = CompletionEngine::new();
+        let source = "Oscillator::sin(0.1, 0.2, 0.3).";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 3);
+        assert!(completions
+            .iter()
+            .all(|c| c.kind == CompletionKind::Method));
+        assert!(completions.iter().any(|c| c.label == "clone"));
+        assert!(completions.iter().any(|c| c.label == "phase"));
+        assert!(completions
+            .iter()
+            .any(|c| c.label == "modulated_by"));
+        // constructors should not appear in dot access
+        assert!(!completions.iter().any(|c| c.label == "sin"));
+    }
+
+    #[test]
+    fn test_modulator_method_chain() {
+        let engine = CompletionEngine::new();
+        let source = "Modulator::sin(0.1, 0.2, 0.3).";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 5);
+        assert!(completions
+            .iter()
+            .all(|c| c.kind == CompletionKind::Method));
+        assert!(completions.iter().any(|c| c.label == "clone"));
+        assert!(completions.iter().any(|c| c.label == "phase"));
+        assert!(completions.iter().any(|c| c.label == "intensity"));
+        assert!(completions.iter().any(|c| c.label == "on_phase"));
+        assert!(completions
+            .iter()
+            .any(|c| c.label == "on_amplitude"));
+    }
+
+    #[test]
+    fn test_wave_layer_method_chain() {
+        let engine = CompletionEngine::new();
+        let source = "WaveLayer::new(Oscillator::sin(0.1, 0.2, 0.3)).";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 7);
+        assert!(completions
+            .iter()
+            .all(|c| c.kind == CompletionKind::Method));
+        assert!(completions.iter().any(|c| c.label == "clone"));
+        assert!(completions.iter().any(|c| c.label == "multiply"));
+        assert!(completions.iter().any(|c| c.label == "average"));
+        assert!(completions.iter().any(|c| c.label == "max"));
+        assert!(completions.iter().any(|c| c.label == "amplitude"));
+        assert!(completions.iter().any(|c| c.label == "power"));
+        assert!(completions.iter().any(|c| c.label == "abs"));
+        // constructor should not appear
+        assert!(!completions.iter().any(|c| c.label == "new"));
+    }
+
+    #[test]
+    fn test_wave_pattern_method_chain() {
+        let engine = CompletionEngine::new();
+        let source = "WavePattern::new(WaveLayer::new(Oscillator::sin(0.1, 0.2, 0.3))).";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 4);
+        assert!(completions
+            .iter()
+            .all(|c| c.kind == CompletionKind::Method));
+        assert!(completions.iter().any(|c| c.label == "clone"));
+        assert!(completions
+            .iter()
+            .any(|c| c.label == "with_layer"));
+        assert!(completions
+            .iter()
+            .any(|c| c.label == "with_contrast"));
+        assert!(completions
+            .iter()
+            .any(|c| c.label == "with_transition_width"));
+    }
+
+    #[test]
+    fn test_oscillator_constructor_param_hint() {
+        let engine = CompletionEngine::new();
+        let source = "Oscillator::sin(";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert!(!completions.is_empty());
+        assert_eq!(completions[0], CompletionItem {
+            label: "<f32>".to_string(),
+            kind: CompletionKind::Type,
+            detail: "Parameter 1 of 3".to_string(),
+            insert_text: None,
+        });
+    }
+
+    #[test]
+    fn test_wave_layer_new_param_hint() {
+        let engine = CompletionEngine::new();
+        let source = "WaveLayer::new(";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert!(!completions.is_empty());
+        assert_eq!(completions[0], CompletionItem {
+            label: "Oscillator::".to_string(),
+            kind: CompletionKind::Parameter,
+            detail: "Parameter 1 of 1".to_string(),
+            insert_text: None,
+        });
+    }
+
+    #[test]
+    fn test_wave_pattern_new_param_hint() {
+        let engine = CompletionEngine::new();
+        let source = "WavePattern::new(";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert!(!completions.is_empty());
+        assert_eq!(completions[0], CompletionItem {
+            label: "WaveLayer::".to_string(),
+            kind: CompletionKind::Parameter,
+            detail: "Parameter 1 of 1".to_string(),
+            insert_text: None,
+        });
+    }
+
+    #[test]
+    fn test_oscillator_modulated_by_param_hint() {
+        let engine = CompletionEngine::new();
+        let source = "Oscillator::sin(0.1, 0.2, 0.3).modulated_by(";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert!(!completions.is_empty());
+        assert_eq!(completions[0], CompletionItem {
+            label: "Modulator::".to_string(),
+            kind: CompletionKind::Parameter,
+            detail: "Parameter 1 of 1".to_string(),
+            insert_text: None,
+        });
+    }
+
+    #[test]
+    fn test_wave_layer_multiply_param_hint() {
+        let engine = CompletionEngine::new();
+        let source = "WaveLayer::new(Oscillator::sin(0.1, 0.2, 0.3)).multiply(";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert!(!completions.is_empty());
+        assert_eq!(completions[0], CompletionItem {
+            label: "Oscillator::".to_string(),
+            kind: CompletionKind::Parameter,
+            detail: "Parameter 1 of 1".to_string(),
+            insert_text: None,
+        });
+    }
+
+    #[test]
+    fn test_wave_let_binding_inference() {
+        let engine = CompletionEngine::new();
+        let source = indoc! {r#"
+            let osc = Oscillator::sin(0.1, 0.2, 0.3);
+            let modulator = Modulator::cos(0.5, 0.0, 1.0);
+            let layer = WaveLayer::new(osc);
+            let pattern = WavePattern::new(layer);
+        "#};
+
+        let tokens = tokenize(source).map(sanitize_tokens).unwrap();
+        let bindings = engine.extract_let_bindings(&tokens);
+
+        assert_eq!(bindings, &[
+            LetBinding::new("osc", "Oscillator"),
+            LetBinding::new("modulator", "Modulator"),
+            LetBinding::new("layer", "WaveLayer"),
+            LetBinding::new("pattern", "WavePattern"),
+        ]);
+    }
+
+    #[test]
+    fn test_wave_let_binding_as_param_suggestion() {
+        let engine = CompletionEngine::new();
+        let source = indoc! {r#"
+            let osc = Oscillator::sin(0.1, 0.2, 0.3);
+            WaveLayer::new(
+        "#};
+
+        let completions = engine.completions(source, source.len() as u32);
+
+        // should suggest Oscillator:: as param hint AND the 'osc' variable
+        assert!(completions
+            .iter()
+            .any(|c| c.label == "Oscillator::" && c.kind == CompletionKind::Parameter));
+        assert!(completions.iter().any(|c| c.label == "osc"
+            && c.kind == CompletionKind::Variable
+            && c.detail == "Oscillator"));
+    }
+
+    #[test]
+    fn test_top_level_includes_wave_namespaces() {
+        let engine = CompletionEngine::new();
+        let completions = engine.completions("", 0);
+
+        for ns in &["WaveLayer::", "Oscillator::", "Modulator::", "WavePattern::"] {
+            assert!(
+                completions.iter().any(|c| c.label == *ns),
+                "Top-level completions should include {ns}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_wave_chained_methods_continue_type() {
+        let engine = CompletionEngine::new();
+
+        // chaining .amplitude() on WaveLayer should still offer WaveLayer methods
+        let source = "WaveLayer::new(Oscillator::sin(0.1, 0.2, 0.3)).amplitude(2.0).";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 7);
+        assert!(completions.iter().any(|c| c.label == "power"));
+        assert!(completions.iter().any(|c| c.label == "abs"));
+    }
+
+    #[test]
+    fn test_modulator_chained_methods_continue_type() {
+        let engine = CompletionEngine::new();
+        let source = "Modulator::sin(0.1, 0.2, 0.3).phase(1.0).";
+        let completions = engine.completions(source, source.len() as u32);
+
+        assert_eq!(completions.len(), 5);
+        assert!(completions
+            .iter()
+            .any(|c| c.label == "on_amplitude"));
+        assert!(completions.iter().any(|c| c.label == "intensity"));
     }
 }

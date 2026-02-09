@@ -1,4 +1,4 @@
-pub use sendable::{RefCount, ThreadSafetyMarker};
+pub use sendable::{RefCount, Shared, ThreadSafetyMarker};
 
 use crate::fx::unique::UniqueContext;
 
@@ -14,6 +14,7 @@ mod sendable {
     impl<T: Send> ThreadSafetyMarker for T {}
 
     pub type RefCount<T> = Arc<Mutex<T>>;
+    pub type Shared<T> = Arc<T>;
 
     pub fn ref_count<T>(value: T) -> RefCount<T> {
         Arc::new(Mutex::new(value))
@@ -29,6 +30,7 @@ mod sendable {
     impl<T> ThreadSafetyMarker for T {}
 
     pub type RefCount<T> = Rc<RefCell<T>>;
+    pub type Shared<T> = Rc<T>;
 
     pub fn ref_count<T>(value: T) -> RefCount<T> {
         Rc::new(RefCell::new(value))

@@ -2,7 +2,7 @@ mod arguments;
 mod completions;
 #[allow(clippy::module_inception)]
 mod dsl;
-mod dsl_format;
+pub(crate) mod dsl_format;
 mod dsl_writer;
 mod environment;
 mod expr_promotion;

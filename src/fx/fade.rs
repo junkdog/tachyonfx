@@ -42,7 +42,7 @@ impl Shader for FadeColors {
         let bg = self.bg;
         let color_space = self.color_space;
 
-        let mut pattern = self.pattern.for_frame(global_alpha, area);
+        let mut pattern = self.pattern.clone().for_frame(global_alpha, area);
         let cell_iter = self.cell_iter(buf, area);
         let mut color_cache: ColorCache<(Color, u8), 8> = ColorCache::new();
 

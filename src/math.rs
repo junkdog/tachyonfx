@@ -28,9 +28,19 @@ pub fn parabolic_cos(t: f32) -> f32 {
 /// sine wave but with slightly flattened peaks.
 #[inline(always)]
 pub fn wave_sin(t: f32) -> f32 {
-    let x = micromath::F32Ext::fract(t);
+    let f = micromath::F32Ext::fract(t);
+    let x = if f < 0.0 { f + 1.0 } else { f };
     let phase: f32 = 1.0 - 2.0 * x;
     4.0 * phase * (1.0 - micromath::F32Ext::abs(phase))
+}
+
+/// Fast, branchless cosine approximation using parabolic segments.
+///
+/// Input `t` is in normalized cycles where `1.0` equals one full period.
+/// Values beyond `1.0` wrap naturally. Output ranges from `-1.0` to `1.0`.
+#[inline(always)]
+pub fn wave_cos(t: f32) -> f32 {
+    wave_sin(t + 0.25)
 }
 
 /// Square root function using micromath (faster than std)

@@ -46,6 +46,7 @@ mod ref_rect;
 mod render_effect;
 mod shader;
 mod simple_rng;
+pub mod wave;
 
 pub mod fx;
 pub mod widget;
@@ -72,7 +73,7 @@ pub use effect_timer::EffectTimer;
 pub use features::{ref_count, RefCount, ThreadSafetyMarker};
 pub use interpolation::*;
 pub use lru_cache::LruCache;
-pub use math::{parabolic_cos, parabolic_sin, wave_sin};
+pub use math::{parabolic_cos, parabolic_sin, wave_cos, wave_sin};
 pub use motion::*;
 pub use rect_ext::CenteredShrink;
 pub use ref_rect::RefRect;

@@ -3,8 +3,9 @@ use ratatui_core::layout::{Position, Rect};
 use crate::{
     fx::sliding_window_alpha::SlidingWindowAlpha,
     pattern::{
-        CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern, InstancedPattern,
-        Pattern, PreparedPattern, RadialPattern, SweepPattern,
+        wave::WavePatternContext, CheckerboardPattern, CoalescePattern, DiagonalPattern,
+        DissolvePattern, InstancedPattern, Pattern, PreparedPattern, RadialPattern, SweepPattern,
+        WavePattern,
     },
     simple_rng::SimpleRng,
 };
@@ -12,7 +13,7 @@ use crate::{
 /// An enum that can hold any concrete pattern type.
 /// This allows shaders to store patterns without knowing their concrete types at compile
 /// time.
-#[derive(Clone, Debug, Copy, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub enum AnyPattern {
     #[default]
     Identity, // Returns global alpha unchanged - allows single code path for all effects
@@ -22,6 +23,7 @@ pub enum AnyPattern {
     Sweep(SweepPattern),
     Coalesce(CoalescePattern),
     Dissolve(DissolvePattern),
+    Wave(WavePattern),
 }
 
 /// Context enum that holds the appropriate pattern frame state for each pattern type
@@ -33,6 +35,7 @@ pub enum AnyPatternContext {
     Sweep(PreparedPattern<SlidingWindowAlpha, SweepPattern>),
     Coalesce(PreparedPattern<(f32, SimpleRng), CoalescePattern>),
     Dissolve(PreparedPattern<(f32, SimpleRng), DissolvePattern>),
+    Wave(PreparedPattern<WavePatternContext, WavePattern>),
 }
 
 impl Pattern for AnyPattern {
@@ -43,17 +46,19 @@ impl Pattern for AnyPattern {
         Self: Sized,
     {
         use AnyPatternContext as APC;
+        let pattern = self.clone();
         let context = match self {
             AnyPattern::Identity => APC::Identity(alpha),
-            AnyPattern::Radial(pattern) => APC::Radial(pattern.for_frame(alpha, area)),
-            AnyPattern::Diagonal(pattern) => APC::Diagonal(pattern.for_frame(alpha, area)),
-            AnyPattern::Checkerboard(pattern) => APC::Checkerboard(pattern.for_frame(alpha, area)),
-            AnyPattern::Sweep(pattern) => APC::Sweep(pattern.for_frame(alpha, area)),
-            AnyPattern::Coalesce(pattern) => APC::Coalesce(pattern.for_frame(alpha, area)),
-            AnyPattern::Dissolve(pattern) => APC::Dissolve(pattern.for_frame(alpha, area)),
+            AnyPattern::Radial(p) => APC::Radial(p.for_frame(alpha, area)),
+            AnyPattern::Diagonal(p) => APC::Diagonal(p.for_frame(alpha, area)),
+            AnyPattern::Checkerboard(p) => APC::Checkerboard(p.for_frame(alpha, area)),
+            AnyPattern::Sweep(p) => APC::Sweep(p.for_frame(alpha, area)),
+            AnyPattern::Coalesce(p) => APC::Coalesce(p.for_frame(alpha, area)),
+            AnyPattern::Dissolve(p) => APC::Dissolve(p.for_frame(alpha, area)),
+            AnyPattern::Wave(p) => APC::Wave(p.for_frame(alpha, area)),
         };
 
-        PreparedPattern { pattern: self, context }
+        PreparedPattern { pattern, context }
     }
 }
 
@@ -67,6 +72,7 @@ impl InstancedPattern for PreparedPattern<AnyPatternContext, AnyPattern> {
             AnyPatternContext::Sweep(frame) => frame.map_alpha(pos),
             AnyPatternContext::Coalesce(frame) => frame.map_alpha(pos),
             AnyPatternContext::Dissolve(frame) => frame.map_alpha(pos),
+            AnyPatternContext::Wave(frame) => frame.map_alpha(pos),
         }
     }
 }
@@ -105,5 +111,11 @@ impl From<CoalescePattern> for AnyPattern {
 impl From<DissolvePattern> for AnyPattern {
     fn from(pattern: DissolvePattern) -> Self {
         AnyPattern::Dissolve(pattern)
+    }
+}
+
+impl From<WavePattern> for AnyPattern {
+    fn from(pattern: WavePattern) -> Self {
+        AnyPattern::Wave(pattern)
     }
 }

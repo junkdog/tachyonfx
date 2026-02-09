@@ -8,8 +8,9 @@ use crate::{
     fx::IntoTemporaryEffect,
     pattern::{
         AnyPattern, CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern,
-        RadialPattern, SweepPattern,
+        RadialPattern, SweepPattern, WavePattern,
     },
+    wave::{Modulator, Oscillator, WaveLayer},
     CellFilter, Effect,
 };
 
@@ -186,6 +187,57 @@ impl ChainableMethods for DissolvePattern {
     }
 }
 
+impl ChainableMethods for WavePattern {
+    fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => pattern,
+            "with_layer" => pattern.with_layer(args.wave_layer()?),
+            "with_contrast" => pattern.with_contrast(args.read_i32()?),
+            "with_transition_width" => pattern.with_transition_width(args.read_f32()?),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for Modulator {
+    fn apply_fn(modulator: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => modulator,
+            "phase" => modulator.phase(args.read_f32()?),
+            "intensity" => modulator.intensity(args.read_f32()?),
+            "on_phase" => modulator.on_phase(),
+            "on_amplitude" => modulator.on_amplitude(),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for Oscillator {
+    fn apply_fn(osc: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => osc,
+            "phase" => osc.phase(args.read_f32()?),
+            "modulated_by" => osc.modulated_by(args.modulator()?),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for WaveLayer {
+    fn apply_fn(layer: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => layer,
+            "multiply" => layer.multiply(args.oscillator()?),
+            "average" => layer.average(args.oscillator()?),
+            "max" => layer.max(args.oscillator()?),
+            "amplitude" => layer.amplitude(args.read_f32()?),
+            "power" => layer.power(args.read_i32()?),
+            "abs" => layer.abs(),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
 impl ChainableMethods for AnyPattern {
     fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match pattern {
@@ -211,6 +263,7 @@ impl ChainableMethods for AnyPattern {
             AnyPattern::Dissolve(inner) => {
                 AnyPattern::Dissolve(DissolvePattern::apply_fn(inner, name, args)?)
             },
+            AnyPattern::Wave(inner) => AnyPattern::Wave(WavePattern::apply_fn(inner, name, args)?),
         })
     }
 }

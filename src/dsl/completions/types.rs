@@ -129,10 +129,21 @@ pub enum CompletionKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum CompletionContext {
     TopLevel,
-    DotAccess { receiver_type: String },
-    FnCall { fn_name: String, arg_index: usize },
-    DoubleColon { namespace: String },
-    StructInit { struct_name: String, filled_fields: Vec<String> },
+    DotAccess {
+        receiver_type: String,
+    },
+    FnCall {
+        fn_name: String,
+        namespace: Option<String>,
+        arg_index: usize,
+    },
+    DoubleColon {
+        namespace: String,
+    },
+    StructInit {
+        struct_name: String,
+        filled_fields: Vec<String>,
+    },
 }
 
 impl CompletionItem {
