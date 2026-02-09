@@ -15,9 +15,15 @@ fn fract_positive(v: f32) -> f32 {
     }
 }
 
+pub trait SignalSampler {
+    /// Evaluates the signal at position (`x`, `y`) and time `t`, returning a value in
+    /// −1..1.
+    fn sample(&self, x: f32, y: f32, t: f32) -> f32;
+}
+
 /// Waveform function selector.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum WaveFn {
+pub(crate) enum WaveFn {
     /// Sine wave (parabolic approximation).
     Sin,
     /// Cosine wave (phase-shifted sine).
@@ -170,13 +176,6 @@ impl Modulator {
     pub fn target(&self) -> ModTarget {
         self.target
     }
-
-    fn signal(self, x: f32, y: f32, t: f32) -> f32 {
-        self.intensity
-            * self
-                .func
-                .eval(self.kx * x + self.ky * y + self.kt * t + self.phase)
-    }
 }
 
 /// A single trig oscillator with optional modulation.
@@ -259,25 +258,11 @@ impl Oscillator {
     pub fn modulator(&self) -> Option<&Modulator> {
         self.modulator.as_ref()
     }
-
-    fn eval(self, x: f32, y: f32, t: f32) -> f32 {
-        let (phase_mod, amp_mod) = self.modulator.map_or((0.0, 1.0), |m| {
-            let s = m.signal(x, y, t);
-            match m.target {
-                ModTarget::Phase => (s, 1.0),
-                ModTarget::Amplitude => (0.0, 1.0 + s),
-            }
-        });
-
-        self.func
-            .eval(self.kx * x + self.ky * y + self.kt * t + self.phase + phase_mod)
-            * amp_mod
-    }
 }
 
 /// How two oscillators are combined.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Combinator {
+pub(crate) enum Combinator {
     /// Element-wise product of the two oscillator signals.
     Multiply,
     /// Arithmetic mean of the two oscillator signals.
@@ -289,7 +274,7 @@ pub enum Combinator {
 /// Optional post-processing of the combined signal.
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[allow(dead_code)]
-pub enum PostTransform {
+pub(crate) enum PostTransform {
     /// No post-processing.
     None,
     /// Raise the signal to the given integer power; sharpens peaks and valleys.
@@ -356,29 +341,29 @@ impl WaveLayer {
     }
 
     /// Returns the primary oscillator.
-    pub fn oscillator_a(&self) -> &Oscillator {
+    pub(crate) fn oscillator_a(&self) -> &Oscillator {
         &self.a
     }
 
     /// Returns the secondary oscillator and its combinator, if set.
-    pub fn oscillator_b(&self) -> Option<(&Combinator, &Oscillator)> {
+    pub(crate) fn oscillator_b(&self) -> Option<(&Combinator, &Oscillator)> {
         self.b.as_ref().map(|(c, o)| (c, o))
     }
 
     /// Returns the post-transform applied after combining oscillators.
-    pub fn post_transform(&self) -> PostTransform {
+    pub(crate) fn post_transform(&self) -> PostTransform {
         self.post_transform
     }
+}
 
-    /// Evaluates the layer at position (`x`, `y`) and time `t`, returning a value in
-    /// −1..1.
-    pub fn evaluate(&self, x: f32, y: f32, t: f32) -> f32 {
-        let va = self.a.eval(x, y, t);
+impl SignalSampler for WaveLayer {
+    fn sample(&self, x: f32, y: f32, t: f32) -> f32 {
+        let va = self.a.sample(x, y, t);
 
         let raw = match self.b {
-            Some((Combinator::Multiply, ref osc)) => va * osc.eval(x, y, t),
-            Some((Combinator::Average, ref osc)) => (va + osc.eval(x, y, t)) * 0.5,
-            Some((Combinator::Max, ref osc)) => va.max(osc.eval(x, y, t)),
+            Some((Combinator::Multiply, ref osc)) => va * osc.sample(x, y, t),
+            Some((Combinator::Average, ref osc)) => (va + osc.sample(x, y, t)) * 0.5,
+            Some((Combinator::Max, ref osc)) => va.max(osc.sample(x, y, t)),
             None => va,
         };
 
@@ -389,6 +374,41 @@ impl WaveLayer {
         };
 
         transformed * self.amplitude
+    }
+}
+
+impl SignalSampler for [WaveLayer] {
+    fn sample(&self, x: f32, y: f32, t: f32) -> f32 {
+        let n = self.len() as f32;
+        self.iter()
+            .map(|layer| layer.sample(x, y, t))
+            .sum::<f32>()
+            / n
+    }
+}
+
+impl SignalSampler for Oscillator {
+    fn sample(&self, x: f32, y: f32, t: f32) -> f32 {
+        let (phase_mod, amp_mod) = self.modulator.map_or((0.0, 1.0), |m| {
+            let s = m.sample(x, y, t);
+            match m.target {
+                ModTarget::Phase => (s, 1.0),
+                ModTarget::Amplitude => (0.0, 1.0 + s),
+            }
+        });
+
+        self.func
+            .eval(self.kx * x + self.ky * y + self.kt * t + self.phase + phase_mod)
+            * amp_mod
+    }
+}
+
+impl SignalSampler for Modulator {
+    fn sample(&self, x: f32, y: f32, t: f32) -> f32 {
+        self.intensity
+            * self
+                .func
+                .eval(self.kx * x + self.ky * y + self.kt * t + self.phase)
     }
 }
 
@@ -490,8 +510,8 @@ mod tests {
     #[test]
     fn modulator_intensity_scales_signal() {
         let m = Modulator::sin(1.0, 0.0, 0.0).intensity(0.5);
-        let full = Modulator::sin(1.0, 0.0, 0.0).signal(FRAC_PI_2, 0.0, 0.0);
-        let half = m.signal(FRAC_PI_2, 0.0, 0.0);
+        let full = Modulator::sin(1.0, 0.0, 0.0).sample(FRAC_PI_2, 0.0, 0.0);
+        let half = m.sample(FRAC_PI_2, 0.0, 0.0);
         assert!(approx(half, full * 0.5));
     }
 
@@ -506,7 +526,7 @@ mod tests {
     #[test]
     fn oscillator_without_modulator() {
         let osc = Oscillator::sin(1.0, 0.0, 0.0);
-        assert!(approx(osc.eval(FRAC_PI_2, 0.0, 0.0), 1.0));
+        assert!(approx(osc.sample(FRAC_PI_2, 0.0, 0.0), 1.0));
     }
 
     #[test]
@@ -518,7 +538,7 @@ mod tests {
                 .intensity(0.5),
         );
         // amp_mod = 1.0 + 0.5 * cos(0) = 1.5, carrier = cos(0) = 1.0
-        assert!(approx(modulated.eval(0.0, 0.0, 0.0), 1.5));
+        assert!(approx(modulated.sample(0.0, 0.0, 0.0), 1.5));
     }
 
     // --- WaveLayer ---
@@ -526,13 +546,13 @@ mod tests {
     #[test]
     fn layer_single_oscillator() {
         let layer = WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0));
-        assert!(approx(layer.evaluate(FRAC_PI_2, 0.0, 0.0), 1.0));
+        assert!(approx(layer.sample(FRAC_PI_2, 0.0, 0.0), 1.0));
     }
 
     #[test]
     fn layer_amplitude_scales_output() {
         let layer = WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0)).amplitude(0.5);
-        assert!(approx(layer.evaluate(FRAC_PI_2, 0.0, 0.0), 0.5));
+        assert!(approx(layer.sample(FRAC_PI_2, 0.0, 0.0), 0.5));
     }
 
     #[test]
@@ -540,10 +560,10 @@ mod tests {
         // sin(pi/2) * sin(pi/2) = 1.0 * 1.0
         let layer =
             WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0)).multiply(Oscillator::sin(1.0, 0.0, 0.0));
-        assert!(approx(layer.evaluate(FRAC_PI_2, 0.0, 0.0), 1.0));
+        assert!(approx(layer.sample(FRAC_PI_2, 0.0, 0.0), 1.0));
 
         // sin(0) * sin(pi/2) = 0.0
-        assert!(approx(layer.evaluate(0.0, 0.0, 0.0), 0.0));
+        assert!(approx(layer.sample(0.0, 0.0, 0.0), 0.0));
     }
 
     #[test]
@@ -552,22 +572,22 @@ mod tests {
         let layer = WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0))
             .average(Oscillator::sin(1.0, 0.0, 0.0).phase(FRAC_PI_2));
         // at x=0: (sin(0) + sin(pi/2)) / 2 = 0.5
-        assert!(approx(layer.evaluate(0.0, 0.0, 0.0), 0.5));
+        assert!(approx(layer.sample(0.0, 0.0, 0.0), 0.5));
     }
 
     #[test]
     fn layer_abs_post_transform() {
         let layer = WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0)).abs();
         // sin(3*pi/2) = -1.0, abs => 1.0
-        assert!(approx(layer.evaluate(3.0 * FRAC_PI_2, 0.0, 0.0), 1.0));
+        assert!(approx(layer.sample(3.0 * FRAC_PI_2, 0.0, 0.0), 1.0));
     }
 
     #[test]
     fn layer_power_post_transform() {
         let layer = WaveLayer::new(Oscillator::sin(1.0, 0.0, 0.0)).power(2);
         // sin(pi/2)^2 = 1.0
-        assert!(approx(layer.evaluate(FRAC_PI_2, 0.0, 0.0), 1.0));
+        assert!(approx(layer.sample(FRAC_PI_2, 0.0, 0.0), 1.0));
         // sin(pi)^2 ~= 0.0
-        assert!(approx(layer.evaluate(PI, 0.0, 0.0), 0.0));
+        assert!(approx(layer.sample(PI, 0.0, 0.0), 0.0));
     }
 }

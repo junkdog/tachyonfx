@@ -6,7 +6,7 @@ use crate::{
     features::Shared,
     math,
     pattern::{InstancedPattern, Pattern, PreparedPattern},
-    wave::WaveLayer,
+    wave::{SignalSampler, WaveLayer},
 };
 
 /// A pattern driven by wave interference.
@@ -59,12 +59,13 @@ impl WavePattern {
     pub(crate) fn contrast(&self) -> i32 {
         self.contrast
     }
+}
 
-    /// Evaluates all layers and returns the combined signal in 0..1.
+impl SignalSampler for WavePattern {
     fn sample(&self, x: f32, y: f32, t: f32) -> f32 {
         let mut sum = 0.0f32;
         for layer in self.layers.iter() {
-            sum += layer.evaluate(x, y, t);
+            sum += layer.sample(x, y, t);
         }
 
         // normalise from [-layer_count..layer_count] to [0..1]

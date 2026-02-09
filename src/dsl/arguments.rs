@@ -642,7 +642,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`WaveFn`].
-    pub fn wave_fn(&mut self) -> Result<WaveFn, DslError> {
+    pub(crate) fn wave_fn(&mut self) -> Result<WaveFn, DslError> {
         match self.next("wave_fn")? {
             Expr::Literal(Value::WaveFn(w), _) => Ok(w),
             Expr::Var { name, span, .. } => self.bound_var(name, span),
@@ -660,7 +660,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Combinator`].
-    pub fn combinator(&mut self) -> Result<Combinator, DslError> {
+    pub(crate) fn combinator(&mut self) -> Result<Combinator, DslError> {
         match self.next("combinator")? {
             Expr::Literal(Value::Combinator(c), _) => Ok(c),
             Expr::Var { name, span, .. } => self.bound_var(name, span),
@@ -669,7 +669,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`PostTransform`].
-    pub fn post_transform(&mut self) -> Result<PostTransform, DslError> {
+    pub(crate) fn post_transform(&mut self) -> Result<PostTransform, DslError> {
         match self.next("post_transform")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
                 "PostTransform::Power" => {
