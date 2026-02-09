@@ -79,7 +79,10 @@ impl WavePattern {
     }
 }
 
-/// Per-frame context for `WavePattern`: global alpha, area, and time derived from alpha.
+/// Per-frame evaluation context for [`WavePattern`].
+///
+/// Holds the current animation progress (`alpha`) and the effect area,
+/// allowing the pattern to map cell positions to wave-derived alpha values.
 pub struct WavePatternContext {
     alpha: f32,
     area: Rect,

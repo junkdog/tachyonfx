@@ -18,7 +18,9 @@ fn fract_positive(v: f32) -> f32 {
 /// Waveform function selector.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum WaveFn {
+    /// Sine wave (parabolic approximation).
     Sin,
+    /// Cosine wave (phase-shifted sine).
     Cos,
     /// Linear ramp up/down; produces angular/faceted patterns.
     Triangle,
@@ -27,6 +29,7 @@ pub enum WaveFn {
 }
 
 impl WaveFn {
+    /// Returns the lowercase name of this waveform (e.g. `"sin"`, `"triangle"`).
     pub fn name(self) -> &'static str {
         match self {
             WaveFn::Sin => "sin",
@@ -118,41 +121,52 @@ impl Modulator {
         Self::new(WaveFn::Sawtooth, kx, ky, kt)
     }
 
+    /// Sets the phase offset (in radians).
     pub fn phase(self, phase: f32) -> Self {
         Self { phase, ..self }
     }
 
+    /// Sets the modulation intensity (amplitude scaling of the modulator signal).
     pub fn intensity(self, intensity: f32) -> Self {
         Self { intensity, ..self }
     }
 
+    /// Configures this modulator to affect the parent oscillator's phase (FM).
     pub fn on_phase(self) -> Self {
         Self { target: ModTarget::Phase, ..self }
     }
 
+    /// Configures this modulator to affect the parent oscillator's amplitude (AM).
     pub fn on_amplitude(self) -> Self {
         Self { target: ModTarget::Amplitude, ..self }
     }
 
+    /// Returns the name of the underlying waveform function.
     pub fn func_name(&self) -> &'static str {
         self.func.name()
     }
 
+    /// Spatial frequency along x (columns).
     pub fn kx(&self) -> f32 {
         self.kx
     }
+    /// Spatial frequency along y (rows).
     pub fn ky(&self) -> f32 {
         self.ky
     }
+    /// Temporal frequency.
     pub fn kt(&self) -> f32 {
         self.kt
     }
+    /// Phase offset in radians.
     pub fn phase_offset(&self) -> f32 {
         self.phase
     }
+    /// Modulation intensity (amplitude scaling).
     pub fn intensity_value(&self) -> f32 {
         self.intensity
     }
+    /// Whether this modulator targets phase or amplitude.
     pub fn target(&self) -> ModTarget {
         self.target
     }
@@ -210,30 +224,38 @@ impl Oscillator {
         Self::new(WaveFn::Sawtooth, kx, ky, kt)
     }
 
+    /// Sets the phase offset (in radians).
     pub fn phase(self, phase: f32) -> Self {
         Self { phase, ..self }
     }
 
+    /// Attaches a [`Modulator`] that modulates this oscillator's phase or amplitude.
     pub fn modulated_by(self, modulator: Modulator) -> Self {
         Self { modulator: Some(modulator), ..self }
     }
 
+    /// Returns the name of the underlying waveform function.
     pub fn func_name(&self) -> &'static str {
         self.func.name()
     }
 
+    /// Spatial frequency along x (columns).
     pub fn kx(&self) -> f32 {
         self.kx
     }
+    /// Spatial frequency along y (rows).
     pub fn ky(&self) -> f32 {
         self.ky
     }
+    /// Temporal frequency.
     pub fn kt(&self) -> f32 {
         self.kt
     }
+    /// Phase offset in radians.
     pub fn phase_offset(&self) -> f32 {
         self.phase
     }
+    /// Returns the attached modulator, if any.
     pub fn modulator(&self) -> Option<&Modulator> {
         self.modulator.as_ref()
     }
@@ -256,8 +278,11 @@ impl Oscillator {
 /// How two oscillators are combined.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Combinator {
+    /// Element-wise product of the two oscillator signals.
     Multiply,
+    /// Arithmetic mean of the two oscillator signals.
     Average,
+    /// Element-wise maximum of the two oscillator signals.
     Max,
 }
 
@@ -265,7 +290,9 @@ pub enum Combinator {
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[allow(dead_code)]
 pub enum PostTransform {
+    /// No post-processing.
     None,
+    /// Raise the signal to the given integer power; sharpens peaks and valleys.
     Power(i32),
     /// Mirror the negative half of the signal; visually doubles frequency.
     Abs,
@@ -282,6 +309,8 @@ pub struct WaveLayer {
 
 #[allow(dead_code)]
 impl WaveLayer {
+    /// Creates a layer from a single oscillator with default amplitude (1.0) and no
+    /// post-transform.
     pub fn new(a: Oscillator) -> Self {
         Self {
             a,
@@ -291,46 +320,58 @@ impl WaveLayer {
         }
     }
 
+    /// Combines a second oscillator by multiplying the two signals.
     pub fn multiply(self, b: Oscillator) -> Self {
         Self { b: Some((Combinator::Multiply, b)), ..self }
     }
 
+    /// Combines a second oscillator by averaging the two signals.
     pub fn average(self, b: Oscillator) -> Self {
         Self { b: Some((Combinator::Average, b)), ..self }
     }
 
+    /// Combines a second oscillator by taking the element-wise maximum.
     pub fn max(self, b: Oscillator) -> Self {
         Self { b: Some((Combinator::Max, b)), ..self }
     }
 
+    /// Sets the amplitude (output scaling factor) for this layer.
     pub fn amplitude(self, amplitude: f32) -> Self {
         Self { amplitude, ..self }
     }
 
+    /// Applies a power post-transform, raising the combined signal to `n`.
     pub fn power(self, n: i32) -> Self {
         Self { post_transform: PostTransform::Power(n), ..self }
     }
 
+    /// Applies an absolute-value post-transform, mirroring negative values.
     pub fn abs(self) -> Self {
         Self { post_transform: PostTransform::Abs, ..self }
     }
 
+    /// Returns the amplitude scaling factor.
     pub fn amplitude_value(&self) -> f32 {
         self.amplitude
     }
 
+    /// Returns the primary oscillator.
     pub fn oscillator_a(&self) -> &Oscillator {
         &self.a
     }
 
+    /// Returns the secondary oscillator and its combinator, if set.
     pub fn oscillator_b(&self) -> Option<(&Combinator, &Oscillator)> {
         self.b.as_ref().map(|(c, o)| (c, o))
     }
 
+    /// Returns the post-transform applied after combining oscillators.
     pub fn post_transform(&self) -> PostTransform {
         self.post_transform
     }
 
+    /// Evaluates the layer at position (`x`, `y`) and time `t`, returning a value in
+    /// −1..1.
     pub fn evaluate(&self, x: f32, y: f32, t: f32) -> f32 {
         let va = self.a.eval(x, y, t);
 
