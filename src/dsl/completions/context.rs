@@ -55,9 +55,20 @@ pub(super) fn analyze_last_tokens(
             CompletionContext::DoubleColon { namespace: ns.to_string() }
         },
 
+        // Pattern: Namespace::function_name(  (e.g., "WaveLayer::new(")
+        [.., tok!(Identifier => ns), tok!(DoubleColon), tok!(Identifier => fn_name), tok!(LeftParen)] => {
+            CompletionContext::FnCall {
+                fn_name: fn_name.to_string(),
+                namespace: Some(ns.to_string()),
+                arg_index: 0,
+            }
+        },
+
         // Pattern: function_name(  (e.g., "fade_to(")
-        [.., tok!(Identifier => fn_name), tok!(LeftParen)] => {
-            CompletionContext::FnCall { fn_name: fn_name.to_string(), arg_index: 0 }
+        [.., tok!(Identifier => fn_name), tok!(LeftParen)] => CompletionContext::FnCall {
+            fn_name: fn_name.to_string(),
+            namespace: None,
+            arg_index: 0,
         },
 
         // Pattern: function_name(arg1, arg2,  (count commas for arg index)
@@ -100,11 +111,21 @@ pub(super) fn analyze_last_tokens(
                     }
                 }
 
-                // Try to find the function name before the paren
+                // Try to find the function name (and optional namespace) before the paren
                 if paren_idx > 0 {
                     if let Some(tok!(Identifier => fn_name)) = tokens.get(paren_idx - 1) {
+                        let namespace = if paren_idx >= 3 {
+                            match (&tokens[paren_idx - 3], &tokens[paren_idx - 2]) {
+                                (tok!(Identifier => ns), tok!(DoubleColon)) => Some(ns.to_string()),
+                                _ => None,
+                            }
+                        } else {
+                            None
+                        };
+
                         return CompletionContext::FnCall {
                             fn_name: fn_name.to_string(),
+                            namespace,
                             arg_index: comma_count,
                         };
                     }
@@ -344,6 +365,7 @@ mod tests {
     fn test_function_call_no_args() {
         assert_context_eq("fade_to(", CompletionContext::FnCall {
             fn_name: "fade_to".to_string(),
+            namespace: None,
             arg_index: 0,
         });
     }
@@ -352,11 +374,13 @@ mod tests {
     fn test_function_call_with_args() {
         assert_context_eq("fade_to(Color::Red,", CompletionContext::FnCall {
             fn_name: "fade_to".to_string(),
+            namespace: None,
             arg_index: 1,
         });
 
         assert_context_eq("dissolve(500, CircOut,", CompletionContext::FnCall {
             fn_name: "dissolve".to_string(),
+            namespace: None,
             arg_index: 2,
         });
     }
@@ -389,6 +413,7 @@ mod tests {
         // When cursor is inside nested call, should detect the innermost context
         assert_context_eq("outer(inner(", CompletionContext::FnCall {
             fn_name: "inner".to_string(),
+            namespace: None,
             arg_index: 0,
         });
     }
@@ -451,6 +476,7 @@ mod tests {
     fn test_qualified_function_call() {
         assert_context_eq("Color::from_u32(", CompletionContext::FnCall {
             fn_name: "from_u32".to_string(),
+            namespace: Some("Color".to_string()),
             arg_index: 0,
         });
     }
@@ -474,12 +500,17 @@ mod tests {
     fn test_nested_effects_inside_slice() {
         assert_context_eq("fx::sequence(&[", CompletionContext::FnCall {
             fn_name: "sequence".to_string(),
+            namespace: Some("fx".to_string()),
             arg_index: 0,
         });
 
         assert_context_eq(
             "fx::sequence(&[fx::dissolve(500), ",
-            CompletionContext::FnCall { fn_name: "sequence".to_string(), arg_index: 0 },
+            CompletionContext::FnCall {
+                fn_name: "sequence".to_string(),
+                namespace: Some("fx".to_string()),
+                arg_index: 0,
+            },
         );
 
         assert_context_eq(
