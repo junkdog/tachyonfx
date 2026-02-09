@@ -5,8 +5,7 @@
 - `wave_sin(t)`: fast, branchless parabolic sine approximation using normalized cycles (`1.0` = one period).
 - `parabolic_sin(t)`: parabolic sine approximation accepting radians.
 - `parabolic_cos(t)`: parabolic cosine approximation accepting radians.
-- **Wave interference system**: `Oscillator`, `Modulator`, `WaveLayer`, `WaveFn`, `Combinator`, `PostTransform`, and `ModTarget` types for composing spatial wave patterns.
-- `WavePattern`: pattern type driven by wave interference, supporting multiple layers and configurable contrast.
+- `WavePattern`: spatial pattern driven by composable wave interference. Built from `WaveLayer`s with FM/AM modulation, configurable contrast, and transition width.
 
 ### Changed
 - `SimpleRng`: replace LCG with SplitMix32 for improved randomness quality
