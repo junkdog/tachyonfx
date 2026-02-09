@@ -10,7 +10,7 @@ use crate::{
     dsl::completions::macros::{ctor, method},
     fx::{EvolveSymbolSet, ExpandDirection, RepeatMode},
     pattern::*,
-    wave::{Combinator, ModTarget, Modulator, Oscillator, PostTransform, WaveFn, WaveLayer},
+    wave::{Modulator, Oscillator, WaveLayer},
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
     SimpleRng,
 };
@@ -129,10 +129,6 @@ macro_rules! impl_dsl_type_map {
                 (EvolveSymbolSet::TYPE_NAME, EvolveSymbolSet::$method()),
                 (Interpolation::TYPE_NAME, Interpolation::$method()),
                 // Wave types
-                (WaveFn::TYPE_NAME, WaveFn::$method()),
-                (ModTarget::TYPE_NAME, ModTarget::$method()),
-                (Combinator::TYPE_NAME, Combinator::$method()),
-                (PostTransform::TYPE_NAME, PostTransform::$method()),
                 (Modulator::TYPE_NAME, Modulator::$method()),
                 (Oscillator::TYPE_NAME, Oscillator::$method()),
                 (WaveLayer::TYPE_NAME, WaveLayer::$method()),
@@ -838,72 +834,6 @@ impl DslType for Interpolation {
 
     fn constructors() -> &'static [CallableItem] {
         &[]
-    }
-
-    fn methods() -> &'static [CallableItem] {
-        &[]
-    }
-}
-
-impl DslType for WaveFn {
-    const TYPE_NAME: &'static str = "WaveFn";
-
-    fn constants() -> &'static [&'static str] {
-        &["Sin", "Cos", "Triangle", "Sawtooth"]
-    }
-
-    fn constructors() -> &'static [CallableItem] {
-        &[]
-    }
-
-    fn methods() -> &'static [CallableItem] {
-        &[]
-    }
-}
-
-impl DslType for ModTarget {
-    const TYPE_NAME: &'static str = "ModTarget";
-
-    fn constants() -> &'static [&'static str] {
-        &["Phase", "Amplitude"]
-    }
-
-    fn constructors() -> &'static [CallableItem] {
-        &[]
-    }
-
-    fn methods() -> &'static [CallableItem] {
-        &[]
-    }
-}
-
-impl DslType for Combinator {
-    const TYPE_NAME: &'static str = "Combinator";
-
-    fn constants() -> &'static [&'static str] {
-        &["Multiply", "Average", "Max"]
-    }
-
-    fn constructors() -> &'static [CallableItem] {
-        &[]
-    }
-
-    fn methods() -> &'static [CallableItem] {
-        &[]
-    }
-}
-
-impl DslType for PostTransform {
-    const TYPE_NAME: &'static str = "PostTransform";
-
-    fn constants() -> &'static [&'static str] {
-        &["None", "Abs"]
-    }
-
-    fn constructors() -> &'static [CallableItem] {
-        const T: &str = "PostTransform";
-        const CTORS: &[CallableItem] = &[ctor!(T, "Power", "i32")];
-        CTORS
     }
 
     fn methods() -> &'static [CallableItem] {

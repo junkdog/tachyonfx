@@ -7,7 +7,7 @@ use ratatui_core::{
 use crate::{
     fx::{EvolveSymbolSet, RepeatMode},
     pattern::WavePattern,
-    wave::{Combinator, ModTarget, Modulator, Oscillator, PostTransform, WaveFn, WaveLayer},
+    wave::{Combinator, ModTarget, Modulator, Oscillator, PostTransform, WaveLayer},
     CellFilter, ColorSpace, Duration, EffectTimer, Interpolation, Motion,
 };
 
@@ -368,49 +368,6 @@ impl DslFormat for CellFilter {
             CellFilter::Static(filter) => {
                 format_compact!("CellFilter::Static(Box::new({}))", filter.dsl_format())
             },
-        }
-    }
-}
-
-impl DslFormat for WaveFn {
-    fn dsl_format(&self) -> CompactString {
-        match self {
-            WaveFn::Sin => "WaveFn::Sin",
-            WaveFn::Cos => "WaveFn::Cos",
-            WaveFn::Triangle => "WaveFn::Triangle",
-            WaveFn::Sawtooth => "WaveFn::Sawtooth",
-        }
-        .to_compact_string()
-    }
-}
-
-impl DslFormat for ModTarget {
-    fn dsl_format(&self) -> CompactString {
-        match self {
-            ModTarget::Phase => "ModTarget::Phase",
-            ModTarget::Amplitude => "ModTarget::Amplitude",
-        }
-        .to_compact_string()
-    }
-}
-
-impl DslFormat for Combinator {
-    fn dsl_format(&self) -> CompactString {
-        match self {
-            Combinator::Multiply => "Combinator::Multiply",
-            Combinator::Average => "Combinator::Average",
-            Combinator::Max => "Combinator::Max",
-        }
-        .to_compact_string()
-    }
-}
-
-impl DslFormat for PostTransform {
-    fn dsl_format(&self) -> CompactString {
-        match self {
-            PostTransform::None => "PostTransform::None".to_compact_string(),
-            PostTransform::Power(n) => format_compact!("PostTransform::Power({n})"),
-            PostTransform::Abs => "PostTransform::Abs".to_compact_string(),
         }
     }
 }

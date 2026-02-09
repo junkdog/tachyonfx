@@ -6,12 +6,7 @@ use ratatui_core::{
     style::{Color, Modifier},
 };
 
-use crate::{
-    dsl::DslFormat,
-    fx::RepeatMode,
-    wave::{Combinator, ModTarget, PostTransform, WaveFn},
-    CellFilter, ColorSpace, Interpolation, Motion,
-};
+use crate::{dsl::DslFormat, fx::RepeatMode, CellFilter, ColorSpace, Interpolation, Motion};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct FnCallInfo {
@@ -95,10 +90,6 @@ pub(super) enum Value {
     Interpolation(Interpolation),
     ExpandDirection(crate::fx::ExpandDirection),
     EvolveSymbolSet(crate::fx::EvolveSymbolSet),
-    WaveFn(WaveFn),
-    ModTarget(ModTarget),
-    Combinator(Combinator),
-    PostTransform(PostTransform),
 }
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -208,10 +199,6 @@ impl Value {
             Value::Bool(b) => b.dsl_format(),
             Value::ExpandDirection(d) => d.dsl_format(),
             Value::EvolveSymbolSet(s) => s.dsl_format(),
-            Value::WaveFn(w) => w.dsl_format(),
-            Value::ModTarget(m) => m.dsl_format(),
-            Value::Combinator(c) => c.dsl_format(),
-            Value::PostTransform(p) => p.dsl_format(),
         }
     }
 
@@ -234,10 +221,6 @@ impl Value {
             Value::ColorSpace(_) => "color_space",
             Value::ExpandDirection(_) => "expand_direction",
             Value::EvolveSymbolSet(_) => "evolve_symbol_set",
-            Value::WaveFn(_) => "wave_fn",
-            Value::ModTarget(_) => "mod_target",
-            Value::Combinator(_) => "combinator",
-            Value::PostTransform(_) => "post_transform",
         }
     }
 }

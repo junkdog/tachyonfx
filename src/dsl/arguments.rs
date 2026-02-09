@@ -22,7 +22,7 @@ use crate::{
     },
     fx::{EvolveSymbolSet, ExpandDirection, RepeatMode},
     pattern::AnyPattern,
-    wave::{Combinator, ModTarget, Modulator, Oscillator, PostTransform, WaveFn, WaveLayer},
+    wave::{Modulator, Oscillator, WaveLayer},
     CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Motion, RefRect,
     SimpleRng,
 };
@@ -638,48 +638,6 @@ impl<'dsl> Arguments<'dsl> {
                 .fold_fns(self_fns, self.context, self.vars),
 
             e => self.expected_type_expr("pattern", e),
-        }
-    }
-
-    /// Consumes the next argument and returns a [`WaveFn`].
-    pub(crate) fn wave_fn(&mut self) -> Result<WaveFn, DslError> {
-        match self.next("wave_fn")? {
-            Expr::Literal(Value::WaveFn(w), _) => Ok(w),
-            Expr::Var { name, span, .. } => self.bound_var(name, span),
-            e => self.expected_type_expr("wave_fn", e),
-        }
-    }
-
-    /// Consumes the next argument and returns a [`ModTarget`].
-    pub fn mod_target(&mut self) -> Result<ModTarget, DslError> {
-        match self.next("mod_target")? {
-            Expr::Literal(Value::ModTarget(m), _) => Ok(m),
-            Expr::Var { name, span, .. } => self.bound_var(name, span),
-            e => self.expected_type_expr("mod_target", e),
-        }
-    }
-
-    /// Consumes the next argument and returns a [`Combinator`].
-    pub(crate) fn combinator(&mut self) -> Result<Combinator, DslError> {
-        match self.next("combinator")? {
-            Expr::Literal(Value::Combinator(c), _) => Ok(c),
-            Expr::Var { name, span, .. } => self.bound_var(name, span),
-            e => self.expected_type_expr("combinator", e),
-        }
-    }
-
-    /// Consumes the next argument and returns a [`PostTransform`].
-    pub(crate) fn post_transform(&mut self) -> Result<PostTransform, DslError> {
-        match self.next("post_transform")? {
-            Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
-                "PostTransform::Power" => {
-                    PostTransform::Power(self.extract_nested(args, Arguments::read_i32, span)?)
-                },
-                _ => self.expected_type("post_transform", name, span)?,
-            }),
-            Expr::Literal(Value::PostTransform(p), _) => Ok(p),
-            Expr::Var { name, span, .. } => self.bound_var(name, span),
-            e => self.expected_type_expr("post_transform", e),
         }
     }
 
@@ -1332,10 +1290,6 @@ impl_from_args!(SimpleRng, simple_rng);
 impl_from_args!(AnyPattern, pattern);
 
 // Wave types
-impl_from_args!(WaveFn, wave_fn);
-impl_from_args!(ModTarget, mod_target);
-impl_from_args!(Combinator, combinator);
-impl_from_args!(PostTransform, post_transform);
 impl_from_args!(Modulator, modulator);
 impl_from_args!(Oscillator, oscillator);
 impl_from_args!(WaveLayer, wave_layer);
@@ -1937,75 +1891,6 @@ mod tests {
     }
 
     // ── Wave type DSL parsing tests ──────────────────────────────────
-
-    #[test]
-    fn test_wave_fn_parsing() {
-        use crate::wave::WaveFn;
-
-        let span = ExprSpan::new(0, 0);
-        let mut args = prepare_test(vec![
-            Expr::Literal(Value::WaveFn(WaveFn::Sin), span),
-            Expr::Literal(Value::WaveFn(WaveFn::Cos), span),
-            Expr::Literal(Value::WaveFn(WaveFn::Triangle), span),
-            Expr::Literal(Value::WaveFn(WaveFn::Sawtooth), span),
-        ]);
-
-        assert_eq!(args.wave_fn(), Ok(WaveFn::Sin));
-        assert_eq!(args.wave_fn(), Ok(WaveFn::Cos));
-        assert_eq!(args.wave_fn(), Ok(WaveFn::Triangle));
-        assert_eq!(args.wave_fn(), Ok(WaveFn::Sawtooth));
-    }
-
-    #[test]
-    fn test_mod_target_parsing() {
-        use crate::wave::ModTarget;
-
-        let span = ExprSpan::new(0, 0);
-        let mut args = prepare_test(vec![
-            Expr::Literal(Value::ModTarget(ModTarget::Phase), span),
-            Expr::Literal(Value::ModTarget(ModTarget::Amplitude), span),
-        ]);
-
-        assert_eq!(args.mod_target(), Ok(ModTarget::Phase));
-        assert_eq!(args.mod_target(), Ok(ModTarget::Amplitude));
-    }
-
-    #[test]
-    fn test_combinator_parsing() {
-        use crate::wave::Combinator;
-
-        let span = ExprSpan::new(0, 0);
-        let mut args = prepare_test(vec![
-            Expr::Literal(Value::Combinator(Combinator::Multiply), span),
-            Expr::Literal(Value::Combinator(Combinator::Average), span),
-            Expr::Literal(Value::Combinator(Combinator::Max), span),
-        ]);
-
-        assert_eq!(args.combinator(), Ok(Combinator::Multiply));
-        assert_eq!(args.combinator(), Ok(Combinator::Average));
-        assert_eq!(args.combinator(), Ok(Combinator::Max));
-    }
-
-    #[test]
-    fn test_post_transform_parsing() {
-        use crate::wave::PostTransform;
-
-        let span = ExprSpan::new(0, 0);
-        let mut args = prepare_test(vec![
-            Expr::Literal(Value::PostTransform(PostTransform::None), span),
-            Expr::Literal(Value::PostTransform(PostTransform::Abs), span),
-        ]);
-
-        assert_eq!(args.post_transform(), Ok(PostTransform::None));
-        assert_eq!(args.post_transform(), Ok(PostTransform::Abs));
-
-        // PostTransform::Power requires constructor form (function call)
-        assert_result(
-            "PostTransform::Power(3)",
-            PostTransform::Power(3),
-            Arguments::post_transform,
-        );
-    }
 
     #[test]
     fn test_modulator_parsing() {

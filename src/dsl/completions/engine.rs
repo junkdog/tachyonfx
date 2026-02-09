@@ -177,10 +177,6 @@ impl CompletionEngine {
                     CompletionItem::new_type("WaveLayer::", "Wave interference layer"),
                     CompletionItem::new_type("Oscillator::", "Trig oscillator"),
                     CompletionItem::new_type("Modulator::", "Oscillator modulation source"),
-                    CompletionItem::new_type("WaveFn::", "Waveform functions"),
-                    CompletionItem::new_type("ModTarget::", "Modulation targets"),
-                    CompletionItem::new_type("Combinator::", "Oscillator combinators"),
-                    CompletionItem::new_type("PostTransform::", "Post-processing transforms"),
                     CompletionItem::new_type("Interpolation::", "Easing functions"),
                     CompletionItem::new_type("Motion::", "Movement directions"),
                     CompletionItem::new_type("ColorSpace::", "Color interpolation spaces"),
@@ -1264,80 +1260,6 @@ mod tests {
     // --- Wave type completion tests ---
 
     #[test]
-    fn test_wavefn_namespace_completions() {
-        let engine = CompletionEngine::new();
-        let source = "WaveFn::";
-        let completions = engine.completions(source, source.len() as u32);
-
-        assert_eq!(completions.len(), 4);
-        assert!(completions
-            .iter()
-            .all(|c| c.kind == CompletionKind::Constant));
-        assert!(completions.iter().any(|c| c.label == "Sin"));
-        assert!(completions.iter().any(|c| c.label == "Cos"));
-        assert!(completions.iter().any(|c| c.label == "Triangle"));
-        assert!(completions.iter().any(|c| c.label == "Sawtooth"));
-    }
-
-    #[test]
-    fn test_wavefn_partial_input() {
-        let engine = CompletionEngine::new();
-        let source = "WaveFn::Tri";
-        let completions = engine.completions(source, source.len() as u32);
-
-        assert_eq!(completions.len(), 1);
-        assert_eq!(completions[0].label, "Triangle");
-    }
-
-    #[test]
-    fn test_modtarget_namespace_completions() {
-        let engine = CompletionEngine::new();
-        let source = "ModTarget::";
-        let completions = engine.completions(source, source.len() as u32);
-
-        assert_eq!(completions.len(), 2);
-        assert!(completions
-            .iter()
-            .all(|c| c.kind == CompletionKind::Constant));
-        assert!(completions.iter().any(|c| c.label == "Phase"));
-        assert!(completions.iter().any(|c| c.label == "Amplitude"));
-    }
-
-    #[test]
-    fn test_combinator_namespace_completions() {
-        let engine = CompletionEngine::new();
-        let source = "Combinator::";
-        let completions = engine.completions(source, source.len() as u32);
-
-        assert_eq!(completions.len(), 3);
-        assert!(completions
-            .iter()
-            .all(|c| c.kind == CompletionKind::Constant));
-        assert!(completions.iter().any(|c| c.label == "Multiply"));
-        assert!(completions.iter().any(|c| c.label == "Average"));
-        assert!(completions.iter().any(|c| c.label == "Max"));
-    }
-
-    #[test]
-    fn test_post_transform_namespace_completions() {
-        let engine = CompletionEngine::new();
-        let source = "PostTransform::";
-        let completions = engine.completions(source, source.len() as u32);
-
-        // 2 constants (None, Abs) + 1 constructor (Power)
-        assert_eq!(completions.len(), 3);
-        assert!(completions
-            .iter()
-            .any(|c| c.label == "None" && c.kind == CompletionKind::Constant));
-        assert!(completions
-            .iter()
-            .any(|c| c.label == "Abs" && c.kind == CompletionKind::Constant));
-        assert!(completions
-            .iter()
-            .any(|c| c.label == "Power" && c.kind == CompletionKind::Function));
-    }
-
-    #[test]
     fn test_oscillator_namespace_completions() {
         let engine = CompletionEngine::new();
         let source = "Oscillator::";
@@ -1589,16 +1511,7 @@ mod tests {
         let engine = CompletionEngine::new();
         let completions = engine.completions("", 0);
 
-        for ns in &[
-            "WaveLayer::",
-            "Oscillator::",
-            "Modulator::",
-            "WaveFn::",
-            "ModTarget::",
-            "Combinator::",
-            "PostTransform::",
-            "WavePattern::",
-        ] {
+        for ns in &["WaveLayer::", "Oscillator::", "Modulator::", "WavePattern::"] {
             assert!(
                 completions.iter().any(|c| c.label == *ns),
                 "Top-level completions should include {ns}"
@@ -1630,59 +1543,5 @@ mod tests {
             .iter()
             .any(|c| c.label == "on_amplitude"));
         assert!(completions.iter().any(|c| c.label == "intensity"));
-    }
-
-    #[test]
-    fn test_post_transform_power_param_hint() {
-        let engine = CompletionEngine::new();
-        let source = "PostTransform::Power(";
-        let completions = engine.completions(source, source.len() as u32);
-
-        assert!(!completions.is_empty());
-        // Power takes an i32
-        assert!(completions[0].detail.contains("Parameter 1 of 1"));
-    }
-
-    #[test]
-    fn test_wave_shortform_constants() {
-        let engine = CompletionEngine::new();
-
-        // WaveFn constants should be resolvable as shortforms
-        assert_eq!(engine.resolve_shortform_constants("Sin"), Some("WaveFn"));
-        assert_eq!(engine.resolve_shortform_constants("Cos"), Some("WaveFn"));
-        assert_eq!(
-            engine.resolve_shortform_constants("Triangle"),
-            Some("WaveFn")
-        );
-        assert_eq!(
-            engine.resolve_shortform_constants("Sawtooth"),
-            Some("WaveFn")
-        );
-
-        // ModTarget constants
-        assert_eq!(
-            engine.resolve_shortform_constants("Phase"),
-            Some("ModTarget")
-        );
-        assert_eq!(
-            engine.resolve_shortform_constants("Amplitude"),
-            Some("ModTarget")
-        );
-
-        // Combinator constants
-        assert_eq!(
-            engine.resolve_shortform_constants("Multiply"),
-            Some("Combinator")
-        );
-        assert_eq!(
-            engine.resolve_shortform_constants("Average"),
-            Some("Combinator")
-        );
-
-        // PostTransform constants
-        assert_eq!(
-            engine.resolve_shortform_constants("Abs"),
-            Some("PostTransform")
-        );
     }
 }
