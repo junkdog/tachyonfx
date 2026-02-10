@@ -173,6 +173,7 @@ impl CompletionEngine {
                     CompletionItem::new_type("RadialPattern::", "Effect progression"),
                     CompletionItem::new_type("SweepPattern::", "Effect progression"),
                     CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
+                    CompletionItem::new_type("BlendPattern::", "Blend between two patterns"),
                     // Wave types
                     CompletionItem::new_type("WaveLayer::", "Wave interference layer"),
                     CompletionItem::new_type("Oscillator::", "Trig oscillator"),
@@ -467,6 +468,7 @@ fn specialize_completions(completions: Vec<CompletionItem>) -> Vec<CompletionIte
         .into_iter()
         .flat_map(|c| match () {
             _ if c.label == "AnyPattern::" => vec![
+                CompletionItem::new_type("BlendPattern::", "Blend between two patterns"),
                 CompletionItem::new_type("CheckerboardPattern::", "Effect progression"),
                 CompletionItem::new_type("CoalescePattern::", "Effect progression"),
                 CompletionItem::new_type("DiagonalPattern::", "Effect progression"),
@@ -1115,6 +1117,7 @@ mod tests {
 
         // Expected pattern types (all concrete pattern types)
         let expected_patterns = vec![
+            "BlendPattern::",
             "CheckerboardPattern::",
             "CoalescePattern::",
             "DiagonalPattern::",

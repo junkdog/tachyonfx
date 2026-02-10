@@ -627,6 +627,13 @@ impl<'dsl> Arguments<'dsl> {
                         AnyPattern::from(WavePattern::new(layer))
                     },
 
+                    "BlendPattern::new" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let pattern_a = inner_args.pattern()?;
+                        let pattern_b = inner_args.pattern()?;
+                        AnyPattern::from(BlendPattern::new(pattern_a, pattern_b))
+                    },
+
                     _ => self.expected_type("pattern", name, span)?,
                 };
 

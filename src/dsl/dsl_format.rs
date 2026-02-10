@@ -175,6 +175,9 @@ impl DslFormat for crate::pattern::AnyPattern {
             crate::pattern::AnyPattern::Wave(p) => {
                 format_compact!("AnyPattern::Wave({})", p.dsl_format())
             },
+            crate::pattern::AnyPattern::Blend(p) => {
+                format_compact!("AnyPattern::Blend({})", p.dsl_format())
+            },
         }
     }
 }
@@ -463,6 +466,16 @@ impl DslFormat for WaveLayer {
             PostTransform::Abs => s.push_str(".abs()"),
         }
         s
+    }
+}
+
+impl DslFormat for crate::pattern::BlendPattern {
+    fn dsl_format(&self) -> CompactString {
+        format_compact!(
+            "BlendPattern::new({}, {})",
+            self.pattern_a().dsl_format(),
+            self.pattern_b().dsl_format()
+        )
     }
 }
 

@@ -264,6 +264,10 @@ impl ChainableMethods for AnyPattern {
                 AnyPattern::Dissolve(DissolvePattern::apply_fn(inner, name, args)?)
             },
             AnyPattern::Wave(inner) => AnyPattern::Wave(WavePattern::apply_fn(inner, name, args)?),
+            AnyPattern::Blend(_) => match name {
+                "clone" => pattern,
+                _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+            },
         })
     }
 }

@@ -119,6 +119,7 @@ macro_rules! impl_dsl_type_map {
                 (DissolvePattern::TYPE_NAME, DissolvePattern::$method()),
                 (RadialPattern::TYPE_NAME, RadialPattern::$method()),
                 (SweepPattern::TYPE_NAME, SweepPattern::$method()),
+                (BlendPattern::TYPE_NAME, BlendPattern::$method()),
                 // Enum types
                 (Motion::TYPE_NAME, Motion::$method()),
                 (ColorSpace::TYPE_NAME, ColorSpace::$method()),
@@ -950,6 +951,26 @@ impl DslType for WavePattern {
             method!(T, "with_contrast", "i32"),
             method!(T, "with_transition_width", "f32"),
         ];
+        METHODS
+    }
+}
+
+impl DslType for BlendPattern {
+    const TYPE_NAME: &'static str = "BlendPattern";
+
+    fn constants() -> &'static [&'static str] {
+        &[]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        const T: &str = "BlendPattern";
+        const CTORS: &[CallableItem] = &[ctor!(T, "new", "AnyPattern", "AnyPattern")];
+        CTORS
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        const T: &str = "BlendPattern";
+        const METHODS: &[CallableItem] = &[method!(T, "clone")];
         METHODS
     }
 }

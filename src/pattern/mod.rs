@@ -1,4 +1,5 @@
 mod any_pattern;
+mod blend;
 mod checkerboard;
 mod coalesce;
 mod diagonal;
@@ -13,6 +14,7 @@ use ratatui_core::layout::Rect;
 pub(crate) use self::instanced_pattern::InstancedPattern;
 pub use self::{
     any_pattern::AnyPattern,
+    blend::BlendPattern,
     checkerboard::CheckerboardPattern,
     coalesce::CoalescePattern,
     diagonal::{DiagonalDirection, DiagonalPattern},

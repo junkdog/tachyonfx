@@ -3,9 +3,10 @@ use ratatui_core::layout::{Position, Rect};
 use crate::{
     fx::sliding_window_alpha::SlidingWindowAlpha,
     pattern::{
-        wave::WavePatternContext, CheckerboardPattern, CoalescePattern, DiagonalPattern,
-        DissolvePattern, InstancedPattern, Pattern, PreparedPattern, RadialPattern, SweepPattern,
-        WavePattern,
+        blend::{BlendPattern, BlendPatternContext},
+        wave::WavePatternContext,
+        CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern, InstancedPattern,
+        Pattern, PreparedPattern, RadialPattern, SweepPattern, WavePattern,
     },
     simple_rng::SimpleRng,
 };
@@ -23,6 +24,7 @@ pub enum AnyPattern {
     Sweep(SweepPattern),
     Coalesce(CoalescePattern),
     Dissolve(DissolvePattern),
+    Blend(BlendPattern),
     Wave(WavePattern),
 }
 
@@ -35,6 +37,7 @@ pub enum AnyPatternContext {
     Sweep(PreparedPattern<SlidingWindowAlpha, SweepPattern>),
     Coalesce(PreparedPattern<(f32, SimpleRng), CoalescePattern>),
     Dissolve(PreparedPattern<(f32, SimpleRng), DissolvePattern>),
+    Blend(PreparedPattern<BlendPatternContext, BlendPattern>),
     Wave(PreparedPattern<WavePatternContext, WavePattern>),
 }
 
@@ -55,6 +58,7 @@ impl Pattern for AnyPattern {
             AnyPattern::Sweep(p) => APC::Sweep(p.for_frame(alpha, area)),
             AnyPattern::Coalesce(p) => APC::Coalesce(p.for_frame(alpha, area)),
             AnyPattern::Dissolve(p) => APC::Dissolve(p.for_frame(alpha, area)),
+            AnyPattern::Blend(p) => APC::Blend(p.for_frame(alpha, area)),
             AnyPattern::Wave(p) => APC::Wave(p.for_frame(alpha, area)),
         };
 
@@ -72,6 +76,7 @@ impl InstancedPattern for PreparedPattern<AnyPatternContext, AnyPattern> {
             AnyPatternContext::Sweep(frame) => frame.map_alpha(pos),
             AnyPatternContext::Coalesce(frame) => frame.map_alpha(pos),
             AnyPatternContext::Dissolve(frame) => frame.map_alpha(pos),
+            AnyPatternContext::Blend(frame) => frame.map_alpha(pos),
             AnyPatternContext::Wave(frame) => frame.map_alpha(pos),
         }
     }
@@ -117,5 +122,11 @@ impl From<DissolvePattern> for AnyPattern {
 impl From<WavePattern> for AnyPattern {
     fn from(pattern: WavePattern) -> Self {
         AnyPattern::Wave(pattern)
+    }
+}
+
+impl From<BlendPattern> for AnyPattern {
+    fn from(pattern: BlendPattern) -> Self {
+        AnyPattern::Blend(pattern)
     }
 }
