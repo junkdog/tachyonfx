@@ -13,6 +13,9 @@
 - Internal `sin()`/`cos()` now use `parabolic_sin`/`parabolic_cos` across both std and no_std builds.
 - Internal `sqrt`, `round`, `floor`, `ceil` now always use micromath (faster than std in benchmarks).
 
+### Fixed
+- Replace `u16::is_multiple_of` with modulo operator for compatibility with Rust < 1.87.
+
 ## tachyonfx 0.23.0 - 2026-01-28
 
 ### Changed

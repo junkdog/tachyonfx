@@ -44,10 +44,11 @@ impl CheckerboardPattern {
         self
     }
 
+    #[allow(clippy::manual_is_multiple_of)] // only stabilized in 1.87.0 (2025-05)
     fn is_white_cell(&self, x: u16, y: u16) -> bool {
         let cell_x = x / self.cell_size;
         let cell_y = y / self.cell_size;
-        (cell_x + cell_y).is_multiple_of(2)
+        (cell_x + cell_y) % 2 == 0
     }
 }
 
