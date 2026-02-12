@@ -225,82 +225,76 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
     )
 }
 
-fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
-    let r = r as f32 / 255.0;
-    let g = g as f32 / 255.0;
-    let b = b as f32 / 255.0;
-
+pub(crate) fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     let max = r.max(g).max(b);
     let min = r.min(g).min(b);
-    let delta = max - min;
+    let delta = max - min; // u8
+    let sum = max as u16 + min as u16; // 0..510
 
-    // Lightness calculation
-    let l = (max + min) / 2.0;
-
-    // If delta is 0, the color is a shade of gray
-    if delta == 0.0 {
-        return (0.0, 0.0, l * 100.0);
+    if delta == 0 {
+        return (0.0, 0.0, sum as f32 * (50.0 / 255.0));
     }
 
-    // Saturation calculation
-    let s = if l <= 0.5 { delta / (max + min) } else { delta / (2.0 - max - min) };
+    let l = sum as f32 * (50.0 / 255.0);
 
-    // Hue calculation
-    let h = if max == r {
-        (g - b) / delta + (if g < b { 6.0 } else { 0.0 })
-    } else if max == g {
-        (b - r) / delta + 2.0
-    } else {
-        (r - g) / delta + 4.0
-    };
+    // Saturation denom computed in integer: 255 - |sum - 255|
+    let abs_diff = sum.abs_diff(255);
+    let denom = (255 - abs_diff) as f32;
 
-    (h * 60.0, s * 100.0, l * 100.0)
+    // Two independent divisions — CPU pipelines these
+    let inv_delta = 1.0 / delta as f32;
+    let inv_denom = 1.0 / denom;
+
+    let s = delta as f32 * 100.0 * inv_denom;
+
+    // Hue: channel diffs as integer → single multiply by precomputed inv_delta
+    let hr = (g as f32 - b as f32) * inv_delta;
+    let hg = (b as f32 - r as f32) * inv_delta + 2.0;
+    let hb = (r as f32 - g as f32) * inv_delta + 4.0;
+
+    // Branchless masks using exact u8 comparisons
+    let r_mask = ((r >= g) as u8 & (r >= b) as u8) as f32;
+    let g_mask = (g >= b) as u8 as f32 * (1.0 - r_mask);
+    let b_mask = 1.0 - r_mask - g_mask;
+
+    let hr = hr + (g < b) as u8 as f32 * 6.0;
+    let h = (r_mask * hr + g_mask * hg + b_mask * hb) * 60.0;
+
+    (h, s, l)
 }
 
 pub(crate) fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
-    let h = h % 360.0;
     let s = s / 100.0;
     let l = l / 100.0;
 
-    // If saturation is 0, color is a shade of gray
     if s == 0.0 {
         let gray = math::round(l * 255.0) as u8;
         return (gray, gray, gray);
     }
 
-    let q = if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
+    let h = (h % 360.0) / 60.0;
+    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let m = l - c * 0.5;
 
-    let p = 2.0 * l - q;
+    let sector = h as u32;
+    let f = h - sector as f32;
+    let h2 = (sector & 1) as f32 + f;
+    let x = c * (1.0 - (h2 - 1.0).abs());
 
-    let to_rgb_component = |t: f32| -> u8 {
-        let t = if t < 0.0 {
-            t + 1.0
-        } else if t > 1.0 {
-            t - 1.0
-        } else {
-            t
-        };
-
-        let value = if t < 1.0 / 6.0 {
-            p + (q - p) * 6.0 * t
-        } else if t < 1.0 / 2.0 {
-            q
-        } else if t < 2.0 / 3.0 {
-            p + (q - p) * (2.0 / 3.0 - t) * 6.0
-        } else {
-            p
-        };
-
-        math::round(value * 255.0) as u8
+    let (r, g, b) = match sector {
+        0 => (c + m, x + m, m),
+        1 => (x + m, c + m, m),
+        2 => (m, c + m, x + m),
+        3 => (m, x + m, c + m),
+        4 => (x + m, m, c + m),
+        _ => (c + m, m, x + m),
     };
 
-    let h = h / 360.0;
-
-    let r = to_rgb_component(h + 1.0 / 3.0);
-    let g = to_rgb_component(h);
-    let b = to_rgb_component(h - 1.0 / 3.0);
-
-    (r, g, b)
+    (
+        math::round(r * 255.0) as u8,
+        math::round(g * 255.0) as u8,
+        math::round(b * 255.0) as u8,
+    )
 }
 
 #[cfg(test)]

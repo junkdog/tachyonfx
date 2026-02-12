@@ -12,6 +12,8 @@
 - `SimpleRng`: replace LCG with SplitMix32 for improved randomness quality
 - Internal `sin()`/`cos()` now use `parabolic_sin`/`parabolic_cos` across both std and no_std builds.
 - Internal `sqrt`, `round`, `floor`, `ceil` now always use micromath (faster than std in benchmarks).
+- `rgb_to_hsl`: optimized with integer pipeline (~34% faster).
+- `hsl_to_rgb`: uses direct sector computation (~31% faster).
 
 ### Fixed
 - Replace `u16::is_multiple_of` with modulo operator for compatibility with Rust < 1.87.
