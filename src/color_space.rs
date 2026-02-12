@@ -72,7 +72,107 @@ pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
     rgb_to_hsl(r, g, b)
 }
 
+/// Darken: scale toward 0. Lighten: lerp toward 255.
+/// `amount`: -1.0 (black) to +1.0 (white).
+#[inline]
+fn adjust_lightness_linear(r: u8, g: u8, b: u8, amount: f32) -> (u8, u8, u8) {
+    if amount >= 0.0 {
+        // lerp toward white: c' = c + (255 - c) * amount
+        let a = (amount * 256.0) as u32;
+        let r = r as u32 + (((255 - r as u32) * a) >> 8);
+        let g = g as u32 + (((255 - g as u32) * a) >> 8);
+        let b = b as u32 + (((255 - b as u32) * a) >> 8);
+        (r as u8, g as u8, b as u8)
+    } else {
+        // scale toward black: c' = c * (1 + amount)
+        let factor = ((1.0 + amount) * 256.0) as u32;
+        let r = (r as u32 * factor) >> 8;
+        let g = (g as u32 * factor) >> 8;
+        let b = (b as u32 * factor) >> 8;
+        (r as u8, g as u8, b as u8)
+    }
+}
+
+/// Adjust saturation by lerping toward BT.601 weighted luminance.
+/// `factor`: 0.0 = fully desaturated, 1.0 = original, >1.0 = oversaturated.
+#[inline]
+fn adjust_saturation_weighted(r: u8, g: u8, b: u8, factor: f32) -> (u8, u8, u8) {
+    // BT.601: 77/256 = 0.299, 150/256 = 0.586, 29/256 = 0.113
+    let lum = ((r as u32 * 77 + g as u32 * 150 + b as u32 * 29) >> 8) as i32;
+    let f = (factor * 256.0) as i32;
+
+    // c' = lum + (c - lum) * factor
+    let r = (lum + (((r as i32 - lum) * f) >> 8)).clamp(0, 255) as u8;
+    let g = (lum + (((g as i32 - lum) * f) >> 8)).clamp(0, 255) as u8;
+    let b = (lum + (((b as i32 - lum) * f) >> 8)).clamp(0, 255) as u8;
+    (r, g, b)
+}
+
+/// Lerp a value toward 0 (negative amount) or toward `max` (positive amount).
+/// `amount`: -1.0 to +1.0. Result is clamped to 0..max.
+#[inline]
+fn lerp_toward_extreme(value: f32, amount: f32, max: f32) -> f32 {
+    if amount >= 0.0 {
+        value + (max - value) * amount
+    } else {
+        value + value * amount
+    }
+}
+
 impl ColorSpace {
+    /// Adjust saturation of a color.
+    /// `factor`: 0.0 = fully desaturated, 1.0 = original, >1.0 = oversaturated.
+    pub fn saturate(&self, color: &Color, factor: f32) -> Color {
+        match self {
+            ColorSpace::Rgb => {
+                let (r, g, b) = color.to_rgb();
+                let (r, g, b) = adjust_saturation_weighted(r, g, b, factor);
+                Color::Rgb(r, g, b)
+            },
+            ColorSpace::Hsl => {
+                let (r, g, b) = color.to_rgb();
+                let (h, s, l) = rgb_to_hsl(r, g, b);
+                let s = (s * factor).clamp(0.0, 100.0);
+                let (r, g, b) = hsl_to_rgb(h, s, l);
+                Color::Rgb(r, g, b)
+            },
+            ColorSpace::Hsv => {
+                let (r, g, b) = color.to_rgb();
+                let (h, s, v) = rgb_to_hsv(r, g, b);
+                let s = (s * factor).clamp(0.0, 100.0);
+                let (r, g, b) = hsv_to_rgb(h, s, v);
+                Color::Rgb(r, g, b)
+            },
+        }
+    }
+
+    /// Adjust lightness/brightness of a color.
+    /// `amount`: -1.0 (black) to +1.0 (white). Lerps toward the extreme.
+    pub fn lighten(&self, color: &Color, amount: f32) -> Color {
+        let amount = amount.clamp(-1.0, 1.0);
+        match self {
+            ColorSpace::Rgb => {
+                let (r, g, b) = color.to_rgb();
+                let (r, g, b) = adjust_lightness_linear(r, g, b, amount);
+                Color::Rgb(r, g, b)
+            },
+            ColorSpace::Hsl => {
+                let (r, g, b) = color.to_rgb();
+                let (h, s, l) = rgb_to_hsl(r, g, b);
+                let l = lerp_toward_extreme(l, amount, 100.0);
+                let (r, g, b) = hsl_to_rgb(h, s, l);
+                Color::Rgb(r, g, b)
+            },
+            ColorSpace::Hsv => {
+                let (r, g, b) = color.to_rgb();
+                let (h, s, v) = rgb_to_hsv(r, g, b);
+                let v = lerp_toward_extreme(v, amount, 100.0);
+                let (r, g, b) = hsv_to_rgb(h, s, v);
+                Color::Rgb(r, g, b)
+            },
+        }
+    }
+
     pub fn lerp(&self, from: &Color, to: &Color, alpha: f32) -> Color {
         use ColorSpace::*;
 
@@ -585,5 +685,153 @@ mod tests {
 
         let (hsl_h, _, _) = rgb_to_hsl(hsl_mid.to_rgb().0, hsl_mid.to_rgb().1, hsl_mid.to_rgb().2);
         assert_approx_eq(hsl_h, 90.0, 5.0);
+    }
+
+    #[test]
+    fn test_lighten_all_color_spaces() {
+        let spaces = [ColorSpace::Rgb, ColorSpace::Hsl, ColorSpace::Hsv];
+        let red = Color::Rgb(200, 50, 50);
+        let gray = Color::Rgb(128, 128, 128);
+
+        for cs in spaces {
+            // amount=0 returns original
+            assert_eq!(
+                cs.lighten(&red, 0.0).to_rgb(),
+                red.to_rgb(),
+                "{cs:?}: amount=0 should return original"
+            );
+
+            // amount=1.0: RGB/HSL produce white, HSV maxes brightness (stays saturated)
+            let (r, g, b) = cs.lighten(&red, 1.0).to_rgb();
+            match cs {
+                ColorSpace::Rgb | ColorSpace::Hsl => {
+                    assert!(
+                        r >= 254 && g >= 254 && b >= 254,
+                        "{cs:?}: amount=1.0 should produce white, got ({r}, {g}, {b})"
+                    );
+                },
+                ColorSpace::Hsv => {
+                    assert_eq!(r, 255, "{cs:?}: amount=1.0 should max out dominant channel");
+                },
+            }
+
+            // amount=-1.0 produces black
+            let (r, g, b) = cs.lighten(&red, -1.0).to_rgb();
+            assert!(
+                r <= 1 && g <= 1 && b <= 1,
+                "{cs:?}: amount=-1.0 should produce black, got ({r}, {g}, {b})"
+            );
+
+            // positive amount increases perceived brightness
+            let orig = gray.to_rgb();
+            let lighter = cs.lighten(&gray, 0.5).to_rgb();
+            assert!(
+                lighter.0 > orig.0 && lighter.1 > orig.1 && lighter.2 > orig.2,
+                "{cs:?}: lighten(0.5) should increase all channels for gray"
+            );
+
+            // negative amount decreases perceived brightness
+            let darker = cs.lighten(&gray, -0.5).to_rgb();
+            assert!(
+                darker.0 < orig.0 && darker.1 < orig.1 && darker.2 < orig.2,
+                "{cs:?}: lighten(-0.5) should decrease all channels for gray"
+            );
+        }
+    }
+
+    #[test]
+    fn test_saturate_all_color_spaces() {
+        let spaces = [ColorSpace::Rgb, ColorSpace::Hsl, ColorSpace::Hsv];
+        let teal = Color::Rgb(50, 180, 160);
+
+        for cs in spaces {
+            // factor=1.0 returns original
+            assert_eq!(
+                cs.saturate(&teal, 1.0).to_rgb(),
+                teal.to_rgb(),
+                "{cs:?}: factor=1.0 should return original"
+            );
+
+            // factor=0.0 produces grayscale
+            let (r, g, b) = cs.saturate(&teal, 0.0).to_rgb();
+            let max_diff = (r as i32 - g as i32)
+                .abs()
+                .max((g as i32 - b as i32).abs())
+                .max((r as i32 - b as i32).abs());
+            assert!(
+                max_diff <= 1,
+                "{cs:?}: factor=0.0 should produce grayscale, got ({r}, {g}, {b})"
+            );
+
+            // factor=0.0 preserves approximate luminance (not too dark/bright)
+            // HSL/HSV use different gray-point definitions than BT.601,
+            // so allow wider tolerance for those spaces
+            let gray_lum = (r as u32 * 77 + g as u32 * 150 + b as u32 * 29) >> 8;
+            let orig = teal.to_rgb();
+            let orig_lum = (orig.0 as u32 * 77 + orig.1 as u32 * 150 + orig.2 as u32 * 29) >> 8;
+            let tolerance = match cs {
+                ColorSpace::Rgb => 5,  // BT.601 weights — tight
+                ColorSpace::Hsl => 30, // (max+min)/2 gray point
+                ColorSpace::Hsv => 50, // max(r,g,b) gray point — furthest from BT.601
+            };
+            assert!((gray_lum as i32 - orig_lum as i32).unsigned_abs() < tolerance,
+                "{cs:?}: desaturated luminance ({gray_lum}) should be close to original ({orig_lum})");
+
+            // factor < 1.0 moves channels closer together
+            let desat = cs.saturate(&teal, 0.5).to_rgb();
+            let orig_spread = orig.0.abs_diff(orig.1) as u32
+                + orig.1.abs_diff(orig.2) as u32
+                + orig.0.abs_diff(orig.2) as u32;
+            let desat_spread = desat.0.abs_diff(desat.1) as u32
+                + desat.1.abs_diff(desat.2) as u32
+                + desat.0.abs_diff(desat.2) as u32;
+            assert!(
+                desat_spread < orig_spread,
+                "{cs:?}: factor=0.5 should reduce channel spread ({desat_spread} < {orig_spread})"
+            );
+
+            // factor > 1.0 pushes channels further apart
+            let oversat = cs.saturate(&teal, 1.5).to_rgb();
+            let oversat_spread = oversat.0.abs_diff(oversat.1) as u32
+                + oversat.1.abs_diff(oversat.2) as u32
+                + oversat.0.abs_diff(oversat.2) as u32;
+            assert!(oversat_spread > orig_spread,
+                "{cs:?}: factor=1.5 should increase channel spread ({oversat_spread} > {orig_spread})");
+        }
+    }
+
+    #[test]
+    fn test_lighten_clamps_out_of_range() {
+        let color = Color::Rgb(100, 150, 200);
+        for cs in [ColorSpace::Rgb, ColorSpace::Hsl, ColorSpace::Hsv] {
+            assert_eq!(
+                cs.lighten(&color, 2.0).to_rgb(),
+                cs.lighten(&color, 1.0).to_rgb(),
+                "{cs:?}: amount > 1.0 should clamp to 1.0"
+            );
+            assert_eq!(
+                cs.lighten(&color, -5.0).to_rgb(),
+                cs.lighten(&color, -1.0).to_rgb(),
+                "{cs:?}: amount < -1.0 should clamp to -1.0"
+            );
+        }
+    }
+
+    #[test]
+    fn test_lighten_saturate_gray_invariance() {
+        // Gray has no saturation — saturate should be a no-op
+        let gray = Color::Rgb(128, 128, 128);
+        for cs in [ColorSpace::Rgb, ColorSpace::Hsl, ColorSpace::Hsv] {
+            for factor in [0.0_f32, 0.5, 1.0, 1.5, 2.0] {
+                let result = cs.saturate(&gray, factor).to_rgb();
+                let (r, g, b) = result;
+                let max_diff = (r as i32 - 128)
+                    .abs()
+                    .max((g as i32 - 128).abs())
+                    .max((b as i32 - 128).abs());
+                assert!(max_diff <= 1,
+                    "{cs:?}: saturate({factor}) on gray should be ~(128,128,128), got ({r},{g},{b})");
+            }
+        }
     }
 }

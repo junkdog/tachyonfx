@@ -95,6 +95,14 @@ harness = false
 name = "hsl_hsv_conversion"
 harness = false
 
+[[bench]]
+name = "lightness_adjustment"
+harness = false
+
+[[bench]]
+name = "saturation_adjustment"
+harness = false
+
 [lints.clippy]
 std_instead_of_core = "warn"
 std_instead_of_alloc = "warn"
