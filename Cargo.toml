@@ -92,7 +92,7 @@ name = "math_functions"
 harness = false
 
 [[bench]]
-name = "hsl_conversion"
+name = "hsl_hsv_conversion"
 harness = false
 
 [lints.clippy]

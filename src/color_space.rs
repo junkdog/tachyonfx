@@ -158,34 +158,35 @@ impl ColorSpace {
 }
 
 fn rgb_to_hsv(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
-    let r = r as f32 / 255.0;
-    let g = g as f32 / 255.0;
-    let b = b as f32 / 255.0;
-
     let max = r.max(g).max(b);
     let min = r.min(g).min(b);
-    let delta = max - min;
+    let delta = max - min; // u8
 
-    // Hue calculation
-    let h = if delta == 0.0 {
-        0.0
-    } else if max == r {
-        60.0 * (((g - b) / delta) % 6.0)
-    } else if max == g {
-        60.0 * ((b - r) / delta + 2.0)
-    } else {
-        60.0 * ((r - g) / delta + 4.0)
-    };
+    if delta == 0 {
+        return (0.0, 0.0, max as f32 * (100.0 / 255.0));
+    }
 
-    let h = if h < 0.0 { h + 360.0 } else { h };
+    let v = max as f32 * (100.0 / 255.0);
 
-    // Saturation calculation
-    let s = if max == 0.0 { 0.0 } else { delta / max };
+    // Two independent divisions — CPU pipelines these
+    let inv_delta = 1.0 / delta as f32;
+    let inv_max = 1.0 / max as f32;
 
-    // Value calculation
-    let v = max;
+    let s = delta as f32 * 100.0 * inv_max;
 
-    (h, s * 100.0, v * 100.0)
+    // Branchless hue via arithmetic masks
+    let hr = (g as f32 - b as f32) * inv_delta;
+    let hg = (b as f32 - r as f32) * inv_delta + 2.0;
+    let hb = (r as f32 - g as f32) * inv_delta + 4.0;
+
+    let r_mask = ((r >= g) as u8 & (r >= b) as u8) as f32;
+    let g_mask = (g >= b) as u8 as f32 * (1.0 - r_mask);
+    let b_mask = 1.0 - r_mask - g_mask;
+
+    let hr = hr + (g < b) as u8 as f32 * 6.0;
+    let h = (r_mask * hr + g_mask * hg + b_mask * hb) * 60.0;
+
+    (h, s, v)
 }
 
 fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {

@@ -398,10 +398,239 @@ fn bench_round_trip(c: &mut Criterion) {
     group.finish();
 }
 
+// ── HSV: current implementations (baseline) ──────────────────────────
+
+/// Current rgb_to_hsv (copied from color_space.rs for benchmarking).
+fn rgb_to_hsv(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    let r = r as f32 / 255.0;
+    let g = g as f32 / 255.0;
+    let b = b as f32 / 255.0;
+
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let delta = max - min;
+
+    let h = if delta == 0.0 {
+        0.0
+    } else if max == r {
+        60.0 * (((g - b) / delta) % 6.0)
+    } else if max == g {
+        60.0 * ((b - r) / delta + 2.0)
+    } else {
+        60.0 * ((r - g) / delta + 4.0)
+    };
+
+    let h = if h < 0.0 { h + 360.0 } else { h };
+
+    let s = if max == 0.0 { 0.0 } else { delta / max };
+
+    let v = max;
+
+    (h, s * 100.0, v * 100.0)
+}
+
+/// Current hsv_to_rgb (copied from color_space.rs for benchmarking).
+fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
+    let s = s / 100.0;
+    let v = v / 100.0;
+    let h = h % 360.0;
+
+    if s <= 0.0 {
+        let gray = (v * 255.0 + 0.5) as u8;
+        return (gray, gray, gray);
+    }
+
+    let h = h / 60.0;
+    let i = h as i32;
+    let f = h - i as f32;
+
+    let p = v * (1.0 - s);
+    let q = v * (1.0 - s * f);
+    let t = v * (1.0 - s * (1.0 - f));
+
+    let (r, g, b) = match i {
+        0 => (v, t, p),
+        1 => (q, v, p),
+        2 => (p, v, t),
+        3 => (p, q, v),
+        4 => (t, p, v),
+        _ => (v, p, q),
+    };
+
+    (
+        (r * 255.0 + 0.5) as u8,
+        (g * 255.0 + 0.5) as u8,
+        (b * 255.0 + 0.5) as u8,
+    )
+}
+
+// ── HSV: optimized implementations ───────────────────────────────────
+
+/// Integer-pipeline RGB→HSV: integer max/min/delta with branchless hue
+/// selection via arithmetic masks and pipelined float divisions.
+/// Same hue logic as rgb_to_hsl v3; HSV saturation = delta/max is simpler.
+fn rgb_to_hsv_v2(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let delta = max - min; // u8
+
+    if delta == 0 {
+        return (0.0, 0.0, max as f32 * (100.0 / 255.0));
+    }
+
+    let v = max as f32 * (100.0 / 255.0);
+
+    // Two independent divisions — CPU pipelines these
+    let inv_delta = 1.0 / delta as f32;
+    let inv_max = 1.0 / max as f32;
+
+    let s = delta as f32 * 100.0 * inv_max;
+
+    // Branchless hue (same as rgb_to_hsl v3)
+    let hr = (g as f32 - b as f32) * inv_delta;
+    let hg = (b as f32 - r as f32) * inv_delta + 2.0;
+    let hb = (r as f32 - g as f32) * inv_delta + 4.0;
+
+    let r_mask = ((r >= g) as u8 & (r >= b) as u8) as f32;
+    let g_mask = (g >= b) as u8 as f32 * (1.0 - r_mask);
+    let b_mask = 1.0 - r_mask - g_mask;
+
+    let hr = hr + (g < b) as u8 as f32 * 6.0;
+    let h = (r_mask * hr + g_mask * hg + b_mask * hb) * 60.0;
+
+    (h, s, v)
+}
+
+/// Direct-sector HSV→RGB: unified c/x/m approach with single 6-way match.
+/// HSV: c = V*S, m = V - c (simpler than HSL's chroma formula).
+fn hsv_to_rgb_v2(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
+    let s = s / 100.0;
+    let v = v / 100.0;
+
+    if s == 0.0 {
+        let gray = (v * 255.0 + 0.5) as u8;
+        return (gray, gray, gray);
+    }
+
+    let h = (h % 360.0) / 60.0;
+    let c = v * s;
+    let m = v - c;
+
+    let sector = h as u32;
+    let f = h - sector as f32;
+    let h2 = (sector & 1) as f32 + f;
+    let x = c * (1.0 - (h2 - 1.0).abs());
+
+    let (r, g, b) = match sector {
+        0 => (c + m, x + m, m),
+        1 => (x + m, c + m, m),
+        2 => (m, c + m, x + m),
+        3 => (m, x + m, c + m),
+        4 => (x + m, m, c + m),
+        _ => (c + m, m, x + m),
+    };
+
+    (
+        (r * 255.0 + 0.5) as u8,
+        (g * 255.0 + 0.5) as u8,
+        (b * 255.0 + 0.5) as u8,
+    )
+}
+
+// ── HSV benchmarks ───────────────────────────────────────────────────
+
+fn bench_rgb_to_hsv(c: &mut Criterion) {
+    let colors = test_colors();
+    let mut group = c.benchmark_group("rgb_to_hsv");
+
+    group.bench_function("current", |b| {
+        b.iter(|| {
+            for &(r, g, bb) in &colors {
+                core::hint::black_box(rgb_to_hsv(r, g, bb));
+            }
+        })
+    });
+
+    group.bench_function("v2 int pipeline", |b| {
+        b.iter(|| {
+            for &(r, g, bb) in &colors {
+                core::hint::black_box(rgb_to_hsv_v2(r, g, bb));
+            }
+        })
+    });
+
+    group.finish();
+}
+
+fn bench_hsv_to_rgb(c: &mut Criterion) {
+    let colors = test_colors();
+    let hsv_values: Vec<(f32, f32, f32)> = colors
+        .iter()
+        .map(|&(r, g, b)| rgb_to_hsv(r, g, b))
+        .collect();
+
+    let mut group = c.benchmark_group("hsv_to_rgb");
+
+    group.bench_function("current", |b| {
+        b.iter(|| {
+            for &(h, s, v) in &hsv_values {
+                core::hint::black_box(hsv_to_rgb(h, s, v));
+            }
+        })
+    });
+
+    group.bench_function("v2 direct-sector", |b| {
+        b.iter(|| {
+            for &(h, s, v) in &hsv_values {
+                core::hint::black_box(hsv_to_rgb_v2(h, s, v));
+            }
+        })
+    });
+
+    group.finish();
+}
+
+fn bench_hsv_round_trip(c: &mut Criterion) {
+    let colors = test_colors();
+    let mut group = c.benchmark_group("hsv_round_trip");
+
+    group.bench_function("current", |b| {
+        b.iter(|| {
+            for &(r, g, bb) in &colors {
+                let (h, s, v) = rgb_to_hsv(r, g, bb);
+                core::hint::black_box(hsv_to_rgb(h, s, v));
+            }
+        })
+    });
+
+    group.bench_function("v2", |b| {
+        b.iter(|| {
+            for &(r, g, bb) in &colors {
+                let (h, s, v) = rgb_to_hsv_v2(r, g, bb);
+                core::hint::black_box(hsv_to_rgb_v2(h, s, v));
+            }
+        })
+    });
+
+    group.bench_function("v2+v1 combo", |b| {
+        b.iter(|| {
+            for &(r, g, bb) in &colors {
+                let (h, s, v) = rgb_to_hsv_v2(r, g, bb);
+                core::hint::black_box(hsv_to_rgb(h, s, v));
+            }
+        })
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_rgb_to_hsl,
     bench_hsl_to_rgb,
     bench_round_trip,
+    bench_rgb_to_hsv,
+    bench_hsv_to_rgb,
+    bench_hsv_round_trip,
 );
 criterion_main!(benches);
