@@ -244,6 +244,7 @@ mod prolong;
 mod repeat;
 mod resize;
 mod run_once;
+mod saturate;
 mod shader_fn;
 mod sleep;
 mod slide;
@@ -1676,6 +1677,59 @@ pub fn paint_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect
 /// ```
 pub fn paint_bg<T: Into<EffectTimer>, C: Into<Color>>(bg: C, timer: T) -> Effect {
     Paint::new(None, Some(bg.into()), timer.into()).into_effect()
+}
+
+/// Adjusts the saturation of foreground and/or background colors.
+///
+/// The saturation factor is applied over the effect's duration, scaled by the
+/// timer's alpha and any active pattern. A factor of `0.0` fully desaturates
+/// (grayscale), while `1.0` applies maximum saturation adjustment.
+///
+/// # Arguments
+/// * `fg` - Optional foreground saturation factor (`0.0..=1.0`)
+/// * `bg` - Optional background saturation factor (`0.0..=1.0`)
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Panics
+/// Panics if both `fg` and `bg` are `None`.
+///
+/// This effect supports spatial patterns via
+/// [`.with_pattern()`](crate::Effect::with_pattern).
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::fx;
+/// use tachyonfx::SweepPattern;
+///
+/// // desaturate both fg and bg
+/// fx::saturate(Some(0.5), Some(0.3), 1000);
+///
+/// // desaturate with a sweep pattern
+/// fx::saturate(Some(0.5), None, 1000)
+///     .with_pattern(SweepPattern::left_to_right(25));
+/// ```
+pub fn saturate<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T) -> Effect {
+    saturate::Saturate::new(fg, bg, timer.into()).into_effect()
+}
+
+/// Adjusts the saturation of the foreground color.
+///
+/// Convenience wrapper around [`saturate()`] that only affects the foreground.
+///
+/// # Arguments
+/// * `fg` - Foreground saturation factor (`0.0..=1.0`)
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::fx;
+///
+/// fx::saturate_fg(0.5, 1000);
+/// ```
+pub fn saturate_fg<T: Into<EffectTimer>>(fg: f32, timer: T) -> Effect {
+    saturate(Some(fg), None, timer)
 }
 
 /// Fades to the specified the background and foreground colors over the specified

@@ -58,7 +58,7 @@ impl CompletionEngine {
     /// Creates a new completion engine with all DSL types registered.
     ///
     /// The engine is pre-populated with:
-    /// - tachyonfx effects (41 effects)
+    /// - tachyonfx effects (43 effects)
     /// - Ratatui types (Color, Layout, Rect, Style, etc.)
     /// - Enum constants (Interpolation, Motion, Direction, etc.)
     /// - Constructor and instance methods
@@ -596,11 +596,11 @@ mod tests {
         let source = "fx::";
         let completions = engine.completions(source, source.len() as u32);
 
-        // Should return exactly 41 effect completions (all registered effects)
+        // Should return exactly 43 effect completions (all registered effects)
         assert_eq!(
             completions.len(),
-            41,
-            "Should have exactly 41 fx effect completions"
+            43,
+            "Should have exactly 43 fx effect completions"
         );
 
         // All completions should be functions

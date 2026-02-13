@@ -343,6 +343,8 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("paint", compilers::paint)
         .register("paint_bg", compilers::paint_bg)
         .register("paint_fg", compilers::paint_fg)
+        .register("saturate", compilers::saturate)
+        .register("saturate_fg", compilers::saturate_fg)
         .register("ping_pong", |args| ping_pong(args.effect()?).into())
         .register("prolong_end", compilers::prolong_end)
         .register("prolong_start", compilers::prolong_start)
@@ -532,6 +534,16 @@ mod compilers {
         fx::paint_bg(args.color()?, args.effect_timer()?).into()
     }
 
+    pub(super) fn saturate(args: &mut Arguments) -> Result<Effect, DslError> {
+        let fg = args.option(|args| args.read_into_f32())?;
+        let bg = args.option(|args| args.read_into_f32())?;
+        fx::saturate(fg, bg, args.effect_timer()?).into()
+    }
+
+    pub(super) fn saturate_fg(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::saturate_fg(args.read_into_f32()?, args.effect_timer()?).into()
+    }
+
     pub(super) fn prolong_start(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::prolong_start(args.effect_timer()?, args.effect()?).into()
     }
@@ -693,6 +705,10 @@ mod tests {
             fx::paint(color, color, (1000, Linear)),
             fx::paint_fg(color, (1000, Linear)),
             fx::paint_bg(color, (1000, Linear)),
+            fx::saturate(Some(0.5), Some(0.3), (1000, Linear)),
+            fx::saturate(Some(0.5), None, (1000, Linear)),
+            fx::saturate(None, Some(0.3), (1000, Linear)),
+            fx::saturate_fg(0.5, (1000, Linear)),
             fx::ping_pong(fx::dissolve((1000, Linear))),
             fx::prolong_end((1000, Linear), fx::dissolve((1000, Linear))),
             fx::prolong_start((1000, Linear), fx::dissolve((1000, Linear))),

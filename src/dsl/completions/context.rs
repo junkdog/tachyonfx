@@ -285,6 +285,7 @@ mod tests {
                 ("slide_out", "Effect"),
                 ("coalesce", "Effect"),
                 ("paint", "Effect"),
+                ("saturate", "Effect"),
                 ("hsl_shift", "Effect"),
             ])
             .into_iter()

@@ -103,6 +103,12 @@ impl DslFormat for bool {
     }
 }
 
+impl DslFormat for f32 {
+    fn dsl_format(&self) -> CompactString {
+        format_compact!("{:}", self)
+    }
+}
+
 impl DslFormat for RepeatMode {
     fn dsl_format(&self) -> CompactString {
         match self {
