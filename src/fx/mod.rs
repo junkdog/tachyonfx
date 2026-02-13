@@ -1682,13 +1682,15 @@ pub fn paint_bg<T: Into<EffectTimer>, C: Into<Color>>(bg: C, timer: T) -> Effect
 
 /// Adjusts the saturation of foreground and/or background colors.
 ///
-/// The saturation factor is applied over the effect's duration, scaled by the
-/// timer's alpha and any active pattern. A factor of `0.0` fully desaturates
-/// (grayscale), while `1.0` applies maximum saturation adjustment.
+/// The factor is a relative adjustment applied over the effect's duration,
+/// scaled by the timer's alpha and any active pattern. A factor of `0.0`
+/// leaves saturation unchanged, negative values desaturate (toward grayscale),
+/// and positive values boost saturation.
 ///
 /// # Arguments
-/// * `fg` - Optional foreground saturation factor (`0.0..=1.0`)
-/// * `bg` - Optional background saturation factor (`0.0..=1.0`)
+/// * `fg` - Optional foreground saturation factor (e.g. `-0.5` to halve, `0.5` to boost
+///   50%)
+/// * `bg` - Optional background saturation factor
 /// * `timer` - Timer controlling the effect duration
 ///
 /// # Panics
@@ -1703,11 +1705,11 @@ pub fn paint_bg<T: Into<EffectTimer>, C: Into<Color>>(bg: C, timer: T) -> Effect
 /// use tachyonfx::fx;
 /// use tachyonfx::pattern::SweepPattern;
 ///
-/// // desaturate both fg and bg
-/// fx::saturate(Some(0.5), Some(0.3), 1000);
+/// // desaturate fg, boost bg saturation
+/// fx::saturate(Some(-0.5), Some(0.3), 1000);
 ///
 /// // desaturate with a sweep pattern
-/// fx::saturate(Some(0.5), None, 1000)
+/// fx::saturate(Some(-0.5), None, 1000)
 ///     .with_pattern(SweepPattern::left_to_right(25));
 /// ```
 pub fn saturate<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T) -> Effect {
@@ -1719,7 +1721,7 @@ pub fn saturate<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T
 /// Convenience wrapper around [`saturate()`] that only affects the foreground.
 ///
 /// # Arguments
-/// * `fg` - Foreground saturation factor (`0.0..=1.0`)
+/// * `fg` - Foreground saturation factor (e.g. `-0.5` to halve, `0.5` to boost 50%)
 /// * `timer` - Timer controlling the effect duration
 ///
 /// # Examples
@@ -1727,7 +1729,8 @@ pub fn saturate<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T
 /// ```no_run
 /// use tachyonfx::fx;
 ///
-/// fx::saturate_fg(0.5, 1000);
+/// // desaturate foreground by 50%
+/// fx::saturate_fg(-0.5, 1000);
 /// ```
 pub fn saturate_fg<T: Into<EffectTimer>>(fg: f32, timer: T) -> Effect {
     saturate(Some(fg), None, timer)

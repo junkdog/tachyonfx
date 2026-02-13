@@ -29,8 +29,8 @@ impl Saturate {
         }
 
         Self {
-            fg: fg.map(|v| v.clamp(0.0, 1.0)),
-            bg: bg.map(|v| v.clamp(0.0, 1.0)),
+            fg,
+            bg,
             timer,
             area: None,
             color_space: ColorSpace::Rgb,
@@ -67,7 +67,7 @@ impl Shader for Saturate {
             let alpha = pattern.map_alpha(pos);
 
             if let Some(factor) = fg_saturate.as_ref().copied() {
-                let modified_alpha = factor * alpha;
+                let modified_alpha = 1.0 + factor * alpha;
                 let color = color_cache.memoize_fg(cell.fg, modified_alpha.to_bits(), |c| {
                     color_space.saturate(c, modified_alpha)
                 });
@@ -75,7 +75,7 @@ impl Shader for Saturate {
             }
 
             if let Some(factor) = bg_saturate.as_ref().copied() {
-                let modified_alpha = factor * alpha;
+                let modified_alpha = 1.0 + factor * alpha;
                 let color = color_cache.memoize_bg(cell.bg, modified_alpha.to_bits(), |c| {
                     color_space.saturate(c, modified_alpha)
                 });
