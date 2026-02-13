@@ -103,13 +103,17 @@ The DSL provides access to all standard tachyonfx effects:
 - **Dissolve/Coalesce**: `fx::dissolve()`, `fx::coalesce()`, `fx::dissolve_to()`, `fx::coalesce_from()`
 - **Slide/Sweep**: `fx::slide_in()`, `fx::slide_out()`, `fx::sweep_in()`, `fx::sweep_out()`
 - **Explosion**: `fx::explode()`
-- **Stretch**: `fx::stretch()` - expanding/contracting animations using block characters
+- **Stretch/Expand**: `fx::stretch()`, `fx::expand()`
 - **Evolution**: `fx::evolve()`, `fx::evolve_from()`, `fx::evolve_into()` - character transformations
+- **Translation**: `fx::translate()`
 
 ### Color Effects
 
-- **Basic Fading**: `fx::fade_to_fg()`, `fx::fade_from_fg()`, `fx::fade_to()`, `fx::fade_from()`
-- **HSL Manipulation**: `fx::hsl_shift()`, `fx::hsl_shift_fg()`, `fx::hsl_shift_bg()`
+- **Fading**: `fx::fade_to()`, `fx::fade_to_fg()`, `fx::fade_from()`, `fx::fade_from_fg()`
+- **Painting**: `fx::paint()`, `fx::paint_fg()`, `fx::paint_bg()`
+- **HSL Manipulation**: `fx::hsl_shift()`, `fx::hsl_shift_fg()`
+- **Saturation**: `fx::saturate()`, `fx::saturate_fg()`
+- **Lightness**: `fx::lighten()`, `fx::lighten_fg()`, `fx::darken()`, `fx::darken_fg()`
 
 ### Timing and Control Effects
 
@@ -286,7 +290,7 @@ Some effects are intentionally excluded due to complexity or runtime requirement
 
 - **Function-based**: `fx::effect_fn`, `fx::effect_fn_buf` (require closures)
 - **Buffer-based**: `fx::translate_buf`, `fx::offscreen_buffer` (require `RefCount<Buffer>`)
-- **Geometry**: `fx::translate`, `fx::resize_area` (TBD)
+- **Geometry**: `fx::resize_area` (deprecated)
 - **Advanced**: `fx::dynamic_area`, `fx::dispatch_event` (require shared references or channels)
 
 ## Limitations

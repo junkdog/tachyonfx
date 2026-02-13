@@ -7,8 +7,9 @@
 - `parabolic_cos(t)`: parabolic cosine approximation accepting radians.
 - `WavePattern`: spatial pattern driven by composable wave interference. Built from `WaveLayer`s with FM/AM modulation, configurable contrast, and transition width.
 - `BlendPattern`: spatial pattern that linearly interpolates between two sub-patterns, crossfading from one to the other over the effect's lifetime.
-- `fx::saturate`: adjusts saturation of foreground and/or background colors.
-- `fx::saturate_fg`: adjusts foreground saturation (convenience wrapper).
+- `fx::saturate`, `fx::saturate_fg`: adjusts color saturation.
+- `fx::lighten`, `fx::lighten_fg`: increases lightness toward white.
+- `fx::darken`, `fx::darken_fg`: decreases lightness toward black.
 
 ### Changed
 - `SimpleRng`: replace LCG with SplitMix32 for improved randomness quality

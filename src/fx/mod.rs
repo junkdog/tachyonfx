@@ -236,6 +236,7 @@ mod explode;
 mod fade;
 mod glitch;
 mod hsl_shift;
+mod lighten;
 mod never_complete;
 mod offscreen_buffer;
 mod paint;
@@ -1700,7 +1701,7 @@ pub fn paint_bg<T: Into<EffectTimer>, C: Into<Color>>(bg: C, timer: T) -> Effect
 ///
 /// ```no_run
 /// use tachyonfx::fx;
-/// use tachyonfx::SweepPattern;
+/// use tachyonfx::pattern::SweepPattern;
 ///
 /// // desaturate both fg and bg
 /// fx::saturate(Some(0.5), Some(0.3), 1000);
@@ -1730,6 +1731,112 @@ pub fn saturate<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T
 /// ```
 pub fn saturate_fg<T: Into<EffectTimer>>(fg: f32, timer: T) -> Effect {
     saturate(Some(fg), None, timer)
+}
+
+/// Increases the lightness of foreground and/or background colors.
+///
+/// The lightness amount is applied over the effect's duration, scaled by the
+/// timer's alpha and any active pattern. An amount of `0.0` leaves the color
+/// unchanged, while `1.0` shifts fully to white.
+///
+/// This effect supports spatial patterns via
+/// [`.with_pattern()`](crate::Effect::with_pattern).
+///
+/// # Arguments
+/// * `fg` - Optional foreground lightness amount (`0.0..=1.0`)
+/// * `bg` - Optional background lightness amount (`0.0..=1.0`)
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Panics
+/// Panics if both `fg` and `bg` are `None`.
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::fx;
+/// use tachyonfx::pattern::SweepPattern;
+///
+/// // lighten both fg and bg
+/// fx::lighten(Some(0.5), Some(0.3), 1000);
+///
+/// // lighten with a sweep pattern
+/// fx::lighten(Some(0.5), None, 1000)
+///     .with_pattern(SweepPattern::left_to_right(25));
+/// ```
+pub fn lighten<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T) -> Effect {
+    lighten::Lighten::new(fg, bg, timer.into()).into_effect()
+}
+
+/// Increases the lightness of the foreground color.
+///
+/// Convenience wrapper around [`lighten()`] that only affects the foreground.
+///
+/// # Arguments
+/// * `fg` - Foreground lightness amount (`0.0..=1.0`)
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::fx;
+///
+/// fx::lighten_fg(0.5, 1000);
+/// ```
+pub fn lighten_fg<T: Into<EffectTimer>>(fg: f32, timer: T) -> Effect {
+    lighten(Some(fg), None, timer)
+}
+
+/// Decreases the lightness of foreground and/or background colors.
+///
+/// The darkness amount is applied over the effect's duration, scaled by the
+/// timer's alpha and any active pattern. An amount of `0.0` leaves the color
+/// unchanged, while `1.0` shifts fully to black.
+///
+/// This effect supports spatial patterns via
+/// [`.with_pattern()`](crate::Effect::with_pattern).
+///
+/// # Arguments
+/// * `fg` - Optional foreground darkness amount (`0.0..=1.0`)
+/// * `bg` - Optional background darkness amount (`0.0..=1.0`)
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Panics
+/// Panics if both `fg` and `bg` are `None`.
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::fx;
+/// use tachyonfx::pattern::SweepPattern;
+///
+/// // darken both fg and bg
+/// fx::darken(Some(0.5), Some(0.3), 1000);
+///
+/// // darken with a sweep pattern
+/// fx::darken(Some(0.5), None, 1000)
+///     .with_pattern(SweepPattern::left_to_right(25));
+/// ```
+pub fn darken<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T) -> Effect {
+    lighten::Lighten::new(fg.map(|v| -v), bg.map(|v| -v), timer.into()).into_effect()
+}
+
+/// Decreases the lightness of the foreground color.
+///
+/// Convenience wrapper around [`darken()`] that only affects the foreground.
+///
+/// # Arguments
+/// * `fg` - Foreground darkness amount (`0.0..=1.0`)
+/// * `timer` - Timer controlling the effect duration
+///
+/// # Examples
+///
+/// ```no_run
+/// use tachyonfx::fx;
+///
+/// fx::darken_fg(0.5, 1000);
+/// ```
+pub fn darken_fg<T: Into<EffectTimer>>(fg: f32, timer: T) -> Effect {
+    darken(Some(fg), None, timer)
 }
 
 /// Fades to the specified the background and foreground colors over the specified

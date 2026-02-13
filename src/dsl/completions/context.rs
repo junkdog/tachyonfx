@@ -286,6 +286,8 @@ mod tests {
                 ("coalesce", "Effect"),
                 ("paint", "Effect"),
                 ("saturate", "Effect"),
+                ("lighten", "Effect"),
+                ("darken", "Effect"),
                 ("hsl_shift", "Effect"),
             ])
             .into_iter()
