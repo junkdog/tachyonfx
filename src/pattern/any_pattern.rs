@@ -4,6 +4,8 @@ use crate::{
     fx::sliding_window_alpha::SlidingWindowAlpha,
     pattern::{
         blend::{BlendPattern, BlendPatternContext},
+        diagonal::DiagonalContext,
+        radial::RadialContext,
         wave::WavePatternContext,
         CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern, InstancedPattern,
         Pattern, PreparedPattern, RadialPattern, SweepPattern, WavePattern,
@@ -31,8 +33,8 @@ pub enum AnyPattern {
 /// Context enum that holds the appropriate pattern frame state for each pattern type
 pub enum AnyPatternContext {
     Identity(f32), // Just stores the global alpha
-    Radial(PreparedPattern<(f32, Rect), RadialPattern>),
-    Diagonal(PreparedPattern<(f32, Rect), DiagonalPattern>),
+    Radial(PreparedPattern<RadialContext, RadialPattern>),
+    Diagonal(PreparedPattern<DiagonalContext, DiagonalPattern>),
     Checkerboard(PreparedPattern<(f32, Rect), CheckerboardPattern>),
     Sweep(PreparedPattern<SlidingWindowAlpha, SweepPattern>),
     Coalesce(PreparedPattern<(f32, SimpleRng), CoalescePattern>),

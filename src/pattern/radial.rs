@@ -6,7 +6,7 @@ use ratatui_core::layout::{Position, Rect};
 use crate::dsl::{dsl_format::fmt_f32, DslFormat};
 use crate::{
     math,
-    pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress},
+    pattern::{InstancedPattern, Pattern, PreparedPattern},
 };
 
 #[derive(Clone, Debug, Copy, PartialEq)]
@@ -72,33 +72,29 @@ impl RadialPattern {
     }
 }
 
+/// Precomputed per-frame state for [`RadialPattern`].
+pub struct RadialContext {
+    center_x: f32,
+    center_y: f32,
+    /// Distance threshold below which cells are fully active.
+    threshold: f32,
+    /// Distance threshold above which cells are fully inactive.
+    threshold_end: f32,
+    /// Reciprocal of transition width for fast linear interpolation.
+    inv_transition_width: f32,
+}
+
 impl Pattern for RadialPattern {
-    type Context = (f32, Rect);
+    type Context = RadialContext;
 
     fn for_frame(self, alpha: f32, area: Rect) -> PreparedPattern<Self::Context, Self>
     where
         Self: Sized,
     {
-        PreparedPattern { pattern: self, context: (alpha, area) }
-    }
-}
+        let center_x = area.x as f32 + (self.center_x * area.width as f32);
+        let center_y = area.y as f32 + (self.center_y * area.height as f32);
+        let transition_width = self.transition_width.max(0.1);
 
-impl InstancedPattern for PreparedPattern<(f32, Rect), RadialPattern> {
-    fn map_alpha(&mut self, pos: Position) -> f32 {
-        let pattern = &self.pattern;
-        let (global_alpha, area) = self.context;
-
-        // Calculate center position in cell coordinates
-        let center_x = area.x as f32 + (pattern.center_x * area.width as f32);
-        let center_y = area.y as f32 + (pattern.center_y * area.height as f32);
-
-        // Calculate distance from center in cell coordinates
-        let dx = pos.x as f32 - center_x;
-        let dy = pos.y as f32 - center_y;
-        // Compensate for terminal cell aspect ratio (typically 2:1 height to width)
-        let distance = math::sqrt(dx * dx + 2.0 * dy * 2.0 * dy);
-
-        // Calculate maximum radius (distance to the farthest corner) - also with aspect ratio
         let max_radius = {
             let corners = [
                 (area.x as f32, area.y as f32),
@@ -111,17 +107,43 @@ impl InstancedPattern for PreparedPattern<(f32, Rect), RadialPattern> {
                 .map(|(x, y)| {
                     let dx = x - center_x;
                     let dy = y - center_y;
-                    // Apply same aspect ratio compensation as distance calculation
-                    math::sqrt(dx * dx + 2.0 * dy * 2.0 * dy)
+                    math::sqrt(dx * dx + 4.0 * dy * dy)
                 })
                 .fold(0.0f32, f32::max)
         };
 
-        TransitionProgress::from(pattern.transition_width).map_radial(
-            global_alpha,
-            distance,
-            max_radius,
-        )
+        let threshold = (alpha * (max_radius + 2.0 * transition_width)) - transition_width;
+
+        PreparedPattern {
+            pattern: self,
+            context: RadialContext {
+                center_x,
+                center_y,
+                threshold,
+                threshold_end: threshold + transition_width,
+                inv_transition_width: 1.0 / transition_width,
+            },
+        }
+    }
+}
+
+impl InstancedPattern for PreparedPattern<RadialContext, RadialPattern> {
+    fn map_alpha(&mut self, pos: Position) -> f32 {
+        let ctx = &self.context;
+
+        let dx = pos.x as f32 - ctx.center_x;
+        let dy = pos.y as f32 - ctx.center_y;
+        // Compensate for terminal cell aspect ratio (typically 2:1 height to width)
+        let distance = math::sqrt(dx * dx + 4.0 * dy * dy);
+
+        if distance <= ctx.threshold {
+            1.0
+        } else if distance <= ctx.threshold_end {
+            let distance_into_transition = distance - ctx.threshold;
+            1.0 - (distance_into_transition * ctx.inv_transition_width).clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
     }
 }
 
@@ -278,6 +300,64 @@ mod tests {
                 "Center at {:.1} should have higher alpha than offset. Center: {:.3}, Offset: {:.3}",
                 expected_center_x, center_alpha, offset_alpha
             );
+        }
+    }
+
+    #[test]
+    fn test_radial_boundary_alphas() {
+        // 10x1 area, center at (5,0), transition_width=2.0
+        // At alpha=0.0:  threshold = 0*(max_r+4)-2 = -2, so all cells inactive (0.0)
+        // At alpha=1.0:  threshold = 1*(max_r+4)-2 = max_r+2, so all cells active (1.0)
+        let area = Rect::new(0, 0, 10, 1);
+        let pattern = RadialPattern::center().with_transition_width(2.0);
+
+        // alpha=0 => all cells should be 0.0
+        let mut p = pattern.for_frame(0.0, area);
+        for x in 0..10 {
+            let a = p.map_alpha(Position::new(x, 0));
+            assert!(a == 0.0, "alpha=0: expected 0.0 at x={x}, got {a}");
+        }
+
+        // alpha=1 => all cells should be 1.0
+        let mut p = pattern.for_frame(1.0, area);
+        for x in 0..10 {
+            let a = p.map_alpha(Position::new(x, 0));
+            assert!(a == 1.0, "alpha=1: expected 1.0 at x={x}, got {a}");
+        }
+    }
+
+    #[test]
+    fn test_radial_symmetry() {
+        // Cells equidistant from center should have equal alpha
+        let area = Rect::new(0, 0, 20, 1);
+        let pattern = RadialPattern::center().with_transition_width(2.0);
+        let mut p = pattern.for_frame(0.5, area);
+
+        // center at x=10; check x=8 vs x=12 (both 2 cells away)
+        let left = p.map_alpha(Position::new(8, 0));
+        let right = p.map_alpha(Position::new(12, 0));
+        assert!(
+            (left - right).abs() < 1e-5,
+            "Symmetric positions should have equal alpha: left={left}, right={right}"
+        );
+    }
+
+    #[test]
+    fn test_radial_monotonic_from_center() {
+        // Alpha should be monotonically non-increasing as distance from center grows
+        let area = Rect::new(0, 0, 40, 1);
+        let pattern = RadialPattern::center().with_transition_width(3.0);
+        let mut p = pattern.for_frame(0.5, area);
+
+        let center_x = 20u16;
+        let mut prev_alpha = p.map_alpha(Position::new(center_x, 0));
+        for d in 1..20u16 {
+            let a = p.map_alpha(Position::new(center_x + d, 0));
+            assert!(
+                a <= prev_alpha + 1e-5,
+                "Alpha should decrease with distance: at d={d}, got {a} > prev {prev_alpha}"
+            );
+            prev_alpha = a;
         }
     }
 

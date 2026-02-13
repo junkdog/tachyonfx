@@ -6,7 +6,7 @@ use ratatui_core::layout::Position;
 /// position-specific alpha values, creating spatial effects like fades, sweeps,
 /// and transitions. Each implementation defines how the pattern reveals or hides
 /// cells based on their coordinates.
-pub(crate) trait InstancedPattern {
+pub trait InstancedPattern {
     /// Computes the alpha value for a specific cell position.
     ///
     /// # Arguments

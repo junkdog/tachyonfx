@@ -11,7 +11,6 @@ mod wave;
 
 use ratatui_core::layout::Rect;
 
-pub(crate) use self::instanced_pattern::InstancedPattern;
 pub use self::{
     any_pattern::AnyPattern,
     blend::BlendPattern,
@@ -19,6 +18,7 @@ pub use self::{
     coalesce::CoalescePattern,
     diagonal::{DiagonalDirection, DiagonalPattern},
     dissolve::DissolvePattern,
+    instanced_pattern::InstancedPattern,
     radial::RadialPattern,
     sweep::SweepPattern,
     wave::WavePattern,
@@ -84,58 +84,6 @@ impl From<f32> for TransitionProgress {
 }
 
 impl TransitionProgress {
-    /// Maps spatial patterns where positions vary along a continuous dimension.
-    ///
-    /// Used for patterns like diagonal and radial where positions have a natural
-    /// progression along some spatial dimension with a defined range.
-    ///
-    /// # Arguments
-    /// * `global_alpha` - Global animation progress (0.0-1.0)
-    /// * `position` - Position along the pattern dimension
-    /// * `max_range` - Maximum value for the position dimension
-    pub fn map_spatial(&self, global_alpha: f32, position: f32, max_range: f32) -> f32 {
-        // Scale global_alpha to include transition zone
-        let scaled_alpha =
-            global_alpha * (max_range + 2.0 * self.transition_width) - self.transition_width;
-
-        if position <= scaled_alpha {
-            // Fully active (positions before threshold)
-            1.0
-        } else if position <= scaled_alpha + self.transition_width {
-            // Transition zone with correct falloff
-            let distance_into_transition = position - scaled_alpha;
-            let progress = 1.0 - (distance_into_transition / self.transition_width);
-            progress.clamp(0.0, 1.0)
-        } else {
-            // Inactive
-            0.0
-        }
-    }
-
-    /// Maps radial patterns where smaller distances (closer to center) should be more
-    /// active.
-    ///
-    /// # Arguments
-    /// * `global_alpha` - Global animation progress (0.0-1.0)
-    /// * `distance` - Distance from center point
-    /// * `max_range` - Maximum distance value
-    pub fn map_radial(&self, global_alpha: f32, distance: f32, max_range: f32) -> f32 {
-        let threshold =
-            (global_alpha * (max_range + 2.0 * self.transition_width)) - self.transition_width;
-
-        // For radial: we want 1.0 when distance <= threshold, 0.0 when distance > threshold +
-        // transition
-        if distance <= threshold {
-            1.0
-        } else if distance <= threshold + self.transition_width {
-            // In transition zone - linear falloff
-            let distance_into_transition = distance - threshold;
-            1.0 - (distance_into_transition / self.transition_width).clamp(0.0, 1.0)
-        } else {
-            0.0
-        }
-    }
-
     /// Maps discrete threshold patterns where cells have distinct activation thresholds.
     ///
     /// Used for patterns like checkerboard where cells belong to discrete categories

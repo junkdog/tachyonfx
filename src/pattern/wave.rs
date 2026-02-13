@@ -103,11 +103,21 @@ impl SignalSampler for WavePattern {
 
 /// Per-frame evaluation context for [`WavePattern`].
 ///
-/// Holds the current animation progress (`alpha`) and the effect area,
-/// allowing the pattern to map cell positions to wave-derived alpha values.
+/// Holds precomputed values derived from the current animation progress
+/// and effect area, allowing efficient per-cell alpha computation.
 pub struct WavePatternContext {
+    /// Animation progress, used as the time parameter for wave sampling.
     alpha: f32,
-    area: Rect,
+    /// `1.0 - alpha`; the activation threshold that sweeps from 1→0.
+    threshold: f32,
+    /// `1.0 / transition_width`
+    inv_transition_width: f32,
+    /// `1.0 / layer_count`
+    inv_n: f32,
+    /// Precomputed area origin x as f32.
+    area_x: f32,
+    /// Precomputed area origin y as f32.
+    area_y: f32,
 }
 
 impl Pattern for WavePattern {
@@ -117,38 +127,49 @@ impl Pattern for WavePattern {
     where
         Self: Sized,
     {
+        let inv_n = 1.0 / self.layers.len() as f32;
+        let inv_tw = 1.0 / self.transition_width.max(0.01);
         PreparedPattern {
             pattern: self,
-            context: WavePatternContext { alpha, area },
+            context: WavePatternContext {
+                alpha,
+                threshold: 1.0 - alpha,
+                inv_transition_width: inv_tw,
+                inv_n,
+                area_x: area.x as f32,
+                area_y: area.y as f32,
+            },
         }
     }
 }
 
 impl InstancedPattern for PreparedPattern<WavePatternContext, WavePattern> {
     fn map_alpha(&mut self, pos: Position) -> f32 {
-        let WavePatternContext { alpha, area } = self.context;
+        let ctx = &self.context;
 
-        // normalise position to [0..width/height]
-        let x = (pos.x as f32) - (area.x as f32);
-        let y = (pos.y as f32) - (area.y as f32);
+        let x = pos.x as f32 - ctx.area_x;
+        let y = pos.y as f32 - ctx.area_y;
 
-        // use global alpha as the time parameter so the pattern
-        // animates in lockstep with the effect's progress
-        let t = alpha;
+        // Inlines WavePattern::sample() to use precomputed inv_n;
+        // keep in sync with SignalSampler impl for WavePattern.
+        let mut sum = 0.0f32;
+        for layer in self.pattern.layers.iter() {
+            sum += layer.sample(x, y, ctx.alpha);
+        }
+        let normalised = (sum * ctx.inv_n + 1.0) * 0.5;
+        let wave_alpha = if self.pattern.contrast != 1 {
+            math::powi(normalised.clamp(0.0, 1.0), self.pattern.contrast)
+        } else {
+            normalised.clamp(0.0, 1.0)
+        };
 
-        let wave_alpha = self.pattern.sample(x, y, t);
-
-        // blend: cells whose wave value exceeds the threshold are active
-        // the threshold sweeps from 1→0 as global alpha goes 0→1
-        let threshold = 1.0 - alpha;
-        if wave_alpha >= threshold {
+        if wave_alpha >= ctx.threshold {
             1.0
         } else {
-            // soft transition: linearly ramp over the configured transition width
-            let transition = self.pattern.transition_width;
-            let distance_below = threshold - wave_alpha;
-            if distance_below < transition {
-                1.0 - (distance_below / transition)
+            let distance_below = ctx.threshold - wave_alpha;
+            let t = 1.0 - distance_below * ctx.inv_transition_width;
+            if t > 0.0 {
+                t
             } else {
                 0.0
             }
