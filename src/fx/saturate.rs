@@ -66,7 +66,7 @@ impl Shader for Saturate {
         cell_iter.for_each_cell(move |pos, cell| {
             let alpha = pattern.map_alpha(pos);
 
-            if let Some(factor) = fg_saturate.as_ref().copied() {
+            if let Some(factor) = fg_saturate {
                 let modified_alpha = 1.0 + factor * alpha;
                 let color = color_cache.memoize_fg(cell.fg, modified_alpha.to_bits(), |c| {
                     color_space.saturate(c, modified_alpha)

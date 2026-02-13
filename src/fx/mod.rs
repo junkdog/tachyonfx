@@ -136,12 +136,14 @@
 //!
 //! | Pattern                                                      | Description                      |
 //! |--------------------------------------------------------------|----------------------------------|
+//! | [`BlendPattern`](crate::pattern::BlendPattern)               | Crossfade between two patterns   |
 //! | [`CheckerboardPattern`](crate::pattern::CheckerboardPattern) | Alternating cell activation      |
 //! | [`CoalescePattern`](crate::pattern::CoalescePattern)         | Reform pattern for text effects  |
 //! | [`DiagonalPattern`](crate::pattern::DiagonalPattern)         | Diagonal sweep progression       |
 //! | [`DissolvePattern`](crate::pattern::DissolvePattern)         | Dissolve pattern for text effects|
 //! | [`RadialPattern`](crate::pattern::RadialPattern)             | Circular progression from center |
 //! | [`SweepPattern`](crate::pattern::SweepPattern)               | Directional sweep                |
+//! | [`WavePattern`](crate::pattern::WavePattern)                 | Wave interference pattern        |
 //!
 //! Example showing a sweeping dissolve effect:
 //! ```rust

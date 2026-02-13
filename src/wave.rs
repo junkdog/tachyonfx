@@ -89,7 +89,6 @@ pub struct Modulator {
     target: ModTarget,
 }
 
-#[allow(dead_code)]
 impl Modulator {
     fn new(func: WaveFn, kx: f32, ky: f32, kt: f32) -> Self {
         Self {
@@ -193,7 +192,6 @@ pub struct Oscillator {
     modulator: Option<Modulator>,
 }
 
-#[allow(dead_code)]
 impl Oscillator {
     fn new(func: WaveFn, kx: f32, ky: f32, kt: f32) -> Self {
         Self { func, kx, ky, kt, phase: 0.0, modulator: None }
@@ -292,7 +290,6 @@ pub struct WaveLayer {
     post_transform: PostTransform,
 }
 
-#[allow(dead_code)]
 impl WaveLayer {
     /// Creates a layer from a single oscillator with default amplitude (1.0) and no
     /// post-transform.
