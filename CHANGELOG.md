@@ -1,6 +1,8 @@
 # Changelog
 
 ## unreleased
+
+## tachyonfx-0.24.0 - 2026-02-14
 ### Added
 - `wave_sin(t)`: fast, branchless parabolic sine approximation using normalized cycles (`1.0` = one period).
 - `parabolic_sin(t)`: parabolic sine approximation accepting radians.
