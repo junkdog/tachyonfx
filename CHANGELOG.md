@@ -19,6 +19,11 @@
 - `hsl_to_rgb`: uses direct sector computation (~31% faster).
 - `rgb_to_hsv`: optimized with integer pipeline (~50% faster).
 
+### Breaking
+- `blit_buffer` and `blit_buffer_region` no longer skip cells with `Cell::skip`.
+  Ratatui removed `Cell::skip` after 0.30.0; skip-cell filtering may be re-added
+  once the replacement API stabilises.
+
 ### Fixed
 - Replace `u16::is_multiple_of` with modulo operator for compatibility with Rust < 1.87.
 

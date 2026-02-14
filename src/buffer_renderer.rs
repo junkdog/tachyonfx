@@ -82,8 +82,7 @@ impl BufferRenderer for Buffer {
 ///
 /// # Behavior
 ///
-/// -Individual cells marked with `skip = true` in the source buffer are not copied,
-///  leaving the destination cells unchanged.
+/// - All source cells are copied to the destination buffer.
 /// - If the offset would place the entire source buffer outside the bounds of the
 ///   destination buffer, no copying occurs.
 /// - The function clips the source buffer as necessary to fit within the destination
@@ -113,8 +112,7 @@ pub fn blit_buffer(src: &Buffer, dst: &mut Buffer, offset: Offset) {
 /// # Behavior
 ///
 /// - The source region is automatically clipped to the bounds of the source buffer.
-/// - Individual cells marked with `skip = true` in the source buffer are not copied,
-///   leaving the destination cells unchanged.
+/// - All source cells are copied to the destination buffer.
 /// - If the offset would place the entire source buffer outside the bounds of the
 ///   destination buffer, no copying occurs.
 /// - The function clips the source region as necessary to fit within the destination
@@ -130,13 +128,9 @@ pub fn blit_buffer_region(src: &Buffer, src_region: Rect, dst: &mut Buffer, offs
         return; // zero area or out of bounds
     }
 
-    // copy non-skipped cells from clipped source region to destination buffer
+    // copy cells from clipped source region to destination buffer
     for p in clip.normalized_positions() {
         let src_cell = &src[clip.src_pos(p)];
-        if src_cell.skip {
-            continue;
-        }
-
         dst[clip.dst_pos(p)] = src_cell.clone();
     }
 }
