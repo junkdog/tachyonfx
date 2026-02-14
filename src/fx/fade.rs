@@ -75,12 +75,12 @@ impl Shader for FadeColors {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::DslFormat;
 
-        let s = if self.bg.is_some() {
+        let s = if let Some(bg) = self.bg {
             format!(
                 "fx::{}({}, {}, {})",
                 self.name(),
                 self.fg.unwrap().dsl_format(),
-                self.bg.unwrap().dsl_format(),
+                bg.dsl_format(),
                 self.timer.dsl_format(),
             )
         } else {

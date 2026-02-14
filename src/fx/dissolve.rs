@@ -85,20 +85,15 @@ impl Shader for Dissolve {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
 
-        if self.dissolved_style.is_none() {
-            EffectExpression::parse(&format!("fx::{}({})", self.name(), self.timer.dsl_format(),))
-        } else {
-            let style = self
-                .dissolved_style
-                .as_ref()
-                .unwrap()
-                .dsl_format();
+        if let Some(style) = &self.dissolved_style {
             EffectExpression::parse(&format!(
                 "fx::{}({}, {})",
                 self.name(),
-                style,
+                style.dsl_format(),
                 self.timer.dsl_format(),
             ))
+        } else {
+            EffectExpression::parse(&format!("fx::{}({})", self.name(), self.timer.dsl_format(),))
         }
     }
 }
