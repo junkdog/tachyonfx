@@ -300,7 +300,7 @@ fn qualified_name<'a>() -> impl TokenParser<'a, Expr> {
 }
 
 fn function_expression<'a>() -> impl TokenParser<'a, Expr> {
-    tuplify!(function_call(), method_chain())
+    (tuplify!(function_call(), method_chain()))
         .map(|(call, self_fns)| Expr::FnCall { call, self_fns })
 }
 
@@ -328,7 +328,7 @@ fn struct_instantiation<'a>() -> impl TokenParser<'a, Expr> {
     use TokenKind::*;
 
     // todo: support shorthand syntax for fields
-    let field = tuplify!(identifier(), token(Colon), expression(),)
+    let field = (tuplify!(identifier(), token(Colon), expression(),))
         .map(|(name, _, value)| (name.to_compact_string(), value));
 
     let fields = many_to_vec(field, true, separator(token(Comma), true));
