@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
 // ── v1: original implementations ─────────────────────────────────────
 
@@ -291,6 +291,7 @@ fn test_colors() -> Vec<(u8, u8, u8)> {
 fn bench_rgb_to_hsl(c: &mut Criterion) {
     let colors = test_colors();
     let mut group = c.benchmark_group("rgb_to_hsl");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("v1 original", |b| {
         b.iter(|| {
@@ -327,6 +328,7 @@ fn bench_hsl_to_rgb(c: &mut Criterion) {
         .collect();
 
     let mut group = c.benchmark_group("hsl_to_rgb");
+    group.throughput(Throughput::Elements(hsl_values.len() as u64));
 
     group.bench_function("v1 original", |b| {
         b.iter(|| {
@@ -358,6 +360,7 @@ fn bench_hsl_to_rgb(c: &mut Criterion) {
 fn bench_round_trip(c: &mut Criterion) {
     let colors = test_colors();
     let mut group = c.benchmark_group("round_trip");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("v1 original", |b| {
         b.iter(|| {
@@ -542,6 +545,7 @@ fn hsv_to_rgb_v2(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
 fn bench_rgb_to_hsv(c: &mut Criterion) {
     let colors = test_colors();
     let mut group = c.benchmark_group("rgb_to_hsv");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("current", |b| {
         b.iter(|| {
@@ -570,6 +574,7 @@ fn bench_hsv_to_rgb(c: &mut Criterion) {
         .collect();
 
     let mut group = c.benchmark_group("hsv_to_rgb");
+    group.throughput(Throughput::Elements(hsv_values.len() as u64));
 
     group.bench_function("current", |b| {
         b.iter(|| {
@@ -593,6 +598,7 @@ fn bench_hsv_to_rgb(c: &mut Criterion) {
 fn bench_hsv_round_trip(c: &mut Criterion) {
     let colors = test_colors();
     let mut group = c.benchmark_group("hsv_round_trip");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("current", |b| {
         b.iter(|| {

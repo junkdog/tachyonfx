@@ -1,10 +1,11 @@
 // benches/color_conversion.rs
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use ratatui::style::Color;
 use tachyonfx::{color_from_hsl, color_to_hsl, ToRgbComponents};
 
 pub fn color_conversion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("color_conversion");
+    group.throughput(Throughput::Elements(16));
 
     // Create a diverse set of colors to test conversions
     // Include primary, secondary, various brightness and saturation levels
@@ -104,8 +105,13 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
         })
     });
 
-    // Benchmark 7: Batch conversions (100 items) - tachyonfx
+    group.finish();
+
+    // Batch conversion benchmark in a separate group with its own throughput
+    let mut group = c.benchmark_group("color_conversion_batch");
     let batch_size = 100;
+    group.throughput(Throughput::Elements(batch_size * 16));
+
     group.bench_function("tachyonfx_batch_100", |b| {
         b.iter(|| {
             for _ in 0..batch_size {

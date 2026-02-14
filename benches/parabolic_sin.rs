@@ -1,12 +1,13 @@
 // benches/parabolic_sin.rs
 use core::f32::consts::TAU;
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use micromath::F32Ext;
 use tachyonfx::parabolic_sin;
 
 pub fn parabolic_sin_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("sin_approximation");
+    group.throughput(Throughput::Elements(1024));
 
     // sample points: four full periods in radians
     let radians: Vec<f32> = (0..1024)

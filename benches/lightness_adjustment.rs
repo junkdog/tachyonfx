@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
 // ── HSL round-trip (current approach) ────────────────────────────────
 
@@ -189,6 +189,7 @@ fn bench_lighten(c: &mut Criterion) {
     let amount = 0.3_f32; // moderate lighten
 
     let mut group = c.benchmark_group("lighten_+0.3");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("hsl round-trip", |b| {
         b.iter(|| {
@@ -222,6 +223,7 @@ fn bench_darken(c: &mut Criterion) {
     let amount = -0.3_f32; // moderate darken
 
     let mut group = c.benchmark_group("darken_-0.3");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("hsl round-trip", |b| {
         b.iter(|| {
@@ -255,6 +257,7 @@ fn bench_extreme_lighten(c: &mut Criterion) {
     let amount = 0.8_f32;
 
     let mut group = c.benchmark_group("lighten_+0.8");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("hsl round-trip", |b| {
         b.iter(|| {
@@ -288,6 +291,7 @@ fn bench_extreme_darken(c: &mut Criterion) {
     let amount = -0.8_f32;
 
     let mut group = c.benchmark_group("darken_-0.8");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("hsl round-trip", |b| {
         b.iter(|| {

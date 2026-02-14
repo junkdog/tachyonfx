@@ -54,7 +54,7 @@ regex = "1.11.1"
 indoc = "2.0.6"
 crossterm = { workspace = true }
 ratatui.workspace = true
-criterion = "0.7.0"
+criterion = "0.8.2"
 
 [features]
 #default = ["std", "crossterm", "dsl"]

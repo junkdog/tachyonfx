@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use ratatui::style::Color;
 use tachyonfx::{ColorCache, ColorSpace};
 
@@ -54,6 +54,7 @@ fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("color-lerp");
 
     let theme_colors = fg_colors_from_ansi(SCREEN_BUFFER);
+    group.throughput(Throughput::Elements(theme_colors.len() as u64));
 
     // Direct interpolation benchmark
     group.bench_with_input(BenchmarkId::new("direct", "hsl"), &(), |b, _| {

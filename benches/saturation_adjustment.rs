@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
 // ── HSL round-trip (current approach) ────────────────────────────────
 
@@ -164,6 +164,7 @@ fn bench_desaturate(c: &mut Criterion) {
     let factor = 0.3_f32; // strong desaturation
 
     let mut group = c.benchmark_group("desaturate_0.3");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("hsl round-trip", |b| {
         b.iter(|| {
@@ -197,6 +198,7 @@ fn bench_mild_desaturate(c: &mut Criterion) {
     let factor = 0.7_f32;
 
     let mut group = c.benchmark_group("desaturate_0.7");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("hsl round-trip", |b| {
         b.iter(|| {
@@ -230,6 +232,7 @@ fn bench_oversaturate(c: &mut Criterion) {
     let factor = 1.5_f32;
 
     let mut group = c.benchmark_group("oversaturate_1.5");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("hsl round-trip", |b| {
         b.iter(|| {
@@ -263,6 +266,7 @@ fn bench_full_desaturate(c: &mut Criterion) {
     let factor = 0.0_f32;
 
     let mut group = c.benchmark_group("desaturate_0.0");
+    group.throughput(Throughput::Elements(colors.len() as u64));
 
     group.bench_function("hsl round-trip", |b| {
         b.iter(|| {

@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use ratatui::{
     buffer::Buffer,
     layout::{Position, Rect},
@@ -60,6 +60,7 @@ pub fn cell_iteration_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cell_iteration");
 
     for &(name, rect, buffer_size) in BENCH_CONFIGS {
+        group.throughput(Throughput::Elements(rect.width as u64 * rect.height as u64));
         // Manual iteration (baseline)
         group.bench_with_input(
             BenchmarkId::new("manual", name),

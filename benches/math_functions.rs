@@ -1,9 +1,10 @@
 // benches/math_functions.rs
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use micromath::F32Ext;
 
 pub fn sqrt_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("sqrt");
+    group.throughput(Throughput::Elements(1024));
 
     let values: Vec<f32> = (0..1024)
         .map(|i| i as f32 / 1024.0 * 100.0)
@@ -30,6 +31,7 @@ pub fn sqrt_benchmark(c: &mut Criterion) {
 
 pub fn powf_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("powf");
+    group.throughput(Throughput::Elements(1024));
 
     let values: Vec<(f32, f32)> = (0..1024)
         .map(|i| {
@@ -60,6 +62,7 @@ pub fn powf_benchmark(c: &mut Criterion) {
 
 pub fn powi_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("powi");
+    group.throughput(Throughput::Elements(1024));
 
     let values: Vec<(f32, i32)> = (0..1024)
         .map(|i| {
@@ -90,6 +93,7 @@ pub fn powi_benchmark(c: &mut Criterion) {
 
 pub fn round_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("round");
+    group.throughput(Throughput::Elements(1024));
 
     let values: Vec<f32> = (0..1024)
         .map(|i| (i as f32 / 100.0) - 5.12)
@@ -116,6 +120,7 @@ pub fn round_benchmark(c: &mut Criterion) {
 
 pub fn floor_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("floor");
+    group.throughput(Throughput::Elements(1024));
 
     let values: Vec<f32> = (0..1024)
         .map(|i| (i as f32 / 100.0) - 5.12)
@@ -142,6 +147,7 @@ pub fn floor_benchmark(c: &mut Criterion) {
 
 pub fn ceil_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("ceil");
+    group.throughput(Throughput::Elements(1024));
 
     let values: Vec<f32> = (0..1024)
         .map(|i| (i as f32 / 100.0) - 5.12)

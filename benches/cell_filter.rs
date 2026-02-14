@@ -1,5 +1,5 @@
 // benches/cell_filter.rs
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use ratatui::{
     buffer::Buffer,
     layout,
@@ -53,6 +53,9 @@ fn bench_effect_with_filter(
 pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
     let area = bench_area();
     let mut group = c.benchmark_group("cell_filter_overhead");
+    group.throughput(Throughput::Elements(
+        BENCH_WIDTH as u64 * BENCH_HEIGHT as u64,
+    ));
 
     // Baseline - Raw buffer iteration with no effect framework overhead
     group.bench_function("raw_no_filter", |b| {
