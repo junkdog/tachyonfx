@@ -202,6 +202,23 @@ pub enum CellFilter {
     /// ```
     Text,
 
+    /// Selects cells that contain a non-space symbol.
+    ///
+    /// This filter is **dynamic** and excludes cells whose symbol is `" "` (a single
+    /// space), which typically represents an empty or unwritten cell. Unlike [`Text`],
+    /// which matches alphanumeric characters and common punctuation, `NonEmpty` matches
+    /// any cell that is not blank — including box-drawing characters, symbols, and other
+    /// graphical content.
+    ///
+    /// # Example
+    /// ```rust
+    /// use tachyonfx::CellFilter;
+    ///
+    /// let filter = CellFilter::NonEmpty;
+    /// // Selects cells whose symbol is not " "
+    /// ```
+    NonEmpty,
+
     /// Selects cells that match ALL of the given filters (logical AND).
     ///
     /// A cell must satisfy every filter in the collection to be selected. The
@@ -421,6 +438,7 @@ impl CellFilter {
             CellFilter::Inner(m) => format!("inner({})", format_margin(m)),
             CellFilter::Outer(m) => format!("outer({})", format_margin(m)),
             CellFilter::Text => "text".to_string(),
+            CellFilter::NonEmpty => "non_empty".to_string(),
             CellFilter::AllOf(filters) => format!("all_of({})", to_string(filters)),
             CellFilter::AnyOf(filters) => format!("any_of({})", to_string(filters)),
             CellFilter::NoneOf(filters) => format!("none_of({})", to_string(filters)),
@@ -491,6 +509,7 @@ impl fmt::Debug for CellFilter {
             CellFilter::Inner(margin) => write!(f, "Inner({margin:?})"),
             CellFilter::Outer(margin) => write!(f, "Outer({margin:?})"),
             CellFilter::Text => write!(f, "Text"),
+            CellFilter::NonEmpty => write!(f, "NonEmpty"),
             CellFilter::AllOf(filters) => f.debug_tuple("AllOf").field(filters).finish(),
             CellFilter::AnyOf(filters) => f.debug_tuple("AnyOf").field(filters).finish(),
             CellFilter::NoneOf(filters) => f.debug_tuple("NoneOf").field(filters).finish(),
@@ -516,6 +535,7 @@ impl PartialEq for CellFilter {
             (CellFilter::Inner(m1), CellFilter::Inner(m2)) => m1 == m2,
             (CellFilter::Outer(m1), CellFilter::Outer(m2)) => m1 == m2,
             (CellFilter::Text, CellFilter::Text) => true,
+            (CellFilter::NonEmpty, CellFilter::NonEmpty) => true,
             (CellFilter::AllOf(f1), CellFilter::AllOf(f2)) => f1 == f2,
             (CellFilter::AnyOf(f1), CellFilter::AnyOf(f2)) => f1 == f2,
             (CellFilter::NoneOf(f1), CellFilter::NoneOf(f2)) => f1 == f2,

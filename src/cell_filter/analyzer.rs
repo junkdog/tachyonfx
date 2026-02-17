@@ -66,6 +66,7 @@ impl FilterAnalyzer for CellFilter {
             CellFilter::FgColor(_)
             | CellFilter::BgColor(_)
             | CellFilter::Text
+            | CellFilter::NonEmpty
             | CellFilter::PositionFn(_)
             | CellFilter::EvalCell(_) => FilterType::Dynamic,
 

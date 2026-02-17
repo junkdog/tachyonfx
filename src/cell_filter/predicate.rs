@@ -49,6 +49,7 @@ impl<'a> CellPredicate<'a> {
             CellFilter::Inner(margin) => area.inner(*margin),
             CellFilter::Outer(margin) => area.inner(*margin),
             CellFilter::Text => area,
+            CellFilter::NonEmpty => area,
             CellFilter::AllOf(_) => area,
             CellFilter::AnyOf(_) => area,
             CellFilter::NoneOf(_) => area,
@@ -85,6 +86,7 @@ impl<'a> CellPredicate<'a> {
                 let ch = cell.symbol().chars().next().unwrap();
                 ch.is_alphabetic() || ch.is_numeric() || " ?!.,:;()".contains(ch)
             },
+            CellFilter::NonEmpty => cell.symbol() != " ",
             CellFilter::AllOf(s) => s.iter().all(|mode| {
                 mode.predicate(self.filter_area)
                     .is_valid(pos, cell)

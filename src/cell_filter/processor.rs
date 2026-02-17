@@ -410,6 +410,7 @@ fn calculate_cell_indices(buf: &Buffer, area: Rect, filter: &CellFilter) -> BitV
         CellFilter::FgColor(_)
         | CellFilter::BgColor(_)
         | CellFilter::Text
+        | CellFilter::NonEmpty
         | CellFilter::PositionFn(_)
         | CellFilter::EvalCell(_) => {
             let pred = CellPredicate::new(area, filter);

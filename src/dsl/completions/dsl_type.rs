@@ -153,7 +153,7 @@ impl DslType for CellFilter {
     const TYPE_NAME: &'static str = "CellFilter";
 
     fn constants() -> &'static [&'static str] {
-        &["All", "Text"]
+        &["All", "NonEmpty", "Text"]
     }
 
     fn constructors() -> &'static [CallableItem] {

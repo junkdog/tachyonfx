@@ -1,6 +1,8 @@
 # Changelog
 
 ## unreleased
+### Added
+- `CellFilter::NonEmpty`: selects cells that contain a non-space symbol.
 
 ## tachyonfx-0.24.0 - 2026-02-14
 ### Added

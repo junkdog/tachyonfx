@@ -85,6 +85,7 @@ fn cell_filter(text: &str) -> Option<Value> {
         match text.trim_start_matches("CellFilter::") {
             "All" => CellFilter::All,
             "Text" => CellFilter::Text,
+            "NonEmpty" => CellFilter::NonEmpty,
             _ => None?,
         },
     ))

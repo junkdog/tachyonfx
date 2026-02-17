@@ -362,6 +362,7 @@ impl DslFormat for CellFilter {
             CellFilter::Inner(m) => format_compact!("CellFilter::Inner({})", m.dsl_format()),
             CellFilter::Outer(m) => format_compact!("CellFilter::Outer({})", m.dsl_format()),
             CellFilter::Text => CompactString::const_new("CellFilter::Text"),
+            CellFilter::NonEmpty => CompactString::const_new("CellFilter::NonEmpty"),
             CellFilter::AllOf(filters) => format_compact!("CellFilter::AllOf({})", format(filters)),
             CellFilter::AnyOf(filters) => format_compact!("CellFilter::AnyOf({})", format(filters)),
             CellFilter::NoneOf(filters) => {
