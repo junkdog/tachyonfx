@@ -15,7 +15,7 @@ layering simple effects, bringing smooth transitions and visual polish to the te
 
 ## Features
 
-- **40+ unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
+- **50+ unique effects** — color transformations, text animations, geometric distortions, plus support for custom effects
 - **Spatial patterns** — control effect timing and distribution with radial, diagonal, checkerboard, and organic patterns
 - **Effect composition** — chain and combine effects for sophisticated animations
 - **Cell-precise targeting** — apply effects to specific regions or cells matching custom criteria
@@ -134,7 +134,7 @@ fade.process(delta_time, buf, area);
 // Run multiple effects in parallel
 let effects = fx::parallel(&[
     fx::fade_from_fg(Color::Red, 500),
-    fx::slide_in(Direction::LeftToRight, 800),
+    fx::sweep_in(Motion::LeftToRight, 10, 0, Color::Black, 800),
 ]);
 
 // Or sequence them
@@ -183,8 +183,11 @@ Transform colors over time for smooth transitions.
 
 - `fade_from` / `fade_to` — Transition colors
 - `fade_from_fg` / `fade_to_fg` — Foreground color transitions
+- `paint` / `paint_fg` / `paint_bg` — Paint cells with a color over time
 - `hsl_shift` / `hsl_shift_fg` — Animate through HSL color space
-- `term256_colors` — Downsample to 256-color mode
+- `saturate` / `saturate_fg` — Adjust color saturation
+- `lighten` / `lighten_fg` — Increase lightness toward white
+- `darken` / `darken_fg` — Decrease lightness toward black
 
 ### Text & Motion Effects
 Animate text and cell positions for dynamic content.
@@ -218,16 +221,21 @@ Fine-tune timing and behavior.
 Control how effects spread and progress across the terminal.
 
 - `RadialPattern` — Expand outward from center point
+- `DiamondPattern` — Manhattan distance-based diamond reveals
+- `SpiralPattern` — Spiral arm reveals with configurable arm count
 - `DiagonalPattern` — Sweep across diagonally
 - `CheckerboardPattern` — Alternate cell-by-cell in grid pattern
 - `SweepPattern` — Linear progression in cardinal directions
+- `WavePattern` — Wave interference patterns with FM/AM modulation
 - `CoalescePattern` / `DissolvePattern` — Organic, randomized reveals
+- `CombinedPattern` — Combine patterns with multiply, max, min, average
+- `BlendPattern` — Crossfade between two patterns over effect lifetime
+- `InvertedPattern` — Invert any pattern's output
 
 ### Geometry Effects
 Transform positions and layout.
 
 - `translate` — Move content by offset
-- `resize_area` — Scale effect bounds
 - `translate_buf` — Copy and move buffer content
 
 ## Advanced Features
@@ -264,7 +272,7 @@ Alternatively, implement the `Shader` trait and use it together with `.into_effe
 ### Effect DSL
 
 The DSL supports:
-- Most built-in effects (excludes: `effect_fn`, `effect_fn_buf`, `glitch`, `offscreen_buffer`, `resize_area`, `translate`, `translate_buf`)
+- Most built-in effects (excludes: `effect_fn`, `effect_fn_buf`, `offscreen_buffer`, `translate_buf`)
 - All spatial patterns with method chaining
 - Variable bindings
 - Method chaining

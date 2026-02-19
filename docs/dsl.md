@@ -130,10 +130,17 @@ Most effects can be manipulated with spatial patterns using `.with_pattern()`:
 ### Pattern Types
 
 - **RadialPattern**: `RadialPattern::center()`, `RadialPattern::new(x, y)`
+- **DiamondPattern**: `DiamondPattern::center()`, `DiamondPattern::new(x, y)` — Manhattan distance-based diamond reveals
+- **SpiralPattern**: `SpiralPattern::center()`, `SpiralPattern::new(x, y)` — spiral arm reveals with configurable arm count
 - **DiagonalPattern**: `DiagonalPattern::top_left_to_bottom_right()`, etc.
 - **CheckerboardPattern**: `CheckerboardPattern::default()`, `CheckerboardPattern::with_cell_size()`
 - **SweepPattern**: `SweepPattern::left_to_right()`, `SweepPattern::right_to_left()`, etc.
 - **Organic Patterns**: `CoalescePattern::new()`, `DissolvePattern::new()`
+- **WavePattern**: `WavePattern::new(wave_layer)` — complex wave interference patterns with FM/AM modulation
+- **CombinedPattern**: `CombinedPattern::multiply(a, b)`, `CombinedPattern::max(a, b)`, `CombinedPattern::min(a, b)`,
+  `CombinedPattern::average(a, b)` — combine two patterns with binary operations
+- **BlendPattern**: `BlendPattern::new(a, b)` — crossfade between two patterns over effect lifetime
+- **InvertedPattern**: `InvertedPattern::new(pattern)` — inverts a pattern's output
 
 ### Pattern Configuration
 
@@ -143,6 +150,34 @@ Patterns support method chaining:
 RadialPattern::center()
     .with_transition_width(2.5)
     .with_center(0.3, 0.7)
+
+SpiralPattern::center()
+    .with_arms(6)
+    .with_transition_width(1.5)
+```
+
+### Wave System
+
+`WavePattern` is built from composable wave layers and oscillators:
+
+- **Oscillator**: `Oscillator::sin(kx, ky, kt)`, `Oscillator::cos(kx, ky, kt)`,
+  `Oscillator::triangle(kx, ky, kt)`, `Oscillator::sawtooth(kx, ky, kt)`
+  - Methods: `.phase(f32)`, `.modulated_by(Modulator)`
+- **Modulator**: `Modulator::sin(kx, ky, kt)`, `Modulator::cos(kx, ky, kt)`,
+  `Modulator::triangle(kx, ky, kt)`, `Modulator::sawtooth(kx, ky, kt)`
+  - Methods: `.phase(f32)`, `.intensity(f32)`, `.on_phase()`, `.on_amplitude()`
+- **WaveLayer**: `WaveLayer::new(oscillator)`
+  - Methods: `.multiply(oscillator)`, `.average(oscillator)`, `.max(oscillator)`,
+    `.amplitude(f32)`, `.power(i32)`, `.abs()`
+
+```rust,ignore
+WavePattern::new(
+    WaveLayer::new(Oscillator::sin(2.0, 0.0, 1.0))
+        .multiply(Oscillator::cos(0.0, 3.0, 0.5).modulated_by(
+            Modulator::sin(1.0, 1.0, 0.25).intensity(0.5)
+        ))
+        .amplitude(0.8)
+).with_contrast(2)
 ```
 
 ## Supported Types
@@ -161,9 +196,13 @@ The DSL supports all types needed for effect creation:
 - **EffectTimer**: `EffectTimer::from_ms(500, Linear)`, `EffectTimer::new(duration, interpolation)`, or tuple shorthand
   `(500, Linear)`
 - **Motion**: `Motion::LeftToRight`, `Motion::RightToLeft`, `Motion::UpToDown`, `Motion::DownToUp`
-- **Interpolation**: All interpolation curves (`Linear`, `QuadOut`, `BounceIn`, etc.)
+- **Interpolation**: All interpolation curves (`Linear`, `QuadOut`, `BounceIn`, `SmoothStep`, `Spring`, etc.)
 - **RepeatMode**: `RepeatMode::Forever`, `RepeatMode::Times(3)`, `RepeatMode::Duration(duration)`
 - **ColorSpace**: `ColorSpace::Rgb`, `ColorSpace::Hsl`, `ColorSpace::Hsv`
+- **EvolveSymbolSet**: `EvolveSymbolSet::BlocksHorizontal`, `EvolveSymbolSet::BlocksVertical`,
+  `EvolveSymbolSet::CircleFill`, `EvolveSymbolSet::Circles`, `EvolveSymbolSet::Quadrants`,
+  `EvolveSymbolSet::Shaded`, `EvolveSymbolSet::Squares`
+- **SimpleRng**: `SimpleRng::new(seed)`, `SimpleRng::default()` — for pattern randomization
 
 ### Layout Types
 
@@ -171,13 +210,16 @@ The DSL supports all types needed for effect creation:
 - **Layout**: `Layout::horizontal([...])`, `Layout::vertical([...])`, `Layout::new(direction, constraints)`
 - **Constraint**: `Constraint::Min(10)`, `Constraint::Max(100)`, `Constraint::Length(50)`, `Constraint::Percentage(25)`,
   `Constraint::Fill(1)`, `Constraint::Ratio(1, 3)`
+- **Flex**: `Flex::Legacy`, `Flex::Start`, `Flex::End`, `Flex::Center`, `Flex::SpaceBetween`, `Flex::SpaceAround`,
+  `Flex::SpaceEvenly`
 - **Other**: `Margin`, `Offset`, `Size`, `RefRect`, `Direction`
 
 ### Cell Filters
 
 Complete `CellFilter` support including:
 
-- **Basic**: `CellFilter::All`, `CellFilter::Text`, `CellFilter::FgColor(color)`, `CellFilter::BgColor(color)`
+- **Basic**: `CellFilter::All`, `CellFilter::Text`, `CellFilter::NonEmpty`, `CellFilter::FgColor(color)`,
+  `CellFilter::BgColor(color)`
 - **Spatial**: `CellFilter::Area(rect)`, `CellFilter::RefArea(ref_rect)`, `CellFilter::Inner(margin)`,
   `CellFilter::Outer(margin)`
 - **Compound**: `CellFilter::AllOf([...])`, `CellFilter::AnyOf([...])`, `CellFilter::NoneOf([...])`,
