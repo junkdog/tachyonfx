@@ -166,14 +166,14 @@ impl CompletionEngine {
                     CompletionItem::new_type("Size::", "Size constructors"),
                     CompletionItem::new_type("SimpleRng::", "Random number generator"),
                     // Pattern types
-                    CompletionItem::new_type("CheckerboardPattern::", "Effect progression"),
-                    CompletionItem::new_type("CoalescePattern::", "Effect progression"),
-                    CompletionItem::new_type("DiagonalPattern::", "Effect progression"),
-                    CompletionItem::new_type("DissolvePattern::", "Effect progression"),
-                    CompletionItem::new_type("RadialPattern::", "Effect progression"),
+                    CompletionItem::new_type("CheckerboardPattern::", "Checkerboard cell reveal"),
+                    CompletionItem::new_type("CoalescePattern::", "Random cell reveal"),
+                    CompletionItem::new_type("DiagonalPattern::", "Diagonal sweep reveal"),
+                    CompletionItem::new_type("DissolvePattern::", "Random dissolve reveal"),
+                    CompletionItem::new_type("RadialPattern::", "Radial outward reveal"),
                     CompletionItem::new_type("DiamondPattern::", "Diamond-shaped reveal"),
                     CompletionItem::new_type("SpiralPattern::", "Spiral arm reveal"),
-                    CompletionItem::new_type("SweepPattern::", "Effect progression"),
+                    CompletionItem::new_type("SweepPattern::", "Linear sweep reveal"),
                     CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
                     CompletionItem::new_type(
                         "CombinedPattern::",
@@ -222,6 +222,7 @@ impl CompletionEngine {
                                 kind: CompletionKind::Function,
                                 detail: meta,
                                 insert_text: Some(insert_text),
+                                description: ctor.description().map(|s| s.to_string()),
                             }
                         })
                         .collect(),
@@ -258,6 +259,7 @@ impl CompletionEngine {
                                 kind: CompletionKind::Function,
                                 detail: format!("{effect_name}({})", ctor.params().join(", ")),
                                 insert_text: Some(format!("{effect_name}()")),
+                                description: ctor.description().map(|s| s.to_string()),
                             });
                         }
                     } else {
@@ -287,6 +289,7 @@ impl CompletionEngine {
                         kind: CompletionKind::Field,
                         detail: field_type.to_string(),
                         insert_text: None,
+                        description: None,
                     })
                     .collect()
             },
@@ -311,6 +314,7 @@ impl CompletionEngine {
                 kind: CompletionKind::Variable,
                 detail: binding.binding_type,
                 insert_text: None,
+                description: None,
             })
             .for_each(|completion| completions.push(completion));
 
@@ -337,6 +341,7 @@ impl CompletionEngine {
                 kind: CompletionKind::Constant,
                 detail: identifier.to_string(),
                 insert_text: None,
+                description: None,
             })
             .collect()
     }
@@ -476,19 +481,19 @@ fn specialize_completions(completions: Vec<CompletionItem>) -> Vec<CompletionIte
         .flat_map(|c| match () {
             _ if c.label == "AnyPattern::" => vec![
                 CompletionItem::new_type("BlendPattern::", "Blend between two patterns"),
-                CompletionItem::new_type("CheckerboardPattern::", "Effect progression"),
-                CompletionItem::new_type("CoalescePattern::", "Effect progression"),
+                CompletionItem::new_type("CheckerboardPattern::", "Checkerboard cell reveal"),
+                CompletionItem::new_type("CoalescePattern::", "Random cell reveal"),
                 CompletionItem::new_type(
                     "CombinedPattern::",
                     "Combine two patterns with an operation",
                 ),
-                CompletionItem::new_type("DiagonalPattern::", "Effect progression"),
+                CompletionItem::new_type("DiagonalPattern::", "Diagonal sweep reveal"),
                 CompletionItem::new_type("DiamondPattern::", "Diamond-shaped reveal"),
-                CompletionItem::new_type("DissolvePattern::", "Effect progression"),
+                CompletionItem::new_type("DissolvePattern::", "Random dissolve reveal"),
                 CompletionItem::new_type("InvertedPattern::", "Invert pattern output"),
-                CompletionItem::new_type("RadialPattern::", "Effect progression"),
+                CompletionItem::new_type("RadialPattern::", "Radial outward reveal"),
                 CompletionItem::new_type("SpiralPattern::", "Spiral arm reveal"),
-                CompletionItem::new_type("SweepPattern::", "Effect progression"),
+                CompletionItem::new_type("SweepPattern::", "Linear sweep reveal"),
                 CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
             ],
             _ if c.label.starts_with("bool") => vec![
@@ -714,6 +719,7 @@ mod tests {
             kind: CompletionKind::Parameter,
             detail: "Parameter 2 of 2".to_string(),
             insert_text: None,
+            description: None,
         });
 
         // Test CellFilter::Inner(Margin) - first parameter
@@ -729,6 +735,7 @@ mod tests {
             kind: CompletionKind::Parameter,
             detail: "Parameter 1 of 1".to_string(),
             insert_text: None,
+            description: None,
         });
     }
 
@@ -1091,12 +1098,14 @@ mod tests {
                 kind: CompletionKind::Parameter,
                 detail: "Parameter 2 of 3".to_string(),
                 insert_text: None,
+                description: None,
             },
             CompletionItem {
                 label: "screen_bg".to_string(),
                 kind: CompletionKind::Variable,
                 detail: "Color".to_string(),
                 insert_text: None,
+                description: None,
             }
         ]);
 
@@ -1427,6 +1436,7 @@ mod tests {
             kind: CompletionKind::Type,
             detail: "Parameter 1 of 3".to_string(),
             insert_text: None,
+            description: None,
         });
     }
 
@@ -1442,6 +1452,7 @@ mod tests {
             kind: CompletionKind::Parameter,
             detail: "Parameter 1 of 1".to_string(),
             insert_text: None,
+            description: None,
         });
     }
 
@@ -1457,6 +1468,7 @@ mod tests {
             kind: CompletionKind::Parameter,
             detail: "Parameter 1 of 1".to_string(),
             insert_text: None,
+            description: None,
         });
     }
 
@@ -1472,6 +1484,7 @@ mod tests {
             kind: CompletionKind::Parameter,
             detail: "Parameter 1 of 1".to_string(),
             insert_text: None,
+            description: None,
         });
     }
 
@@ -1487,6 +1500,7 @@ mod tests {
             kind: CompletionKind::Parameter,
             detail: "Parameter 1 of 1".to_string(),
             insert_text: None,
+            description: None,
         });
     }
 

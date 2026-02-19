@@ -1,18 +1,38 @@
 macro_rules! ctor {
-    ($type:expr, $name:expr, $($params:expr),*) => {
-        CallableItem::constructor($type, $name, &[$($params),*])
+    // params + description: ctor!("Type", "name", ["p1", "p2"], "desc")
+    ($type:expr, $name:expr, [$($params:expr),*], $desc:expr) => {
+        CallableItem::constructor($type, $name, &[$($params),*], Some($desc))
     };
+    // no params + description: ctor!("Type", "name", [], "desc")
+    ($type:expr, $name:expr, [], $desc:expr) => {
+        CallableItem::constructor($type, $name, &[], Some($desc))
+    };
+    // params, no description (existing)
+    ($type:expr, $name:expr, $($params:expr),*) => {
+        CallableItem::constructor($type, $name, &[$($params),*], None)
+    };
+    // no params, no description (existing)
     ($type:expr, $name:expr) => {
-        CallableItem::constructor($type, $name, &[])
+        CallableItem::constructor($type, $name, &[], None)
     };
 }
 
 macro_rules! method {
-    ($type:expr, $name:expr, $($params:expr),*) => {
-        CallableItem::instance_method($type, $name, &[$($params),*])
+    // params + description: method!("Type", "name", ["p1", "p2"], "desc")
+    ($type:expr, $name:expr, [$($params:expr),*], $desc:expr) => {
+        CallableItem::instance_method($type, $name, &[$($params),*], Some($desc))
     };
+    // no params + description: method!("Type", "name", [], "desc")
+    ($type:expr, $name:expr, [], $desc:expr) => {
+        CallableItem::instance_method($type, $name, &[], Some($desc))
+    };
+    // params, no description (existing)
+    ($type:expr, $name:expr, $($params:expr),*) => {
+        CallableItem::instance_method($type, $name, &[$($params),*], None)
+    };
+    // no params, no description (existing)
     ($type:expr, $name:expr) => {
-        CallableItem::instance_method($type, $name, &[])
+        CallableItem::instance_method($type, $name, &[], None)
     };
 }
 

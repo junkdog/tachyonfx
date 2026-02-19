@@ -56,6 +56,7 @@ pub(super) use tok;
 ///     kind: CompletionKind::Function,
 ///     detail: "fade_to_fg(Color, EffectTimer)".to_string(),
 ///     insert_text: Some("fade_to($0)".to_string()),
+///     description: Some("Fade to specified foreground color".to_string()),
 /// };
 ///
 /// // Constant with plain insertion
@@ -64,6 +65,7 @@ pub(super) use tok;
 ///     kind: CompletionKind::Constant,
 ///     detail: "Interpolation".to_string(),
 ///     insert_text: None,
+///     description: None,
 /// };
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -95,6 +97,12 @@ pub struct CompletionItem {
     ///
     /// When `None`, the `label` should be inserted as-is.
     pub insert_text: Option<String>,
+
+    /// Optional human-readable description of what this completion does.
+    ///
+    /// Provides a brief explanation of the effect, type, or method for display in
+    /// completion UIs. When `None`, no description is available.
+    pub description: Option<String>,
 }
 
 /// The category of a completion item.
@@ -153,6 +161,7 @@ impl CompletionItem {
             kind: CompletionKind::Type,
             detail: detail.into(),
             insert_text: None,
+            description: None,
         }
     }
 
@@ -162,6 +171,7 @@ impl CompletionItem {
             kind: CompletionKind::Parameter,
             detail: format!("Parameter {} of {arg_count}", arg_index + 1),
             insert_text: None,
+            description: None,
         }
     }
 }
@@ -178,6 +188,7 @@ impl From<&CallableItem> for CompletionItem {
             },
             detail: format!("{}({})", name, callable.params().join(", ")),
             insert_text: Some(format!("{name}($0)")),
+            description: callable.description().map(|s| s.to_string()),
         }
     }
 }
@@ -256,18 +267,21 @@ pub(super) enum CallableItem {
         params: &'static [&'static str],
         #[allow(dead_code)]
         declaring_type: &'static str,
+        description: Option<&'static str>,
     },
     #[allow(dead_code)]
     StaticMethod {
         name: &'static str,
         params: &'static [&'static str],
         declaring_type: &'static str,
+        description: Option<&'static str>,
     },
     InstanceMethod {
         name: &'static str,
         params: &'static [&'static str],
         #[allow(dead_code)]
         declaring_type: &'static str,
+        description: Option<&'static str>,
     },
 }
 
@@ -276,8 +290,9 @@ impl CallableItem {
         declaring_type: &'static str,
         name: &'static str,
         params: &'static [&'static str],
+        description: Option<&'static str>,
     ) -> Self {
-        Self::Constructor { name, params, declaring_type }
+        Self::Constructor { name, params, declaring_type, description }
     }
 
     #[allow(dead_code)]
@@ -285,16 +300,18 @@ impl CallableItem {
         declaring_type: &'static str,
         name: &'static str,
         params: &'static [&'static str],
+        description: Option<&'static str>,
     ) -> Self {
-        Self::StaticMethod { name, params, declaring_type }
+        Self::StaticMethod { name, params, declaring_type, description }
     }
 
     pub(super) const fn instance_method(
         declaring_type: &'static str,
         name: &'static str,
         params: &'static [&'static str],
+        description: Option<&'static str>,
     ) -> Self {
-        Self::InstanceMethod { name, params, declaring_type }
+        Self::InstanceMethod { name, params, declaring_type, description }
     }
 
     pub(super) const fn name(&self) -> &str {
@@ -319,6 +336,14 @@ impl CallableItem {
             Self::Constructor { declaring_type, .. }
             | Self::StaticMethod { declaring_type, .. }
             | Self::InstanceMethod { declaring_type, .. } => declaring_type,
+        }
+    }
+
+    pub(super) const fn description(&self) -> Option<&'static str> {
+        match self {
+            Self::Constructor { description, .. }
+            | Self::StaticMethod { description, .. }
+            | Self::InstanceMethod { description, .. } => *description,
         }
     }
 
