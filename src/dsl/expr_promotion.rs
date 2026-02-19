@@ -184,6 +184,9 @@ fn interpolation(text: &str) -> Option<Value> {
 
             "Reverse" => Interpolation::Reverse,
 
+            "SmoothStep" => Interpolation::SmoothStep,
+            "Spring" => Interpolation::Spring,
+
             "SineIn" => Interpolation::SineIn,
             "SineOut" => Interpolation::SineOut,
             "SineInOut" => Interpolation::SineInOut,

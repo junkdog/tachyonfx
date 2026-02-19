@@ -833,6 +833,8 @@ impl DslType for Interpolation {
             "QuintOut",
             "QuintInOut",
             "Reverse",
+            "SmoothStep",
+            "Spring",
             "SineIn",
             "SineOut",
             "SineInOut",

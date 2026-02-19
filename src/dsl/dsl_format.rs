@@ -250,6 +250,8 @@ impl DslFormat for Interpolation {
             Interpolation::QuintOut => "Interpolation::QuintOut",
             Interpolation::QuintInOut => "Interpolation::QuintInOut",
             Interpolation::Reverse => "Interpolation::Reverse",
+            Interpolation::SmoothStep => "Interpolation::SmoothStep",
+            Interpolation::Spring => "Interpolation::Spring",
             Interpolation::SineIn => "Interpolation::SineIn",
             Interpolation::SineOut => "Interpolation::SineOut",
             Interpolation::SineInOut => "Interpolation::SineInOut",

@@ -7,7 +7,7 @@ use crate::{color_space::hsl_to_rgb, color_to_hsl, math, ColorSpace};
 
 /// Easing functions for interpolation
 mod easing {
-    use core::f32::consts::{PI, TAU};
+    use core::f32::consts::{E, PI, TAU};
 
     use crate::math;
 
@@ -210,6 +210,16 @@ mod easing {
         1.0 - t
     }
 
+    pub(super) fn smooth_step(t: f32) -> f32 {
+        t * t * (3.0 - 2.0 * t)
+    }
+
+    pub(super) fn spring(t: f32) -> f32 {
+        let damping = 6.0;
+        let frequency = 4.5 * TAU;
+        1.0 - math::powf(E, -damping * t) * math::cos(frequency * t)
+    }
+
     pub(super) fn sine_in(t: f32) -> f32 {
         1.0 - math::wave_sin(0.25 + t * 0.25)
     }
@@ -266,6 +276,9 @@ pub enum Interpolation {
 
     Reverse,
 
+    SmoothStep,
+    Spring,
+
     SineIn,
     SineOut,
     SineInOut,
@@ -313,6 +326,9 @@ impl Interpolation {
             Interpolation::QuintInOut => easing::quint_in_out(a),
 
             Interpolation::Reverse => easing::reverse(a),
+
+            Interpolation::SmoothStep => easing::smooth_step(a),
+            Interpolation::Spring => easing::spring(a),
 
             Interpolation::SineIn => easing::sine_in(a),
             Interpolation::SineOut => easing::sine_out(a),
@@ -362,6 +378,9 @@ impl Interpolation {
             QuintInOut => QuintInOut,
 
             Reverse => Reverse,
+
+            SmoothStep => SmoothStep,
+            Spring => Spring,
 
             SineIn => SineOut,
             SineOut => SineIn,
@@ -1008,6 +1027,36 @@ mod tests {
         let expected =
             vec![1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.39999998, 0.3, 0.19999999, 0.100000024, 0.0];
         assert_eq!(steps, expected);
+    }
+
+    #[test]
+    fn test_smooth_step() {
+        let steps: Vec<f32> = generate_alpha_steps()
+            .iter()
+            .map(|&a| Interpolation::SmoothStep.alpha(a))
+            .collect();
+        let expected = vec![
+            0.0, 0.028, 0.104, 0.21600002, 0.35200003, 0.5, 0.648, 0.784, 0.896, 0.97199994, 1.0,
+        ];
+        assert_eq!(steps, expected);
+    }
+
+    #[test]
+    fn test_spring() {
+        let steps: Vec<f32> = generate_alpha_steps()
+            .iter()
+            .map(|&a| Interpolation::Spring.alpha(a))
+            .collect();
+
+        // verify boundary conditions
+        assert!((steps[0] - 0.0).abs() < 0.01, "spring(0) should be ~0");
+        assert!((steps[10] - 1.0).abs() < 0.01, "spring(1) should be ~1");
+
+        // verify overshoot (spring should exceed 1.0 at some point)
+        assert!(
+            steps.iter().any(|&v| v > 1.0),
+            "spring should overshoot past 1.0"
+        );
     }
 
     #[test]

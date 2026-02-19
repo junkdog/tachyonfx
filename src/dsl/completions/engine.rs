@@ -644,7 +644,7 @@ mod tests {
         let completions = engine.completions(source, source.len() as u32);
 
         // Should return all interpolation types
-        assert_eq!(completions.len(), 32, "Should have 32 interpolation types");
+        assert_eq!(completions.len(), 34, "Should have 34 interpolation types");
 
         // Check for some common interpolations
         assert!(
