@@ -171,8 +171,15 @@ impl CompletionEngine {
                     CompletionItem::new_type("DiagonalPattern::", "Effect progression"),
                     CompletionItem::new_type("DissolvePattern::", "Effect progression"),
                     CompletionItem::new_type("RadialPattern::", "Effect progression"),
+                    CompletionItem::new_type("DiamondPattern::", "Diamond-shaped reveal"),
+                    CompletionItem::new_type("SpiralPattern::", "Spiral arm reveal"),
                     CompletionItem::new_type("SweepPattern::", "Effect progression"),
                     CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
+                    CompletionItem::new_type(
+                        "CombinedPattern::",
+                        "Combine two patterns with an operation",
+                    ),
+                    CompletionItem::new_type("InvertedPattern::", "Invert pattern output"),
                     CompletionItem::new_type("BlendPattern::", "Blend between two patterns"),
                     // Wave types
                     CompletionItem::new_type("WaveLayer::", "Wave interference layer"),
@@ -230,8 +237,8 @@ impl CompletionEngine {
                         .or_else(|| self.method_by_name(fn_name))
                 } else {
                     self.effect_by_name(fn_name)
-                        .or_else(|| self.constructor_by_name(fn_name))
                         .or_else(|| self.method_by_name(fn_name))
+                        .or_else(|| self.constructor_by_name(fn_name))
                 };
 
                 // Now generate completions based on the parameter type
@@ -471,9 +478,16 @@ fn specialize_completions(completions: Vec<CompletionItem>) -> Vec<CompletionIte
                 CompletionItem::new_type("BlendPattern::", "Blend between two patterns"),
                 CompletionItem::new_type("CheckerboardPattern::", "Effect progression"),
                 CompletionItem::new_type("CoalescePattern::", "Effect progression"),
+                CompletionItem::new_type(
+                    "CombinedPattern::",
+                    "Combine two patterns with an operation",
+                ),
                 CompletionItem::new_type("DiagonalPattern::", "Effect progression"),
+                CompletionItem::new_type("DiamondPattern::", "Diamond-shaped reveal"),
                 CompletionItem::new_type("DissolvePattern::", "Effect progression"),
+                CompletionItem::new_type("InvertedPattern::", "Invert pattern output"),
                 CompletionItem::new_type("RadialPattern::", "Effect progression"),
+                CompletionItem::new_type("SpiralPattern::", "Spiral arm reveal"),
                 CompletionItem::new_type("SweepPattern::", "Effect progression"),
                 CompletionItem::new_type("WavePattern::", "Wave interference pattern"),
             ],
@@ -1120,9 +1134,13 @@ mod tests {
             "BlendPattern::",
             "CheckerboardPattern::",
             "CoalescePattern::",
+            "CombinedPattern::",
             "DiagonalPattern::",
+            "DiamondPattern::",
             "DissolvePattern::",
+            "InvertedPattern::",
             "RadialPattern::",
+            "SpiralPattern::",
             "SweepPattern::",
             "WavePattern::",
         ];

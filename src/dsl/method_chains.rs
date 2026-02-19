@@ -7,8 +7,9 @@ use crate::{
     dsl::{environment::DslEnv, expressions::FnCallInfo, Arguments, DslError, EffectDsl},
     fx::IntoTemporaryEffect,
     pattern::{
-        AnyPattern, CheckerboardPattern, CoalescePattern, DiagonalPattern, DissolvePattern,
-        RadialPattern, SweepPattern, WavePattern,
+        AnyPattern, CheckerboardPattern, CoalescePattern, CombinedPattern, DiagonalPattern,
+        DiamondPattern, DissolvePattern, InvertedPattern, RadialPattern, SpiralPattern,
+        SweepPattern, WavePattern,
     },
     wave::{Modulator, Oscillator, WaveLayer},
     CellFilter, Effect,
@@ -160,6 +161,37 @@ impl ChainableMethods for RadialPattern {
     }
 }
 
+impl ChainableMethods for DiamondPattern {
+    fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => pattern,
+            "with_transition_width" => pattern.with_transition_width(args.read_f32()?),
+            "with_center" => {
+                let center_x = args.read_f32()?;
+                let center_y = args.read_f32()?;
+                pattern.with_center((center_x, center_y))
+            },
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for SpiralPattern {
+    fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => pattern,
+            "with_transition_width" => pattern.with_transition_width(args.read_f32()?),
+            "with_center" => {
+                let center_x = args.read_f32()?;
+                let center_y = args.read_f32()?;
+                pattern.with_center((center_x, center_y))
+            },
+            "with_arms" => pattern.with_arms(args.read_u16()?),
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
 impl ChainableMethods for SweepPattern {
     fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match name {
@@ -179,6 +211,24 @@ impl ChainableMethods for CoalescePattern {
 }
 
 impl ChainableMethods for DissolvePattern {
+    fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => pattern,
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for CombinedPattern {
+    fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
+        Ok(match name {
+            "clone" => pattern,
+            _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
+        })
+    }
+}
+
+impl ChainableMethods for InvertedPattern {
     fn apply_fn(pattern: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match name {
             "clone" => pattern,
@@ -248,6 +298,9 @@ impl ChainableMethods for AnyPattern {
             AnyPattern::Radial(inner) => {
                 AnyPattern::Radial(RadialPattern::apply_fn(inner, name, args)?)
             },
+            AnyPattern::Diamond(inner) => {
+                AnyPattern::Diamond(DiamondPattern::apply_fn(inner, name, args)?)
+            },
             AnyPattern::Diagonal(inner) => {
                 AnyPattern::Diagonal(DiagonalPattern::apply_fn(inner, name, args)?)
             },
@@ -264,6 +317,15 @@ impl ChainableMethods for AnyPattern {
                 AnyPattern::Dissolve(DissolvePattern::apply_fn(inner, name, args)?)
             },
             AnyPattern::Wave(inner) => AnyPattern::Wave(WavePattern::apply_fn(inner, name, args)?),
+            AnyPattern::Spiral(inner) => {
+                AnyPattern::Spiral(SpiralPattern::apply_fn(inner, name, args)?)
+            },
+            AnyPattern::Combined(inner) => {
+                AnyPattern::Combined(CombinedPattern::apply_fn(inner, name, args)?)
+            },
+            AnyPattern::Inverted(inner) => {
+                AnyPattern::Inverted(InvertedPattern::apply_fn(inner, name, args)?)
+            },
             AnyPattern::Blend(_) => match name {
                 "clone" => pattern,
                 _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,

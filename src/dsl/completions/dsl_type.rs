@@ -124,7 +124,11 @@ macro_rules! impl_dsl_type_map {
                 (DiagonalPattern::TYPE_NAME, DiagonalPattern::$method()),
                 (DissolvePattern::TYPE_NAME, DissolvePattern::$method()),
                 (RadialPattern::TYPE_NAME, RadialPattern::$method()),
+                (DiamondPattern::TYPE_NAME, DiamondPattern::$method()),
+                (SpiralPattern::TYPE_NAME, SpiralPattern::$method()),
                 (SweepPattern::TYPE_NAME, SweepPattern::$method()),
+                (CombinedPattern::TYPE_NAME, CombinedPattern::$method()),
+                (InvertedPattern::TYPE_NAME, InvertedPattern::$method()),
                 (BlendPattern::TYPE_NAME, BlendPattern::$method()),
                 // Enum types
                 (Motion::TYPE_NAME, Motion::$method()),
@@ -642,6 +646,67 @@ impl DslType for RadialPattern {
     }
 }
 
+impl DslType for DiamondPattern {
+    const TYPE_NAME: &'static str = "DiamondPattern";
+
+    fn constants() -> &'static [&'static str] {
+        &[]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        const T: &str = "DiamondPattern";
+        const CTORS: &[CallableItem] = &[
+            ctor!(T, "center"),
+            ctor!(T, "new", "f32", "f32"),
+            ctor!(T, "with_transition", "(f32, f32)", "f32"),
+        ];
+
+        CTORS
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        const T: &str = "DiamondPattern";
+        const METHODS: &[CallableItem] = &[
+            method!(T, "clone"),
+            method!(T, "with_transition_width", "f32"),
+            method!(T, "with_center", "f32", "f32"),
+        ];
+
+        METHODS
+    }
+}
+
+impl DslType for SpiralPattern {
+    const TYPE_NAME: &'static str = "SpiralPattern";
+
+    fn constants() -> &'static [&'static str] {
+        &[]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        const T: &str = "SpiralPattern";
+        const CTORS: &[CallableItem] = &[
+            ctor!(T, "center"),
+            ctor!(T, "new", "f32", "f32"),
+            ctor!(T, "with_transition", "(f32, f32)", "f32"),
+        ];
+
+        CTORS
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        const T: &str = "SpiralPattern";
+        const METHODS: &[CallableItem] = &[
+            method!(T, "clone"),
+            method!(T, "with_transition_width", "f32"),
+            method!(T, "with_center", "f32", "f32"),
+            method!(T, "with_arms", "u16"),
+        ];
+
+        METHODS
+    }
+}
+
 impl DslType for SweepPattern {
     const TYPE_NAME: &'static str = "SweepPattern";
 
@@ -959,6 +1024,51 @@ impl DslType for WavePattern {
             method!(T, "with_contrast", "i32"),
             method!(T, "with_transition_width", "f32"),
         ];
+        METHODS
+    }
+}
+
+impl DslType for CombinedPattern {
+    const TYPE_NAME: &'static str = "CombinedPattern";
+
+    fn constants() -> &'static [&'static str] {
+        &[]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        const T: &str = "CombinedPattern";
+        const CTORS: &[CallableItem] = &[
+            ctor!(T, "multiply", "AnyPattern", "AnyPattern"),
+            ctor!(T, "max", "AnyPattern", "AnyPattern"),
+            ctor!(T, "min", "AnyPattern", "AnyPattern"),
+            ctor!(T, "average", "AnyPattern", "AnyPattern"),
+        ];
+        CTORS
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        const T: &str = "CombinedPattern";
+        const METHODS: &[CallableItem] = &[method!(T, "clone")];
+        METHODS
+    }
+}
+
+impl DslType for InvertedPattern {
+    const TYPE_NAME: &'static str = "InvertedPattern";
+
+    fn constants() -> &'static [&'static str] {
+        &[]
+    }
+
+    fn constructors() -> &'static [CallableItem] {
+        const T: &str = "InvertedPattern";
+        const CTORS: &[CallableItem] = &[ctor!(T, "new", "AnyPattern")];
+        CTORS
+    }
+
+    fn methods() -> &'static [CallableItem] {
+        const T: &str = "InvertedPattern";
+        const METHODS: &[CallableItem] = &[method!(T, "clone")];
         METHODS
     }
 }

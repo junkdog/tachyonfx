@@ -4,6 +4,10 @@
 ### Added
 - `CellFilter::NonEmpty`: selects cells that contain a non-space symbol.
 - `Interpolation::SmoothStep` and `Interpolation::Spring`.
+- `DiamondPattern`: spatial pattern using Manhattan distance for diamond-shaped reveals.
+- `SpiralPattern`: trig-free spatial pattern.
+- `InvertedPattern`: wrapper pattern that inverts another pattern's output.
+- `CombinedPattern`: combines two sub-patterns using a binary operation.
 
 ## tachyonfx-0.24.0 - 2026-02-14
 ### Added

@@ -181,6 +181,18 @@ impl DslFormat for crate::pattern::AnyPattern {
             crate::pattern::AnyPattern::Wave(p) => {
                 format_compact!("AnyPattern::Wave({})", p.dsl_format())
             },
+            crate::pattern::AnyPattern::Diamond(p) => {
+                format_compact!("AnyPattern::Diamond({})", p.dsl_format())
+            },
+            crate::pattern::AnyPattern::Spiral(p) => {
+                format_compact!("AnyPattern::Spiral({})", p.dsl_format())
+            },
+            crate::pattern::AnyPattern::Combined(p) => {
+                format_compact!("AnyPattern::Combined({})", p.dsl_format())
+            },
+            crate::pattern::AnyPattern::Inverted(p) => {
+                format_compact!("AnyPattern::Inverted({})", p.dsl_format())
+            },
             crate::pattern::AnyPattern::Blend(p) => {
                 format_compact!("AnyPattern::Blend({})", p.dsl_format())
             },

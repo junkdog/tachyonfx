@@ -2,10 +2,14 @@ mod any_pattern;
 mod blend;
 mod checkerboard;
 mod coalesce;
+mod combined;
 mod diagonal;
+mod diamond;
 mod dissolve;
 mod instanced_pattern;
+mod inverted;
 mod radial;
+mod spiral;
 mod sweep;
 mod wave;
 
@@ -16,10 +20,14 @@ pub use self::{
     blend::BlendPattern,
     checkerboard::CheckerboardPattern,
     coalesce::CoalescePattern,
+    combined::{CombinedPattern, PatternOp},
     diagonal::{DiagonalDirection, DiagonalPattern},
+    diamond::DiamondPattern,
     dissolve::DissolvePattern,
     instanced_pattern::InstancedPattern,
+    inverted::InvertedPattern,
     radial::RadialPattern,
+    spiral::SpiralPattern,
     sweep::SweepPattern,
     wave::WavePattern,
 };

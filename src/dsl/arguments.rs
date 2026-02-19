@@ -605,6 +605,48 @@ impl<'dsl> Arguments<'dsl> {
                         ))
                     },
 
+                    "DiamondPattern::center" => {
+                        self.verify_no_nested_args(args, span)?;
+                        AnyPattern::from(DiamondPattern::center())
+                    },
+                    "DiamondPattern::new" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let center_x = inner_args.read_f32()?;
+                        let center_y = inner_args.read_f32()?;
+                        AnyPattern::from(DiamondPattern::new(center_x, center_y))
+                    },
+                    "DiamondPattern::with_transition" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let center_xy =
+                            inner_args.tuple_2(Arguments::read_f32, Arguments::read_f32)?;
+                        let transition_width = inner_args.read_f32()?;
+                        AnyPattern::from(DiamondPattern::with_transition(
+                            center_xy,
+                            transition_width,
+                        ))
+                    },
+
+                    "SpiralPattern::center" => {
+                        self.verify_no_nested_args(args, span)?;
+                        AnyPattern::from(SpiralPattern::center())
+                    },
+                    "SpiralPattern::new" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let center_x = inner_args.read_f32()?;
+                        let center_y = inner_args.read_f32()?;
+                        AnyPattern::from(SpiralPattern::new(center_x, center_y))
+                    },
+                    "SpiralPattern::with_transition" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let center_xy =
+                            inner_args.tuple_2(Arguments::read_f32, Arguments::read_f32)?;
+                        let transition_width = inner_args.read_f32()?;
+                        AnyPattern::from(SpiralPattern::with_transition(
+                            center_xy,
+                            transition_width,
+                        ))
+                    },
+
                     "SweepPattern::left_to_right" => {
                         let width = self.extract_nested(args, Arguments::read_u16, span)?;
                         AnyPattern::from(SweepPattern::left_to_right(width))
@@ -625,6 +667,36 @@ impl<'dsl> Arguments<'dsl> {
                     "WavePattern::new" => {
                         let layer = self.extract_nested(args, Arguments::wave_layer, span)?;
                         AnyPattern::from(WavePattern::new(layer))
+                    },
+
+                    "CombinedPattern::multiply" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let pattern_a = inner_args.pattern()?;
+                        let pattern_b = inner_args.pattern()?;
+                        AnyPattern::from(CombinedPattern::multiply(pattern_a, pattern_b))
+                    },
+                    "CombinedPattern::max" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let pattern_a = inner_args.pattern()?;
+                        let pattern_b = inner_args.pattern()?;
+                        AnyPattern::from(CombinedPattern::max(pattern_a, pattern_b))
+                    },
+                    "CombinedPattern::min" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let pattern_a = inner_args.pattern()?;
+                        let pattern_b = inner_args.pattern()?;
+                        AnyPattern::from(CombinedPattern::min(pattern_a, pattern_b))
+                    },
+                    "CombinedPattern::average" => {
+                        let mut inner_args = self.nested_args(args, 2, span)?;
+                        let pattern_a = inner_args.pattern()?;
+                        let pattern_b = inner_args.pattern()?;
+                        AnyPattern::from(CombinedPattern::average(pattern_a, pattern_b))
+                    },
+
+                    "InvertedPattern::new" => {
+                        let inner = self.extract_nested(args, Arguments::pattern, span)?;
+                        AnyPattern::from(InvertedPattern::new(inner))
                     },
 
                     "BlendPattern::new" => {
