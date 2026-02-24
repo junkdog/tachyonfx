@@ -1,6 +1,9 @@
 # Changelog
 
 ## unreleased
+### Fixed
+- Fix negative hue values producing wrong colors in `hsl_to_rgb`, `hsv_to_rgb`, and `hsl_shift`.
+
 ### Added
 - `CellFilter::NonEmpty`: selects cells that contain a non-space symbol.
 - `Interpolation::SmoothStep` and `Interpolation::Spring`.

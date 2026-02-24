@@ -39,7 +39,7 @@ impl Shader for HslShift {
             let (h, s, l) = color_to_hsl(c);
 
             let (h, s, l) = (
-                (h + 0.0.lerp(&hsl[0], alpha)) % 360.0,
+                (h + 0.0.lerp(&hsl[0], alpha)).rem_euclid(360.0),
                 (s + 0.0.lerp(&hsl[1], alpha)).clamp(0.0, 100.0),
                 (l + 0.0.lerp(&hsl[2], alpha)).clamp(0.0, 100.0),
             );

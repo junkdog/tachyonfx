@@ -292,7 +292,7 @@ fn rgb_to_hsv(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
     let s = s / 100.0;
     let v = v / 100.0;
-    let h = h % 360.0;
+    let h = h.rem_euclid(360.0);
 
     if s <= 0.0 {
         return (
@@ -373,7 +373,7 @@ pub(crate) fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (u8, u8, u8) {
         return (gray, gray, gray);
     }
 
-    let h = (h % 360.0) / 60.0;
+    let h = h.rem_euclid(360.0) / 60.0;
     let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
     let m = l - c * 0.5;
 
@@ -815,6 +815,30 @@ mod tests {
                 "{cs:?}: amount < -1.0 should clamp to -1.0"
             );
         }
+    }
+
+    #[test]
+    fn test_hsl_to_rgb_negative_hue() {
+        // A negative hue should wrap around the color wheel.
+        // -30° is equivalent to 330° (magenta-pink).
+        let from_negative = hsl_to_rgb(-30.0, 100.0, 50.0);
+        let from_positive = hsl_to_rgb(330.0, 100.0, 50.0);
+        assert_eq!(
+            from_negative, from_positive,
+            "hsl_to_rgb(-30°) should equal hsl_to_rgb(330°)"
+        );
+    }
+
+    #[test]
+    fn test_hsv_to_rgb_negative_hue() {
+        // A negative hue should wrap around the color wheel.
+        // -90° is equivalent to 270° (blue-violet).
+        let from_negative = hsv_to_rgb(-90.0, 100.0, 100.0);
+        let from_positive = hsv_to_rgb(270.0, 100.0, 100.0);
+        assert_eq!(
+            from_negative, from_positive,
+            "hsv_to_rgb(-90°) should equal hsv_to_rgb(270°)"
+        );
     }
 
     #[test]
