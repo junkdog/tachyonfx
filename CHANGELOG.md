@@ -12,6 +12,8 @@
 ### Fixed
 - Fix negative hue values producing wrong colors in `hsl_to_rgb`, `hsv_to_rgb`, and `hsl_shift`.
 - `fx::sequence`: `reverse()` now reverses processing order of child effects
+- `fx::parallel`: `reverse()` now right-aligns shorter children when reversed, so that all children end together
+
 
 ## tachyonfx-0.24.0 - 2026-02-14
 ### Added

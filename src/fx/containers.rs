@@ -66,7 +66,7 @@ impl Shader for ParallelEffect {
                 continue;
             }
 
-            let is_reversed = self.pending_offsets.len() > 0;
+            let is_reversed = !self.pending_offsets.is_empty();
             let child_duration = if is_reversed && self.pending_offsets[i] > Duration::ZERO {
                 // consume offset time before forwarding to child
                 let consumed = duration.min(self.pending_offsets[i]);
