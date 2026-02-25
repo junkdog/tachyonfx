@@ -45,7 +45,7 @@ impl CheckerboardPattern {
     }
 
     #[allow(clippy::manual_is_multiple_of)] // only stabilized in 1.87.0 (2025-05)
-    fn is_white_cell(&self, x: u16, y: u16) -> bool {
+    fn is_white_cell(self, x: u16, y: u16) -> bool {
         let cell_x = x / self.cell_size;
         let cell_y = y / self.cell_size;
         (cell_x + cell_y) % 2 == 0
@@ -178,9 +178,7 @@ mod tests {
 
         assert!(
             early_white >= early_black,
-            "White cells should be more active early in animation: white={:.3}, black={:.3}",
-            early_white,
-            early_black
+            "White cells should be more active early in animation: white={early_white:.3}, black={early_black:.3}"
         );
 
         // At animation end, both should be mostly active
@@ -189,13 +187,11 @@ mod tests {
 
         assert!(
             final_white > 0.8,
-            "White cell should be fully active at animation end, got alpha={:.3}",
-            final_white
+            "White cell should be fully active at animation end, got alpha={final_white:.3}"
         );
         assert!(
             final_black > 0.5,
-            "Black cell should be reasonably active at animation end, got alpha={:.3}",
-            final_black
+            "Black cell should be reasonably active at animation end, got alpha={final_black:.3}"
         );
 
         // Verify that white cells do activate before black cells
@@ -203,8 +199,7 @@ mod tests {
         let mid_black = black_alphas[5]; // At 50% progress
         assert!(
             mid_white > mid_black,
-            "At 50% progress, white cells should be more active than black cells: white={:.3}, black={:.3}",
-            mid_white, mid_black
+            "At 50% progress, white cells should be more active than black cells: white={mid_white:.3}, black={mid_black:.3}"
         );
     }
 
@@ -230,13 +225,11 @@ mod tests {
             // Alpha values should be in valid range
             assert!(
                 (0.0..=1.0).contains(&white_alpha),
-                "White cell alpha should be in valid range for width {width}, got alpha={:.3}",
-                white_alpha
+                "White cell alpha should be in valid range for width {width}, got alpha={white_alpha:.3}"
             );
             assert!(
                 (0.0..=1.0).contains(&black_alpha),
-                "Black cell alpha should be in valid range for width {width}, got alpha={:.3}",
-                black_alpha
+                "Black cell alpha should be in valid range for width {width}, got alpha={black_alpha:.3}"
             );
 
             // At 40% progress, white cells should generally be more active than black
@@ -275,8 +268,7 @@ mod tests {
                 if i != j {
                     assert!(
                         (alpha - other_alpha).abs() < 0.001,
-                        "Cells in same checkerboard cell should have same alpha: pos{i} alpha={:.3}, pos{j} alpha={:.3}",
-                        alpha, other_alpha
+                        "Cells in same checkerboard cell should have same alpha: pos{i} alpha={alpha:.3}, pos{j} alpha={other_alpha:.3}"
                     );
                 }
             }
@@ -293,13 +285,11 @@ mod tests {
         // (exact difference depends on animation progress and transition width)
         assert!(
             (0.0..=1.0).contains(&same_cell_avg),
-            "Same cell average alpha should be valid: {:.3}",
-            same_cell_avg
+            "Same cell average alpha should be valid: {same_cell_avg:.3}"
         );
         assert!(
             (0.0..=1.0).contains(&different_alpha),
-            "Different cell alpha should be valid: {:.3}",
-            different_alpha
+            "Different cell alpha should be valid: {different_alpha:.3}"
         );
     }
 

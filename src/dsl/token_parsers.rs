@@ -18,6 +18,7 @@ create_parser_trait!(TokenParser, [Token<'a>], "effect dsl token parser");
 
 // region main parsers with pub(super) visibility
 
+#[allow(clippy::needless_pass_by_value)] // used with .and_then(parse_ast)
 pub(super) fn parse_ast(input: Vec<Token>) -> Result<Vec<Expr>, DslError> {
     let statements = many_to_vec(
         or!(
@@ -38,8 +39,7 @@ pub(super) fn parse_ast(input: Vec<Token>) -> Result<Vec<Expr>, DslError> {
             location: ast
                 .state
                 .first()
-                .map(|t| ExprSpan::new(t.span.0, t.span.1))
-                .unwrap_or(ExprSpan::default()),
+                .map_or(ExprSpan::default(), |t| ExprSpan::new(t.span.0, t.span.1)),
         });
     };
 

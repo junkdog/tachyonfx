@@ -47,7 +47,7 @@ impl Shader for TemporaryEffect {
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.effect.set_area(area)
+        self.effect.set_area(area);
     }
 
     fn filter(&mut self, strategy: CellFilter) {
@@ -114,7 +114,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert_eq!(dsl.to_string(), indoc! {
+        assert_eq!(dsl, indoc! {
             "fx::with_duration(Duration::from_millis(1000), fx::sleep(100))"
         });
     }

@@ -109,11 +109,11 @@ mod tests {
         )
     }
 
-    fn assert_translation(translate_by: Offset, percent: u8, expected: Buffer) {
+    fn assert_translation(translate_by: Offset, percent: u8, expected: &Buffer) {
         assert_translation_fx(translate_buffer_fx(translate_by), percent, expected);
     }
 
-    fn assert_translation_fx(mut fx: TranslateBuffer, percent: u8, expected: Buffer) {
+    fn assert_translation_fx(mut fx: TranslateBuffer, percent: u8, expected: &Buffer) {
         let screen = Rect::new(0, 0, 20, 10);
         let content = screen.inner_centered(10, 4);
 
@@ -132,7 +132,7 @@ mod tests {
 
         fx.process(Duration::from_millis(percent as _), &mut buf, content);
 
-        assert_eq!(buf, expected)
+        assert_eq!(&buf, expected);
     }
 
     #[test]
@@ -140,7 +140,7 @@ mod tests {
         assert_translation(
             Offset { x: 0, y: 3 },
             0,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -156,7 +156,7 @@ mod tests {
         assert_translation(
             Offset { x: 0, y: 3 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -172,7 +172,7 @@ mod tests {
         assert_translation(
             Offset { x: 0, y: -3 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "     ┌hello───┐     ",
                 "     │        │     ",
                 "     │        │     ",
@@ -188,7 +188,7 @@ mod tests {
         assert_translation(
             Offset { x: -5, y: -3 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "┌hello───┐          ",
                 "│        │          ",
                 "│        │          ",
@@ -204,7 +204,7 @@ mod tests {
         assert_translation(
             Offset { x: 5, y: 3 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -226,7 +226,7 @@ mod tests {
         assert_translation_fx(
             fx,
             0,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "┌hello───┐          ",
                 "│        │          ",
                 "│        │          ",
@@ -245,7 +245,7 @@ mod tests {
         assert_translation_fx(
             fx,
             0,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -266,7 +266,7 @@ mod tests {
         assert_translation(
             Offset { x: 0, y: 5 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -282,7 +282,7 @@ mod tests {
         assert_translation(
             Offset { x: 0, y: 6 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -298,7 +298,7 @@ mod tests {
         assert_translation(
             Offset { x: 0, y: 7 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -316,7 +316,7 @@ mod tests {
         assert_translation(
             Offset { x: 0, y: -5 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "     │        │     ",
                 "     └────────┘     ",
                 "                    ",
@@ -332,7 +332,7 @@ mod tests {
         assert_translation(
             Offset { x: 0, y: -7 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -350,7 +350,7 @@ mod tests {
         assert_translation(
             Offset { x: 7, y: 0 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -366,7 +366,7 @@ mod tests {
         assert_translation(
             Offset { x: 12, y: 0 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -382,7 +382,7 @@ mod tests {
         assert_translation(
             Offset { x: 15, y: 0 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -400,7 +400,7 @@ mod tests {
         assert_translation(
             Offset { x: -7, y: 0 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -416,7 +416,7 @@ mod tests {
         assert_translation(
             Offset { x: -12, y: 0 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",
@@ -432,7 +432,7 @@ mod tests {
         assert_translation(
             Offset { x: -15, y: 0 },
             100,
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "                    ",
                 "                    ",
                 "                    ",

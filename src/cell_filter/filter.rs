@@ -412,12 +412,12 @@ impl CellFilter {
     /// A String representing the filter in a readable format
     #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
-        fn to_hex(c: &Color) -> String {
+        fn to_hex(c: Color) -> String {
             let (r, g, b) = c.to_rgb();
             format!("#{r:02x}{g:02x}{b:02x}")
         }
 
-        fn format_margin(m: &Margin) -> String {
+        fn format_margin(m: Margin) -> String {
             format!("{}:{}", m.horizontal, m.vertical)
         }
 
@@ -433,10 +433,10 @@ impl CellFilter {
             CellFilter::All => "all".to_string(),
             CellFilter::Area(area) => format!("area({area})"),
             CellFilter::RefArea(ref_rect) => format!("ref_area({})", ref_rect.get()),
-            CellFilter::FgColor(color) => format!("fg({})", to_hex(color)),
-            CellFilter::BgColor(color) => format!("bg({})", to_hex(color)),
-            CellFilter::Inner(m) => format!("inner({})", format_margin(m)),
-            CellFilter::Outer(m) => format!("outer({})", format_margin(m)),
+            CellFilter::FgColor(color) => format!("fg({})", to_hex(*color)),
+            CellFilter::BgColor(color) => format!("bg({})", to_hex(*color)),
+            CellFilter::Inner(m) => format!("inner({})", format_margin(*m)),
+            CellFilter::Outer(m) => format!("outer({})", format_margin(*m)),
             CellFilter::Text => "text".to_string(),
             CellFilter::NonEmpty => "non_empty".to_string(),
             CellFilter::AllOf(filters) => format!("all_of({})", to_string(filters)),
@@ -648,13 +648,9 @@ mod tests {
             Buffer::with_lines(["X X X X ", "X X X X ", "X X X X ", "X X X X ",])
         );
 
-        let mut buf = empty.clone();
+        let mut buf = empty;
         let filter = CellFilter::Not(Box::new(CellFilter::Area(Rect::new(0, 0, 8, 2))));
-        buf.render_effect(
-            &mut fx.clone().with_filter(filter),
-            area,
-            Duration::from_millis(16),
-        );
+        buf.render_effect(&mut fx.with_filter(filter), area, Duration::from_millis(16));
 
         assert_eq!(
             buf,
@@ -664,7 +660,7 @@ mod tests {
 
     #[test]
     fn test_all_any_and_none_of() {
-        fn assert_filter(buf: &Buffer, filter: CellFilter, expected: Buffer) {
+        fn assert_filter(buf: &Buffer, filter: CellFilter, expected: &Buffer) {
             let mut mark_fx = effect_fn((), 1, |_, _, cells| {
                 for (_, c) in cells {
                     c.set_symbol("X");
@@ -682,7 +678,7 @@ mod tests {
             b.render_effect(&mut mark_fx, buf.area, Duration::from_millis(16));
             b.render_effect(&mut clear_styling, buf.area, Duration::from_millis(16));
 
-            assert_eq!(b, expected);
+            assert_eq!(&b, expected);
         }
 
         let red = Style::default().fg(Color::Red);
@@ -697,17 +693,17 @@ mod tests {
         assert_filter(
             &buf,
             CellFilter::AllOf(filters.clone()),
-            Buffer::with_lines(["......", ".XXXX.", "......", "......"]),
+            &Buffer::with_lines(["......", ".XXXX.", "......", "......"]),
         );
         assert_filter(
             &buf,
             CellFilter::AnyOf(filters.clone()),
-            Buffer::with_lines(["......", "XXXXXX", ".XXXX.", "......"]),
+            &Buffer::with_lines(["......", "XXXXXX", ".XXXX.", "......"]),
         );
         assert_filter(
             &buf,
-            CellFilter::NoneOf(filters.clone()),
-            Buffer::with_lines(["XXXXXX", "......", "X....X", "XXXXXX"]),
+            CellFilter::NoneOf(filters),
+            &Buffer::with_lines(["XXXXXX", "......", "X....X", "XXXXXX"]),
         );
     }
 
@@ -738,10 +734,10 @@ mod tests {
 
         // Test that changing the RefRect updates the filter area
         ref_rect.set(Rect::new(0, 0, 2, 2));
-        let mut buf2 = empty.clone();
-        let filter2 = CellFilter::RefArea(ref_rect.clone());
+        let mut buf2 = empty;
+        let filter2 = CellFilter::RefArea(ref_rect);
         buf2.render_effect(
-            &mut fx.clone().with_filter(filter2),
+            &mut fx.with_filter(filter2),
             area,
             Duration::from_millis(16),
         );
@@ -758,7 +754,7 @@ mod tests {
         let ref_rect2 = RefRect::new(Rect::new(0, 0, 10, 10));
         let ref_rect3 = RefRect::new(Rect::new(5, 5, 10, 10));
 
-        let filter1 = CellFilter::RefArea(ref_rect1.clone());
+        let filter1 = CellFilter::RefArea(ref_rect1);
         let filter2 = CellFilter::RefArea(ref_rect2);
         let filter3 = CellFilter::RefArea(ref_rect3.clone());
 
@@ -873,9 +869,7 @@ mod tests {
             Duration::from_millis(16),
         );
         text2.render_effect(
-            &mut text_fx
-                .clone()
-                .with_filter(CellFilter::Static(Box::new(CellFilter::Text))),
+            &mut text_fx.with_filter(CellFilter::Static(Box::new(CellFilter::Text))),
             text_buf.area,
             Duration::from_millis(16),
         );

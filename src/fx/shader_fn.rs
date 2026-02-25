@@ -153,11 +153,11 @@ impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
                 let processor = self.cell_filter.as_ref();
                 let cells = CellIterator::new(buf, area, processor);
                 let ctx = ShaderFnContext::new(area, cell_filter, duration, &self.timer);
-                invoke_fn!(f, &mut self.state, ctx, cells)
+                invoke_fn!(f, &mut self.state, ctx, cells);
             },
             ShaderFnSignature::Buffer(f) => {
                 let ctx = ShaderFnContext::new(area, cell_filter, duration, &self.timer);
-                invoke_fn!(f, &mut self.state, ctx, buf)
+                invoke_fn!(f, &mut self.state, ctx, buf);
             },
         }
 

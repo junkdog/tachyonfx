@@ -28,7 +28,7 @@ impl Motion {
     /// # Returns
     ///
     /// The opposite direction of the current motion
-    pub(crate) fn flipped(&self) -> Self {
+    pub(crate) fn flipped(self) -> Self {
         match self {
             Self::LeftToRight => Self::RightToLeft,
             Self::RightToLeft => Self::LeftToRight,
@@ -47,8 +47,8 @@ impl Motion {
     ///
     /// `true` if the motion requires timer reversal (RightToLeft or DownToUp),
     /// `false` otherwise.
-    pub(crate) fn flips_timer(&self) -> bool {
-        self == &Motion::RightToLeft || self == &Motion::DownToUp
+    pub(crate) fn flips_timer(self) -> bool {
+        self == Motion::RightToLeft || self == Motion::DownToUp
     }
 }
 

@@ -82,7 +82,12 @@ impl Shader for ResizeArea {
     }
 
     fn done(&self) -> bool {
-        self.timer.done() && (self.fx.as_ref().is_some_and(|fx| fx.done()) || self.fx.is_none())
+        self.timer.done()
+            && (self
+                .fx
+                .as_ref()
+                .is_some_and(super::super::effect::Effect::done)
+                || self.fx.is_none())
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -115,7 +120,7 @@ impl Shader for ResizeArea {
     fn color_space(&self) -> ColorSpace {
         self.fx
             .as_ref()
-            .map(|e| e.color_space())
+            .map(super::super::effect::Effect::color_space)
             .unwrap_or_default()
     }
 

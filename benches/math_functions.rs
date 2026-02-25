@@ -15,7 +15,7 @@ pub fn sqrt_benchmark(c: &mut Criterion) {
             for &v in &values {
                 core::hint::black_box(v.sqrt());
             }
-        })
+        });
     });
 
     group.bench_function("micromath", |b| {
@@ -23,7 +23,7 @@ pub fn sqrt_benchmark(c: &mut Criterion) {
             for &v in &values {
                 core::hint::black_box(F32Ext::sqrt(v));
             }
-        })
+        });
     });
 
     group.finish();
@@ -46,7 +46,7 @@ pub fn powf_benchmark(c: &mut Criterion) {
             for &(base, exp) in &values {
                 core::hint::black_box(base.powf(exp));
             }
-        })
+        });
     });
 
     group.bench_function("micromath", |b| {
@@ -54,7 +54,7 @@ pub fn powf_benchmark(c: &mut Criterion) {
             for &(base, exp) in &values {
                 core::hint::black_box(F32Ext::powf(base, exp));
             }
-        })
+        });
     });
 
     group.finish();
@@ -77,7 +77,7 @@ pub fn powi_benchmark(c: &mut Criterion) {
             for &(base, exp) in &values {
                 core::hint::black_box(base.powi(exp));
             }
-        })
+        });
     });
 
     group.bench_function("micromath", |b| {
@@ -85,7 +85,7 @@ pub fn powi_benchmark(c: &mut Criterion) {
             for &(base, exp) in &values {
                 core::hint::black_box(F32Ext::powi(base, exp));
             }
-        })
+        });
     });
 
     group.finish();
@@ -104,7 +104,7 @@ pub fn round_benchmark(c: &mut Criterion) {
             for &v in &values {
                 core::hint::black_box(v.round());
             }
-        })
+        });
     });
 
     group.bench_function("micromath", |b| {
@@ -112,7 +112,7 @@ pub fn round_benchmark(c: &mut Criterion) {
             for &v in &values {
                 core::hint::black_box(F32Ext::round(v));
             }
-        })
+        });
     });
 
     group.finish();
@@ -131,7 +131,7 @@ pub fn floor_benchmark(c: &mut Criterion) {
             for &v in &values {
                 core::hint::black_box(v.floor());
             }
-        })
+        });
     });
 
     group.bench_function("micromath", |b| {
@@ -139,7 +139,7 @@ pub fn floor_benchmark(c: &mut Criterion) {
             for &v in &values {
                 core::hint::black_box(F32Ext::floor(v));
             }
-        })
+        });
     });
 
     group.finish();
@@ -158,7 +158,7 @@ pub fn ceil_benchmark(c: &mut Criterion) {
             for &v in &values {
                 core::hint::black_box(v.ceil());
             }
-        })
+        });
     });
 
     group.bench_function("micromath", |b| {
@@ -166,7 +166,7 @@ pub fn ceil_benchmark(c: &mut Criterion) {
             for &v in &values {
                 core::hint::black_box(F32Ext::ceil(v));
             }
-        })
+        });
     });
 
     group.finish();

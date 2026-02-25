@@ -196,8 +196,7 @@ mod tests {
         // Center should be fully active
         assert!(
             center_alpha > 0.9,
-            "Center should be fully active, got alpha={:.3}",
-            center_alpha
+            "Center should be fully active, got alpha={center_alpha:.3}"
         );
 
         // Test positions at known horizontal distances from center
@@ -215,16 +214,14 @@ mod tests {
             if expected_distance == 2.0 {
                 assert!(
                     alpha > 0.8,
-                    "Position at {expected_distance} cells should be mostly active (inside circle radius ~2.5), got alpha={:.3}",
-                    alpha
+                    "Position at {expected_distance} cells should be mostly active (inside circle radius ~2.5), got alpha={alpha:.3}"
                 );
             }
             // At 4-cell distance, should have lower alpha
             else if expected_distance == 4.0 {
                 assert!(
                     alpha < 0.5,
-                    "Position at {expected_distance} cells should have low alpha, got alpha={:.3}",
-                    alpha
+                    "Position at {expected_distance} cells should have low alpha, got alpha={alpha:.3}"
                 );
             }
         }
@@ -250,8 +247,7 @@ mod tests {
             // Just verify that larger transition widths don't break the logic
             assert!(
                 (0.0..=1.0).contains(&alpha),
-                "Alpha should be in valid range for width {width}, got alpha={:.3}",
-                alpha
+                "Alpha should be in valid range for width {width}, got alpha={alpha:.3}"
             );
 
             // For small width, edges should be sharper (but position might still be
@@ -297,8 +293,7 @@ mod tests {
             // Center should have higher or equal alpha than offset position
             assert!(
                 center_alpha >= offset_alpha,
-                "Center at {:.1} should have higher alpha than offset. Center: {:.3}, Offset: {:.3}",
-                expected_center_x, center_alpha, offset_alpha
+                "Center at {expected_center_x:.1} should have higher alpha than offset. Center: {center_alpha:.3}, Offset: {offset_alpha:.3}"
             );
         }
     }
@@ -386,25 +381,21 @@ mod tests {
 
         assert!(
             late_alpha > early_alpha,
-            "Animation should progress: early alpha={:.3}, late alpha={:.3}",
-            early_alpha,
-            late_alpha
+            "Animation should progress: early alpha={early_alpha:.3}, late alpha={late_alpha:.3}"
         );
 
         // At animation start, position should be inactive
         let start_alpha = alphas[0];
         assert!(
             start_alpha < 0.1,
-            "At animation start, distant position should be inactive, got alpha={:.3}",
-            start_alpha
+            "At animation start, distant position should be inactive, got alpha={start_alpha:.3}"
         );
 
         // At animation end, position should be mostly active
         let final_alpha = alphas[10];
         assert!(
             final_alpha > 0.8,
-            "At animation end, position should be mostly active, got alpha={:.3}",
-            final_alpha
+            "At animation end, position should be mostly active, got alpha={final_alpha:.3}"
         );
     }
 }

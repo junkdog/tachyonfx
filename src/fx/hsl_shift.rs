@@ -81,15 +81,13 @@ impl Shader for HslShift {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
 
-        let hsl_mod_fg = self
-            .hsl_mod_fg
-            .map(|hsl| format!("Some([{}, {}, {}])", hsl[0], hsl[1], hsl[2]))
-            .unwrap_or("None".to_string());
+        let hsl_mod_fg = self.hsl_mod_fg.map_or("None".to_string(), |hsl| {
+            format!("Some([{}, {}, {}])", hsl[0], hsl[1], hsl[2])
+        });
 
-        let hsl_mod_bg = self
-            .hsl_mod_bg
-            .map(|hsl| format!("Some([{}, {}, {}])", hsl[0], hsl[1], hsl[2]))
-            .unwrap_or("None".to_string());
+        let hsl_mod_bg = self.hsl_mod_bg.map_or("None".to_string(), |hsl| {
+            format!("Some([{}, {}, {}])", hsl[0], hsl[1], hsl[2])
+        });
 
         EffectExpression::parse(&format!(
             "{}({hsl_mod_fg}, {hsl_mod_bg}, {})",

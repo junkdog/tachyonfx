@@ -237,8 +237,7 @@ mod plain_test {
         assert!(
             colors_differ,
             "Sweep pattern should create different colors at different positions. \
-            Left: {:?}, Middle: {:?}, Right: {:?}",
-            left_color, middle_color, right_color
+            Left: {left_color:?}, Middle: {middle_color:?}, Right: {right_color:?}"
         );
     }
 

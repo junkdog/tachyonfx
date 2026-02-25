@@ -62,11 +62,11 @@ impl Shader for DynamicArea {
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.rect.set(area)
+        self.rect.set(area);
     }
 
     fn filter(&mut self, filter: CellFilter) {
-        self.fx.filter(filter)
+        self.fx.filter(filter);
     }
 
     fn timer(&self) -> Option<EffectTimer> {

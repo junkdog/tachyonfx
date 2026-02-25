@@ -438,10 +438,10 @@ impl Interpolatable for Style {
 
         let mut s = *self;
         if let Some(fg) = fg {
-            s = s.fg(fg)
+            s = s.fg(fg);
         }
         if let Some(bg) = bg {
-            s = s.bg(bg)
+            s = s.bg(bg);
         }
 
         s

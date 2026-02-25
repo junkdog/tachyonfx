@@ -257,7 +257,7 @@ mod tests {
     use super::*;
 
     // Enhanced helper function to test both token kinds and text
-    fn test_tokens(input: &str, expected_tokens: Vec<(TokenKind, &str)>) {
+    fn test_tokens(input: &str, expected_tokens: &[(TokenKind, &str)]) {
         let result = tokenize(input);
         assert!(result.is_ok(), "Failed to parse tokens from input: {input}");
 
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_identifiers() {
-        test_tokens("identifier snake_case_id _leading_underscore", vec![
+        test_tokens("identifier snake_case_id _leading_underscore", &[
             (Identifier, "identifier"),
             (Whitespace, " "),
             (Identifier, "snake_case_id"),
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_keywords() {
-        test_tokens("let if else while for in break continue true false", vec![
+        test_tokens("let if else while for in break continue true false", &[
             (Keyword, "let"),
             (Whitespace, " "),
             (Keyword, "if"),
@@ -328,7 +328,7 @@ mod tests {
     #[test]
     #[allow(clippy::approx_constant)]
     fn test_literals() {
-        test_tokens("123 -456 3.14 - -2.718 0x1a2b \"string literal\"", vec![
+        test_tokens("123 -456 3.14 - -2.718 0x1a2b \"string literal\"", &[
             (IntLiteral, "123"),
             (Whitespace, " "),
             (IntLiteral, "-456"),
@@ -349,7 +349,7 @@ mod tests {
     fn test_string_literals_with_escapes() {
         test_tokens(
             r#""simple" "with \"escaped quotes\"" "with \\backslash" "with \u1234 unicode""#,
-            vec![
+            &[
                 (StringLiteral, r#"simple"#),
                 (Whitespace, " "),
                 (StringLiteral, r#"with \"escaped quotes\""#),
@@ -363,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_operators_and_punctuation() {
-        test_tokens("( ) [ ] { } , . : ; = & :: -", vec![
+        test_tokens("( ) [ ] { } , . : ; = & :: -", &[
             (LeftParen, "("),
             (Whitespace, " "),
             (RightParen, ")"),
@@ -398,7 +398,7 @@ mod tests {
     fn test_comments() {
         let line_comment = "// This is a line comment";
         let block_comment = "/* This is a block comment */";
-        test_tokens(&format!("{line_comment}\n{block_comment}"), vec![
+        test_tokens(&format!("{line_comment}\n{block_comment}"), &[
             (LineComment, line_comment),
             (Whitespace, "\n"),
             (BlockComment, block_comment),
@@ -408,14 +408,14 @@ mod tests {
     #[test]
     fn test_whitespace() {
         let ws = "  \t\n\r  ";
-        test_tokens(ws, vec![(Whitespace, ws)]);
+        test_tokens(ws, &[(Whitespace, ws)]);
     }
 
     #[test]
     #[allow(clippy::approx_constant)]
     fn test_mixed_tokens() {
         let input = "let x = 42; // assign value\nfn::call(true, 3.14);";
-        test_tokens(input, vec![
+        test_tokens(input, &[
             (Keyword, "let"),
             (Whitespace, " "),
             (Identifier, "x"),
@@ -462,7 +462,7 @@ mod tests {
     #[test]
     fn test_complex_expression() {
         let input = "fx::fade_to(Color::Red, (500, CircOut))";
-        test_tokens(input, vec![
+        test_tokens(input, &[
             (Identifier, "fx"),
             (DoubleColon, "::"),
             (Identifier, "fade_to"),
@@ -486,7 +486,7 @@ mod tests {
     fn test_effect_declaration() {
         let input =
             r#"let fade /* yolo */ = fx::fade_to_fg(Color::from_u32(0x504945), (1000, CircOut));"#;
-        test_tokens(input, vec![
+        test_tokens(input, &[
             (Keyword, "let"),
             (Whitespace, " "),
             (Identifier, "fade"),
@@ -525,17 +525,17 @@ mod tests {
         assert_eq!(result.unwrap().len(), 0);
 
         // Only whitespace
-        test_tokens(" \t\n", vec![(Whitespace, " \t\n")]);
+        test_tokens(" \t\n", &[(Whitespace, " \t\n")]);
 
         // Only comments
         let line_comment = "// comment";
-        test_tokens(line_comment, vec![(LineComment, line_comment)]);
+        test_tokens(line_comment, &[(LineComment, line_comment)]);
 
         let block_comment = "/* comment */";
-        test_tokens(block_comment, vec![(BlockComment, block_comment)]);
+        test_tokens(block_comment, &[(BlockComment, block_comment)]);
 
         // Unicode characters in string literals
-        test_tokens("\"Unicode: \u{1234} \u{5678}\"", vec![(
+        test_tokens("\"Unicode: \u{1234} \u{5678}\"", &[(
             StringLiteral,
             "Unicode: \u{1234} \u{5678}",
         )]);

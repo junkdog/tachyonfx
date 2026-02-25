@@ -90,6 +90,6 @@ impl Shader for OffscreenBuffer {
     }
 
     fn reset(&mut self) {
-        self.fx.reset()
+        self.fx.reset();
     }
 }

@@ -196,7 +196,7 @@ fn bench_lighten(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_hsl(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.bench_function("linear rgb", |b| {
@@ -204,7 +204,7 @@ fn bench_lighten(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_linear(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.bench_function("weighted luminance", |b| {
@@ -212,7 +212,7 @@ fn bench_lighten(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_weighted(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.finish();
@@ -230,7 +230,7 @@ fn bench_darken(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_hsl(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.bench_function("linear rgb", |b| {
@@ -238,7 +238,7 @@ fn bench_darken(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_linear(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.bench_function("weighted luminance", |b| {
@@ -246,7 +246,7 @@ fn bench_darken(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_weighted(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.finish();
@@ -264,7 +264,7 @@ fn bench_extreme_lighten(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_hsl(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.bench_function("linear rgb", |b| {
@@ -272,7 +272,7 @@ fn bench_extreme_lighten(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_linear(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.bench_function("weighted luminance", |b| {
@@ -280,7 +280,7 @@ fn bench_extreme_lighten(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_weighted(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.finish();
@@ -298,7 +298,7 @@ fn bench_extreme_darken(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_hsl(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.bench_function("linear rgb", |b| {
@@ -306,7 +306,7 @@ fn bench_extreme_darken(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_linear(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.bench_function("weighted luminance", |b| {
@@ -314,7 +314,7 @@ fn bench_extreme_darken(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_lightness_weighted(r, g, bb, amount));
             }
-        })
+        });
     });
 
     group.finish();

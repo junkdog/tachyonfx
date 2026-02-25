@@ -171,7 +171,7 @@ fn bench_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_hsl(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.bench_function("avg gray lerp", |b| {
@@ -179,7 +179,7 @@ fn bench_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_avg(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.bench_function("weighted luminance lerp", |b| {
@@ -187,7 +187,7 @@ fn bench_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_weighted(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.finish();
@@ -205,7 +205,7 @@ fn bench_mild_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_hsl(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.bench_function("avg gray lerp", |b| {
@@ -213,7 +213,7 @@ fn bench_mild_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_avg(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.bench_function("weighted luminance lerp", |b| {
@@ -221,7 +221,7 @@ fn bench_mild_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_weighted(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.finish();
@@ -239,7 +239,7 @@ fn bench_oversaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_hsl(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.bench_function("avg gray lerp", |b| {
@@ -247,7 +247,7 @@ fn bench_oversaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_avg(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.bench_function("weighted luminance lerp", |b| {
@@ -255,7 +255,7 @@ fn bench_oversaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_weighted(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.finish();
@@ -273,7 +273,7 @@ fn bench_full_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_hsl(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.bench_function("avg gray lerp", |b| {
@@ -281,7 +281,7 @@ fn bench_full_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_avg(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.bench_function("weighted luminance lerp", |b| {
@@ -289,7 +289,7 @@ fn bench_full_desaturate(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(adjust_saturation_weighted(r, g, bb, factor));
             }
-        })
+        });
     });
 
     group.finish();

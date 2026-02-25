@@ -44,7 +44,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
         let key = key.into();
         let ctx = self
             .uniques
-            .entry(key.clone())
+            .entry(key)
             .and_modify(|ctx| acquire_mut(ctx).instance_id = self.rng.gen())
             .or_insert_with(|| ref_count(UniqueContext::new(self.rng.gen())))
             .clone();

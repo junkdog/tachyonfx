@@ -103,7 +103,7 @@ impl ExprSpan {
         Self { start, end }
     }
 
-    pub(super) const fn len(&self) -> u32 {
+    pub(super) const fn len(self) -> u32 {
         self.end - self.start
     }
 }
@@ -117,8 +117,8 @@ impl FnCallInfo {
 impl From<(&str, Vec<Expr>)> for FnCallInfo {
     fn from((name, args): (&str, Vec<Expr>)) -> Self {
         let (start, end) = (
-            args.first().map(|a| a.span().start).unwrap_or(0),
-            args.last().map(|a| a.span().end).unwrap_or(0),
+            args.first().map_or(0, |a| a.span().start),
+            args.last().map_or(0, |a| a.span().end),
         );
 
         Self {

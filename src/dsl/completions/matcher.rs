@@ -54,97 +54,97 @@ impl CompletionMatcher {
         }
 
         // Strategy 2: Smart matching (acronym/abbreviation)
-        if let Some(score) = self.smart_match(label, &partial_lower) {
+        if let Some(score) = smart_match(label, &partial_lower) {
             return Some(500 + score);
         }
 
         // Strategy 3: Fuzzy matching (sequential characters)
-        if let Some(score) = self.fuzzy_match(&label_lower, &partial_lower) {
+        if let Some(score) = fuzzy_match(&label_lower, &partial_lower) {
             return Some(score);
         }
 
         None
     }
+}
 
-    /// Smart matching for acronyms and snake_case/camelCase abbreviations.
-    /// Examples: "EIO" matches "ExpoInOut", "sc" matches "snake_case"
-    fn smart_match(&self, label: &str, partial_lower: &str) -> Option<u32> {
-        let partial_chars: Vec<char> = partial_lower.chars().collect();
+/// Smart matching for acronyms and snake_case/camelCase abbreviations.
+/// Examples: "EIO" matches "ExpoInOut", "sc" matches "snake_case"
+fn smart_match(label: &str, partial_lower: &str) -> Option<u32> {
+    let partial_chars: Vec<char> = partial_lower.chars().collect();
 
-        // Extract significant characters (uppercase, after underscore, start)
-        let mut significant: Vec<(char, usize)> = Vec::new();
-        let mut prev_was_underscore = false;
+    // Extract significant characters (uppercase, after underscore, start)
+    let mut significant: Vec<(char, usize)> = Vec::new();
+    let mut prev_was_underscore = false;
 
-        for (i, ch) in label.chars().enumerate() {
-            if i == 0 || ch.is_uppercase() || prev_was_underscore {
-                significant.push((ch.to_lowercase().next()?, i));
-            }
-            prev_was_underscore = ch == '_';
+    for (i, ch) in label.chars().enumerate() {
+        if i == 0 || ch.is_uppercase() || prev_was_underscore {
+            significant.push((ch.to_lowercase().next()?, i));
+        }
+        prev_was_underscore = ch == '_';
+    }
+
+    // Try to match partial chars against significant chars
+    let mut partial_idx = 0;
+    let mut last_match_pos = 0;
+    let mut gaps = 0;
+
+    for (sig_char, pos) in significant {
+        if partial_idx >= partial_chars.len() {
+            break;
         }
 
-        // Try to match partial chars against significant chars
-        let mut partial_idx = 0;
-        let mut last_match_pos = 0;
-        let mut gaps = 0;
-
-        for (sig_char, pos) in significant {
-            if partial_idx >= partial_chars.len() {
-                break;
-            }
-
-            if sig_char == partial_chars[partial_idx] {
-                gaps += pos.saturating_sub(last_match_pos);
-                last_match_pos = pos;
-                partial_idx += 1;
-            }
-        }
-
-        if partial_idx == partial_chars.len() {
-            // All characters matched, score based on how tight the match was
-            Some(100 - gaps.min(99) as u32)
-        } else {
-            None
+        if sig_char == partial_chars[partial_idx] {
+            gaps += pos.saturating_sub(last_match_pos);
+            last_match_pos = pos;
+            partial_idx += 1;
         }
     }
 
-    /// Fuzzy matching - matches characters in sequence anywhere in the string.
-    /// Score is based on how early and how tightly packed the matches are.
-    fn fuzzy_match(&self, label_lower: &str, partial_lower: &str) -> Option<u32> {
-        let label_chars: Vec<char> = label_lower.chars().collect();
-        let partial_chars: Vec<char> = partial_lower.chars().collect();
+    if partial_idx == partial_chars.len() {
+        // All characters matched, score based on how tight the match was
+        Some(100 - gaps.min(99) as u32)
+    } else {
+        None
+    }
+}
 
-        let mut label_idx = 0;
-        let mut first_match = None;
-        let mut last_match = 0;
-        let mut gaps = 0;
+/// Fuzzy matching - matches characters in sequence anywhere in the string.
+/// Score is based on how early and how tightly packed the matches are.
+fn fuzzy_match(label_lower: &str, partial_lower: &str) -> Option<u32> {
+    let label_chars: Vec<char> = label_lower.chars().collect();
+    let partial_chars: Vec<char> = partial_lower.chars().collect();
 
-        for &partial_char in &partial_chars {
-            // Find next occurrence of this character
-            let found = label_chars[label_idx..]
-                .iter()
-                .position(|&c| c == partial_char)?;
+    let mut label_idx = 0;
+    let mut first_match = None;
+    let mut last_match = 0;
+    let mut gaps = 0;
 
-            let match_pos = label_idx + found;
+    for &partial_char in &partial_chars {
+        // Find next occurrence of this character
+        let found = label_chars[label_idx..]
+            .iter()
+            .position(|&c| c == partial_char)?;
 
-            if first_match.is_none() {
-                first_match = Some(match_pos);
-            }
+        let match_pos = label_idx + found;
 
-            gaps += found;
-            last_match = match_pos;
-            label_idx = match_pos + 1;
+        if first_match.is_none() {
+            first_match = Some(match_pos);
         }
 
-        // Score: prefer early matches and tight packing
-        let first = first_match?;
-        let spread = last_match - first;
-        let score = 100_u32
-            .saturating_sub(first as u32)       // Earlier is better
-            .saturating_sub(spread as u32 / 2)  // Tighter is better
-            .saturating_sub(gaps as u32 / 3); // Fewer gaps is better
-
-        Some(score.max(1)) // Ensure at least 1 if it matches
+        gaps += found;
+        last_match = match_pos;
+        label_idx = match_pos + 1;
     }
+
+    // Score: prefer early matches and tight packing
+    let first = first_match?;
+    let spread = last_match - first;
+    let score = 100_u32
+        .saturating_sub(first as u32)       // Earlier is better
+        .saturating_sub(spread as u32 / 2)  // Tighter is better
+        .saturating_sub(gaps as u32 / 3); // Fewer gaps is better
+
+    Some(score.max(1)) // Ensure at least 1 if it matches
 }
 
 #[cfg(test)]
@@ -252,23 +252,17 @@ mod tests {
         // Prefix should score highest
         assert!(
             score_prefix > score_smart,
-            "Prefix should beat smart: {} vs {}",
-            score_prefix,
-            score_smart
+            "Prefix should beat smart: {score_prefix} vs {score_smart}"
         );
         assert!(
             score_prefix > score_fuzzy,
-            "Prefix should beat fuzzy: {} vs {}",
-            score_prefix,
-            score_fuzzy
+            "Prefix should beat fuzzy: {score_prefix} vs {score_fuzzy}"
         );
 
         // Smart should score higher than fuzzy
         assert!(
             score_smart > score_fuzzy,
-            "Smart should beat fuzzy: {} vs {}",
-            score_smart,
-            score_fuzzy
+            "Smart should beat fuzzy: {score_smart} vs {score_fuzzy}"
         );
     }
 

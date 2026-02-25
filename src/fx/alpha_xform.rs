@@ -69,11 +69,11 @@ impl Shader for FreezeAt {
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.fx.set_area(area)
+        self.fx.set_area(area);
     }
 
     fn filter(&mut self, filter: CellFilter) {
-        self.fx.filter(filter)
+        self.fx.filter(filter);
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
@@ -165,11 +165,11 @@ impl Shader for RemapAlpha {
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.fx.set_area(area)
+        self.fx.set_area(area);
     }
 
     fn filter(&mut self, filter: CellFilter) {
-        self.fx.filter(filter)
+        self.fx.filter(filter);
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {

@@ -34,7 +34,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
             for &color in &colors {
                 core::hint::black_box(color_to_hsl(&color));
             }
-        })
+        });
     });
 
     // Benchmark 2: HSL to Color using tachyonfx
@@ -44,7 +44,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                 let (h, s, l) = color_to_hsl(&color);
                 core::hint::black_box(color_from_hsl(h, s, l));
             }
-        })
+        });
     });
 
     // Benchmark 3: Color to HSL using colorsys
@@ -56,7 +56,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                 let hsl: colorsys::Hsl = rgb.into();
                 core::hint::black_box((hsl.hue(), hsl.saturation(), hsl.lightness()));
             }
-        })
+        });
     });
 
     // Benchmark 4: HSL to Color using colorsys
@@ -75,7 +75,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                     rgb_back.blue().round() as u8,
                 ));
             }
-        })
+        });
     });
 
     // Benchmark 5: Round-trip Color→HSL→Color using tachyonfx
@@ -85,7 +85,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                 let (h, s, l) = color_to_hsl(&color);
                 core::hint::black_box(color_from_hsl(h, s, l));
             }
-        })
+        });
     });
 
     // Benchmark 6: Round-trip Color→HSL→Color using colorsys
@@ -102,7 +102,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                     rgb_back.blue().round() as u8,
                 ));
             }
-        })
+        });
     });
 
     group.finish();
@@ -120,7 +120,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                     core::hint::black_box(color_from_hsl(h, s, l));
                 }
             }
-        })
+        });
     });
 
     // Benchmark 8: Batch conversions (100 items) - colorsys
@@ -139,7 +139,7 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
                     ));
                 }
             }
-        })
+        });
     });
 
     group.finish();

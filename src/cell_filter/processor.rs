@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use core::ops::{BitAnd, BitOr, Not};
+use core::ops::Not;
 
 use ratatui_core::{
     buffer::{Buffer, Cell},
@@ -370,7 +370,7 @@ fn calculate_cell_indices(buf: &Buffer, area: Rect, filter: &CellFilter) -> BitV
             let all_of = filters
                 .iter()
                 .map(|f| calculate_cell_indices(buf, area, f))
-                .reduce(|acc, i| acc.bitand(i));
+                .reduce(core::ops::BitAnd::bitand);
 
             if let Some(indices) = all_of {
                 cell_indices = indices;
@@ -380,7 +380,7 @@ fn calculate_cell_indices(buf: &Buffer, area: Rect, filter: &CellFilter) -> BitV
             let any_of = filters
                 .iter()
                 .map(|f| calculate_cell_indices(buf, area, f))
-                .reduce(|acc, i| acc.bitor(i));
+                .reduce(core::ops::BitOr::bitor);
 
             if let Some(indices) = any_of {
                 cell_indices = indices;
@@ -390,8 +390,8 @@ fn calculate_cell_indices(buf: &Buffer, area: Rect, filter: &CellFilter) -> BitV
             let none_of = filters
                 .iter()
                 .map(|f| calculate_cell_indices(buf, area, f))
-                .reduce(|acc, i| acc.bitor(i))
-                .map(|indices| indices.not());
+                .reduce(core::ops::BitOr::bitor)
+                .map(core::ops::Not::not);
 
             if let Some(indices) = none_of {
                 cell_indices = indices;

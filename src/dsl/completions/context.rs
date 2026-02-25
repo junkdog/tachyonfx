@@ -269,7 +269,7 @@ mod tests {
     use super::*;
     use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
-    fn assert_context_eq(input: &str, expected: CompletionContext) {
+    fn assert_context_eq(input: &str, expected: &CompletionContext) {
         fn analyze(input: &str) -> CompletionContext {
             let tokens = tokenize(input).map(sanitize_tokens).unwrap();
             let cursor = TokenCursor::from_tokens(&tokens, input.len() as _);
@@ -302,56 +302,57 @@ mod tests {
             .unwrap_or(input.len());
 
         let ctx = analyze(&input[..cursor_index]);
-        assert_eq!(ctx, expected, "For input: {}", input);
+        assert_eq!(&ctx, expected, "For input: {input}");
     }
 
     #[test]
     fn test_top_level_context() {
-        assert_context_eq("", CompletionContext::TopLevel);
-        assert_context_eq("fx", CompletionContext::TopLevel);
+        assert_context_eq("", &CompletionContext::TopLevel);
+        assert_context_eq("fx", &CompletionContext::TopLevel);
 
         // cursor is after semicolon, hence top-level
         assert_context_eq(
             "let c = Color::from_u32(0x1d2021);",
-            CompletionContext::TopLevel,
+            &CompletionContext::TopLevel,
         );
     }
 
     #[test]
     fn test_dot_access() {
-        assert_context_eq("a.", CompletionContext::DotAccess {
+        assert_context_eq("a.", &CompletionContext::DotAccess {
             receiver_type: "a".to_string(),
         });
-        assert_context_eq("effect.", CompletionContext::DotAccess {
+        assert_context_eq("effect.", &CompletionContext::DotAccess {
             receiver_type: "effect".to_string(),
         });
-        assert_context_eq("a.clon", CompletionContext::DotAccess {
+        assert_context_eq("a.clon", &CompletionContext::DotAccess {
             receiver_type: "a".to_string(),
         });
-        assert_context_eq("effect.with_cell", CompletionContext::DotAccess {
+        assert_context_eq("effect.with_cell", &CompletionContext::DotAccess {
             receiver_type: "effect".to_string(),
         });
 
-        assert_context_eq("Color::from_u32(0x1d2021).", CompletionContext::DotAccess {
-            receiver_type: "Color".to_string(),
-        });
+        assert_context_eq(
+            "Color::from_u32(0x1d2021).",
+            &CompletionContext::DotAccess { receiver_type: "Color".to_string() },
+        );
 
         assert_context_eq(
             indoc! {"
                 fx::fade_from(bg, bg, 1000). ^ // chevron is cursor pos
                     .with_color_space(ColorSpace::Rgb)
             "},
-            CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
+            &CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
         );
     }
 
     #[test]
     fn test_double_colon() {
-        assert_context_eq("fx::", CompletionContext::DoubleColon {
+        assert_context_eq("fx::", &CompletionContext::DoubleColon {
             namespace: "fx".to_string(),
         });
 
-        assert_context_eq("Color::", CompletionContext::DoubleColon {
+        assert_context_eq("Color::", &CompletionContext::DoubleColon {
             namespace: "Color".to_string(),
         });
 
@@ -360,13 +361,13 @@ mod tests {
                 fx::^
                 fx::fade_from(Black, Black, 1000)
             "},
-            CompletionContext::DoubleColon { namespace: "fx".to_string() },
+            &CompletionContext::DoubleColon { namespace: "fx".to_string() },
         );
     }
 
     #[test]
     fn test_function_call_no_args() {
-        assert_context_eq("fade_to(", CompletionContext::FnCall {
+        assert_context_eq("fade_to(", &CompletionContext::FnCall {
             fn_name: "fade_to".to_string(),
             namespace: None,
             arg_index: 0,
@@ -375,13 +376,13 @@ mod tests {
 
     #[test]
     fn test_function_call_with_args() {
-        assert_context_eq("fade_to(Color::Red,", CompletionContext::FnCall {
+        assert_context_eq("fade_to(Color::Red,", &CompletionContext::FnCall {
             fn_name: "fade_to".to_string(),
             namespace: None,
             arg_index: 1,
         });
 
-        assert_context_eq("dissolve(500, CircOut,", CompletionContext::FnCall {
+        assert_context_eq("dissolve(500, CircOut,", &CompletionContext::FnCall {
             fn_name: "dissolve".to_string(),
             namespace: None,
             arg_index: 2,
@@ -390,22 +391,22 @@ mod tests {
 
     #[test]
     fn test_struct_init() {
-        assert_context_eq("Rect {", CompletionContext::StructInit {
+        assert_context_eq("Rect {", &CompletionContext::StructInit {
             struct_name: "Rect".to_string(),
             filled_fields: vec![],
         });
 
-        assert_context_eq("Rect { x: 0,", CompletionContext::StructInit {
+        assert_context_eq("Rect { x: 0,", &CompletionContext::StructInit {
             struct_name: "Rect".to_string(),
             filled_fields: vec!["x".to_string()],
         });
 
-        assert_context_eq("Rect { x: 0, y: 5,", CompletionContext::StructInit {
+        assert_context_eq("Rect { x: 0, y: 5,", &CompletionContext::StructInit {
             struct_name: "Rect".to_string(),
             filled_fields: vec!["x".to_string(), "y".to_string()],
         });
 
-        assert_context_eq("Yolo { foo: 0, ba", CompletionContext::StructInit {
+        assert_context_eq("Yolo { foo: 0, ba", &CompletionContext::StructInit {
             struct_name: "Yolo".to_string(),
             filled_fields: vec!["foo".to_string()],
         });
@@ -414,7 +415,7 @@ mod tests {
     #[test]
     fn test_nested_function_calls() {
         // When cursor is inside nested call, should detect the innermost context
-        assert_context_eq("outer(inner(", CompletionContext::FnCall {
+        assert_context_eq("outer(inner(", &CompletionContext::FnCall {
             fn_name: "inner".to_string(),
             namespace: None,
             arg_index: 0,
@@ -426,27 +427,28 @@ mod tests {
         // Method chains infer return type from the namespace
 
         // fx:: functions return Effect
-        assert_context_eq("fx::dissolve(500).with_", CompletionContext::DotAccess {
+        assert_context_eq("fx::dissolve(500).with_", &CompletionContext::DotAccess {
             receiver_type: "Effect".to_string(),
         });
 
         // Color:: functions return Color
-        assert_context_eq("Color::from_u32(0xff0000).", CompletionContext::DotAccess {
-            receiver_type: "Color".to_string(),
-        });
+        assert_context_eq(
+            "Color::from_u32(0xff0000).",
+            &CompletionContext::DotAccess { receiver_type: "Color".to_string() },
+        );
 
         // Layout:: functions return Layout
-        assert_context_eq("Layout::horizontal([]).", CompletionContext::DotAccess {
+        assert_context_eq("Layout::horizontal([]).", &CompletionContext::DotAccess {
             receiver_type: "Layout".to_string(),
         });
 
         // Style:: functions return Style
-        assert_context_eq("Style::new().", CompletionContext::DotAccess {
+        assert_context_eq("Style::new().", &CompletionContext::DotAccess {
             receiver_type: "Style".to_string(),
         });
 
         // Non-qualified function calls default to "Chained"
-        assert_context_eq("some_function().", CompletionContext::DotAccess {
+        assert_context_eq("some_function().", &CompletionContext::DotAccess {
             receiver_type: "<Unknown>".to_string(),
         });
 
@@ -458,7 +460,7 @@ mod tests {
                 .re
         "};
 
-        assert_context_eq(src, CompletionContext::DotAccess {
+        assert_context_eq(src, &CompletionContext::DotAccess {
             receiver_type: "Effect".to_string(),
         });
 
@@ -470,14 +472,14 @@ mod tests {
                 .re
         "};
 
-        assert_context_eq(src, CompletionContext::DotAccess {
+        assert_context_eq(src, &CompletionContext::DotAccess {
             receiver_type: "Effect".to_string(),
         });
     }
 
     #[test]
     fn test_qualified_function_call() {
-        assert_context_eq("Color::from_u32(", CompletionContext::FnCall {
+        assert_context_eq("Color::from_u32(", &CompletionContext::FnCall {
             fn_name: "from_u32".to_string(),
             namespace: Some("Color".to_string()),
             arg_index: 0,
@@ -489,19 +491,19 @@ mod tests {
         // Nested function calls - should infer from the outer call, not the inner
         assert_context_eq(
             "fx::sequence(&[fx::dissolve(500)]).",
-            CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
+            &CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
         );
 
         // Multiple levels of nesting
         assert_context_eq(
             "fx::parallel(&[fx::sequence(&[fx::dissolve(500)])]).",
-            CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
+            &CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
         );
     }
 
     #[test]
     fn test_nested_effects_inside_slice() {
-        assert_context_eq("fx::sequence(&[", CompletionContext::FnCall {
+        assert_context_eq("fx::sequence(&[", &CompletionContext::FnCall {
             fn_name: "sequence".to_string(),
             namespace: Some("fx".to_string()),
             arg_index: 0,
@@ -509,7 +511,7 @@ mod tests {
 
         assert_context_eq(
             "fx::sequence(&[fx::dissolve(500), ",
-            CompletionContext::FnCall {
+            &CompletionContext::FnCall {
                 fn_name: "sequence".to_string(),
                 namespace: Some("fx".to_string()),
                 arg_index: 0,
@@ -518,12 +520,12 @@ mod tests {
 
         assert_context_eq(
             "fx::sequence(&[fx::dissolve(500), fx::",
-            CompletionContext::DoubleColon { namespace: "fx".to_string() },
+            &CompletionContext::DoubleColon { namespace: "fx".to_string() },
         );
 
         assert_context_eq(
             "fx::sequence(&[fx::dissolve(500), fx::consume_tick()]).",
-            CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
+            &CompletionContext::DotAccess { receiver_type: "Effect".to_string() },
         );
     }
 

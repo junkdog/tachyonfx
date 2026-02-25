@@ -88,7 +88,7 @@ fn verify_semicolons(tokens: Vec<Token>) -> Result<Vec<Token>, DslError> {
             while j < tokens.len() {
                 match tokens[j].kind {
                     TokenKind::LeftParen | TokenKind::LeftBrace | TokenKind::LeftBracket => {
-                        depth += 1
+                        depth += 1;
                     },
                     TokenKind::RightParen | TokenKind::RightBrace | TokenKind::RightBracket => {
                         if depth > 0 {

@@ -298,7 +298,7 @@ fn bench_rgb_to_hsl(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(rgb_to_hsl_v1(r, g, bb));
             }
-        })
+        });
     });
 
     group.bench_function("v2 branchless", |b| {
@@ -306,7 +306,7 @@ fn bench_rgb_to_hsl(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(rgb_to_hsl_v2(r, g, bb));
             }
-        })
+        });
     });
 
     group.bench_function("v3 int pipeline", |b| {
@@ -314,7 +314,7 @@ fn bench_rgb_to_hsl(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(rgb_to_hsl_v3(r, g, bb));
             }
-        })
+        });
     });
 
     group.finish();
@@ -335,7 +335,7 @@ fn bench_hsl_to_rgb(c: &mut Criterion) {
             for &(h, s, l) in &hsl_values {
                 core::hint::black_box(hsl_to_rgb_v1(h, s, l));
             }
-        })
+        });
     });
 
     group.bench_function("v2 direct-sector", |b| {
@@ -343,7 +343,7 @@ fn bench_hsl_to_rgb(c: &mut Criterion) {
             for &(h, s, l) in &hsl_values {
                 core::hint::black_box(hsl_to_rgb_v2(h, s, l));
             }
-        })
+        });
     });
 
     group.bench_function("v3 fixed-point", |b| {
@@ -351,7 +351,7 @@ fn bench_hsl_to_rgb(c: &mut Criterion) {
             for &(h, s, l) in &hsl_values {
                 core::hint::black_box(hsl_to_rgb_v3(h, s, l));
             }
-        })
+        });
     });
 
     group.finish();
@@ -368,7 +368,7 @@ fn bench_round_trip(c: &mut Criterion) {
                 let (h, s, l) = rgb_to_hsl_v1(r, g, bb);
                 core::hint::black_box(hsl_to_rgb_v1(h, s, l));
             }
-        })
+        });
     });
 
     group.bench_function("v2", |b| {
@@ -377,7 +377,7 @@ fn bench_round_trip(c: &mut Criterion) {
                 let (h, s, l) = rgb_to_hsl_v2(r, g, bb);
                 core::hint::black_box(hsl_to_rgb_v2(h, s, l));
             }
-        })
+        });
     });
 
     group.bench_function("v3", |b| {
@@ -386,7 +386,7 @@ fn bench_round_trip(c: &mut Criterion) {
                 let (h, s, l) = rgb_to_hsl_v3(r, g, bb);
                 core::hint::black_box(hsl_to_rgb_v3(h, s, l));
             }
-        })
+        });
     });
 
     group.bench_function("v3+v2 combo", |b| {
@@ -395,7 +395,7 @@ fn bench_round_trip(c: &mut Criterion) {
                 let (h, s, l) = rgb_to_hsl_v3(r, g, bb);
                 core::hint::black_box(hsl_to_rgb_v2(h, s, l));
             }
-        })
+        });
     });
 
     group.finish();
@@ -552,7 +552,7 @@ fn bench_rgb_to_hsv(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(rgb_to_hsv(r, g, bb));
             }
-        })
+        });
     });
 
     group.bench_function("v2 int pipeline", |b| {
@@ -560,7 +560,7 @@ fn bench_rgb_to_hsv(c: &mut Criterion) {
             for &(r, g, bb) in &colors {
                 core::hint::black_box(rgb_to_hsv_v2(r, g, bb));
             }
-        })
+        });
     });
 
     group.finish();
@@ -581,7 +581,7 @@ fn bench_hsv_to_rgb(c: &mut Criterion) {
             for &(h, s, v) in &hsv_values {
                 core::hint::black_box(hsv_to_rgb(h, s, v));
             }
-        })
+        });
     });
 
     group.bench_function("v2 direct-sector", |b| {
@@ -589,7 +589,7 @@ fn bench_hsv_to_rgb(c: &mut Criterion) {
             for &(h, s, v) in &hsv_values {
                 core::hint::black_box(hsv_to_rgb_v2(h, s, v));
             }
-        })
+        });
     });
 
     group.finish();
@@ -606,7 +606,7 @@ fn bench_hsv_round_trip(c: &mut Criterion) {
                 let (h, s, v) = rgb_to_hsv(r, g, bb);
                 core::hint::black_box(hsv_to_rgb(h, s, v));
             }
-        })
+        });
     });
 
     group.bench_function("v2", |b| {
@@ -615,7 +615,7 @@ fn bench_hsv_round_trip(c: &mut Criterion) {
                 let (h, s, v) = rgb_to_hsv_v2(r, g, bb);
                 core::hint::black_box(hsv_to_rgb_v2(h, s, v));
             }
-        })
+        });
     });
 
     group.bench_function("v2+v1 combo", |b| {
@@ -624,7 +624,7 @@ fn bench_hsv_round_trip(c: &mut Criterion) {
                 let (h, s, v) = rgb_to_hsv_v2(r, g, bb);
                 core::hint::black_box(hsv_to_rgb(h, s, v));
             }
-        })
+        });
     });
 
     group.finish();

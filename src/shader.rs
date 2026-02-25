@@ -48,10 +48,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// let overflow = shader.process(Duration::from_millis(100), &mut buffer, area);
     /// ```
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
-        let overflow = self
-            .timer_mut()
-            .map(|t| t.process(duration))
-            .unwrap_or(None);
+        let overflow = self.timer_mut().and_then(|t| t.process(duration));
 
         self.execute(duration, area, buf);
 
@@ -136,13 +133,13 @@ pub trait Shader: ThreadSafetyMarker + Debug {
 
     #[deprecated(since = "0.11.0", note = "Use `filter()` instead")]
     fn set_cell_selection(&mut self, filter: CellFilter) {
-        self.filter(filter)
+        self.filter(filter);
     }
 
     /// Reverses the shader effect.
     fn reverse(&mut self) {
         if let Some(timer) = self.timer_mut() {
-            *timer = timer.reversed()
+            *timer = timer.reversed();
         }
     }
 

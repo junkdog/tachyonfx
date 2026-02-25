@@ -162,14 +162,12 @@ mod tests {
                     if r == g && g == b && (8..=238).contains(&r) {
                         // Grayscale cube colors should map to grayscale ramp
                         assert!((232..=255).contains(&back_to_index),
-                            "Grayscale cube color {} -> ({}, {}, {}) should map to grayscale ramp, got {}", 
-                            index, r, g, b, back_to_index);
+                            "Grayscale cube color {index} -> ({r}, {g}, {b}) should map to grayscale ramp, got {back_to_index}");
                     } else {
                         // Non-grayscale cube colors should roundtrip exactly
                         assert_eq!(
                             index, back_to_index,
-                            "Roundtrip failed for index {}: {} -> ({}, {}, {}) -> {}",
-                            index, index, r, g, b, back_to_index
+                            "Roundtrip failed for index {index}: {index} -> ({r}, {g}, {b}) -> {back_to_index}"
                         );
                     }
                 },
@@ -177,8 +175,7 @@ mod tests {
                     // Grayscale ramp should always roundtrip exactly
                     assert_eq!(
                         index, back_to_index,
-                        "Roundtrip failed for index {}: {} -> ({}, {}, {}) -> {}",
-                        index, index, r, g, b, back_to_index
+                        "Roundtrip failed for index {index}: {index} -> ({r}, {g}, {b}) -> {back_to_index}"
                     );
                 },
                 _ => continue,

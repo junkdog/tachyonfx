@@ -70,7 +70,7 @@ impl<'dsl> Arguments<'dsl> {
         let initial_arg_count = args.len();
         let mut span = args
             .front()
-            .map_or_else(|| fallback_span, |e| e.span());
+            .map_or_else(|| fallback_span, Expr::span);
         span.end = args.back().map_or(span.end, |e| e.span().end);
         Self { args, span, vars, context, initial_arg_count }
     }
@@ -301,7 +301,7 @@ impl<'dsl> Arguments<'dsl> {
 
     /// Consumes the next argument and returns a `u8`.
     pub fn read_u8(&mut self) -> Result<u8, DslError> {
-        let span = self.peek().map(|expr| expr.span());
+        let span = self.peek().map(Expr::span);
         u8::try_from(self.read_u32()?).map_err(|_| DslError::CastOverflow {
             location: span.unwrap(),
             from: "u32",
@@ -311,7 +311,7 @@ impl<'dsl> Arguments<'dsl> {
 
     /// Consumes the next argument and returns a `u16`.
     pub fn read_u16(&mut self) -> Result<u16, DslError> {
-        let span = self.peek().map(|expr| expr.span());
+        let span = self.peek().map(Expr::span);
         u16::try_from(self.read_u32()?).map_err(|_| DslError::CastOverflow {
             location: span.unwrap(),
             from: "u32",
@@ -848,7 +848,7 @@ impl<'dsl> Arguments<'dsl> {
             },
             Expr::StructInit { name, fields, span } => {
                 if name == "Rect" {
-                    let fields = struct_fields("Rect", &["x", "y", "width", "height"], fields)
+                    let fields = struct_fields("Rect", &["x", "y", "width", "height"], &fields)
                         .map_err(|e| e.with_span(span))?;
                     Ok(Rect {
                         x: self.extract_field("x", &fields, Arguments::read_u16, span)?,
@@ -898,7 +898,7 @@ impl<'dsl> Arguments<'dsl> {
         match self.next("offset")? {
             Expr::StructInit { name, fields, span } => {
                 if name == "Offset" {
-                    let fields = struct_fields("Offset", &["x", "y"], fields)?;
+                    let fields = struct_fields("Offset", &["x", "y"], &fields)?;
                     Ok(Offset {
                         x: self.extract_field("x", &fields, Arguments::read_i32, span)?,
                         y: self.extract_field("y", &fields, Arguments::read_i32, span)?,
@@ -945,7 +945,7 @@ impl<'dsl> Arguments<'dsl> {
             },
             Expr::StructInit { name, fields, span } => {
                 if name == "Size" {
-                    let fields = struct_fields("Size", &["width", "height"], fields)?;
+                    let fields = struct_fields("Size", &["width", "height"], &fields)?;
                     Ok(Size {
                         width: self.extract_field("width", &fields, Arguments::read_u16, span)?,
                         height: self.extract_field("height", &fields, Arguments::read_u16, span)?,
@@ -997,7 +997,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     fn map_exprs<T: Clone>(
-        &mut self,
+        &self,
         exprs: Vec<Expr>,
         inner: impl Fn(&mut Self) -> Result<T, DslError>,
         span: ExprSpan,
@@ -1044,6 +1044,7 @@ impl<'dsl> Arguments<'dsl> {
         self.args.front()
     }
 
+    #[allow(clippy::unused_self)]
     fn expected_type<T>(
         &self,
         expected: &'static str,
@@ -1053,6 +1054,7 @@ impl<'dsl> Arguments<'dsl> {
         Err(DslError::WrongArgumentType { location: span, expected, actual })
     }
 
+    #[allow(clippy::needless_pass_by_value)] // 30+ call sites pass owned Expr
     fn expected_type_expr<T>(&self, expected: &'static str, actual: Expr) -> Result<T, DslError> {
         self.expected_type(
             expected,
@@ -1061,16 +1063,12 @@ impl<'dsl> Arguments<'dsl> {
         )
     }
 
-    fn verify_no_nested_args(
-        &mut self,
-        exprs: Vec<Expr>,
-        span: ExprSpan,
-    ) -> Result<Self, DslError> {
+    fn verify_no_nested_args(&self, exprs: Vec<Expr>, span: ExprSpan) -> Result<Self, DslError> {
         self.nested_args(exprs, 0, span)
     }
 
     fn nested_args(
-        &mut self,
+        &self,
         exprs: Vec<Expr>,
         required_arg_count: usize,
         span: ExprSpan,
@@ -1097,7 +1095,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     pub(super) fn extract_nested<T>(
-        &mut self,
+        &self,
         exprs: Vec<Expr>,
         inner: impl Fn(&mut Self) -> Result<T, DslError>,
         span: ExprSpan,
@@ -1107,7 +1105,7 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     pub(super) fn extract_field<T>(
-        &mut self,
+        &self,
         key: &'static str,
         exprs: &BTreeMap<&'static str, Expr>,
         inner: impl FnOnce(&mut Self) -> Result<T, DslError>,
@@ -1121,7 +1119,7 @@ impl<'dsl> Arguments<'dsl> {
         inner(&mut args)
     }
 
-    fn all_inner_args(&mut self, exprs: Vec<Expr>, span: ExprSpan) -> Self {
+    fn all_inner_args(&self, exprs: Vec<Expr>, span: ExprSpan) -> Self {
         Self::new(exprs.into(), self.context, self.vars, span)
     }
 }
@@ -1129,7 +1127,7 @@ impl<'dsl> Arguments<'dsl> {
 fn struct_fields(
     struct_name: &'static str,
     required: &[&'static str],
-    fields: Vec<(CompactString, Expr)>,
+    fields: &[(CompactString, Expr)],
 ) -> Result<BTreeMap<&'static str, Expr>, DslError> {
     let mut field_values = BTreeMap::new();
 
@@ -1250,7 +1248,7 @@ impl fmt::Display for Arguments<'_> {
             "Arguments({})",
             self.args
                 .iter()
-                .map(|e| e.type_name())
+                .map(Expr::type_name)
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -1862,24 +1860,20 @@ mod tests {
                 "layout" => args.layout().map(|_| ()),
                 "pattern" => args.pattern().map(|_| ()),
                 "ref_rect" => args.ref_rect().map(|_| ()),
-                _ => panic!("Unknown method: {}", method_name),
+                _ => panic!("Unknown method: {method_name}"),
             };
 
             assert!(
                 result.is_err(),
-                "Expected error for input '{}', but got Ok",
-                input
+                "Expected error for input '{input}', but got Ok"
             );
 
             // Verify it's specifically an InvalidArgumentLength error
             if let Err(DslError::InvalidArgumentLength { expected, actual, .. }) = result {
-                assert_eq!(expected, 0, "Expected 0 arguments for '{}'", input);
-                assert_eq!(actual, 1, "Got 1 argument for '{}'", input);
+                assert_eq!(expected, 0, "Expected 0 arguments for '{input}'");
+                assert_eq!(actual, 1, "Got 1 argument for '{input}'");
             } else {
-                panic!(
-                    "Expected InvalidArgumentLength error for '{}', got {:?}",
-                    input, result
-                );
+                panic!("Expected InvalidArgumentLength error for '{input}', got {result:?}");
             }
         }
     }

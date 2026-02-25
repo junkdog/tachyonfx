@@ -377,9 +377,9 @@ mod tests {
         let mut cache: LruCache<i32, String, 3> = LruCache::new();
 
         // Fill cache completely
-        cache.memoize(&1, |k| format!("value{}", k));
-        cache.memoize(&2, |k| format!("value{}", k));
-        cache.memoize(&3, |k| format!("value{}", k));
+        cache.memoize(&1, |k| format!("value{k}"));
+        cache.memoize(&2, |k| format!("value{k}"));
+        cache.memoize(&3, |k| format!("value{k}"));
 
         // All should be hits and return correct values
         assert_eq!(cache.memoize(&1, |_| "wrong".to_string()), "value1");
@@ -387,7 +387,7 @@ mod tests {
         assert_eq!(cache.memoize(&3, |_| "wrong".to_string()), "value3");
 
         // Add new item, should evict one
-        cache.memoize(&4, |k| format!("value{}", k));
+        cache.memoize(&4, |k| format!("value{k}"));
 
         // New item should be cached correctly
         assert_eq!(cache.memoize(&4, |_| "wrong".to_string()), "value4");

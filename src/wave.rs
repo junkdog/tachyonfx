@@ -463,8 +463,7 @@ mod tests {
                 let result = wf.eval(v);
                 assert!(
                     (-1.0..=1.0).contains(&result),
-                    "{:?}.eval({v}) = {result}, out of [-1, 1]",
-                    wf
+                    "{wf:?}.eval({v}) = {result}, out of [-1, 1]"
                 );
             }
         }
@@ -494,11 +493,7 @@ mod tests {
     fn wavefn_periodic() {
         for wf in [WaveFn::Sin, WaveFn::Cos, WaveFn::Triangle, WaveFn::Sawtooth] {
             let v = 1.23;
-            assert!(
-                approx(wf.eval(v), wf.eval(v + TAU)),
-                "{:?} not periodic",
-                wf
-            );
+            assert!(approx(wf.eval(v), wf.eval(v + TAU)), "{wf:?} not periodic");
         }
     }
 

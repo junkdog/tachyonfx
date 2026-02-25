@@ -38,19 +38,19 @@ pub mod duration {
             Self { milliseconds: (seconds * 1000.0) as u32 }
         }
 
-        pub fn as_millis(&self) -> u32 {
+        pub fn as_millis(self) -> u32 {
             self.milliseconds
         }
 
-        pub const fn is_zero(&self) -> bool {
+        pub const fn is_zero(self) -> bool {
             self.milliseconds == 0
         }
 
-        pub fn as_secs_f32(&self) -> f32 {
+        pub fn as_secs_f32(self) -> f32 {
             self.milliseconds as f32 / 1000.0
         }
 
-        pub fn checked_sub(&self, other: Self) -> Option<Self> {
+        pub fn checked_sub(self, other: Self) -> Option<Self> {
             self.milliseconds
                 .checked_sub(other.milliseconds)
                 .map(Self::from_millis)

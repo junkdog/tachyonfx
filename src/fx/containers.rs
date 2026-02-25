@@ -36,7 +36,7 @@ impl ParallelEffect {
         let t_max = self
             .effects
             .iter()
-            .filter_map(|fx| fx.timer())
+            .filter_map(Effect::timer)
             .map(|t| t.duration())
             .max()
             .unwrap_or(Duration::ZERO);
@@ -129,7 +129,7 @@ impl Shader for ParallelEffect {
     fn timer(&self) -> Option<EffectTimer> {
         self.effects
             .iter()
-            .filter_map(|fx| fx.timer())
+            .filter_map(Effect::timer)
             .map(|t| t.duration())
             .max()
             .map(|d| EffectTimer::new(d, Linear))
@@ -216,8 +216,8 @@ impl Shader for SequentialEffect {
         let duration: Duration = self
             .effects
             .iter()
-            .map(|fx| fx.timer())
-            .filter(|t| t.is_some())
+            .map(Effect::timer)
+            .filter(Option::is_some)
             .map(|t| t.unwrap().duration())
             .sum();
 
@@ -234,7 +234,7 @@ impl Shader for SequentialEffect {
 
     fn reset(&mut self) {
         self.current = 0;
-        self.effects.iter_mut().for_each(Effect::reset)
+        self.effects.iter_mut().for_each(Effect::reset);
     }
 
     fn set_color_space(&mut self, color_space: ColorSpace) {
@@ -257,7 +257,7 @@ fn to_dsl(
     use crate::dsl::EffectExpression;
     let effects = effects
         .iter()
-        .map(|e| e.to_dsl())
+        .map(Effect::to_dsl)
         .map(|dsl| dsl.map(|e| e.to_string()))
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -281,7 +281,7 @@ mod tests {
             fx.clone().with_filter(CellFilter::All),
             fx.clone()
                 .with_filter(CellFilter::Inner(Margin::new(1, 1))),
-            fx.clone(),
+            fx,
         ]);
 
         // same effect as calling Effect::filter

@@ -87,10 +87,10 @@ impl Shader for SweepIn {
                     let mod_a = CircOut.alpha(a);
 
                     if cell.fg == Color::Reset {
-                        cell.fg = Color::White
+                        cell.fg = Color::White;
                     };
                     if cell.bg == Color::Reset {
-                        cell.bg = Color::Black
+                        cell.bg = Color::Black;
                     };
 
                     let cache_key = (mod_a.clamp(0.0, 1.0) * 255.0) as u8;

@@ -375,7 +375,7 @@ mod tests {
     use super::*;
     use crate::ref_count;
 
-    fn assert_buffer_to_buffer_copy(offset: Offset, expected: Buffer) {
+    fn assert_buffer_to_buffer_copy(offset: Offset, expected: &Buffer) {
         let aux_buffer = ref_count(Buffer::with_lines(["abcd", "efgh", "ijkl", "mnop"]));
 
         let mut buf = Buffer::with_lines([
@@ -385,14 +385,14 @@ mod tests {
 
         aux_buffer.render_buffer(offset, &mut buf);
 
-        assert_eq!(buf, expected)
+        assert_eq!(&buf, expected);
     }
 
     #[test]
     fn test_render_offsets_in_bounds() {
         assert_buffer_to_buffer_copy(
             Offset { x: 0, y: 0 },
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "abcd. . ", "efgh. . ", "ijkl. . ", "mnop. . ", ". . . . ", ". . . . ", ". . . . ",
                 ". . . . ",
             ]),
@@ -400,7 +400,7 @@ mod tests {
 
         assert_buffer_to_buffer_copy(
             Offset { x: 4, y: 3 },
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 ". . . . ", ". . . . ", ". . . . ", ". . abcd", ". . efgh", ". . ijkl", ". . mnop",
                 ". . . . ",
             ]),
@@ -411,14 +411,14 @@ mod tests {
     fn test_render_offsets_out_of_bounds() {
         assert_buffer_to_buffer_copy(
             Offset { x: -1, y: -2 },
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 "jkl . . ", "nop . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",
                 ". . . . ",
             ]),
         );
         assert_buffer_to_buffer_copy(
             Offset { x: 6, y: 6 },
-            Buffer::with_lines([
+            &Buffer::with_lines([
                 ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . ab",
                 ". . . ef",
             ]),

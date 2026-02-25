@@ -33,17 +33,17 @@ use crate::{
 pub(super) fn maybe_promote(expr: Expr) -> Expr {
     match &expr {
         Expr::QualifiedMember { name, self_fns, span } => {
-            promote(name, span).map(|f| f.self_fns(self_fns.clone()))
+            promote(name, *span).map(|f| f.self_fns(self_fns.clone()))
         },
         Expr::Var { name, self_fns, span } => {
-            promote(name, span).map(|f| f.self_fns(self_fns.clone()))
+            promote(name, *span).map(|f| f.self_fns(self_fns.clone()))
         },
         _ => None,
     }
     .unwrap_or(expr)
 }
 
-fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
+fn promote(text: &str, span: ExprSpan) -> Option<Expr> {
     motion(text)
         .or_else(|| direction(text))
         .or_else(|| flex(text))
@@ -56,7 +56,7 @@ fn promote(text: &str, span: &ExprSpan) -> Option<Expr> {
         .or_else(|| repeat_mode(text))
         .or_else(|| evolve_symbol_set(text))
         .or_else(|| none(text))
-        .map(|v| Expr::Literal(v, *span))
+        .map(|v| Expr::Literal(v, span))
 }
 
 fn motion(text: &str) -> Option<Value> {

@@ -19,7 +19,7 @@ pub fn parabolic_sin_benchmark(c: &mut Criterion) {
             for &t in &radians {
                 core::hint::black_box(parabolic_sin(t));
             }
-        })
+        });
     });
 
     group.bench_function("f32_sin", |b| {
@@ -27,7 +27,7 @@ pub fn parabolic_sin_benchmark(c: &mut Criterion) {
             for &t in &radians {
                 core::hint::black_box(t.sin());
             }
-        })
+        });
     });
 
     group.bench_function("micromath_sin", |b| {
@@ -35,7 +35,7 @@ pub fn parabolic_sin_benchmark(c: &mut Criterion) {
             for &t in &radians {
                 core::hint::black_box(F32Ext::sin(t));
             }
-        })
+        });
     });
 
     group.finish();

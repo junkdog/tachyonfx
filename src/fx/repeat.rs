@@ -68,8 +68,7 @@ impl Shader for Repeat {
                     let overflow = duration - d;
                     self.mode = RepeatMode::Duration(Duration::ZERO);
                     self.process_effect(d, buf, area)
-                        .map(|d| Some(d + overflow))
-                        .unwrap_or(Some(overflow))
+                        .map_or(Some(overflow), |d| Some(d + overflow))
                 } else {
                     self.mode = RepeatMode::Duration(d - duration);
                     self.process_effect(duration, buf, area)
@@ -94,7 +93,7 @@ impl Shader for Repeat {
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.fx.set_area(area)
+        self.fx.set_area(area);
     }
 
     fn filter(&mut self, strategy: CellFilter) {

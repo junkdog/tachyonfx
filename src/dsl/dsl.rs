@@ -156,7 +156,7 @@ impl EffectDsl {
 
     pub(super) fn compile(&self, env: &DslEnv, input: Vec<Expr>) -> Result<Effect, DslError> {
         // compile expressions leading up to last
-        let remaining_expr = self.compile_let_bindings(input, env)?;
+        let remaining_expr = compile_let_bindings(input, env)?;
 
         match remaining_expr {
             Expr::FnCall {
@@ -219,31 +219,31 @@ impl EffectDsl {
             }),
         }
     }
+}
 
-    fn compile_let_bindings(&self, expr: Vec<Expr>, env: &DslEnv) -> Result<Expr, DslError> {
-        let mut expr = expr;
-        let final_effect_expr = expr.remove(expr.len() - 1);
+fn compile_let_bindings(expr: Vec<Expr>, env: &DslEnv) -> Result<Expr, DslError> {
+    let mut expr = expr;
+    let final_effect_expr = expr.remove(expr.len() - 1);
 
-        let err = expr
-            .into_iter()
-            .map(|e| match e {
-                Expr::LetBinding { name, let_expr, .. } => {
-                    env.bind_local(name.clone(), *let_expr);
-                    None
-                },
-                e => Some(DslError::InvalidExpression {
-                    expected: "let binding",
-                    actual: e.type_name(),
-                    location: e.span(),
-                }),
-            })
-            .find(|e| e.is_some());
+    let err = expr
+        .into_iter()
+        .map(|e| match e {
+            Expr::LetBinding { name, let_expr, .. } => {
+                env.bind_local(name, *let_expr);
+                None
+            },
+            e => Some(DslError::InvalidExpression {
+                expected: "let binding",
+                actual: e.type_name(),
+                location: e.span(),
+            }),
+        })
+        .find(Option::is_some);
 
-        if let Some(Some(err)) = err {
-            Err(err)
-        } else {
-            Ok(final_effect_expr) // effect expr
-        }
+    if let Some(Some(err)) = err {
+        Err(err)
+    } else {
+        Ok(final_effect_expr) // effect expr
     }
 }
 
@@ -539,8 +539,8 @@ mod compilers {
     }
 
     pub(super) fn lighten(args: &mut Arguments) -> Result<Effect, DslError> {
-        let fg = args.option(|args| args.read_into_f32())?;
-        let bg = args.option(|args| args.read_into_f32())?;
+        let fg = args.option(Arguments::read_into_f32)?;
+        let bg = args.option(Arguments::read_into_f32)?;
         fx::lighten(fg, bg, args.effect_timer()?).into()
     }
 
@@ -549,8 +549,8 @@ mod compilers {
     }
 
     pub(super) fn darken(args: &mut Arguments) -> Result<Effect, DslError> {
-        let fg = args.option(|args| args.read_into_f32())?;
-        let bg = args.option(|args| args.read_into_f32())?;
+        let fg = args.option(Arguments::read_into_f32)?;
+        let bg = args.option(Arguments::read_into_f32)?;
         fx::darken(fg, bg, args.effect_timer()?).into()
     }
 
@@ -559,8 +559,8 @@ mod compilers {
     }
 
     pub(super) fn saturate(args: &mut Arguments) -> Result<Effect, DslError> {
-        let fg = args.option(|args| args.read_into_f32())?;
-        let bg = args.option(|args| args.read_into_f32())?;
+        let fg = args.option(Arguments::read_into_f32)?;
+        let bg = args.option(Arguments::read_into_f32)?;
         fx::saturate(fg, bg, args.effect_timer()?).into()
     }
 
@@ -1048,7 +1048,6 @@ mod tests {
                 base_effect.clone(),
                 base_effect.clone().reversed(),
                 base_effect
-                    .clone()
                     .reversed()
                     .with_filter(CellFilter::Not(Box::new(CellFilter::Text))),
             ])

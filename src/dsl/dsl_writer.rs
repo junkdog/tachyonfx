@@ -293,7 +293,7 @@ impl DslWriter {
             self.write(&method.name);
             self.write_args(&method.args);
         }
-        self.decrease_indent()
+        self.decrease_indent();
     }
 
     /// Write multiple expressions inline with commas between them.
@@ -323,7 +323,7 @@ impl DslWriter {
     }
 
     fn decrease_indent(&mut self) {
-        self.indent -= self.indent_step
+        self.indent -= self.indent_step;
     }
 
     /// Write the current indentation.

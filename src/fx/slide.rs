@@ -184,7 +184,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert_eq!(dsl.to_string(), indoc! {
+        assert_eq!(dsl, indoc! {
             "fx::slide_in(
                  Motion::LeftToRight,
                  10,
@@ -202,7 +202,7 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert_eq!(dsl.to_string(), indoc! {
+        assert_eq!(dsl, indoc! {
             "fx::slide_out(
                  Motion::UpToDown,
                  10,

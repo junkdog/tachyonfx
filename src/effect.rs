@@ -277,7 +277,7 @@ impl Effect {
     /// # Arguments
     /// * `area` - The rectangular area to set.
     pub fn set_area(&mut self, area: Rect) {
-        self.shader.set_area(area)
+        self.shader.set_area(area);
     }
 
     /// Sets the cell selection strategy for the effect. Only applies the filter
@@ -294,7 +294,7 @@ impl Effect {
     /// effect.filter(CellFilter::Not(CellFilter::Text.into()));
     /// ```
     pub fn filter(&mut self, strategy: CellFilter) {
-        self.shader.propagate_filter(strategy)
+        self.shader.propagate_filter(strategy);
     }
 
     /// Reverses the effect's playback direction.
@@ -302,7 +302,7 @@ impl Effect {
     /// This toggles the effect to play in the opposite direction from its
     /// current state. Can be used to create back-and-forth animations.
     pub fn reverse(&mut self) {
-        self.shader.reverse()
+        self.shader.reverse();
     }
 
     /// Returns the timer associated with this effect.
@@ -357,7 +357,7 @@ impl Effect {
     /// Resets the effect. Used by effects like ping_pong and repeat to reset
     /// the hosted effect to its initial state.
     pub fn reset(&mut self) {
-        self.shader.reset()
+        self.shader.reset();
     }
 
     /// Sets a pattern for spatial alpha progression on pattern-compatible effects.

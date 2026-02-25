@@ -60,7 +60,7 @@ where
 impl ChainableMethods for CellFilter {
     fn apply_fn(filter: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match name {
-            "clone" => filter.clone(),
+            "clone" => filter,
             "negated" => filter.negated(),
             "into_static" => filter.into_static(),
             _ => Err(DslError::UnknownFunction { name: name.into(), location: args.span() })?,
@@ -71,7 +71,7 @@ impl ChainableMethods for CellFilter {
 impl ChainableMethods for Effect {
     fn apply_fn(effect: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match name {
-            "clone" => effect.clone(),
+            "clone" => effect,
             "reversed" => effect.reversed(),
             "with_area" => effect.with_area(args.rect()?),
             "with_color_space" => effect.with_color_space(args.color_space()?),
@@ -86,7 +86,7 @@ impl ChainableMethods for Effect {
 impl ChainableMethods for Layout {
     fn apply_fn(layout: Self, name: &str, args: &mut Arguments<'_>) -> Result<Self, DslError> {
         Ok(match name {
-            "clone" => layout.clone(),
+            "clone" => layout,
             "direction" => layout.direction(args.direction()?),
             "flex" => layout.flex(args.flex()?),
             "constraints" => layout.constraints(args.array(Arguments::constraint)?),

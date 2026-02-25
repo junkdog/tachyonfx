@@ -33,6 +33,7 @@ fn create_noop_effect(filter: Option<CellFilter>) -> Effect {
     effect
 }
 
+#[allow(clippy::needless_pass_by_value)] // cloned repeatedly in iter_with_setup
 fn bench_effect_with_filter(
     group: &mut criterion::BenchmarkGroup<criterion::measurement::WallTime>,
     name: &str,

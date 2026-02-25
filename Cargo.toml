@@ -104,9 +104,26 @@ name = "saturation_adjustment"
 harness = false
 
 [lints.clippy]
+# no_std enforcement
 std_instead_of_core = "warn"
 std_instead_of_alloc = "warn"
 alloc_instead_of_core = "warn"
+# performance
+redundant_clone = "warn"
+cloned_instead_of_copied = "warn"
+trivially_copy_pass_by_ref = "warn"
+needless_pass_by_value = "warn"
+implicit_clone = "warn"
+inefficient_to_string = "warn"
+# dead code / unused
+unused_self = "warn"
+needless_pass_by_ref_mut = "warn"
+# clarity
+redundant_closure_for_method_calls = "warn"
+semicolon_if_nothing_returned = "warn"
+uninlined_format_args = "warn"
+map_unwrap_or = "warn"
+flat_map_option = "warn"
 
 [profile.bench]
 lto = true

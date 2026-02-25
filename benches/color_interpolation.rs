@@ -76,7 +76,7 @@ fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
                     ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
                 }));
             });
-        })
+        });
     });
 
     group.bench_with_input(BenchmarkId::new("color-cache", "hsl/8"), &(), |b, _| {
@@ -86,7 +86,7 @@ fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
                     ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
                 }));
             });
-        })
+        });
     });
 
     group.bench_with_input(BenchmarkId::new("color-cache", "hsl/16"), &(), |b, _| {
@@ -96,7 +96,7 @@ fn ui_like_color_pattern_benchmark(c: &mut Criterion) {
                     ColorSpace::Hsl.lerp(c, &target, INTERPOLATION_ALPHA)
                 }));
             });
-        })
+        });
     });
 
     group.finish();
@@ -111,7 +111,7 @@ fn fg_colors_from_ansi(ansi: &'static str) -> Vec<Color> {
     buffer_text
         .iter()
         .flat_map(|line| &line.spans)
-        .flat_map(|span| span.style.fg)
+        .filter_map(|span| span.style.fg)
         .collect()
 }
 

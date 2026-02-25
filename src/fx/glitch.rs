@@ -49,7 +49,7 @@ pub struct Glitch {
 }
 
 impl Glitch {
-    fn ensure_population(&mut self, screen: &Rect) {
+    fn ensure_population(&mut self, screen: Rect) {
         let total_cells =
             crate::math::round(screen.width as f32 * screen.height as f32 * self.cell_glitch_ratio)
                 as u32;
@@ -103,7 +103,7 @@ impl Shader for Glitch {
 
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         // ensure glitch population meets the cell_glitch_ratio
-        self.ensure_population(&area);
+        self.ensure_population(area);
 
         // subtract durations
         let last_frame_ms = duration.as_millis();
@@ -184,7 +184,7 @@ impl Shader for Glitch {
     }
 
     fn set_area(&mut self, area: Rect) {
-        self.area = Some(area)
+        self.area = Some(area);
     }
 
     fn filter(&mut self, strategy: CellFilter) {

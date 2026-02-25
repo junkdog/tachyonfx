@@ -222,7 +222,9 @@ impl CompletionEngine {
                                 kind: CompletionKind::Function,
                                 detail: meta,
                                 insert_text: Some(insert_text),
-                                description: ctor.description().map(|s| s.to_string()),
+                                description: ctor
+                                    .description()
+                                    .map(alloc::string::ToString::to_string),
                             }
                         })
                         .collect(),
@@ -259,7 +261,9 @@ impl CompletionEngine {
                                 kind: CompletionKind::Function,
                                 detail: format!("{effect_name}({})", ctor.params().join(", ")),
                                 insert_text: Some(format!("{effect_name}()")),
-                                description: ctor.description().map(|s| s.to_string()),
+                                description: ctor
+                                    .description()
+                                    .map(alloc::string::ToString::to_string),
                             });
                         }
                     } else {
@@ -285,7 +289,7 @@ impl CompletionEngine {
                     .into_iter()
                     .filter(|(field, _)| !filled_fields.iter().any(|f| f == field))
                     .map(|(field, field_type)| CompletionItem {
-                        label: format!("{}: ", field),
+                        label: format!("{field}: "),
                         kind: CompletionKind::Field,
                         detail: field_type.to_string(),
                         insert_text: None,
@@ -301,7 +305,7 @@ impl CompletionEngine {
             .map(|c| c.label.clone())
             .map(|c| match () {
                 _ if c.ends_with("::") => c[0..c.len() - 2].to_string(),
-                _ => c.to_string(),
+                _ => c,
             })
             .collect();
 
@@ -333,7 +337,7 @@ impl CompletionEngine {
     fn const_completions(&self, identifier: &str) -> Vec<CompletionItem> {
         self.constants
             .get(identifier)
-            .cloned()
+            .copied()
             .unwrap_or_default()
             .iter()
             .map(|name| CompletionItem {
@@ -349,7 +353,7 @@ impl CompletionEngine {
     fn constructor_completions(&self, identifier: &str) -> Vec<CompletionItem> {
         self.constructors
             .get(identifier)
-            .cloned()
+            .copied()
             .unwrap_or_default()
             .iter()
             .map(CompletionItem::from)
@@ -359,7 +363,7 @@ impl CompletionEngine {
     fn method_completions(&self, identifier: &str) -> Vec<CompletionItem> {
         self.methods
             .get(identifier)
-            .cloned()
+            .copied()
             .unwrap_or_default()
             .iter()
             .map(CompletionItem::from)
@@ -371,7 +375,7 @@ impl CompletionEngine {
             .values()
             .flat_map(|ctors| ctors.iter())
             .find(|ctor| ctor.name() == fn_name)
-            .cloned()
+            .copied()
     }
 
     fn constructor_by_type_and_name(&self, type_name: &str, fn_name: &str) -> Option<CallableItem> {
@@ -380,7 +384,7 @@ impl CompletionEngine {
             .into_iter()
             .flat_map(|fns| fns.iter())
             .find(|f| f.name() == fn_name)
-            .cloned()
+            .copied()
     }
 
     fn constructor_by_name(&self, fn_name: &str) -> Option<CallableItem> {
@@ -388,11 +392,11 @@ impl CompletionEngine {
             .values()
             .flat_map(|fns| fns.iter())
             .find(|f| f.name() == fn_name)
-            .cloned()
+            .copied()
     }
 
     fn effect_by_name(&self, fn_name: &str) -> Option<CallableItem> {
-        self.effect_types.get(fn_name).cloned()
+        self.effect_types.get(fn_name).copied()
     }
 
     fn extract_let_bindings(&self, tokens: &[Token]) -> Vec<LetBinding> {
@@ -912,7 +916,7 @@ mod tests {
         let completions = engine.completions(source, source.len() as u32);
 
         // Should return empty on tokenization error
-        assert!(completions.is_empty(), "was: {:?}", completions);
+        assert!(completions.is_empty(), "was: {completions:?}");
     }
 
     #[test]
@@ -1125,7 +1129,7 @@ mod tests {
         let source = "fx::consume_tick().";
 
         let completions = engine.completions(source, source.len() as u32);
-        println!("{:?}", completions);
+        println!("{completions:?}");
         assert_eq!(completions.len(), Effect::methods().len());
     }
 
@@ -1252,7 +1256,7 @@ mod tests {
         let expected: BTreeSet<String> = engine
             .effect_types
             .keys()
-            .map(|k| k.to_string())
+            .map(alloc::string::ToString::to_string)
             .collect();
 
         assert_eq!(completions, expected);
@@ -1271,8 +1275,8 @@ mod tests {
                     .map(|c| c.insert_text)
                     .collect();
 
-                assert_eq!(vec![Some(expected.to_string())], completions)
-            })
+                assert_eq!(vec![Some(expected.to_string())], completions);
+            });
     }
 
     #[test]

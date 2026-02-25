@@ -188,7 +188,9 @@ impl From<&CallableItem> for CompletionItem {
             },
             detail: format!("{}({})", name, callable.params().join(", ")),
             insert_text: Some(format!("{name}($0)")),
-            description: callable.description().map(|s| s.to_string()),
+            description: callable
+                .description()
+                .map(alloc::string::ToString::to_string),
         }
     }
 }
