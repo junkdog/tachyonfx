@@ -1703,6 +1703,10 @@ pub fn paint_bg<T: Into<EffectTimer>, C: Into<Color>>(bg: C, timer: T) -> Effect
 ///
 /// # Examples
 ///
+/// <div data-tachyonfx-demo="saturate"
+///      data-dsl="fx::prolong_end(2000, fx::saturate(Some(-1.0), Some(-1.0),
+/// 1000))"></div>
+///
 /// ```no_run
 /// use tachyonfx::fx;
 /// use tachyonfx::pattern::SweepPattern;
@@ -1727,6 +1731,10 @@ pub fn saturate<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T
 /// * `timer` - Timer controlling the effect duration
 ///
 /// # Examples
+///
+/// <div data-tachyonfx-demo="saturate_fg"
+///      data-dsl="fx::saturate_fg(-0.8, 1000)
+///                    .with_pattern(SweepPattern::left_to_right(20))"></div>
 ///
 /// ```no_run
 /// use tachyonfx::fx;
@@ -1757,6 +1765,9 @@ pub fn saturate_fg<T: Into<EffectTimer>>(fg: f32, timer: T) -> Effect {
 ///
 /// # Examples
 ///
+/// <div data-tachyonfx-demo="lighten"
+///      data-dsl="fx::lighten(None, Some(0.6), (1500, Interpolation::CubicIn))"></div>
+///
 /// ```no_run
 /// use tachyonfx::fx;
 /// use tachyonfx::pattern::SweepPattern;
@@ -1781,6 +1792,10 @@ pub fn lighten<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T)
 /// * `timer` - Timer controlling the effect duration
 ///
 /// # Examples
+///
+/// <div data-tachyonfx-demo="lighten_fg"
+///      data-dsl="fx::repeating(fx::ping_pong(fx::lighten_fg(0.8, (1000,
+/// Interpolation::SineInOut))))"></div>
 ///
 /// ```no_run
 /// use tachyonfx::fx;
@@ -1810,6 +1825,10 @@ pub fn lighten_fg<T: Into<EffectTimer>>(fg: f32, timer: T) -> Effect {
 ///
 /// # Examples
 ///
+/// <div data-tachyonfx-demo="darken"
+///      data-dsl="fx::darken(Some(0.6), Some(0.4), (1200, Interpolation::QuadOut))
+///                    .with_pattern(SweepPattern::left_to_right(10))"></div>
+///
 /// ```no_run
 /// use tachyonfx::fx;
 /// use tachyonfx::pattern::SweepPattern;
@@ -1834,6 +1853,10 @@ pub fn darken<T: Into<EffectTimer>>(fg: Option<f32>, bg: Option<f32>, timer: T) 
 /// * `timer` - Timer controlling the effect duration
 ///
 /// # Examples
+///
+/// <div data-tachyonfx-demo="darken_fg"
+///      data-dsl="fx::ping_pong(fx::darken_fg(0.7, (800,
+/// Interpolation::SineInOut)))"></div>
 ///
 /// ```no_run
 /// use tachyonfx::fx;
