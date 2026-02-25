@@ -13,9 +13,10 @@ pub(super) struct SequentialEffect {
     current: usize,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub(super) struct ParallelEffect {
     effects: Vec<Effect>,
+    pending_offsets: Vec<Duration>,
 }
 
 impl SequentialEffect {
@@ -26,7 +27,29 @@ impl SequentialEffect {
 
 impl ParallelEffect {
     pub fn new(effects: Vec<Effect>) -> Self {
-        Self { effects }
+        Self { effects, pending_offsets: Vec::new() }
+    }
+
+    /// Computes right-alignment offsets so that shorter children are delayed
+    /// to end at the same time as the longest child.
+    fn compute_offsets(&self) -> Vec<Duration> {
+        let t_max = self
+            .effects
+            .iter()
+            .filter_map(|fx| fx.timer())
+            .map(|t| t.duration())
+            .max()
+            .unwrap_or(Duration::ZERO);
+
+        self.effects
+            .iter()
+            .map(|fx| {
+                fx.timer()
+                    .map(|t| t.duration())
+                    .and_then(|d| t_max.checked_sub(d))
+                    .unwrap_or(Duration::ZERO)
+            })
+            .collect()
     }
 }
 
@@ -38,9 +61,23 @@ impl Shader for ParallelEffect {
     fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let mut remaining = Some(duration);
 
-        for effect in self.effects.iter_mut().filter(|e| e.running()) {
-            let effect_area = effect.area().unwrap_or(area);
-            match effect.process(duration, buf, effect_area) {
+        for i in 0..self.effects.len() {
+            if !self.effects[i].running() {
+                continue;
+            }
+
+            let is_reversed = self.pending_offsets.len() > 0;
+            let child_duration = if is_reversed && self.pending_offsets[i] > Duration::ZERO {
+                // consume offset time before forwarding to child
+                let consumed = duration.min(self.pending_offsets[i]);
+                self.pending_offsets[i] -= consumed;
+                duration - consumed
+            } else {
+                duration
+            };
+
+            let effect_area = self.effects[i].area().unwrap_or(area);
+            match self.effects[i].process(child_duration, buf, effect_area) {
                 None => remaining = None,
                 Some(d) if remaining.is_some() => {
                     remaining = Some(d.min(remaining.unwrap()));
@@ -77,7 +114,12 @@ impl Shader for ParallelEffect {
     }
 
     fn reverse(&mut self) {
-        self.effects.iter_mut().for_each(Effect::reverse)
+        self.effects.iter_mut().for_each(Effect::reverse);
+        self.pending_offsets = if self.pending_offsets.is_empty() {
+            self.compute_offsets()
+        } else {
+            Vec::new()
+        };
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
@@ -98,7 +140,10 @@ impl Shader for ParallelEffect {
     }
 
     fn reset(&mut self) {
-        self.effects.iter_mut().for_each(Effect::reset)
+        self.effects.iter_mut().for_each(Effect::reset);
+        if !self.pending_offsets.is_empty() {
+            self.pending_offsets = self.compute_offsets();
+        }
     }
 
     #[cfg(feature = "dsl")]

@@ -2511,6 +2511,97 @@ mod tests {
         );
     }
 
+    /// Two children with different durations: the shorter one should be
+    /// right-aligned (delayed) when reversed, producing mirror-image output.
+    #[test]
+    fn test_reversed_parallel_different_durations() {
+        let area = Rect::new(0, 0, 1, 1);
+        let total_ms = 1000u32;
+
+        let make_effect =
+            || parallel(&[fade_to_fg(Color::Red, 500), fade_to_fg(Color::Blue, 1000)]);
+
+        let init_buffer = || {
+            let mut buf = Buffer::empty(area);
+            buf[(0, 0)].fg = Color::White;
+            buf
+        };
+
+        assert_reversal_symmetry(
+            "parallel([fade_to_fg 500ms, fade_to_fg 1000ms])",
+            make_effect,
+            area,
+            init_buffer,
+            total_ms,
+            &[0, 100, 250, 500, 750, 900, 1000],
+        );
+    }
+
+    /// A parallel containing a `never_complete` (infinite) child alongside
+    /// timed children. Infinite children get zero offset; timed children
+    /// are right-aligned normally. The parallel never reports done().
+    #[test]
+    fn test_reversed_parallel_with_infinite_child() {
+        let area = Rect::new(0, 0, 1, 1);
+
+        // 500ms fade + 1000ms fade + infinite child
+        let mut fx = parallel(&[
+            fade_to_fg(Color::Red, 500),
+            fade_to_fg(Color::Blue, 1000),
+            never_complete(fade_to_fg(Color::Green, 300)),
+        ]);
+        fx.reverse();
+
+        let mut buf = Buffer::empty(area);
+        buf[(0, 0)].fg = Color::White;
+
+        // process several ticks without panicking
+        for _ in 0..10 {
+            fx.process(Duration::from_millis(100), &mut buf, area);
+        }
+
+        // never done because of infinite child
+        assert!(
+            !fx.done(),
+            "parallel with never_complete child should never be done"
+        );
+
+        // timed children should have completed after 1000ms total
+        // (the 500ms child was delayed 500ms, so finishes at 1000ms)
+    }
+
+    /// Reversal symmetry holds for the timed children within a parallel
+    /// even when an infinite child is present, as long as we compare only
+    /// the timed sub-parallel.
+    #[test]
+    fn test_reversed_parallel_three_timed_children() {
+        let area = Rect::new(0, 0, 1, 1);
+        let total_ms = 1000u32;
+
+        let make_effect = || {
+            parallel(&[
+                fade_to_fg(Color::Red, 300),
+                fade_to_fg(Color::Blue, 700),
+                fade_to_fg(Color::Green, 1000),
+            ])
+        };
+
+        let init_buffer = || {
+            let mut buf = Buffer::empty(area);
+            buf[(0, 0)].fg = Color::White;
+            buf
+        };
+
+        assert_reversal_symmetry(
+            "parallel([fade 300ms, fade 700ms, fade 1000ms])",
+            make_effect,
+            area,
+            init_buffer,
+            total_ms,
+            &[0, 100, 300, 500, 700, 900, 1000],
+        );
+    }
+
     #[test]
     #[ignore = "ignored during cell filter optimization"]
     #[cfg(target_pointer_width = "64")]
@@ -2525,6 +2616,7 @@ mod tests {
         verify_size(size_of::<EffectTimer>(), 12);
         verify_size(size_of::<Ansi256>(), 10);
         verify_size(size_of::<ConsumeTick>(), 1);
+        verify_size(size_of::<ParallelEffect>(), 56);
 
         // Size differs between std and no-std builds due to different underlying types
         #[cfg(feature = "std")]
@@ -2536,7 +2628,6 @@ mod tests {
         verify_size(size_of::<HslShift>(), 104);
         verify_size(size_of::<NeverComplete>(), 16);
         verify_size(size_of::<OffscreenBuffer>(), 24);
-        verify_size(size_of::<ParallelEffect>(), 24);
         verify_size(size_of::<PingPong>(), 72);
         verify_size(size_of::<Prolong>(), 32);
         verify_size(size_of::<Repeat>(), 32);
