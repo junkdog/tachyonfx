@@ -2305,7 +2305,7 @@ use crate::fx::{
 
 #[cfg(test)]
 mod tests {
-    use ratatui_core::style::Color;
+    use ratatui_core::{buffer::Buffer, layout::Rect, style::Color};
 
     use super::*;
 
@@ -2403,6 +2403,112 @@ mod tests {
                 "testing reversed() for direction={dir:?}",
             );
         });
+    }
+
+    /// Verifies that effect(t) == effect.reversed()(T - t) for sampled time points.
+    fn assert_reversal_symmetry(
+        name: &str,
+        make_effect: impl Fn() -> Effect,
+        area: Rect,
+        init_buffer: impl Fn() -> Buffer,
+        total_ms: u32,
+        sample_points: &[u32],
+    ) {
+        for &t in sample_points {
+            let mut normal_fx = make_effect();
+            let mut reversed_fx = make_effect();
+            reversed_fx.reverse();
+
+            let mut buf_normal = init_buffer();
+            let mut buf_reversed = init_buffer();
+
+            normal_fx.process(Duration::from_millis(t as _), &mut buf_normal, area);
+            reversed_fx.process(
+                Duration::from_millis((total_ms - t) as _),
+                &mut buf_reversed,
+                area,
+            );
+
+            for y in area.y..area.bottom() {
+                for x in area.x..area.right() {
+                    let nc = &buf_normal[(x, y)];
+                    let rc = &buf_reversed[(x, y)];
+                    assert_eq!(
+                        (nc.symbol(), nc.fg, nc.bg),
+                        (rc.symbol(), rc.fg, rc.bg),
+                        "{name}: mismatch at ({x}, {y}), \
+                         normal@{t}ms vs reversed@{}ms",
+                        total_ms - t,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Reversed delay should place the sleep at the end of the sequence,
+    /// mirroring the original timeline: `delay(500, fade(500))` reversed
+    /// at time `t` must match the normal effect at time `1000 - t`.
+    #[test]
+    fn test_reversed_delay_timing() {
+        let area = Rect::new(0, 0, 1, 1);
+        let total_ms = 1000u32;
+
+        let make_effect = || delay(500, fade_to_fg(Color::Red, 500));
+
+        let init_buffer = || {
+            let mut buf = Buffer::empty(area);
+            buf[(0, 0)].fg = Color::White;
+            buf
+        };
+
+        assert_reversal_symmetry(
+            "delay(500, fade_to_fg(Red, 500))",
+            make_effect,
+            area,
+            init_buffer,
+            total_ms,
+            // sample across both the sleep and fade phases
+            &[100, 250, 500, 750, 900],
+        );
+    }
+
+    /// Minimal reproduction from the tachyonfx-ftl explode_patterned example:
+    /// a parallel containing a delayed effect should maintain correct timing
+    /// when the entire parallel is reversed.
+    #[test]
+    fn test_reversed_parallel_with_delay() {
+        let area = Rect::new(0, 0, 4, 1);
+        let total_ms = 1500u32;
+
+        let screen_bg = Color::from_u32(0x1d2021);
+
+        let make_effect = || {
+            parallel(&[
+                // continuous fade running for the full duration
+                fade_to(screen_bg, screen_bg, total_ms).with_color_space(ColorSpace::Rgb),
+                // delayed fade: 800ms sleep, then 700ms of actual work
+                delay(800, fade_to_fg(Color::Red, 700)),
+            ])
+        };
+
+        let init_buffer = || {
+            let mut buf = Buffer::empty(area);
+            for x in 0..area.width {
+                buf[(x, 0)].fg = Color::White;
+                buf[(x, 0)].bg = Color::Black;
+            }
+            buf
+        };
+
+        assert_reversal_symmetry(
+            "parallel([fade_to, delay(800, fade_to_fg)])",
+            make_effect,
+            area,
+            init_buffer,
+            total_ms,
+            // sample in the delay phase, around the transition, and in the active phase
+            &[200, 500, 800, 1000, 1200],
+        );
     }
 
     #[test]

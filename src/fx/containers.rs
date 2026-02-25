@@ -158,7 +158,9 @@ impl Shader for SequentialEffect {
     }
 
     fn reverse(&mut self) {
-        self.effects.iter_mut().for_each(Effect::reverse)
+        self.effects.iter_mut().for_each(Effect::reverse);
+        self.effects.reverse();
+        self.current = 0;
     }
 
     fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
