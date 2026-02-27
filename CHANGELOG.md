@@ -1,6 +1,8 @@
 # Changelog
 
 ## unreleased
+
+## tachyonfx-0.25.0 - 2026-02-27
 ### Added
 - `CellFilter::NonEmpty`: selects cells that contain a non-space symbol.
 - `Interpolation::SmoothStep` and `Interpolation::Spring`.
