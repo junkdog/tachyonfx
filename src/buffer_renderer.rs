@@ -7,7 +7,7 @@ use core::cell::RefCell;
 
 use ratatui_core::{
     buffer::Buffer,
-    layout::{Offset, Position, Positions, Rect},
+    layout::{Offset, Position, Rect},
     style::{Color, Modifier, Style},
 };
 
@@ -129,9 +129,12 @@ pub fn blit_buffer_region(src: &Buffer, src_region: Rect, dst: &mut Buffer, offs
     }
 
     // copy cells from clipped source region to destination buffer
-    for p in clip.normalized_positions() {
-        let src_cell = &src[clip.src_pos(p)];
-        dst[clip.dst_pos(p)] = src_cell.clone();
+    for y in 0..clip.height() {
+        for x in 0..clip.width() {
+            let base_pos = Position::new(x, y);
+            let src_cell = &src[clip.src_pos(base_pos)];
+            dst[clip.dst_pos(base_pos)] = src_cell.clone();
+        }
     }
 }
 
@@ -353,10 +356,6 @@ impl ClipRegion {
 
     fn height(&self) -> u16 {
         self.src.height
-    }
-
-    fn normalized_positions(&self) -> Positions {
-        Rect::new(0, 0, self.width(), self.height()).positions()
     }
 
     fn src_pos(&self, pos: Position) -> Position {
