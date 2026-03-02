@@ -295,6 +295,7 @@ let expr = r#"
 
 - `std` — Standard library support (enabled by default)
 - `dsl` — Effect DSL support (enabled by default)
+- `ratatui-next-cell` — Enable when using ratatui > 0.30, where `Cell::skip` was replaced by `Cell::diff_option`.
 - `sendable` — Make effects `Send` (but not `Sync`)
 - `std-duration` — Use `std::time::Duration` instead of 32-bit custom type
 - `wasm` — WebAssembly compatibility

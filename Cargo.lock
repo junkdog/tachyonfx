@@ -1106,7 +1106,6 @@ dependencies = [
  "colorsys",
  "compact_str",
  "criterion",
- "crossterm",
  "indoc",
  "micromath",
  "ratatui",

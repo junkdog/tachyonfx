@@ -52,15 +52,13 @@ ansi-to-tui = "8.0.1"
 colorsys = "0.7.0"
 regex = "1.11.1"
 indoc = "2.0.6"
-crossterm = { workspace = true }
 ratatui.workspace = true
 criterion = "0.8.2"
 
 [features]
-#default = ["std", "crossterm", "dsl"]
 default = ["std", "dsl"]
+ratatui-next-cell = []
 std = ["bon/std", "compact_str/std", "thiserror/std", "ratatui-core/std"]
-#crossterm = ["std", "ratatui-core/crossterm"]
 dsl = ["dep:anpa"]
 sendable = []
 std-duration = ["std"]

@@ -1,6 +1,11 @@
 # Changelog
 
 ## unreleased
+### Added
+- `ratatui-next-cell` feature flag: opt-in support for ratatui > 0.30, where `Cell::skip`
+  was replaced by `Cell::diff_option`. Enable this feature when using a newer ratatui.
+- `blit_buffer` and `blit_buffer_region` now skip cells marked as skippable, restoring
+  the behavior removed in 0.24.0.
 
 ## tachyonfx-0.25.0 - 2026-02-27
 ### Added

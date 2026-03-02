@@ -6,7 +6,7 @@ use alloc::{
 use core::cell::RefCell;
 
 use ratatui_core::{
-    buffer::Buffer,
+    buffer::{Buffer, Cell},
     layout::{Offset, Position, Rect},
     style::{Color, Modifier, Style},
 };
@@ -82,7 +82,8 @@ impl BufferRenderer for Buffer {
 ///
 /// # Behavior
 ///
-/// - All source cells are copied to the destination buffer.
+/// - Individual cells marked with `skip = true` in the source buffer are not copied,
+///   leaving the destination cells unchanged.
 /// - If the offset would place the entire source buffer outside the bounds of the
 ///   destination buffer, no copying occurs.
 /// - The function clips the source buffer as necessary to fit within the destination
@@ -112,7 +113,8 @@ pub fn blit_buffer(src: &Buffer, dst: &mut Buffer, offset: Offset) {
 /// # Behavior
 ///
 /// - The source region is automatically clipped to the bounds of the source buffer.
-/// - All source cells are copied to the destination buffer.
+/// - Individual cells marked with `skip = true` in the source buffer are not copied,
+///   leaving the destination cells unchanged.
 /// - If the offset would place the entire source buffer outside the bounds of the
 ///   destination buffer, no copying occurs.
 /// - The function clips the source region as necessary to fit within the destination
@@ -120,6 +122,15 @@ pub fn blit_buffer(src: &Buffer, dst: &mut Buffer, offset: Offset) {
 /// - Negative offsets are handled by adjusting the starting position in the source
 ///   buffer.
 pub fn blit_buffer_region(src: &Buffer, src_region: Rect, dst: &mut Buffer, offset: Offset) {
+    #[inline(always)]
+    fn should_copy_cell(cell: &Cell) -> bool {
+        #[cfg(not(feature = "ratatui-next-cell"))]
+        return !cell.skip;
+
+        #[cfg(feature = "ratatui-next-cell")]
+        return cell.diff_option != ratatui_core::buffer::CellDiffOption::Skip;
+    }
+
     // clip source region to source buffer bounds
     let src_region = src_region.intersection(src.area);
 
@@ -133,7 +144,10 @@ pub fn blit_buffer_region(src: &Buffer, src_region: Rect, dst: &mut Buffer, offs
         for x in 0..clip.width() {
             let base_pos = Position::new(x, y);
             let src_cell = &src[clip.src_pos(base_pos)];
-            dst[clip.dst_pos(base_pos)] = src_cell.clone();
+
+            if should_copy_cell(src_cell) {
+                dst[clip.dst_pos(base_pos)] = src_cell.clone();
+            }
         }
     }
 }
