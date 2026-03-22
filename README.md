@@ -2,6 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/tachyonfx.svg)](https://crates.io/crates/tachyonfx)
 [![Documentation](https://docs.rs/tachyonfx/badge.svg)](https://docs.rs/tachyonfx)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ratatui/tachyonfx)
 [![License](https://img.shields.io/crates/l/tachyonfx.svg)](https://github.com/ratatui/tachyonfx/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/crates/d/tachyonfx.svg)](https://crates.io/crates/tachyonfx)
 [![Deps.rs](https://deps.rs/repo/github/ratatui/tachyonfx/status.svg)](https://deps.rs/repo/github/ratatui/tachyonfx)
