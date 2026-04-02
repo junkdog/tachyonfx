@@ -331,7 +331,13 @@ impl<'dsl> Arguments<'dsl> {
     pub fn read_i32(&mut self) -> Result<i32, DslError> {
         match self.next("i32")? {
             Expr::Literal(Value::I32(i), _) => Ok(i),
-            Expr::Literal(Value::U32(i), _) => Ok(i as _),
+            Expr::Literal(Value::U32(i), span) => {
+                i32::try_from(i).map_err(|_| DslError::WrongArgumentType {
+                    location: span,
+                    expected: "i32",
+                    actual: compact_str::format_compact!("u32({})", i),
+                })
+            },
             Expr::Var { name, span, .. } => self.bound_var(name, span),
             e => self.expected_type_expr("i32", e),
         }
