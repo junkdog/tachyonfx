@@ -21,7 +21,7 @@ impl CheckerboardPattern {
     ///   cells (minimum 0.1)
     pub fn new(cell_size: u16, transition_width: f32) -> Self {
         Self {
-            cell_size,
+            cell_size: cell_size.max(1),
             transition_width: transition_width.max(0.1),
         }
     }
@@ -312,7 +312,7 @@ mod tests {
 
         // Test minimum clamping
         let pattern4 = CheckerboardPattern::new(0, 0.05); // Should be clamped
-        assert_eq!(pattern4.cell_size, 0); // cell_size doesn't get clamped in new()
+        assert_eq!(pattern4.cell_size, 1); // cell_size clamped to minimum
         assert_eq!(pattern4.transition_width, 0.1); // Should be clamped to minimum
 
         let pattern5 = CheckerboardPattern::with_cell_size(0); // Should be clamped
