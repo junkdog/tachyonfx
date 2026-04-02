@@ -2,6 +2,7 @@
 //! Uses std::time::Duration when std-duration feature is enabled,
 //! otherwise uses custom implementation
 
+/// Standard library duration type (used when `std-duration` feature is enabled).
 #[cfg(feature = "std-duration")]
 pub type Duration = core::time::Duration;
 

@@ -47,9 +47,9 @@ impl RefRect {
 
     /// Gets the current rectangle value.
     ///
-    /// # Returns
+    /// # Panics
     ///
-    /// A copy of the current `Rect` value
+    /// Panics if the internal lock is poisoned (sendable feature only).
     #[must_use]
     pub fn get(&self) -> Rect {
         #[cfg(feature = "sendable")]
@@ -66,9 +66,9 @@ impl RefRect {
     ///
     /// All clones of this `RefRect` will see the updated value.
     ///
-    /// # Arguments
+    /// # Panics
     ///
-    /// * `rect` - The new rectangle value to set
+    /// Panics if the internal lock is poisoned (sendable feature only).
     pub fn set(&self, rect: Rect) {
         #[cfg(feature = "sendable")]
         {
@@ -82,13 +82,9 @@ impl RefRect {
 
     /// Checks if the rectangle contains the specified position.
     ///
-    /// # Arguments
+    /// # Panics
     ///
-    /// * `position` - The position to check
-    ///
-    /// # Returns
-    ///
-    /// `true` if the position is within the rectangle bounds, `false` otherwise
+    /// Panics if the internal lock is poisoned (sendable feature only).
     #[must_use]
     pub fn contains(&self, position: Position) -> bool {
         #[cfg(feature = "sendable")]
@@ -103,9 +99,9 @@ impl RefRect {
 
     /// Returns the top y-coordinate of the rectangle.
     ///
-    /// # Returns
+    /// # Panics
     ///
-    /// The y-coordinate of the top edge
+    /// Panics if the internal lock is poisoned (sendable feature only).
     #[must_use]
     pub fn top(&self) -> u16 {
         #[cfg(feature = "sendable")]
@@ -120,11 +116,9 @@ impl RefRect {
 
     /// Returns the bottom y-coordinate of the rectangle (outside the rect).
     ///
-    /// This is equivalent to `y + height`.
+    /// # Panics
     ///
-    /// # Returns
-    ///
-    /// The y-coordinate of the bottom edge (exclusive)
+    /// Panics if the internal lock is poisoned (sendable feature only).
     #[must_use]
     pub fn bottom(&self) -> u16 {
         #[cfg(feature = "sendable")]
@@ -139,9 +133,9 @@ impl RefRect {
 
     /// Returns the left x-coordinate of the rectangle.
     ///
-    /// # Returns
+    /// # Panics
     ///
-    /// The x-coordinate of the left edge
+    /// Panics if the internal lock is poisoned (sendable feature only).
     #[must_use]
     pub fn left(&self) -> u16 {
         #[cfg(feature = "sendable")]
@@ -156,11 +150,9 @@ impl RefRect {
 
     /// Returns the right x-coordinate of the rectangle (outside the rect).
     ///
-    /// This is equivalent to `x + width`.
+    /// # Panics
     ///
-    /// # Returns
-    ///
-    /// The x-coordinate of the right edge (exclusive)
+    /// Panics if the internal lock is poisoned (sendable feature only).
     #[must_use]
     pub fn right(&self) -> u16 {
         #[cfg(feature = "sendable")]

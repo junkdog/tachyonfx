@@ -10,10 +10,13 @@ mod sendable {
     use alloc::sync::Arc;
     use std::sync::Mutex;
 
+    /// Marker trait for thread safety; requires `Send` when `sendable` is enabled.
     pub trait ThreadSafetyMarker: Send {}
     impl<T: Send> ThreadSafetyMarker for T {}
 
+    /// Thread-safe reference-counted smart pointer (`Arc<Mutex<T>>`).
     pub type RefCount<T> = Arc<Mutex<T>>;
+    /// Thread-safe shared pointer (`Arc<T>`).
     pub type Shared<T> = Arc<T>;
 
     pub fn ref_count<T>(value: T) -> RefCount<T> {
