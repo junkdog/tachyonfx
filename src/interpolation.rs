@@ -233,58 +233,95 @@ mod easing {
     }
 }
 
+/// Easing/interpolation functions for controlling animation curves.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Interpolation {
+    /// Back ease-in: slight overshoot backward before accelerating forward.
     BackIn,
+    /// Back ease-out: overshoots the target then settles back.
     BackOut,
+    /// Back ease-in-out: overshoots at both ends with smooth transition.
     BackInOut,
 
+    /// Bounce ease-in: simulates a ball bouncing at the start.
     BounceIn,
+    /// Bounce ease-out: simulates a ball bouncing to rest.
     BounceOut,
+    /// Bounce ease-in-out: bouncing at both start and end.
     BounceInOut,
 
+    /// Circular ease-in: slow start following a quarter-circle curve.
     CircIn,
+    /// Circular ease-out: fast start following a quarter-circle curve.
     CircOut,
+    /// Circular ease-in-out: quarter-circle acceleration and deceleration.
     CircInOut,
 
+    /// Cubic ease-in: slow start with cubic acceleration.
     CubicIn,
+    /// Cubic ease-out: fast start with cubic deceleration.
     CubicOut,
+    /// Cubic ease-in-out: cubic acceleration then deceleration.
     CubicInOut,
 
+    /// Elastic ease-in: spring-like oscillation at the start.
     ElasticIn,
+    /// Elastic ease-out: spring-like oscillation at the end.
     ElasticOut,
+    /// Elastic ease-in-out: spring-like oscillation at both ends.
     ElasticInOut,
 
+    /// Exponential ease-in: very slow start with exponential acceleration.
     ExpoIn,
+    /// Exponential ease-out: fast start with exponential deceleration.
     ExpoOut,
+    /// Exponential ease-in-out: exponential acceleration then deceleration.
     ExpoInOut,
 
+    /// Linear interpolation with constant rate of change.
     #[default]
     Linear,
 
+    /// Quadratic ease-in: slow start, accelerating.
     QuadIn,
+    /// Quadratic ease-out: fast start, decelerating.
     QuadOut,
+    /// Quadratic ease-in-out: quadratic acceleration then deceleration.
     QuadInOut,
 
+    /// Quartic ease-in: slow start with fourth-power acceleration.
     QuartIn,
+    /// Quartic ease-out: fast start with fourth-power deceleration.
     QuartOut,
+    /// Quartic ease-in-out: quartic acceleration then deceleration.
     QuartInOut,
 
+    /// Quintic ease-in: slow start with fifth-power acceleration.
     QuintIn,
+    /// Quintic ease-out: fast start with fifth-power deceleration.
     QuintOut,
+    /// Quintic ease-in-out: quintic acceleration then deceleration.
     QuintInOut,
 
+    /// Reverses the interpolation value (1.0 - t).
     Reverse,
 
+    /// Hermite smooth step: smooth acceleration and deceleration.
     SmoothStep,
+    /// Damped spring oscillation that settles at the target.
     Spring,
 
+    /// Sinusoidal ease-in: gentle start following a sine curve.
     SineIn,
+    /// Sinusoidal ease-out: gentle deceleration following a sine curve.
     SineOut,
+    /// Sinusoidal ease-in-out: sine-based acceleration and deceleration.
     SineInOut,
 }
 
 impl Interpolation {
+    /// Applies the easing function to the given alpha value (expected range 0.0..=1.0).
+    #[must_use]
     pub fn alpha(&self, a: f32) -> f32 {
         match self {
             Interpolation::BackIn => easing::back_in(a),
@@ -336,6 +373,8 @@ impl Interpolation {
         }
     }
 
+    /// Returns the complementary easing: swaps ease-in for ease-out and vice versa.
+    #[must_use]
     pub fn flipped(&self) -> Self {
         use Interpolation::*;
         match self {
@@ -391,8 +430,12 @@ impl Interpolation {
 
 /// A trait for interpolating between two values.
 pub trait Interpolatable {
+    /// Linearly interpolates between `self` and `target` by `alpha` (0.0..=1.0).
+    #[must_use]
     fn lerp(&self, target: &Self, alpha: f32) -> Self;
 
+    /// Interpolates between `self` and `target` using the given easing function.
+    #[must_use]
     fn tween(&self, target: &Self, alpha: f32, interpolation: Interpolation) -> Self
     where
         Self: Sized,
@@ -480,12 +523,15 @@ impl Interpolatable for Offset {
     }
 }
 
+/// Trait for converting colors to and from HSL representation.
 #[deprecated(
     since = "0.12.0",
     note = "Replaced by ColorSpace and associated functions"
 )]
 pub trait HslConvertable {
+    /// Creates a color from HSL float components (hue, saturation, lightness).
     fn from_hsl_f32(h: f32, s: f32, v: f32) -> Self;
+    /// Converts this color to HSL float components (hue, saturation, lightness).
     fn to_hsl_f32(&self) -> (f32, f32, f32);
 }
 

@@ -72,6 +72,7 @@ impl CompletionEngine {
     /// let completions = engine.completions("", 0);
     /// assert!(!completions.is_empty());
     /// ```
+    #[must_use]
     pub fn new() -> Self {
         let methods = all_methods();
         let constructors = all_constructors();
@@ -96,6 +97,7 @@ impl CompletionEngine {
     /// # Returns
     ///
     /// A vector of [`CompletionItem`]s sorted by relevance (best matches first).
+    #[must_use]
     pub fn completions(&self, source: &str, cursor_index: u32) -> Vec<CompletionItem> {
         use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 
@@ -127,6 +129,8 @@ impl CompletionEngine {
         vec![]
     }
 
+    /// Returns the source text up to the cursor position.
+    #[must_use]
     pub fn echo_source(&self, source: &str, cursor_index: u32) -> String {
         source[..cursor_index as usize].to_string()
     }

@@ -8,12 +8,14 @@ use core::f32::consts::TAU;
 
 /// Parabolic sine approximation. Input is in radians.
 #[inline(always)]
+#[must_use]
 pub fn parabolic_sin(t: f32) -> f32 {
     wave_sin(t * (1.0 / TAU))
 }
 
 /// Parabolic cosine approximation. Input is in radians.
 #[inline(always)]
+#[must_use]
 pub fn parabolic_cos(t: f32) -> f32 {
     wave_sin(t * (1.0 / TAU) + 0.25)
 }
@@ -27,6 +29,7 @@ pub fn parabolic_cos(t: f32) -> f32 {
 /// Output ranges from `-1.0` to `1.0`. The shape closely follows a true
 /// sine wave but with slightly flattened peaks.
 #[inline(always)]
+#[must_use]
 pub fn wave_sin(t: f32) -> f32 {
     let f = micromath::F32Ext::fract(t);
     let x = if f < 0.0 { f + 1.0 } else { f };
@@ -39,6 +42,7 @@ pub fn wave_sin(t: f32) -> f32 {
 /// Input `t` is in normalized cycles where `1.0` equals one full period.
 /// Values beyond `1.0` wrap naturally. Output ranges from `-1.0` to `1.0`.
 #[inline(always)]
+#[must_use]
 pub fn wave_cos(t: f32) -> f32 {
     wave_sin(t + 0.25)
 }

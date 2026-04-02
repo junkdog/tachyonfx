@@ -9,6 +9,7 @@ use crate::{
     pattern::{InstancedPattern, Pattern, PreparedPattern},
 };
 
+/// A radial pattern that emanates from a center point.
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct RadialPattern {
     center_x: f32,
@@ -19,6 +20,7 @@ pub struct RadialPattern {
 impl RadialPattern {
     /// Creates a radial pattern centered at the middle of the area with default
     /// transition width
+    #[must_use]
     pub fn center() -> Self {
         Self {
             center_x: 0.5,
@@ -29,6 +31,7 @@ impl RadialPattern {
 
     /// Creates a radial pattern with custom center point (0.0-1.0 normalized coordinates)
     /// and default transition width
+    #[must_use]
     pub fn new(center_x: f32, center_y: f32) -> Self {
         Self {
             center_x: center_x.clamp(0.0, 1.0),
@@ -44,6 +47,7 @@ impl RadialPattern {
     /// * `center_y` - Center Y position (0.0-1.0 normalized coordinates)
     /// * `transition_width` - Width of the gradient transition zone in terminal cells
     ///   (minimum 0.1)
+    #[must_use]
     pub fn with_transition(center: (f32, f32), transition_width: f32) -> Self {
         let (center_x, center_y) = center;
         Self {
@@ -58,12 +62,14 @@ impl RadialPattern {
     /// # Arguments
     /// * `width` - Width of the gradient transition zone in terminal cells (minimum 0.1).
     ///   Smaller values create sharper edges.
+    #[must_use]
     pub fn with_transition_width(mut self, width: f32) -> Self {
         self.transition_width = width.max(0.1);
         self
     }
 
     /// Sets a custom center point for the radial pattern
+    #[must_use]
     pub fn with_center(mut self, center: (f32, f32)) -> Self {
         let (center_x, center_y) = center;
         self.center_x = center_x.clamp(0.0, 1.0);

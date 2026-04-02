@@ -10,6 +10,7 @@ use crate::{
     Motion,
 };
 
+/// A directional sweep pattern with a gradient edge.
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct SweepPattern {
     direction: Motion,
@@ -17,18 +18,26 @@ pub struct SweepPattern {
 }
 
 impl SweepPattern {
+    /// Creates a left-to-right sweep with the given gradient span.
+    #[must_use]
     pub fn left_to_right(gradient_span: u16) -> Self {
         Self { direction: Motion::LeftToRight, gradient_span }
     }
 
+    /// Creates a right-to-left sweep with the given gradient span.
+    #[must_use]
     pub fn right_to_left(gradient_span: u16) -> Self {
         Self { direction: Motion::RightToLeft, gradient_span }
     }
 
+    /// Creates a top-to-bottom sweep with the given gradient span.
+    #[must_use]
     pub fn up_to_down(gradient_span: u16) -> Self {
         Self { direction: Motion::UpToDown, gradient_span }
     }
 
+    /// Creates a bottom-to-top sweep with the given gradient span.
+    #[must_use]
     pub fn down_to_up(gradient_span: u16) -> Self {
         Self { direction: Motion::DownToUp, gradient_span }
     }
@@ -38,6 +47,7 @@ impl SweepPattern {
     /// # Arguments
     /// * `direction` - The direction of the slide
     /// * `gradient_span` - The relative width of the gradient (0.1 = sharp, 0.5 = wide)
+    #[must_use]
     pub fn new(direction: Motion, gradient_span: u16) -> Self {
         Self { direction, gradient_span }
     }

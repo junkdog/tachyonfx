@@ -119,7 +119,7 @@ impl Shader for Explode {
             .as_ref()
             .map(FilterProcessor::validator);
 
-        for (pos, (dx, dy)) in cells.iter() {
+        for (pos, (dx, dy)) in cells {
             let pos = *pos;
             let (dx, dy) = (*dx, *dy);
 

@@ -438,6 +438,10 @@ where
 /// let bg_shift = [-20.0, -50.0, 15.0];
 /// fx::hsl_shift(Some(fg_shift), Some(bg_shift), timer);
 /// ```
+///
+/// # Panics
+///
+/// Panics if both `hsl_fg_change` and `hsl_bg_change` are `None`.
 pub fn hsl_shift<T: Into<EffectTimer>>(
     hsl_fg_change: Option<[f32; 3]>,
     hsl_bg_change: Option<[f32; 3]>,
@@ -487,6 +491,7 @@ pub fn hsl_shift_fg<T: Into<EffectTimer>>(hsl_fg_change: [f32; 3], timer: T) -> 
 /// <div data-tachyonfx-demo="term256_colors"
 ///      data-dsl="fx::term256_colors()"></div>
 #[deprecated(since = "0.16.0", note = "not considered widely useful")]
+#[must_use]
 pub fn term256_colors() -> Effect {
     Ansi256::default().into_effect()
 }
@@ -570,6 +575,7 @@ pub fn explode(force: f32, force_rng_factor: f32, timer: impl Into<EffectTimer>)
 /// let fade_effect = fx::dissolve(1000);
 /// fx::freeze_at(0.5, false, fade_effect);
 /// ```
+#[must_use]
 pub fn freeze_at(alpha: f32, set_raw_alpha: bool, effect: Effect) -> Effect {
     FreezeAt::new(alpha, set_raw_alpha, effect).into_effect()
 }
@@ -614,6 +620,7 @@ pub fn freeze_at(alpha: f32, set_raw_alpha: bool, effect: Effect) -> Effect {
 ///     .with_color_space(ColorSpace::Rgb);
 /// fx::remap_alpha(0.1, 0.5, fade_effect);
 /// ```
+#[must_use]
 pub fn remap_alpha(alpha_start: f32, alpha_end: f32, effect: Effect) -> Effect {
     let range = alpha_start.max(0.0)..alpha_end.min(1.0);
     RemapAlpha::new(range, effect).into_effect()
@@ -647,6 +654,7 @@ pub fn remap_alpha(alpha_start: f32, alpha_end: f32, effect: Effect) -> Effect {
 /// let fade = fx::fade_to_fg(Color::Red, EffectTimer::from_ms(1000, Interpolation::CubicOut));
 /// let repeated = fx::repeat(fade, RepeatMode::Times(3));
 /// ```
+#[must_use]
 pub fn repeat(effect: Effect, mode: RepeatMode) -> Effect {
     Repeat::new(effect, mode).into_effect()
 }
@@ -675,6 +683,7 @@ pub fn repeat(effect: Effect, mode: RepeatMode) -> Effect {
 /// let timer = (500, Interpolation::CircOut);
 /// fx::ping_pong(fx::coalesce(timer));
 /// ```
+#[must_use]
 pub fn ping_pong(effect: Effect) -> Effect {
     PingPong::new(effect).into_effect()
 }
@@ -703,6 +712,7 @@ pub fn ping_pong(effect: Effect) -> Effect {
 /// let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));
 /// let endless = fx::repeating(fade);
 /// ```
+#[must_use]
 pub fn repeating(effect: Effect) -> Effect {
     repeat(effect, RepeatMode::Forever)
 }
@@ -1390,6 +1400,7 @@ pub fn offscreen_buffer(fx: Effect, render_target: RefCount<Buffer>) -> Effect {
 /// );
 /// fx::sequence(&[dissolve_effect, fade_effect]);
 /// ```
+#[must_use]
 pub fn sequence(effects: &[Effect]) -> Effect {
     SequentialEffect::new(effects.into()).into_effect()
 }
@@ -1424,6 +1435,7 @@ pub fn sequence(effects: &[Effect]) -> Effect {
 ///     fx::hsl_shift_fg([240.0, 30.0, 15.0], timer).reversed(),
 /// ]);
 /// ```
+#[must_use]
 pub fn parallel(effects: &[Effect]) -> Effect {
     ParallelEffect::new(effects.into()).into_effect()
 }
@@ -2075,6 +2087,7 @@ pub fn prolong_end<T: Into<EffectTimer>>(duration: T, effect: Effect) -> Effect 
 ///
 /// fx::consume_tick();
 /// ```
+#[must_use]
 pub fn consume_tick() -> Effect {
     ConsumeTick::default().into_effect()
 }
@@ -2112,6 +2125,7 @@ pub fn consume_tick() -> Effect {
 ///     fx::fade_to_fg(Color::Blue, 1000),
 /// ]);
 /// ```
+#[must_use]
 pub fn run_once(effect: Effect) -> Effect {
     RunOnce::new(effect).into_effect()
 }
@@ -2148,6 +2162,7 @@ pub fn run_once(effect: Effect) -> Effect {
 /// let fade = fx::fade_to_fg(Color::Red, (1000, Interpolation::Linear));
 /// let permanent = fx::never_complete(fade);
 /// ```
+#[must_use]
 pub fn never_complete(effect: Effect) -> Effect {
     NeverComplete::new(effect).into_effect()
 }
@@ -2166,6 +2181,7 @@ pub fn never_complete(effect: Effect) -> Effect {
 ///
 /// fx::with_duration(Duration::from_millis(1000), fx::dissolve(2000));
 /// ```
+#[must_use]
 pub fn with_duration(duration: Duration, effect: Effect) -> Effect {
     effect.with_duration(duration)
 }
@@ -2184,6 +2200,7 @@ pub fn with_duration(duration: Duration, effect: Effect) -> Effect {
 ///
 /// fx::timed_never_complete(Duration::from_millis(1000), fx::dissolve(2000));
 /// ```
+#[must_use]
 pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
     TemporaryEffect::new(never_complete(effect), duration).into_effect()
 }
@@ -2221,6 +2238,7 @@ pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
 /// // Later, update the area and the effect will use the new area
 /// area_ref.set(Rect::new(0, 0, 30, 8));
 /// ```
+#[must_use]
 pub fn dynamic_area(area: RefRect, effect: Effect) -> Effect {
     dynamic_area::DynamicArea::new(area, effect).into_effect()
 }

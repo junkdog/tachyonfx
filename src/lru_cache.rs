@@ -64,6 +64,7 @@ where
     /// # Panics
     ///
     /// Panics if `N` is 0 or greater than 255.
+    #[must_use]
     pub fn new() -> Self
     where
         K: Default,

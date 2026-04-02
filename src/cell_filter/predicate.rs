@@ -74,6 +74,11 @@ impl<'a> CellPredicate<'a> {
     ///
     /// # Returns
     /// `true` if the cell meets all filter criteria, `false` otherwise
+    ///
+    /// # Panics
+    ///
+    /// Panics if a cell's symbol is empty when using the `Text` filter.
+    #[must_use]
     pub fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
         match &self.strategy {
             CellFilter::All => true,

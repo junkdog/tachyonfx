@@ -1,6 +1,8 @@
 use ratatui_core::style::Color;
 
+/// Converts a color to its RGB components.
 pub trait ToRgbComponents {
+    /// Returns the `(r, g, b)` components of this color.
     fn to_rgb(&self) -> (u8, u8, u8);
 }
 

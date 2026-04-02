@@ -23,6 +23,7 @@ pub enum ColorSpace {
 ///
 /// # Returns
 /// A ratatui Color in RGB format
+#[must_use]
 pub fn color_from_hsl(h: f32, s: f32, l: f32) -> Color {
     let (r, g, b) = hsl_to_rgb(h, s, l);
     Color::Rgb(r, g, b)
@@ -37,6 +38,7 @@ pub fn color_from_hsl(h: f32, s: f32, l: f32) -> Color {
 ///
 /// # Returns
 /// A ratatui Color in RGB format
+#[must_use]
 pub fn color_from_hsv(h: f32, s: f32, v: f32) -> Color {
     let (r, g, b) = hsv_to_rgb(h, s, v);
     Color::Rgb(r, g, b)
@@ -52,6 +54,7 @@ pub fn color_from_hsv(h: f32, s: f32, v: f32) -> Color {
 /// * hue is in degrees (0-360)
 /// * saturation is a percentage (0-100)
 /// * value is a percentage (0-100)
+#[must_use]
 pub fn color_to_hsv(color: &Color) -> (f32, f32, f32) {
     let (r, g, b) = color.to_rgb();
     rgb_to_hsv(r, g, b)
@@ -67,6 +70,7 @@ pub fn color_to_hsv(color: &Color) -> (f32, f32, f32) {
 /// * hue is in degrees (0-360)
 /// * saturation is a percentage (0-100)
 /// * lightness is a percentage (0-100)
+#[must_use]
 pub fn color_to_hsl(color: &Color) -> (f32, f32, f32) {
     let (r, g, b) = color.to_rgb();
     rgb_to_hsl(r, g, b)
@@ -122,6 +126,7 @@ fn lerp_toward_extreme(value: f32, amount: f32, max: f32) -> f32 {
 impl ColorSpace {
     /// Adjust saturation of a color.
     /// `factor`: 0.0 = fully desaturated, 1.0 = original, >1.0 = oversaturated.
+    #[must_use]
     pub fn saturate(&self, color: &Color, factor: f32) -> Color {
         match self {
             ColorSpace::Rgb => {
@@ -148,6 +153,7 @@ impl ColorSpace {
 
     /// Adjust lightness/brightness of a color.
     /// `amount`: -1.0 (black) to +1.0 (white). Lerps toward the extreme.
+    #[must_use]
     pub fn lighten(&self, color: &Color, amount: f32) -> Color {
         let amount = amount.clamp(-1.0, 1.0);
         match self {
@@ -173,6 +179,8 @@ impl ColorSpace {
         }
     }
 
+    /// Interpolates between two colors in this color space.
+    #[must_use]
     pub fn lerp(&self, from: &Color, to: &Color, alpha: f32) -> Color {
         use ColorSpace::*;
 
@@ -570,9 +578,9 @@ mod tests {
     #[test]
     fn test_round_trip_conversions() {
         // Test a range of RGB colors for round-trip conversion
-        for r in [0, 64, 128, 192, 255].iter() {
-            for g in [0, 64, 128, 192, 255].iter() {
-                for b in [0, 64, 128, 192, 255].iter() {
+        for r in &[0, 64, 128, 192, 255] {
+            for g in &[0, 64, 128, 192, 255] {
+                for b in &[0, 64, 128, 192, 255] {
                     let original = (*r, *g, *b);
 
                     // RGB -> HSL -> RGB

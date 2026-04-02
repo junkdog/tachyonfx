@@ -26,9 +26,11 @@ mod sendable {
     use alloc::rc::Rc;
     use core::cell::RefCell;
 
+    /// Marker trait for thread safety; no-op when `sendable` is disabled.
     pub trait ThreadSafetyMarker {}
     impl<T> ThreadSafetyMarker for T {}
 
+    /// Reference-counted smart pointer (`Rc<RefCell<T>>`).
     pub type RefCount<T> = Rc<RefCell<T>>;
     pub type Shared<T> = Rc<T>;
 

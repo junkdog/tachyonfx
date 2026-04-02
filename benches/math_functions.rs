@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 // benches/math_functions.rs
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use micromath::F32Ext;

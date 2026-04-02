@@ -32,6 +32,7 @@ pub trait BufferRenderer {
     /// * `buf` - The target buffer to render onto.
     fn render_buffer(&self, offset: Offset, buf: &mut Buffer);
 
+    /// Renders the specified region of this buffer onto the provided buffer.
     fn render_buffer_region(&self, src_region: Rect, offset: Offset, buf: &mut Buffer);
 }
 
@@ -173,6 +174,7 @@ pub fn blit_buffer_region(src: &Buffer, src_region: Rect, dst: &mut Buffer, offs
     since = "0.16.0",
     note = "use `buffer_to_ansi_string(buffer, false)` instead"
 )]
+#[must_use]
 pub fn render_as_ansi_string(buffer: &Buffer) -> String {
     buffer_to_ansi_string(buffer, false)
 }
@@ -207,6 +209,11 @@ pub fn render_as_ansi_string(buffer: &Buffer) -> String {
 /// - Includes every cell in the buffer grid, regardless of character width
 /// - Useful for output formats that expect the full buffer grid to be printed
 /// - Example: "🦀test" might render as "🦀 test" (with spaces from the buffer grid)
+///
+/// # Panics
+///
+/// Panics if the buffer contains positions outside its own area.
+#[must_use]
 pub fn buffer_to_ansi_string(buffer: &Buffer, include_all_cells: bool) -> String {
     use unicode_width::UnicodeWidthStr;
 

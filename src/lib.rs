@@ -40,15 +40,19 @@ mod interpolation;
 mod lru_cache;
 mod math;
 mod motion;
+/// Spatial patterns for controlling effect progression.
 pub mod pattern;
 mod rect_ext;
 mod ref_rect;
 mod render_effect;
 mod shader;
 mod simple_rng;
+/// Wave signal generation utilities.
 pub mod wave;
 
+/// Built-in effect constructors.
 pub mod fx;
+/// Helper widgets for visualizing effects.
 pub mod widget;
 
 #[doc = include_str!("../docs/dsl.md")]

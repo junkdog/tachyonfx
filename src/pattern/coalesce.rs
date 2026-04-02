@@ -28,6 +28,7 @@ impl CoalescePattern {
     /// The coalesce pattern creates a randomized reveal effect where each cell
     /// becomes active at a random threshold, creating a scattered, organic-looking
     /// transition as the global alpha increases.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }

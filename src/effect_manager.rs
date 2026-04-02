@@ -109,6 +109,7 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     ///     })?;
     /// }
     /// ```
+    #[must_use]
     pub fn is_running(&self) -> bool {
         !self.effects.is_empty()
     }

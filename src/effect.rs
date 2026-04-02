@@ -48,6 +48,7 @@ impl Effect {
     /// fx::dissolve(EffectTimer::from_ms(120, Interpolation::CircInOut))
     ///     .with_area(Rect::new(0, 0, 10, 10));
     /// ```
+    #[must_use]
     pub fn with_area(mut self, area: Rect) -> Self {
         self.shader.set_area(area);
         self
@@ -75,12 +76,15 @@ impl Effect {
     /// let shader = fx::fade_to_fg(color, (300, Interpolation::SineIn))
     ///     .with_filter(CellFilter::Text);
     /// ```
+    #[must_use]
     pub fn with_filter(mut self, mode: CellFilter) -> Self {
         self.filter(mode);
         self
     }
 
     #[deprecated(since = "0.11.0", note = "Use `with_filter` instead")]
+    #[doc(hidden)]
+    #[must_use]
     pub fn with_cell_selection(&self, mode: CellFilter) -> Self {
         self.clone().with_filter(mode)
     }
@@ -90,6 +94,7 @@ impl Effect {
     ///
     /// # Returns
     /// * The `ColorSpace` currently in use by this effect.
+    #[must_use]
     pub fn color_space(&self) -> ColorSpace {
         self.shader.color_space()
     }
@@ -139,6 +144,7 @@ impl Effect {
     /// let effect = fx::fade_to_fg(Color::Red, (300, Interpolation::SineIn))
     ///     .with_color_space(ColorSpace::Rgb);
     /// ```
+    #[must_use]
     pub fn with_color_space(mut self, color_space: ColorSpace) -> Self {
         self.set_color_space(color_space);
         self
@@ -178,6 +184,7 @@ impl Effect {
     /// let effect2 = fx::dissolve(1000).with_rng(SimpleRng::new(42));
     /// // effect1 and effect2 will dissolve cells in the exact same pattern
     /// ```
+    #[must_use]
     pub fn with_rng(mut self, rng: SimpleRng) -> Self {
         self.shader.set_rng(rng);
         self
@@ -187,6 +194,7 @@ impl Effect {
     ///
     /// # Returns
     /// * A new `Effect` instance with the shader's reverse flag toggled.
+    #[must_use]
     pub fn reversed(mut self) -> Self {
         self.reverse();
         self
@@ -204,6 +212,7 @@ impl Effect {
     ///
     /// # Returns
     /// * The name of the shader as a static string.
+    #[must_use]
     pub fn name(&self) -> &'static str {
         self.shader.name()
     }
@@ -252,6 +261,7 @@ impl Effect {
     ///
     /// # Returns
     /// * `true` if the effect is done, `false` otherwise.
+    #[must_use]
     pub fn done(&self) -> bool {
         self.shader.done()
     }
@@ -260,6 +270,7 @@ impl Effect {
     ///
     /// # Returns
     /// * `true` if the effect is running, `false` otherwise.
+    #[must_use]
     pub fn running(&self) -> bool {
         self.shader.running()
     }
@@ -268,6 +279,7 @@ impl Effect {
     ///
     /// # Returns
     /// * An `Option` containing the rectangular area if set, or `None` if not set.
+    #[must_use]
     pub fn area(&self) -> Option<Rect> {
         self.shader.area()
     }
@@ -323,6 +335,7 @@ impl Effect {
     ///   (e.g., a ping-pong effect might double the duration).
     /// - The returned timer should reflect the total expected duration of the effect,
     ///   which may differ from the current remaining time.
+    #[must_use]
     pub fn timer(&self) -> Option<EffectTimer> {
         self.shader.timer()
     }
@@ -350,6 +363,7 @@ impl Effect {
     ///
     /// # Returns
     /// * An `Option` containing the effect's `CellFilter`, or `None` if not applicable.
+    #[must_use]
     pub fn cell_filter(&self) -> Option<&CellFilter> {
         self.shader.cell_filter()
     }
@@ -385,6 +399,7 @@ impl Effect {
     /// let effect = fx::dissolve(1000)
     ///     .with_pattern(pattern::RadialPattern::center());
     /// ```
+    #[must_use]
     pub fn with_pattern<P>(mut self, pattern: P) -> Self
     where
         P: Into<AnyPattern>,
@@ -403,6 +418,7 @@ impl Effect {
     /// release.
     #[deprecated(since = "0.23.0", note = "EffectSpan is being removed")]
     #[allow(deprecated)]
+    #[must_use]
     pub fn as_effect_span(&self, offset: Duration) -> EffectSpan
     where
         Self: Sized + Clone,

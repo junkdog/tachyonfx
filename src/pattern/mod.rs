@@ -101,6 +101,7 @@ impl TransitionProgress {
     /// * `global_alpha` - Global animation progress (0.0-1.0)
     /// * `cell_threshold` - The discrete threshold for this cell (e.g., 0.0 for white,
     ///   0.5 for black)
+    #[must_use]
     pub fn map_threshold(&self, global_alpha: f32, cell_threshold: f32) -> f32 {
         let transition_width = self.transition_width;
 

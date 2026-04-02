@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 // benches/parabolic_sin.rs
 use core::f32::consts::TAU;
 

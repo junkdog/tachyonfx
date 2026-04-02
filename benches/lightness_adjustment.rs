@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
 // ── HSL round-trip (current approach) ────────────────────────────────

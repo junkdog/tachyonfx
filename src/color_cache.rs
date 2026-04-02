@@ -82,6 +82,7 @@ where
     Context: Debug + PartialEq + Copy + Eq + Default,
 {
     /// Creates a new `ColorCache` with empty foreground and background caches.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             fg_cache: LruCache::new(),

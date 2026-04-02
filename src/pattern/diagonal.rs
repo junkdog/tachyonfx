@@ -9,6 +9,7 @@ use crate::{
     pattern::{InstancedPattern, Pattern, PreparedPattern},
 };
 
+/// A diagonal sweep pattern across the area.
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct DiagonalPattern {
     direction: DiagonalDirection,
@@ -29,6 +30,8 @@ pub enum DiagonalDirection {
 }
 
 impl DiagonalPattern {
+    /// Creates a diagonal pattern sweeping from top-left to bottom-right.
+    #[must_use]
     pub fn top_left_to_bottom_right() -> Self {
         Self {
             direction: DiagonalDirection::TopLeftToBottomRight,
@@ -36,6 +39,8 @@ impl DiagonalPattern {
         }
     }
 
+    /// Creates a diagonal pattern sweeping from top-right to bottom-left.
+    #[must_use]
     pub fn top_right_to_bottom_left() -> Self {
         Self {
             direction: DiagonalDirection::TopRightToBottomLeft,
@@ -43,6 +48,8 @@ impl DiagonalPattern {
         }
     }
 
+    /// Creates a diagonal pattern sweeping from bottom-left to top-right.
+    #[must_use]
     pub fn bottom_left_to_top_right() -> Self {
         Self {
             direction: DiagonalDirection::BottomLeftToTopRight,
@@ -50,6 +57,8 @@ impl DiagonalPattern {
         }
     }
 
+    /// Creates a diagonal pattern sweeping from bottom-right to top-left.
+    #[must_use]
     pub fn bottom_right_to_top_left() -> Self {
         Self {
             direction: DiagonalDirection::BottomRightToTopLeft,
@@ -63,6 +72,7 @@ impl DiagonalPattern {
     /// * `direction` - Direction of the diagonal sweep
     /// * `transition_width` - Width of gradient transition zone in terminal cells
     ///   (minimum 0.1)
+    #[must_use]
     pub fn new(direction: DiagonalDirection, transition_width: f32) -> Self {
         Self {
             direction,
@@ -74,6 +84,7 @@ impl DiagonalPattern {
     ///
     /// # Arguments
     /// * `width` - Width of gradient transition zone in terminal cells (minimum 0.1)
+    #[must_use]
     pub fn with_transition_width(mut self, width: f32) -> Self {
         self.transition_width = width.max(0.1);
         self

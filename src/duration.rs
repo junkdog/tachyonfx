@@ -5,6 +5,7 @@
 #[cfg(feature = "std-duration")]
 pub type Duration = core::time::Duration;
 
+/// Millisecond-resolution duration type (custom lightweight implementation).
 #[cfg(not(feature = "std-duration"))]
 pub type Duration = duration::Duration;
 

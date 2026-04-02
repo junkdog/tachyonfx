@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 // benches/cell_filter.rs
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use ratatui::{

@@ -15,6 +15,7 @@ fn fract_positive(v: f32) -> f32 {
     }
 }
 
+/// Evaluates a wave signal at a given position and time.
 pub trait SignalSampler {
     /// Evaluates the signal at position (`x`, `y`) and time `t`, returning a value in
     /// −1..1.
@@ -107,71 +108,86 @@ impl Modulator {
     /// - `kx`: spatial frequency along x (columns); higher = more oscillations per column
     /// - `ky`: spatial frequency along y (rows); higher = more oscillations per row
     /// - `kt`: temporal frequency; higher = faster animation over the effect's lifetime
+    #[must_use]
     pub fn sin(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Sin, kx, ky, kt)
     }
 
     /// Creates a cosine modulator. See [`Modulator::sin`] for parameter docs.
+    #[must_use]
     pub fn cos(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Cos, kx, ky, kt)
     }
 
     /// Creates a triangle-wave modulator. See [`Modulator::sin`] for parameter docs.
+    #[must_use]
     pub fn triangle(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Triangle, kx, ky, kt)
     }
 
     /// Creates a sawtooth-wave modulator. See [`Modulator::sin`] for parameter docs.
+    #[must_use]
     pub fn sawtooth(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Sawtooth, kx, ky, kt)
     }
 
     /// Sets the phase offset (in radians).
+    #[must_use]
     pub fn phase(self, phase: f32) -> Self {
         Self { phase, ..self }
     }
 
     /// Sets the modulation intensity (amplitude scaling of the modulator signal).
+    #[must_use]
     pub fn intensity(self, intensity: f32) -> Self {
         Self { intensity, ..self }
     }
 
     /// Configures this modulator to affect the parent oscillator's phase (FM).
+    #[must_use]
     pub fn on_phase(self) -> Self {
         Self { target: ModTarget::Phase, ..self }
     }
 
     /// Configures this modulator to affect the parent oscillator's amplitude (AM).
+    #[must_use]
     pub fn on_amplitude(self) -> Self {
         Self { target: ModTarget::Amplitude, ..self }
     }
 
     /// Returns the name of the underlying waveform function.
+    #[must_use]
     pub fn func_name(&self) -> &'static str {
         self.func.name()
     }
 
     /// Spatial frequency along x (columns).
+    #[must_use]
     pub fn kx(&self) -> f32 {
         self.kx
     }
     /// Spatial frequency along y (rows).
+    #[must_use]
     pub fn ky(&self) -> f32 {
         self.ky
     }
     /// Temporal frequency.
+    #[must_use]
     pub fn kt(&self) -> f32 {
         self.kt
     }
     /// Phase offset in radians.
+    #[must_use]
     pub fn phase_offset(&self) -> f32 {
         self.phase
     }
     /// Modulation intensity (amplitude scaling).
+    #[must_use]
     pub fn intensity_value(&self) -> f32 {
         self.intensity
     }
     /// Whether this modulator targets phase or amplitude.
+    #[must_use]
     pub fn target(&self) -> ModTarget {
         self.target
     }
@@ -202,57 +218,69 @@ impl Oscillator {
     /// - `kx`: spatial frequency along x (columns); higher = more oscillations per column
     /// - `ky`: spatial frequency along y (rows); higher = more oscillations per row
     /// - `kt`: temporal frequency; higher = faster animation over the effect's lifetime
+    #[must_use]
     pub fn sin(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Sin, kx, ky, kt)
     }
 
     /// Creates a cosine oscillator. See [`Oscillator::sin`] for parameter docs.
+    #[must_use]
     pub fn cos(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Cos, kx, ky, kt)
     }
 
     /// Creates a triangle-wave oscillator. See [`Oscillator::sin`] for parameter docs.
+    #[must_use]
     pub fn triangle(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Triangle, kx, ky, kt)
     }
 
     /// Creates a sawtooth-wave oscillator. See [`Oscillator::sin`] for parameter docs.
+    #[must_use]
     pub fn sawtooth(kx: f32, ky: f32, kt: f32) -> Self {
         Self::new(WaveFn::Sawtooth, kx, ky, kt)
     }
 
     /// Sets the phase offset (in radians).
+    #[must_use]
     pub fn phase(self, phase: f32) -> Self {
         Self { phase, ..self }
     }
 
     /// Attaches a [`Modulator`] that modulates this oscillator's phase or amplitude.
+    #[must_use]
     pub fn modulated_by(self, modulator: Modulator) -> Self {
         Self { modulator: Some(modulator), ..self }
     }
 
     /// Returns the name of the underlying waveform function.
+    #[must_use]
     pub fn func_name(&self) -> &'static str {
         self.func.name()
     }
 
     /// Spatial frequency along x (columns).
+    #[must_use]
     pub fn kx(&self) -> f32 {
         self.kx
     }
     /// Spatial frequency along y (rows).
+    #[must_use]
     pub fn ky(&self) -> f32 {
         self.ky
     }
     /// Temporal frequency.
+    #[must_use]
     pub fn kt(&self) -> f32 {
         self.kt
     }
     /// Phase offset in radians.
+    #[must_use]
     pub fn phase_offset(&self) -> f32 {
         self.phase
     }
     /// Returns the attached modulator, if any.
+    #[must_use]
     pub fn modulator(&self) -> Option<&Modulator> {
         self.modulator.as_ref()
     }
@@ -293,6 +321,7 @@ pub struct WaveLayer {
 impl WaveLayer {
     /// Creates a layer from a single oscillator with default amplitude (1.0) and no
     /// post-transform.
+    #[must_use]
     pub fn new(a: Oscillator) -> Self {
         Self {
             a,
@@ -303,36 +332,43 @@ impl WaveLayer {
     }
 
     /// Combines a second oscillator by multiplying the two signals.
+    #[must_use]
     pub fn multiply(self, b: Oscillator) -> Self {
         Self { b: Some((Combinator::Multiply, b)), ..self }
     }
 
     /// Combines a second oscillator by averaging the two signals.
+    #[must_use]
     pub fn average(self, b: Oscillator) -> Self {
         Self { b: Some((Combinator::Average, b)), ..self }
     }
 
     /// Combines a second oscillator by taking the element-wise maximum.
+    #[must_use]
     pub fn max(self, b: Oscillator) -> Self {
         Self { b: Some((Combinator::Max, b)), ..self }
     }
 
     /// Sets the amplitude (output scaling factor) for this layer.
+    #[must_use]
     pub fn amplitude(self, amplitude: f32) -> Self {
         Self { amplitude, ..self }
     }
 
     /// Applies a power post-transform, raising the combined signal to `n`.
+    #[must_use]
     pub fn power(self, n: i32) -> Self {
         Self { post_transform: PostTransform::Power(n), ..self }
     }
 
     /// Applies an absolute-value post-transform, mirroring negative values.
+    #[must_use]
     pub fn abs(self) -> Self {
         Self { post_transform: PostTransform::Abs, ..self }
     }
 
     /// Returns the amplitude scaling factor.
+    #[must_use]
     pub fn amplitude_value(&self) -> f32 {
         self.amplitude
     }

@@ -6,6 +6,7 @@ use ratatui_core::layout::{Position, Rect};
 use crate::dsl::{dsl_format::fmt_f32, DslFormat};
 use crate::pattern::{InstancedPattern, Pattern, PreparedPattern, TransitionProgress};
 
+/// An alternating checkerboard pattern.
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct CheckerboardPattern {
     cell_size: u16,
@@ -19,6 +20,7 @@ impl CheckerboardPattern {
     /// * `cell_size` - Size of each checkerboard cell in terminal cells (minimum 1)
     /// * `transition_width` - Width of gradient transition between cells in terminal
     ///   cells (minimum 0.1)
+    #[must_use]
     pub fn new(cell_size: u16, transition_width: f32) -> Self {
         Self {
             cell_size: cell_size.max(1),
@@ -31,6 +33,7 @@ impl CheckerboardPattern {
     /// # Arguments
     /// * `cell_size` - Size of each checkerboard cell in terminal cells (automatically
     ///   clamped to minimum 1)
+    #[must_use]
     pub fn with_cell_size(cell_size: u16) -> Self {
         Self { cell_size: cell_size.max(1), transition_width: 2.0 }
     }
@@ -39,6 +42,7 @@ impl CheckerboardPattern {
     ///
     /// # Arguments
     /// * `width` - Width of gradient transition zone in terminal cells (minimum 0.1)
+    #[must_use]
     pub fn with_transition_width(mut self, width: f32) -> Self {
         self.transition_width = width.max(0.1);
         self

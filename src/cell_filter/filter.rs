@@ -377,6 +377,7 @@ impl CellFilter {
     }
 
     /// Wraps this filter in a `Not` variant, effectively negating its selection criteria.
+    #[must_use]
     pub fn negated(self) -> Self {
         CellFilter::Not(Box::new(self))
     }
@@ -399,6 +400,7 @@ impl CellFilter {
     /// - Color filters when colors change during the effect
     /// - Text filters when characters change during the effect
     /// - Custom predicates that depend on mutable cell properties
+    #[must_use]
     pub fn into_static(self) -> Self {
         CellFilter::Static(Box::new(self))
     }
@@ -411,6 +413,7 @@ impl CellFilter {
     /// # Returns
     /// A String representing the filter in a readable format
     #[allow(clippy::inherent_to_string)]
+    #[must_use]
     pub fn to_string(&self) -> String {
         fn to_hex(c: Color) -> String {
             let (r, g, b) = c.to_rgb();
@@ -477,6 +480,7 @@ impl CellFilter {
     /// let pos = Position::new(5, 5);
     /// let matches = predicate.is_valid(pos, &cell);
     /// ```
+    #[must_use]
     pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
         CellPredicate::new(area, self)
     }
@@ -493,6 +497,7 @@ impl CellFilter {
     ///
     /// A [`CellPredicate`] that can evaluate individual cells against this filter
     #[deprecated(since = "0.17.0", note = "Use `predicate()` instead")]
+    #[must_use]
     pub fn selector(&self, area: Rect) -> CellPredicate<'_> {
         self.predicate(area)
     }

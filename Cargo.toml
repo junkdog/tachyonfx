@@ -106,22 +106,43 @@ harness = false
 std_instead_of_core = "warn"
 std_instead_of_alloc = "warn"
 alloc_instead_of_core = "warn"
-# performance
+# performance / allocation
 redundant_clone = "warn"
 cloned_instead_of_copied = "warn"
 trivially_copy_pass_by_ref = "warn"
 needless_pass_by_value = "warn"
 implicit_clone = "warn"
 inefficient_to_string = "warn"
+collection_is_never_read = "warn"
+large_types_passed_by_value = "warn"
+linkedlist = "warn"
+rc_buffer = "warn"
+redundant_allocation = "warn"
+vec_init_then_push = "warn"
 # dead code / unused
 unused_self = "warn"
 needless_pass_by_ref_mut = "warn"
-# clarity
+# api surface
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+must_use_candidate = "warn"
+return_self_not_must_use = "warn"
+# general quality
 redundant_closure_for_method_calls = "warn"
 semicolon_if_nothing_returned = "warn"
 uninlined_format_args = "warn"
 map_unwrap_or = "warn"
 flat_map_option = "warn"
+explicit_into_iter_loop = "warn"
+explicit_iter_loop = "warn"
+from_iter_instead_of_collect = "warn"
+manual_let_else = "warn"
+string_add_assign = "warn"
+large_enum_variant = "warn"
+manual_string_new = "warn"
+needless_collect = "warn"
+needless_return = "warn"
+type_complexity = "warn"
 
 [profile.bench]
 lto = true
@@ -129,6 +150,10 @@ codegen-units = 1
 debug = false
 
 [lints.rust]
+dead_code = "warn"
+missing_docs = "warn"
+unused_variables = "deny"
+unused_imports = "deny"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(not_disabled_due_to_version_conflict)'] }
 
 [package.metadata.docs.rs]

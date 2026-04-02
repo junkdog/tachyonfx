@@ -2,7 +2,9 @@ use ratatui_core::{buffer::Buffer, layout::Rect, terminal::Frame};
 
 use crate::{Duration, Effect};
 
+/// Trait for rendering an effect into a buffer or frame.
 pub trait EffectRenderer<T> {
+    /// Processes the effect for `last_tick` duration and renders it into `area`.
     fn render_effect(&mut self, effect: &mut T, area: Rect, last_tick: Duration);
 }
 

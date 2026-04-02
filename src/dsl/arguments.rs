@@ -84,6 +84,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Duration`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid duration.
     pub fn duration(&mut self) -> Result<Duration, DslError> {
         match self.next("duration")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
@@ -105,6 +109,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an [`EffectTimer`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid timer.
     pub fn effect_timer(&mut self) -> Result<EffectTimer, DslError> {
         match self.next("timer")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
@@ -134,7 +142,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    /// Consumes the next argument and returns a [`Color`].
+    /// Consumes the next argument and returns a [`CellFilter`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid cell filter.
     pub fn cell_filter(&mut self) -> Result<CellFilter, DslError> {
         match self.next("cell_filter")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
@@ -172,6 +184,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns a [`ColorSpace`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid color space.
     pub fn color_space(&mut self) -> Result<ColorSpace, DslError> {
         match self.next("color_space")? {
             Expr::Literal(Value::ColorSpace(c), _) => Ok(c),
@@ -181,6 +198,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `T`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a bound variable.
     pub fn any_var<T: Clone + 'static>(&mut self) -> Result<T, DslError> {
         match self.next("var")? {
             Expr::Var { name, span, .. } => self.vars.bound_global(name, span),
@@ -189,6 +210,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Constraint`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid constraint.
     pub fn constraint(&mut self) -> Result<Constraint, DslError> {
         use Constraint::*;
 
@@ -217,6 +242,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Direction`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid direction.
     pub fn direction(&mut self) -> Result<Direction, DslError> {
         match self.next("direction")? {
             Expr::Literal(Value::Direction(d), _) => Ok(d),
@@ -226,6 +255,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Flex`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid flex value.
     pub fn flex(&mut self) -> Result<ratatui_core::layout::Flex, DslError> {
         match self.next("flex")? {
             Expr::Literal(Value::Flex(f), _) => Ok(f),
@@ -235,6 +268,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Layout`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid layout.
     pub fn layout(&mut self) -> Result<Layout, DslError> {
         match self.next("layout")? {
             Expr::FnCall { call, self_fns } => {
@@ -281,7 +318,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    /// Consumes the next argument and returns a [`Interpolation`].
+    /// Consumes the next argument and returns an [`Interpolation`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid interpolation.
     pub fn interpolation(&mut self) -> Result<Interpolation, DslError> {
         match self.next("interpolation")? {
             Expr::Literal(Value::Interpolation(i), _) => Ok(i),
@@ -291,6 +332,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `bool`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a boolean.
     pub fn read_bool(&mut self) -> Result<bool, DslError> {
         match self.next("bool")? {
             Expr::Literal(Value::Bool(v), _) => Ok(v),
@@ -300,6 +345,15 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `u8`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing, not a `u32`, or overflows
+    /// `u8`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `peek()` returns `None` after `read_u32` succeeds (should not happen).
     pub fn read_u8(&mut self) -> Result<u8, DslError> {
         let span = self.peek().map(Expr::span);
         u8::try_from(self.read_u32()?).map_err(|_| DslError::CastOverflow {
@@ -310,6 +364,15 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `u16`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing, not a `u32`, or overflows
+    /// `u16`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `peek()` returns `None` after `read_u32` succeeds (should not happen).
     pub fn read_u16(&mut self) -> Result<u16, DslError> {
         let span = self.peek().map(Expr::span);
         u16::try_from(self.read_u32()?).map_err(|_| DslError::CastOverflow {
@@ -320,6 +383,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `u32`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a `u32`.
     pub fn read_u32(&mut self) -> Result<u32, DslError> {
         match self.next("u32")? {
             Expr::Literal(Value::U32(u), _) => Ok(u),
@@ -328,6 +395,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns an `i32`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not convertible to `i32`.
     pub fn read_i32(&mut self) -> Result<i32, DslError> {
         match self.next("i32")? {
             Expr::Literal(Value::I32(i), _) => Ok(i),
@@ -343,7 +415,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    /// Consumes the next argument and returns a `f32`.
+    /// Consumes the next argument and returns a `f32`, accepting `u32` literals as well.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not numeric.
     pub fn read_into_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
             Expr::Literal(Value::F32(f), _) => Ok(f),
@@ -354,6 +430,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `f32`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not an `f32`.
     pub fn read_f32(&mut self) -> Result<f32, DslError> {
         match self.next("f32")? {
             Expr::Literal(Value::F32(f), _) => Ok(f),
@@ -363,6 +443,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`CompactString`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a string.
     pub fn string(&mut self) -> Result<CompactString, DslError> {
         match self.next("string")? {
             Expr::Literal(Value::String(s), _) => Ok(s),
@@ -372,6 +456,11 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an `Option<T>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid option
+    /// expression.
     #[allow(private_bounds)]
     pub fn option<T: Clone + FromDslExpr + 'static>(
         &mut self,
@@ -389,6 +478,11 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an [`Effect`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid effect
+    /// expression.
     pub fn effect(&mut self) -> Result<Effect, DslError> {
         match self.next("effect")? {
             Expr::FnCall { call, self_fns } => {
@@ -426,6 +520,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Color`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid color.
     pub fn color(&mut self) -> Result<Color, DslError> {
         match self.next("color")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
@@ -451,6 +549,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Modifier`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid modifier.
     pub fn modifier(&mut self) -> Result<Modifier, DslError> {
         match self.next("modifier")? {
             Expr::Literal(Value::Modifier(m), _) => Ok(m),
@@ -460,6 +562,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Style`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid style.
     pub fn style(&mut self) -> Result<Style, DslError> {
         match self.next("style")? {
             Expr::FnCall { call, self_fns } => {
@@ -479,6 +585,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Motion`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid motion.
     pub fn motion(&mut self) -> Result<Motion, DslError> {
         match self.next("motion")? {
             Expr::Literal(Value::Motion(m), _) => Ok(m),
@@ -488,6 +598,11 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an [`ExpandDirection`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid expand
+    /// direction.
     pub fn expand_direction(&mut self) -> Result<ExpandDirection, DslError> {
         match self.next("expand_direction")? {
             Expr::Literal(Value::ExpandDirection(d), _) => Ok(d),
@@ -496,6 +611,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns an [`EvolveSymbolSet`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid symbol set.
     pub fn evolve_symbol_set(&mut self) -> Result<EvolveSymbolSet, DslError> {
         match self.next("evolve_symbol_set")? {
             Expr::Literal(Value::EvolveSymbolSet(s), _) => Ok(s),
@@ -505,6 +625,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`RepeatMode`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid repeat mode.
     pub fn repeat_mode(&mut self) -> Result<RepeatMode, DslError> {
         match self.next("repeat_mode")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
@@ -523,6 +647,11 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`SimpleRng`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid RNG
+    /// constructor.
     pub fn simple_rng(&mut self) -> Result<SimpleRng, DslError> {
         match self.next("simple_rng")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } => Ok(match name.as_str() {
@@ -540,6 +669,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns an [`AnyPattern`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid pattern.
     pub fn pattern(&mut self) -> Result<AnyPattern, DslError> {
         use crate::pattern::*;
         match self.next("pattern")? {
@@ -727,6 +861,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Modulator`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid modulator.
     pub fn modulator(&mut self) -> Result<Modulator, DslError> {
         match self.next("modulator")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
@@ -759,6 +897,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns an [`Oscillator`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid oscillator.
     pub fn oscillator(&mut self) -> Result<Oscillator, DslError> {
         match self.next("oscillator")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
@@ -799,6 +941,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`WaveLayer`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid wave layer.
     pub fn wave_layer(&mut self) -> Result<WaveLayer, DslError> {
         match self.next("wave_layer")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns } => {
@@ -819,6 +965,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Margin`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid margin.
     pub fn margin(&mut self) -> Result<Margin, DslError> {
         match self.next("margin")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } if name == "Margin::new" => {
@@ -831,6 +981,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`Rect`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid rect.
     pub fn rect(&mut self) -> Result<Rect, DslError> {
         match self.next("rect")? {
             Expr::FnCall { call, self_fns } => match call.name.as_str() {
@@ -876,6 +1030,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a [`RefRect`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid ref rect.
     pub fn ref_rect(&mut self) -> Result<RefRect, DslError> {
         match self.next("ref_rect")? {
             Expr::FnCall { call, self_fns: _ } => match call.name.as_str() {
@@ -899,7 +1057,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    /// Consumes the next argument and returns an `Offset` tuple.
+    /// Consumes the next argument and returns an [`Offset`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid offset.
     pub fn offset(&mut self) -> Result<Offset, DslError> {
         match self.next("offset")? {
             Expr::StructInit { name, fields, span } => {
@@ -940,7 +1102,11 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
-    /// Consumes the next argument and returns a `Size`.
+    /// Consumes the next argument and returns a [`Size`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid size.
     pub fn size(&mut self) -> Result<Size, DslError> {
         match self.next("size")? {
             Expr::FnCall { call: FnCallInfo { name, args, span }, .. } if name == "Size::new" => {
@@ -966,6 +1132,10 @@ impl<'dsl> Arguments<'dsl> {
     }
 
     /// Consumes the next argument and returns a `Vec<T>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a valid array.
     #[allow(private_bounds)]
     pub fn array<T: Clone + FromDslExpr + 'static>(
         &mut self,
@@ -980,6 +1150,12 @@ impl<'dsl> Arguments<'dsl> {
         }
     }
 
+    /// Consumes the next argument and returns a `Box<T>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslError`] if the next argument is missing or not a `Box::new(...)`
+    /// call.
     pub fn boxed<T: Clone + FromDslExpr + 'static>(
         &mut self,
         inner: impl Fn(&mut Self) -> Result<T, DslError>,

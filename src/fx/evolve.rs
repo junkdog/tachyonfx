@@ -112,15 +112,23 @@ impl From<(EvolveSymbolSet, Style)> for EvolveSymbolConfig {
     }
 }
 
+/// Symbol sets used by the evolve effect for character transitions.
 #[derive(Clone, Debug, Copy, Default, PartialEq)]
 pub enum EvolveSymbolSet {
+    /// Horizontal block elements (▏▎▍▌▋▊▉█).
     BlocksHorizontal,
+    /// Vertical block elements (▁▂▃▄▅▆▇█).
     BlocksVertical,
+    /// Filling circle symbols (◌○◎●).
     CircleFill,
+    /// Circle symbols of increasing size.
     #[default]
     Circles,
+    /// Quadrant block characters (▖▗▘▙▚▛▜▝▞▟).
     Quadrants,
+    /// Shading characters (░▒▓█).
     Shaded,
+    /// Square symbols of increasing size.
     Squares,
 }
 

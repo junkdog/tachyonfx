@@ -35,13 +35,17 @@ type FnIterSignature<S> = dyn FnMut(&mut S, ShaderFnContext, CellIterator) + 'st
 #[cfg(not(feature = "sendable"))]
 type FnBufSignature<S> = dyn FnMut(&mut S, ShaderFnContext, &mut Buffer) + 'static;
 
+/// Signature variants for shader functions.
 #[derive(Clone)]
 pub enum ShaderFnSignature<S> {
+    /// Cell-iterator-based shader function.
     Iter(RefCount<FnIterSignature<S>>),
+    /// Buffer-based shader function.
     Buffer(RefCount<FnBufSignature<S>>),
 }
 
 impl<S> ShaderFnSignature<S> {
+    /// Creates a new cell-iterator-based shader function signature.
     pub fn new_iter<F>(f: F) -> Self
     where
         F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static,
@@ -49,6 +53,7 @@ impl<S> ShaderFnSignature<S> {
         Self::Iter(ref_count(f))
     }
 
+    /// Creates a new buffer-based shader function signature.
     pub fn new_buffer<F>(f: F) -> Self
     where
         F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static,
@@ -60,8 +65,11 @@ impl<S> ShaderFnSignature<S> {
 /// Context provided to the shader function, containing timing and area information.
 #[derive(Debug)]
 pub struct ShaderFnContext<'a> {
+    /// Duration of the last tick.
     pub last_tick: Duration,
+    /// Reference to the effect timer.
     pub timer: &'a EffectTimer,
+    /// The area being processed.
     pub area: Rect,
     filter: Option<FilterProcessor>,
 }
@@ -76,10 +84,14 @@ impl<'a> ShaderFnContext<'a> {
         Self { last_tick, timer, area, filter }
     }
 
+    /// Returns the current alpha (progress) value.
+    #[must_use]
     pub fn alpha(&self) -> f32 {
         self.timer.alpha()
     }
 
+    /// Returns the active cell filter, if any.
+    #[must_use]
     pub fn filter(&self) -> Option<&FilterProcessor> {
         self.filter.as_ref()
     }

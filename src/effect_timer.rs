@@ -46,6 +46,7 @@ impl EffectTimer {
     /// use tachyonfx::{EffectTimer, Interpolation};
     /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
     /// ```
+    #[must_use]
     pub fn from_ms(duration: u32, interpolation: Interpolation) -> Self {
         Self::new(Duration::from_millis(duration as _), interpolation)
     }
@@ -64,6 +65,7 @@ impl EffectTimer {
     /// use tachyonfx::{Duration, EffectTimer, Interpolation};
     /// let timer = EffectTimer::new(Duration::from_millis(500), Interpolation::Linear);
     /// ```
+    #[must_use]
     pub fn new(duration: Duration, interpolation: Interpolation) -> Self {
         Self {
             remaining: duration,
@@ -83,10 +85,13 @@ impl EffectTimer {
     /// use tachyonfx::{EffectTimer, Interpolation};
     /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear).reversed();
     /// ```
+    #[must_use]
     pub fn reversed(self) -> Self {
         Self { reverse: !self.reverse, ..self }
     }
 
+    /// Returns `true` if the timer is reversed.
+    #[must_use]
     pub fn is_reversed(&self) -> bool {
         self.reverse
     }
@@ -113,6 +118,7 @@ impl EffectTimer {
     /// assert!(mirrored.is_reversed());
     /// // Note: interpolation() is private, but the flipping behavior is verified internally
     /// ```
+    #[must_use]
     pub fn mirrored(mut self) -> Self {
         self.reverse = !self.reverse;
         self.interpolation = self.interpolation.flipped();
@@ -130,6 +136,7 @@ impl EffectTimer {
     /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
     /// assert!(!timer.started());
     /// ```
+    #[must_use]
     pub fn started(&self) -> bool {
         self.total != self.remaining
     }
@@ -158,6 +165,7 @@ impl EffectTimer {
     /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
     /// let alpha = timer.alpha();
     /// ```
+    #[must_use]
     pub fn alpha(&self) -> f32 {
         let total = self.total.as_millis() as f32;
         if total == 0.0 {
@@ -171,10 +179,14 @@ impl EffectTimer {
         self.interpolation.alpha(a)
     }
 
+    /// Returns the remaining duration.
+    #[must_use]
     pub fn remaining(&self) -> Duration {
         self.remaining
     }
 
+    /// Returns the total duration of the timer.
+    #[must_use]
     pub fn duration(&self) -> Duration {
         self.total
     }
@@ -217,6 +229,7 @@ impl EffectTimer {
     /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
     /// assert!(!timer.done());
     /// ```
+    #[must_use]
     pub fn done(&self) -> bool {
         self.remaining.is_zero()
     }

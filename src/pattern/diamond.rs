@@ -21,6 +21,7 @@ pub struct DiamondPattern {
 impl DiamondPattern {
     /// Creates a diamond pattern centered at the middle of the area with default
     /// transition width
+    #[must_use]
     pub fn center() -> Self {
         Self {
             center_x: 0.5,
@@ -31,6 +32,7 @@ impl DiamondPattern {
 
     /// Creates a diamond pattern with custom center point (0.0-1.0 normalized
     /// coordinates) and default transition width
+    #[must_use]
     pub fn new(center_x: f32, center_y: f32) -> Self {
         Self {
             center_x: center_x.clamp(0.0, 1.0),
@@ -40,6 +42,7 @@ impl DiamondPattern {
     }
 
     /// Creates a diamond pattern with custom center and transition width
+    #[must_use]
     pub fn with_transition(center: (f32, f32), transition_width: f32) -> Self {
         let (center_x, center_y) = center;
         Self {
@@ -50,12 +53,14 @@ impl DiamondPattern {
     }
 
     /// Sets the transition width for gradient smoothing
+    #[must_use]
     pub fn with_transition_width(mut self, width: f32) -> Self {
         self.transition_width = width.max(0.1);
         self
     }
 
     /// Sets a custom center point for the diamond pattern
+    #[must_use]
     pub fn with_center(mut self, center: (f32, f32)) -> Self {
         let (center_x, center_y) = center;
         self.center_x = center_x.clamp(0.0, 1.0);

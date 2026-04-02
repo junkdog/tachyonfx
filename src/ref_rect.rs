@@ -40,6 +40,7 @@ impl RefRect {
     /// # Returns
     ///
     /// A new `RefRect` containing the specified rectangle
+    #[must_use]
     pub fn new(rect: Rect) -> Self {
         Self { rect: ref_count(rect) }
     }
@@ -49,6 +50,7 @@ impl RefRect {
     /// # Returns
     ///
     /// A copy of the current `Rect` value
+    #[must_use]
     pub fn get(&self) -> Rect {
         #[cfg(feature = "sendable")]
         {
@@ -87,6 +89,7 @@ impl RefRect {
     /// # Returns
     ///
     /// `true` if the position is within the rectangle bounds, `false` otherwise
+    #[must_use]
     pub fn contains(&self, position: Position) -> bool {
         #[cfg(feature = "sendable")]
         {
@@ -103,6 +106,7 @@ impl RefRect {
     /// # Returns
     ///
     /// The y-coordinate of the top edge
+    #[must_use]
     pub fn top(&self) -> u16 {
         #[cfg(feature = "sendable")]
         {
@@ -121,6 +125,7 @@ impl RefRect {
     /// # Returns
     ///
     /// The y-coordinate of the bottom edge (exclusive)
+    #[must_use]
     pub fn bottom(&self) -> u16 {
         #[cfg(feature = "sendable")]
         {
@@ -137,6 +142,7 @@ impl RefRect {
     /// # Returns
     ///
     /// The x-coordinate of the left edge
+    #[must_use]
     pub fn left(&self) -> u16 {
         #[cfg(feature = "sendable")]
         {
@@ -155,6 +161,7 @@ impl RefRect {
     /// # Returns
     ///
     /// The x-coordinate of the right edge (exclusive)
+    #[must_use]
     pub fn right(&self) -> u16 {
         #[cfg(feature = "sendable")]
         {

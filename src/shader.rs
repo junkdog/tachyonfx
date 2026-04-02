@@ -16,6 +16,7 @@ use crate::{
 /// default `process()` implementation handles timer management and calls `execute()` with
 /// the current alpha value. Only override `process()` if you need custom timer handling.
 pub trait Shader: ThreadSafetyMarker + Debug {
+    /// Returns the name identifier for this shader.
     fn name(&self) -> &'static str;
 
     /// Processes the shader for the given duration. The default implementation:
@@ -132,6 +133,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     fn filter(&mut self, filter: CellFilter);
 
     #[deprecated(since = "0.11.0", note = "Use `filter()` instead")]
+    #[doc(hidden)]
     fn set_cell_selection(&mut self, filter: CellFilter) {
         self.filter(filter);
     }
@@ -200,11 +202,13 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     }
 
     /// Returns a mutable reference to the shader's filter processor for selective cell
+    /// processing.
     fn filter_processor_mut(&mut self) -> Option<&mut FilterProcessor> {
         None
     }
 
     #[deprecated(since = "0.11.0", note = "Use `cell_filter()` instead")]
+    #[doc(hidden)]
     fn cell_selection(&self) -> Option<CellFilter> {
         self.cell_filter().cloned()
     }

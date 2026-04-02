@@ -141,10 +141,14 @@ impl Shader for Repeat {
     }
 }
 
+/// Controls how an effect is repeated.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RepeatMode {
+    /// Repeats indefinitely.
     Forever,
+    /// Repeats a fixed number of times.
     Times(u32),
+    /// Repeats for the given duration.
     Duration(Duration),
 }
 

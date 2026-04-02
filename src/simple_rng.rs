@@ -27,6 +27,8 @@ pub struct SimpleRng {
 }
 
 impl SimpleRng {
+    /// Creates a new RNG with the given seed.
+    #[must_use]
     pub fn new(seed: u32) -> Self {
         SimpleRng { state: seed }
     }
@@ -94,7 +96,9 @@ impl Default for SimpleRng {
     }
 }
 
+/// Trait for sampling a value within a range.
 pub trait RangeSampler<T> {
+    /// Generates a random value within the given range.
     fn gen_range(&mut self, range: Range<T>) -> T;
 }
 

@@ -90,7 +90,9 @@ impl Shader for TemporaryEffect {
     }
 }
 
+/// Wraps an effect with an explicit duration limit.
 pub trait IntoTemporaryEffect {
+    /// Returns a new effect that runs for at most the given duration.
     fn with_duration(self, duration: Duration) -> Effect;
 }
 

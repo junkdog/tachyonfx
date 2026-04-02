@@ -29,6 +29,7 @@ impl DissolvePattern {
     /// The dissolve pattern creates a randomized hide effect where each cell
     /// becomes inactive at a random threshold, creating a scattered, organic-looking
     /// transition as the global alpha increases.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }

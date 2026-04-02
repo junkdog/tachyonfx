@@ -79,26 +79,31 @@ impl DslParseError {
     }
 
     /// Returns the line where the error starts
+    #[must_use]
     pub fn start_line(&self) -> usize {
         self.location.start_line
     }
 
     /// Returns the column where the error starts
+    #[must_use]
     pub fn start_column(&self) -> usize {
         self.location.start_column
     }
 
     /// Returns the line where the error ends
+    #[must_use]
     pub fn end_line(&self) -> usize {
         self.location.end_line
     }
 
     /// Returns the column where the error ends
+    #[must_use]
     pub fn end_column(&self) -> usize {
         self.location.end_column
     }
 
     /// Returns the entire context around the error, including nearby lines
+    #[must_use]
     pub fn context(&self) -> String {
         let context_lines = 2; // Number of lines before and after the error to show
         let lines: Vec<&str> = self.input.lines().collect();
@@ -147,6 +152,7 @@ impl DslParseError {
     }
 
     /// Returns the portion of text that caused the error
+    #[must_use]
     pub fn error_text(&self) -> String {
         let lines: Vec<&str> = self.input.lines().collect();
 

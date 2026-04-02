@@ -22,19 +22,32 @@ use crate::{
 /// time.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum AnyPattern {
+    /// Returns global alpha unchanged; allows a single code path for all effects.
     #[default]
-    Identity, // Returns global alpha unchanged - allows single code path for all effects
+    Identity,
+    /// Radial pattern emanating from a center point.
     Radial(RadialPattern),
+    /// Diamond-shaped pattern.
     Diamond(DiamondPattern),
+    /// Diagonal sweep pattern.
     Diagonal(DiagonalPattern),
+    /// Alternating checkerboard cells.
     Checkerboard(CheckerboardPattern),
+    /// Directional sweep with a gradient edge.
     Sweep(SweepPattern),
+    /// Coalescing random cells.
     Coalesce(CoalescePattern),
+    /// Dissolving random cells.
     Dissolve(DissolvePattern),
+    /// Blended combination of two patterns.
     Blend(BlendPattern),
+    /// Multiple patterns combined with an operator.
     Combined(CombinedPattern),
+    /// Inverted alpha of another pattern.
     Inverted(InvertedPattern),
+    /// Wave-based spatial pattern.
     Wave(WavePattern),
+    /// Spiral pattern.
     Spiral(SpiralPattern),
 }
 

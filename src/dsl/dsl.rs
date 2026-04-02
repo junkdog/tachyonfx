@@ -80,6 +80,7 @@ struct EffectCompiler {
 
 impl EffectDsl {
     /// Creates a new `EffectDsl` instance with all standard effect compilers registered.
+    #[must_use]
     pub fn new() -> Self {
         register_default_compilers(Self { compilers: Vec::new() })
     }
@@ -115,6 +116,7 @@ impl EffectDsl {
     ///         todo!("e.g. Ok(custom_effect(duration, color))")
     ///     });
     /// ```
+    #[must_use]
     pub fn register(
         self,
         name: &'static str,
@@ -150,6 +152,7 @@ impl EffectDsl {
     ///     fx::fade_to_fg(fg_color, (1000, Linear))
     /// "#);
     /// ```
+    #[must_use]
     pub fn compiler(&self) -> DslCompiler<'_> {
         DslCompiler { dsl: self, environment: DslEnv::new() }
     }
@@ -272,6 +275,7 @@ impl DslCompiler<'_> {
     /// # Returns
     ///
     /// Returns self for method chaining.
+    #[must_use]
     pub fn bind<K, T>(mut self, name: K, value: T) -> Self
     where
         K: Into<CompactString>,
@@ -291,7 +295,11 @@ impl DslCompiler<'_> {
     ///
     /// Returns either:
     /// - `Ok(Effect)` if compilation succeeds
-    /// - `Err(DslError)` if parsing or compilation fails
+    /// - `Err(DslParseError)` if parsing or compilation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DslParseError`] if tokenization, parsing, or effect compilation fails.
     ///
     /// # Examples
     ///

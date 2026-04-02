@@ -54,6 +54,7 @@ impl FilterProcessor {
     /// # Returns
     /// A [`CellPredicate`] configured for the specified area
     #[deprecated(since = "0.19.0", note = "use validator() instead")]
+    #[must_use]
     pub fn predicate(&self, area: Rect) -> CellPredicate<'_> {
         match self {
             FilterProcessor::Static(processor) => processor.filter.predicate(area),
@@ -103,6 +104,7 @@ impl FilterProcessor {
     ///
     /// # Returns
     /// A [`CellValidator`] configured for optimal performance
+    #[must_use]
     pub fn validator(&self) -> CellValidator<'_> {
         match self {
             FilterProcessor::Static(processor) => CellValidator::Static(processor),
@@ -119,6 +121,7 @@ impl FilterProcessor {
     ///
     /// # Returns
     /// A reference to the underlying [`CellFilter`]
+    #[must_use]
     pub fn filter_ref(&self) -> &CellFilter {
         match self {
             FilterProcessor::Static(processor) => &processor.filter,
@@ -143,6 +146,7 @@ pub enum CellValidator<'a> {
 
 impl CellValidator<'_> {
     /// Determines if a cell at the given position meets the filter criteria.
+    #[must_use]
     pub fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
         match self {
             CellValidator::Static(processor) => processor.is_valid(pos),

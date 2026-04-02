@@ -36,6 +36,7 @@ impl PartialEq for WavePattern {
 #[allow(dead_code)]
 impl WavePattern {
     /// Creates a wave pattern from a single layer.
+    #[must_use]
     pub fn new(layer: WaveLayer) -> Self {
         Self {
             layers: Shared::from(vec![layer]),
@@ -45,6 +46,7 @@ impl WavePattern {
     }
 
     /// Adds a layer to the pattern.
+    #[must_use]
     pub fn with_layer(self, layer: WaveLayer) -> Self {
         let mut layers = self.layers.to_vec();
         layers.push(layer);
@@ -57,6 +59,7 @@ impl WavePattern {
 
     /// Sets the contrast exponent (default 1).
     /// Values >1 push the pattern toward black/white extremes.
+    #[must_use]
     pub fn with_contrast(mut self, contrast: i32) -> Self {
         self.contrast = contrast;
         self
@@ -72,6 +75,7 @@ impl WavePattern {
 
     /// Sets the transition width for the soft edge between active/inactive cells.
     /// The value is in normalised [0,1] space (default 0.15). Clamped to >= 0.01.
+    #[must_use]
     pub fn with_transition_width(mut self, width: f32) -> Self {
         self.transition_width = width.max(0.01);
         self

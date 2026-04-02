@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use ratatui::style::Color;
 use tachyonfx::{ColorCache, ColorSpace};
