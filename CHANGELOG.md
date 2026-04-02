@@ -7,6 +7,11 @@
 - `blit_buffer` and `blit_buffer_region` now skip cells marked as skippable, restoring
   the behavior removed in 0.24.0.
 
+### Fixed
+- `fx::prolong_start`, `fx::prolong_end`: `reverse()` now correctly reverses the inner effect, its timer, and internal state.
+- `CheckerboardPattern::new()`: prevent division by zero.
+- DSL: `read_i32` now returns an error for `u32` values exceeding `i32::MAX`.
+
 ## tachyonfx-0.25.0 - 2026-02-27
 ### Added
 - `CellFilter::NonEmpty`: selects cells that contain a non-space symbol.

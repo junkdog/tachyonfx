@@ -59,6 +59,15 @@ impl Shader for Prolong {
         self.timer.done() && self.inner.done()
     }
 
+    fn reverse(&mut self) {
+        self.timer = self.timer.reversed();
+        self.inner.reverse();
+        self.position = match self.position {
+            ProlongPosition::Start => ProlongPosition::End,
+            ProlongPosition::End => ProlongPosition::Start,
+        };
+    }
+
     fn clone_box(&self) -> Box<dyn Shader> {
         Box::new(self.clone())
     }
