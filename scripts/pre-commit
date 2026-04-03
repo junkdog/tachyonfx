@@ -1,0 +1,56 @@
+#!/bin/bash
+# Pre-commit hook for Rust projects
+# Runs cargo +nightly fmt and cargo clippy across all feature configurations
+
+set -e
+
+echo "Running pre-commit hooks..."
+
+# Run cargo +nightly fmt
+echo "Running cargo +nightly fmt..."
+cargo +nightly fmt
+if [ $? -ne 0 ]; then
+    echo "❌ cargo +nightly fmt failed"
+    exit 1
+fi
+
+# Check if files were modified by fmt (compare working directory to index)
+if ! git diff --quiet --exit-code; then
+    echo "⚠️  Files were modified by cargo fmt. Please stage the changes and commit again."
+    echo "Modified files:"
+    git diff --name-only
+    exit 1
+fi
+
+# Run cargo clippy across all valid feature configurations
+FEATURE_SETS=(
+    ""                  # default features (dsl + std)
+    "--no-default-features"
+    "--features=sendable"
+    "--features=std-duration"
+    "--features=wasm"
+)
+
+failed=0
+for features in "${FEATURE_SETS[@]}"; do
+    label="${features:-default}"
+    echo "Running cargo clippy ($label)..."
+    if ! cargo clippy --lib $features -- -D warnings; then
+        echo "❌ cargo clippy ($label) failed"
+        failed=1
+    fi
+done
+
+# also check tests/benches with default features
+echo "Running cargo clippy (--all-targets)..."
+if ! cargo clippy --all-targets -- -D warnings; then
+    echo "❌ cargo clippy (--all-targets) failed"
+    failed=1
+fi
+
+if [ $failed -ne 0 ]; then
+    echo "❌ Pre-commit checks failed"
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"
