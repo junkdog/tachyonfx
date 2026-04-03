@@ -76,8 +76,7 @@ pub(crate) fn powf(base: f32, exp: f32) -> f32 {
 #[cfg(not(feature = "std"))]
 #[inline]
 pub(crate) fn powf(base: f32, exp: f32) -> f32 {
-    use micromath::F32Ext;
-    base.powf(exp)
+    micromath::F32Ext::powf(base, exp)
 }
 
 /// Integer power function that works in both std and no_std environments
@@ -91,8 +90,7 @@ pub(crate) fn powi(base: f32, exp: i32) -> f32 {
 #[cfg(not(feature = "std"))]
 #[inline]
 pub(crate) fn powi(base: f32, exp: i32) -> f32 {
-    use micromath::F32Ext;
-    base.powi(exp)
+    micromath::F32Ext::powi(base, exp)
 }
 
 /// Round function using micromath (faster than std)

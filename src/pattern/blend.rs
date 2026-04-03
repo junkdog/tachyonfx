@@ -64,10 +64,12 @@ impl BlendPattern {
         }
     }
 
+    #[cfg(feature = "dsl")]
     pub(crate) fn pattern_a(&self) -> &AnyPattern {
         &self.inner.pattern_a
     }
 
+    #[cfg(feature = "dsl")]
     pub(crate) fn pattern_b(&self) -> &AnyPattern {
         &self.inner.pattern_b
     }

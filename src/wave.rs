@@ -374,16 +374,19 @@ impl WaveLayer {
     }
 
     /// Returns the primary oscillator.
+    #[cfg(feature = "dsl")]
     pub(crate) fn oscillator_a(&self) -> &Oscillator {
         &self.a
     }
 
     /// Returns the secondary oscillator and its combinator, if set.
+    #[cfg(feature = "dsl")]
     pub(crate) fn oscillator_b(&self) -> Option<(&Combinator, &Oscillator)> {
         self.b.as_ref().map(|(c, o)| (c, o))
     }
 
     /// Returns the post-transform applied after combining oscillators.
+    #[cfg(feature = "dsl")]
     pub(crate) fn post_transform(&self) -> PostTransform {
         self.post_transform
     }
