@@ -1,16 +1,16 @@
 # Changelog
 
-## unreleased
+## tachyonfx-0.25.1 - 2026-07-05
 ### Added
-- `ratatui-next-cell` feature flag: opt-in support for ratatui > 0.30, where `Cell::skip`
-  was replaced by `Cell::diff_option`. Enable this feature when using a newer ratatui.
-- `blit_buffer` and `blit_buffer_region` now skip cells marked as skippable, restoring
-  the behavior removed in 0.24.0.
+- `ratatui-next-cell` compatibility support for Ratatui's `Cell::diff_option` API.
+- `blit_buffer` and `blit_buffer_region` again skip cells marked as skippable.
 
 ### Fixed
 - `fx::prolong_start`, `fx::prolong_end`: `reverse()` now correctly reverses the inner effect, its timer, and internal state.
 - `CheckerboardPattern::new()`: prevent division by zero.
 - DSL: `read_i32` now returns an error for `u32` values exceeding `i32::MAX`.
+- Buffer rendering: switch from deprecated `Cell::skip` access to `Cell::diff_option`.
+- Ratatui compatibility: update to `ratatui 0.30.2`, `ratatui-core 0.1.2`, `ratatui-crossterm 0.1.2`, and `ratatui-widgets 0.3.2`.
 
 ## tachyonfx-0.25.0 - 2026-02-27
 ### Added
