@@ -6,7 +6,7 @@ use alloc::{
 use core::cell::RefCell;
 
 use ratatui_core::{
-    buffer::{Buffer, Cell},
+    buffer::{Buffer, Cell, CellDiffOption},
     layout::{Offset, Position, Rect},
     style::{Color, Modifier, Style},
 };
@@ -125,11 +125,7 @@ pub fn blit_buffer(src: &Buffer, dst: &mut Buffer, offset: Offset) {
 pub fn blit_buffer_region(src: &Buffer, src_region: Rect, dst: &mut Buffer, offset: Offset) {
     #[inline(always)]
     fn should_copy_cell(cell: &Cell) -> bool {
-        #[cfg(not(feature = "ratatui-next-cell"))]
-        return !cell.skip;
-
-        #[cfg(feature = "ratatui-next-cell")]
-        return cell.diff_option != ratatui_core::buffer::CellDiffOption::Skip;
+        cell.diff_option != CellDiffOption::Skip
     }
 
     // clip source region to source buffer bounds
