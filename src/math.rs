@@ -47,6 +47,16 @@ pub fn wave_cos(t: f32) -> f32 {
     wave_sin(t + 0.25)
 }
 
+/// Euclidean remainder, for wrapping a value into `0.0..m`.
+///
+/// `f32::rem_euclid` is std-only, so this is expressed with the crate's own
+/// `floor` to behave identically in both environments.
+#[inline(always)]
+#[must_use]
+pub(crate) fn rem_euclid(x: f32, m: f32) -> f32 {
+    x - m * floor(x / m)
+}
+
 /// Square root function using micromath (faster than std)
 #[inline]
 pub(crate) fn sqrt(x: f32) -> f32 {

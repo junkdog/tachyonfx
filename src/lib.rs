@@ -40,6 +40,7 @@ mod interpolation;
 mod lru_cache;
 mod math;
 mod motion;
+pub mod noise;
 /// Spatial patterns for controlling effect progression.
 pub mod pattern;
 mod rect_ext;
