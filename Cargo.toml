@@ -26,7 +26,7 @@ exclude = ["images/*.gif", "docs/assets/*.gif", ".*", "scripts/*"]
 
 [workspace.dependencies]
 ratatui-core = { version = "0.1.2", default-features = false }
-compact_str = { version = "0.9.0", default-features = false }
+compact_str = { version = "0.10.0", default-features = false }
 crossterm = "0.29.0"
 tachyonfx = { path = "." }
 bon = { version = "3.9.1", default-features = false }
