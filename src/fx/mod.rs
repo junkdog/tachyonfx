@@ -241,6 +241,7 @@ mod hsl_shift;
 mod lighten;
 mod never_complete;
 mod offscreen_buffer;
+mod organic;
 mod paint;
 mod ping_pong;
 mod prolong;
@@ -2343,6 +2344,177 @@ use crate::fx::{
     expand::Expand,
     explode::Explode,
 };
+
+// ── Ambient effects ──────────────────────────────────────────────────
+//
+// Unlike the transitions above, these never complete: they are meant to sit
+// under a UI for as long as it is open. Each sets the cell filter it can
+// actually act on -- painting effects take blank cells, modulating effects take
+// glyphs -- because applied to the wrong ones they run and do nothing at all.
+// An explicit `.with_filter()` still overrides the default.
+
+/// A slowly drifting fractal-noise field, painted as cell backgrounds.
+///
+/// The workhorse ambient background. Unlike a waveform-driven one it never
+/// visibly repeats: `scale` sets how tight the pattern is in cell space,
+/// `speed` how fast it drifts, `octaves` (1-4) how much fine detail is layered
+/// in.
+///
+/// `speed` is in noise units per second, and one noise unit spans `1/scale`
+/// cells — so at `scale = 0.2`, `speed = 1.0` moves the field five cells a
+/// second. Much below `0.5` and the drift stops reading as motion at all.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::fx;
+/// use ratatui_core::style::Color;
+///
+/// fx::noise_field(Color::Black, Color::Blue, 0.2, 1.2, 3);
+/// ```
+#[must_use]
+pub fn noise_field(from: Color, to: Color, scale: f32, speed: f32, octaves: u32) -> Effect {
+    // Clamped on construction: octaves in particular is linear in cost and paid
+    // per cell per frame, so an unbounded value is a performance footgun.
+    organic::ambient(organic::Kind::NoiseField {
+        from,
+        to,
+        scale: scale.clamp(0.01, 2.0),
+        speed: speed.clamp(0.0, 5.0),
+        octaves: octaves.clamp(1, 4),
+    })
+}
+
+/// A three-stop colour gradient sweeping sideways, painted as cell backgrounds.
+///
+/// Periodic and directional, so it reads as a deliberate sweep where
+/// [`noise_field`] reads as drift. `spread` sets how much of the gradient is
+/// visible at once.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::fx;
+/// use ratatui_core::style::Color;
+///
+/// fx::color_wave(Color::Red, Color::Green, Color::Blue, 1.2, 0.06);
+/// ```
+#[must_use]
+pub fn color_wave(a: Color, b: Color, c: Color, speed: f32, spread: f32) -> Effect {
+    organic::ambient(organic::Kind::ColorWave {
+        stops: [a, b, c],
+        speed: speed.clamp(0.0, 5.0),
+        spread: spread.clamp(0.005, 1.0),
+    })
+}
+
+/// A radial bloom centred on the area, breathing over `period` seconds.
+///
+/// `falloff` shapes the curve: 1.0 is linear, higher values keep the centre
+/// bright and drop off sharply at the edge. The radius is corrected for cell
+/// aspect ratio, so the bloom is round rather than a vertical ellipse.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::fx;
+/// use ratatui_core::style::Color;
+///
+/// fx::glow(Color::Cyan, 20.0, 2.0, 3.0);
+/// ```
+#[must_use]
+pub fn glow(color: Color, radius: f32, falloff: f32, period: f32) -> Effect {
+    organic::ambient(organic::Kind::Glow {
+        color,
+        radius: radius.max(0.5),
+        falloff: falloff.clamp(0.1, 8.0),
+        period: period.max(0.1),
+    })
+}
+
+/// A slow brightness swell applied to whatever colour a cell already has.
+///
+/// Asymmetric on purpose — a slow rise and a quicker fall reads as breathing,
+/// where a sine reads as a machine. `intensity` is `0.0..=1.0`, `period` is in
+/// seconds.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::fx;
+///
+/// fx::breathe(0.4, 3.0);
+/// ```
+#[must_use]
+pub fn breathe(intensity: f32, period: f32) -> Effect {
+    organic::ambient(organic::Kind::Breathe {
+        intensity: intensity.clamp(0.0, 1.0),
+        period: period.max(0.1),
+    })
+}
+
+/// Stochastic per-column brightness flicker, for a phosphor-tube feel.
+///
+/// Each column gets its own flicker path, so a line never pulses in unison.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::fx;
+///
+/// fx::flicker(0.15, 2.0);
+/// ```
+#[must_use]
+pub fn flicker(intensity: f32, speed: f32) -> Effect {
+    organic::ambient(organic::Kind::Flicker {
+        intensity: intensity.clamp(0.0, 1.0),
+        speed: speed.clamp(0.0, 10.0),
+    })
+}
+
+/// A smooth noise-driven highlight sliding across the text.
+///
+/// Where [`flicker`] is stochastic per column and reads as electrical noise,
+/// this is spatial and continuous — a moving gradient. Centred so text
+/// brightens and dims around its true colour rather than only ever darkening.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::fx;
+///
+/// fx::shimmer(0.4, 0.15, 0.8);
+/// ```
+#[must_use]
+pub fn shimmer(intensity: f32, scale: f32, speed: f32) -> Effect {
+    organic::ambient(organic::Kind::Shimmer {
+        intensity: intensity.clamp(0.0, 1.0),
+        scale: scale.clamp(0.01, 2.0),
+        speed: speed.clamp(0.0, 5.0),
+    })
+}
+
+/// A slow noise-driven wander of the foreground colour between two colours.
+///
+/// Uniform across the area — everything drifts together, unlike [`shimmer`],
+/// which varies per cell.
+///
+/// # Examples
+///
+/// ```
+/// use tachyonfx::fx;
+/// use ratatui_core::style::Color;
+///
+/// fx::drift(Color::Blue, Color::Magenta, 1.0);
+/// ```
+#[must_use]
+pub fn drift(from: Color, to: Color, speed: f32) -> Effect {
+    organic::ambient(organic::Kind::Drift {
+        from,
+        to,
+        speed: speed.clamp(0.0, 5.0),
+    })
+}
 
 #[cfg(test)]
 mod tests {

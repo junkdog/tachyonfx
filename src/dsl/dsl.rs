@@ -327,8 +327,10 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
             #[allow(deprecated)]
             fx::term256_colors().into()
         })
+        .register("breathe", compilers::breathe)
         .register("coalesce", compilers::coalesce)
         .register("coalesce_from", compilers::coalesce_from)
+        .register("color_wave", compilers::color_wave)
         .register("consume_tick", |_args| consume_tick().into())
         .register("delay", compilers::delay)
         .register("dissolve", |args| dissolve(args.effect_timer()?).into())
@@ -336,8 +338,13 @@ fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
         .register("evolve", compilers::evolve)
         .register("evolve_into", compilers::evolve_into)
         .register("evolve_from", compilers::evolve_from)
+        .register("drift", compilers::drift)
         .register("expand", compilers::expand)
         .register("explode", compilers::explode)
+        .register("flicker", compilers::flicker)
+        .register("glow", compilers::glow)
+        .register("noise_field", compilers::noise_field)
+        .register("shimmer", compilers::shimmer)
         .register("fade_from", compilers::fade_from)
         .register("fade_from_fg", compilers::fade_from_fg)
         .register("fade_to", compilers::fade_to)
@@ -395,6 +402,54 @@ mod compilers {
         dsl::{dsl::Arguments, expressions::Expr, DslError},
         fx, Effect,
     };
+
+    pub(super) fn noise_field(args: &mut Arguments) -> Result<Effect, DslError> {
+        let from = args.color()?;
+        let to = args.color()?;
+        let scale = args.read_f32()?;
+        let speed = args.read_f32()?;
+        let octaves = args.read_u32()?;
+        fx::noise_field(from, to, scale, speed, octaves).into()
+    }
+
+    pub(super) fn color_wave(args: &mut Arguments) -> Result<Effect, DslError> {
+        let a = args.color()?;
+        let b = args.color()?;
+        let c = args.color()?;
+        let speed = args.read_f32()?;
+        let spread = args.read_f32()?;
+        fx::color_wave(a, b, c, speed, spread).into()
+    }
+
+    pub(super) fn glow(args: &mut Arguments) -> Result<Effect, DslError> {
+        let color = args.color()?;
+        let radius = args.read_f32()?;
+        let falloff = args.read_f32()?;
+        let period = args.read_f32()?;
+        fx::glow(color, radius, falloff, period).into()
+    }
+
+    pub(super) fn breathe(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::breathe(args.read_f32()?, args.read_f32()?).into()
+    }
+
+    pub(super) fn flicker(args: &mut Arguments) -> Result<Effect, DslError> {
+        fx::flicker(args.read_f32()?, args.read_f32()?).into()
+    }
+
+    pub(super) fn shimmer(args: &mut Arguments) -> Result<Effect, DslError> {
+        let intensity = args.read_f32()?;
+        let scale = args.read_f32()?;
+        let speed = args.read_f32()?;
+        fx::shimmer(intensity, scale, speed).into()
+    }
+
+    pub(super) fn drift(args: &mut Arguments) -> Result<Effect, DslError> {
+        let from = args.color()?;
+        let to = args.color()?;
+        let speed = args.read_f32()?;
+        fx::drift(from, to, speed).into()
+    }
 
     pub(super) fn coalesce(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::coalesce(args.effect_timer()?).into()

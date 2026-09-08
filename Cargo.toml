@@ -7,6 +7,7 @@ members = [
     "examples/effect-showcase",
     "examples/tweens",
     "examples/effect-registry",
+    "examples/organic-effects",
 ]
 
 [package]
